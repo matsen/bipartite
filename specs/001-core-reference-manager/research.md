@@ -32,47 +32,67 @@ Sources:
 
 ### 2. CLI Framework
 
-**Decision**: Use Go standard library `flag` package with a simple command dispatcher
+**Decision**: Use `spf13/cobra` for CLI structure
 
 **Rationale**:
-- Minimal dependencies: Aligns with constitution principle VI (Simplicity)
-- Fast startup: No framework initialization overhead
-- Sufficient for our needs: We have ~10 commands with simple flag structures
-- Easy to understand: No magic, explicit command routing
+- De facto standard for Go CLIs (Kubernetes, Hugo, GitHub CLI)
+- Automatic help generation with consistent formatting
+- Clean subcommand handling without boilerplate
+- Short/long flag support (`-h` / `--human`) built-in
+- Shell completion for free
+- Agents generate better Cobra code (more training examples)
+- Single focused dependency that solves a real problem
 
 **Alternatives Considered**:
-- `spf13/cobra`: Powerful but "bloated", adds complexity we don't need
-- `urfave/cli`: Reports of flag handling issues, still heavier than needed
-- `alecthomas/kong`: Struct-based approach is nice but adds a dependency
-- `peterbourgon/ff`: Good middle ground but still external dependency
+- Standard library `flag`: Requires hand-rolling subcommand dispatch, help formatting, short flags
+- `urfave/cli`: Reports of flag handling quirks
+- `alecthomas/kong`: Struct-based approach is nice but less common
 
 **Implementation Pattern**:
 ```go
-// Simple dispatcher pattern
+// cmd/bp/main.go
 func main() {
-    if len(os.Args) < 2 {
-        printUsage()
-        os.Exit(1)
+    rootCmd := &cobra.Command{
+        Use:   "bp",
+        Short: "Agent-first academic reference manager",
     }
 
-    cmd := os.Args[1]
-    args := os.Args[2:]
+    rootCmd.AddCommand(
+        newInitCmd(),
+        newImportCmd(),
+        newSearchCmd(),
+        // ...
+    )
 
-    switch cmd {
-    case "init":
-        runInit(args)
-    case "import":
-        runImport(args)
-    // ...
+    rootCmd.Execute()
+}
+
+// cmd/bp/import.go
+func newImportCmd() *cobra.Command {
+    var format string
+    var dryRun bool
+
+    cmd := &cobra.Command{
+        Use:   "import <file>",
+        Short: "Import references from external format",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            // implementation
+        },
     }
+
+    cmd.Flags().StringVar(&format, "format", "", "Import format (paperpile)")
+    cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be imported")
+    cmd.MarkFlagRequired("format")
+
+    return cmd
 }
 ```
 
-Each command defines its own flag set, keeping concerns separated.
+**Note**: Avoid `cobra-cli init` code generator - write commands directly for cleaner code.
 
 Sources:
+- [Cobra on GitHub](https://github.com/spf13/cobra)
 - [Go CLI comparison](https://github.com/gschauer/go-cli-comparison)
-- [ffcli - simpler building block](https://mfridman.medium.com/a-simpler-building-block-for-go-clis-4c3f7f0f6e03)
 
 ---
 
@@ -229,7 +249,7 @@ Sources:
 | Decision | Choice | Key Reason |
 |----------|--------|------------|
 | SQLite | modernc.org/sqlite | CGO-free cross-compilation |
-| CLI | Standard library `flag` | Minimal dependencies |
+| CLI | spf13/cobra | De facto standard, better ergonomics |
 | BibTeX | Hand-rolled | Simple format, no parsing needed |
 | PDF open | Platform commands | Native integration |
 | Data format | JSONL | Git-mergeable, human-readable |

@@ -11,7 +11,7 @@ Build the foundational `bp` CLI tool in Go that enables researchers and AI agent
 
 **Language/Version**: Go 1.21+ (latest stable)
 **Primary Dependencies**:
-- Standard library for JSON, file I/O, `flag` package for CLI
+- `spf13/cobra` - CLI framework (de facto standard for Go CLIs)
 - `modernc.org/sqlite` - pure Go SQLite (no CGO, easy cross-compilation)
 **Storage**: JSONL source of truth + ephemeral SQLite for queries
 **Testing**: Go's built-in `testing` package with real fixture data

@@ -29,6 +29,7 @@ mkdir -p testdata
 ### 3. Add Dependencies
 
 ```bash
+go get github.com/spf13/cobra
 go get modernc.org/sqlite
 ```
 
