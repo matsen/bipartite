@@ -237,10 +237,27 @@ Semantic search over your literature:
 
 The full bipartite vision:
 
-- Nodes: papers, concepts, code features, artifacts
-- Edges: directed relationships with semantic summaries
-- Generic summaries: overview of a paper
-- Relational summaries: "Paper A provides the theoretical basis for Model B"
+- **Nodes**: papers, concepts, code features, artifacts
+- **Edges**: directed relationships with semantic summaries
+
+#### Two Types of Summaries
+
+**Generic summaries** provide a standalone overview of a node (e.g., a paper's abstract distilled to key contributions). These live on the node itself.
+
+**Relational summaries** live on edges and describe a node *as it relates to* another node. The same paper has different summaries depending on the relationship:
+
+- "Paper A → variational inference": "Introduces a novel ELBO formulation that reduces variance in gradient estimates"
+- "Paper A → phylogenetics": "Applies variational methods to tree inference, achieving 10x speedup over MCMC"
+- "Paper A → Paper B": "Provides the theoretical foundation that Paper B extends to non-Euclidean spaces"
+
+This means when you traverse the graph from a particular node, you get summaries contextualized to your starting point. An agent exploring "what papers relate to my current project?" gets summaries tailored to that project's concepts, not generic abstracts.
+
+#### Edge Semantics
+
+Edges carry:
+- **Direction**: A relates-to B (asymmetric)
+- **Relationship type**: "cites", "extends", "contradicts", "implements", "applies-to"
+- **Relational summary**: prose explaining the connection from A's perspective toward B
 
 ### Phase IV: ASTA/Semantic Scholar Integration
 
