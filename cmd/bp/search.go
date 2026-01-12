@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -13,7 +11,7 @@ import (
 var searchLimit int
 
 func init() {
-	searchCmd.Flags().IntVar(&searchLimit, "limit", 50, "Maximum results to return")
+	searchCmd.Flags().IntVar(&searchLimit, "limit", DefaultSearchLimit, "Maximum results to return")
 	rootCmd.AddCommand(searchCmd)
 }
 
@@ -36,37 +34,13 @@ Examples:
 }
 
 func runSearch(cmd *cobra.Command, args []string) error {
-	root, exitCode := getRepoRoot()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-
-	// Find repository
-	repoRoot, err := config.FindRepository(root)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: err.Error()})
-		}
-		os.Exit(ExitConfigError)
-	}
-
-	// Open database
-	dbPath := config.DBPath(repoRoot)
-	db, err := storage.OpenDB(dbPath)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: opening database: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("opening database: %v", err)})
-		}
-		os.Exit(ExitError)
-	}
+	repoRoot := mustFindRepository()
+	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
 	query := args[0]
 	var refs []storage.Reference
+	var err error
 
 	// Check for field-specific searches
 	if strings.HasPrefix(query, "author:") {
@@ -80,12 +54,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: searching: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("searching: %v", err)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "searching: %v", err)
 	}
 
 	// Empty result is not an error
@@ -111,7 +80,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 func printRefSummary(num int, ref storage.Reference) {
 	fmt.Printf("[%d] %s\n", num, ref.ID)
-	fmt.Printf("    %s\n", truncateString(ref.Title, 70))
+	fmt.Printf("    %s\n", truncateString(ref.Title, SummaryTitleLen))
 
 	// Format authors
 	if len(ref.Authors) > 0 {

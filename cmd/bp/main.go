@@ -4,6 +4,8 @@ package main
 import (
 	"os"
 
+	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -36,8 +38,9 @@ func init() {
 	rootCmd.Version = Version
 }
 
-// getRepoRoot returns the repository root, or exits with an error if not in a repository.
-func getRepoRoot() (string, int) {
+// getStartingDirectory returns the directory to start searching for a repository.
+// It checks the BP_ROOT environment variable first, then falls back to the current working directory.
+func getStartingDirectory() (string, int) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", outputError(ExitError, "getting current directory: %v", err)
@@ -45,8 +48,43 @@ func getRepoRoot() (string, int) {
 
 	// Check BP_ROOT environment variable first
 	if root := os.Getenv("BP_ROOT"); root != "" {
-		cwd = root
+		return root, 0
 	}
 
 	return cwd, 0
+}
+
+// mustFindRepository finds and validates the repository, exits on error.
+// Returns the repository root path.
+func mustFindRepository() string {
+	start, exitCode := getStartingDirectory()
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
+
+	repoRoot, err := config.FindRepository(start)
+	if err != nil {
+		exitWithError(ExitConfigError, "%v", err)
+	}
+	return repoRoot
+}
+
+// mustOpenDatabase opens the SQLite database, exits on error.
+// The caller is responsible for calling Close() on the returned DB.
+func mustOpenDatabase(repoRoot string) *storage.DB {
+	dbPath := config.DBPath(repoRoot)
+	db, err := storage.OpenDB(dbPath)
+	if err != nil {
+		exitWithError(ExitError, "opening database: %v", err)
+	}
+	return db
+}
+
+// mustLoadConfig loads configuration, exits on error.
+func mustLoadConfig(repoRoot string) *config.Config {
+	cfg, err := config.Load(repoRoot)
+	if err != nil {
+		exitWithError(ExitConfigError, "loading config: %v", err)
+	}
+	return cfg
 }

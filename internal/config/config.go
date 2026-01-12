@@ -146,3 +146,18 @@ func ValidatePDFReader(reader string) error {
 
 	return fmt.Errorf("invalid pdf_reader: %s (valid: %v)", reader, ValidReaders)
 }
+
+// ExpandPath expands ~ to the user's home directory.
+// Returns the original path unchanged if it doesn't start with ~.
+func ExpandPath(path string) string {
+	if len(path) == 0 || path[0] != '~' {
+		return path
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return path // Return original if we can't get home directory
+	}
+
+	return filepath.Join(home, path[1:])
+}

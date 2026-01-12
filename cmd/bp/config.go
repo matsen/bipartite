@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -33,32 +31,8 @@ Keys:
 }
 
 func runConfig(cmd *cobra.Command, args []string) error {
-	root, exitCode := getRepoRoot()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-
-	// Find repository
-	repoRoot, err := config.FindRepository(root)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: err.Error()})
-		}
-		os.Exit(ExitConfigError)
-	}
-
-	// Load config
-	cfg, err := config.Load(repoRoot)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: loading config: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("loading config: %v", err)})
-		}
-		os.Exit(ExitConfigError)
-	}
+	repoRoot := mustFindRepository()
+	cfg := mustLoadConfig(repoRoot)
 
 	// No args: show all config
 	if len(args) == 0 {
@@ -94,12 +68,7 @@ func runConfig(cmd *cobra.Command, args []string) error {
 				outputJSON(map[string]string{"pdf_reader": cfg.PDFReader})
 			}
 		default:
-			if humanOutput {
-				fmt.Fprintf(os.Stderr, "error: unknown configuration key: %s\n", key)
-			} else {
-				outputJSON(ErrorResponse{Error: fmt.Sprintf("unknown configuration key: %s", key)})
-			}
-			os.Exit(ExitError)
+			exitWithError(ExitError, "unknown configuration key: %s", key)
 		}
 		return nil
 	}
@@ -109,54 +78,27 @@ func runConfig(cmd *cobra.Command, args []string) error {
 
 	switch normalizedKey {
 	case "pdf-root":
-		// Expand ~ to home directory
-		expandedValue := value
-		if strings.HasPrefix(value, "~") {
-			home, err := os.UserHomeDir()
-			if err == nil {
-				expandedValue = filepath.Join(home, value[1:])
-			}
-		}
+		// Expand ~ to home directory and validate
+		expandedValue := config.ExpandPath(value)
 
-		// Validate path exists
 		if err := config.ValidatePDFRoot(expandedValue); err != nil {
-			if humanOutput {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			} else {
-				outputJSON(ErrorResponse{Error: err.Error()})
-			}
-			os.Exit(ExitConfigError)
+			exitWithError(ExitConfigError, "%v", err)
 		}
 		cfg.PDFRoot = expandedValue
 
 	case "pdf-reader":
 		if err := config.ValidatePDFReader(value); err != nil {
-			if humanOutput {
-				fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			} else {
-				outputJSON(ErrorResponse{Error: err.Error()})
-			}
-			os.Exit(ExitError)
+			exitWithError(ExitError, "%v", err)
 		}
 		cfg.PDFReader = value
 
 	default:
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: unknown configuration key: %s\n", key)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("unknown configuration key: %s", key)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "unknown configuration key: %s", key)
 	}
 
 	// Save config
 	if err := cfg.Save(repoRoot); err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: saving config: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("saving config: %v", err)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "saving config: %v", err)
 	}
 
 	// Output success

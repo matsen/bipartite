@@ -264,9 +264,9 @@ func TestFindByDOI(t *testing.T) {
 	}
 
 	tests := []struct {
-		doi      string
-		wantIdx  int
-		wantOK   bool
+		doi     string
+		wantIdx int
+		wantOK  bool
 	}{
 		{"10.1234/a", 0, true},
 		{"10.1234/b", 1, true},
@@ -292,9 +292,9 @@ func TestFindByID(t *testing.T) {
 	}
 
 	tests := []struct {
-		id       string
-		wantIdx  int
-		wantOK   bool
+		id      string
+		wantIdx int
+		wantOK  bool
 	}{
 		{"Smith2026", 0, true},
 		{"Jones2025", 1, true},

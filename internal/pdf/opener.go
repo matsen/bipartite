@@ -49,7 +49,16 @@ func (o *Opener) ResolvePath(relativePath string) (string, error) {
 }
 
 // Open opens a PDF file using the configured reader.
+// The fullPath should be an absolute path to an existing PDF file.
 func (o *Opener) Open(fullPath string) error {
+	// Fail fast if file doesn't exist
+	if _, err := os.Stat(fullPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("PDF file does not exist: %s", fullPath)
+		}
+		return fmt.Errorf("checking PDF file: %w", err)
+	}
+
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {

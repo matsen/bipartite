@@ -15,6 +15,12 @@ type DB struct {
 	db *sql.DB
 }
 
+// selectRefFields contains the standard field list for SELECT queries.
+const selectRefFields = `id, doi, title, abstract, venue,
+	pub_year, pub_month, pub_day,
+	pdf_path, source_type, source_id, supersedes,
+	authors_json, supplement_paths_json`
+
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
 	db, err := sql.Open("sqlite", path)
@@ -161,14 +167,7 @@ func formatAuthorsText(authors []reference.Author) string {
 
 // GetByID retrieves a reference by its ID.
 func (d *DB) GetByID(id string) (*Reference, error) {
-	row := d.db.QueryRow(`
-		SELECT id, doi, title, abstract, venue,
-			pub_year, pub_month, pub_day,
-			pdf_path, source_type, source_id, supersedes,
-			authors_json, supplement_paths_json
-		FROM refs WHERE id = ?
-	`, id)
-
+	row := d.db.QueryRow(`SELECT `+selectRefFields+` FROM refs WHERE id = ?`, id)
 	return scanReference(row)
 }
 
@@ -184,8 +183,7 @@ func (d *DB) Search(query string, limit int) ([]Reference, error) {
 			r.authors_json, r.supplement_paths_json
 		FROM refs r
 		WHERE r.id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
-		LIMIT ?
-	`, ftsQuery, limit)
+		LIMIT ?`, ftsQuery, limit)
 	if err != nil {
 		return nil, fmt.Errorf("searching: %w", err)
 	}
@@ -226,29 +224,12 @@ func (d *DB) SearchField(field, value string, limit int) ([]Reference, error) {
 
 // ListAll returns all references, optionally limited.
 func (d *DB) ListAll(limit int) ([]Reference, error) {
-	var query string
+	query := `SELECT ` + selectRefFields + ` FROM refs ORDER BY id`
 	var args []interface{}
 
 	if limit > 0 {
-		query = `
-			SELECT id, doi, title, abstract, venue,
-				pub_year, pub_month, pub_day,
-				pdf_path, source_type, source_id, supersedes,
-				authors_json, supplement_paths_json
-			FROM refs
-			ORDER BY id
-			LIMIT ?
-		`
+		query += " LIMIT ?"
 		args = []interface{}{limit}
-	} else {
-		query = `
-			SELECT id, doi, title, abstract, venue,
-				pub_year, pub_month, pub_day,
-				pdf_path, source_type, source_id, supersedes,
-				authors_json, supplement_paths_json
-			FROM refs
-			ORDER BY id
-		`
 	}
 
 	rows, err := d.db.Query(query, args...)
@@ -308,10 +289,14 @@ func scanReference(s scanner) (*Reference, error) {
 
 	// Parse JSON fields
 	if authorsJSON.Valid {
-		json.Unmarshal([]byte(authorsJSON.String), &ref.Authors)
+		if err := json.Unmarshal([]byte(authorsJSON.String), &ref.Authors); err != nil {
+			return nil, fmt.Errorf("parsing authors JSON for %s: %w", ref.ID, err)
+		}
 	}
 	if supplementJSON.Valid && supplementJSON.String != "" {
-		json.Unmarshal([]byte(supplementJSON.String), &ref.SupplementPaths)
+		if err := json.Unmarshal([]byte(supplementJSON.String), &ref.SupplementPaths); err != nil {
+			return nil, fmt.Errorf("parsing supplement paths JSON for %s: %w", ref.ID, err)
+		}
 	}
 
 	return &ref, nil

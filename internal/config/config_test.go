@@ -229,7 +229,7 @@ func TestValidatePDFReader(t *testing.T) {
 		reader  string
 		wantErr bool
 	}{
-		{"", false},        // Empty defaults to system
+		{"", false}, // Empty defaults to system
 		{"system", false},
 		{"skim", false},
 		{"zathura", false},

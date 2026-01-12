@@ -225,10 +225,10 @@ func TestDB_Search(t *testing.T) {
 	defer cleanup()
 
 	tests := []struct {
-		query    string
-		limit    int
-		wantIDs  []string
-		wantMin  int // Minimum expected results (for flexibility)
+		query   string
+		limit   int
+		wantIDs []string
+		wantMin int // Minimum expected results (for flexibility)
 	}{
 		// Title search
 		{"machine learning", 10, nil, 1},
@@ -410,8 +410,8 @@ func TestPrepareFTSQuery(t *testing.T) {
 	}{
 		{"simple", "simple"},
 		{"two words", "two words"},
-		{"  spaces  ", "spaces"},        // Trimmed
-		{"", ""},                         // Empty stays empty
+		{"  spaces  ", "spaces"},               // Trimmed
+		{"", ""},                               // Empty stays empty
 		{`with "quotes"`, `"with ""quotes"""`}, // Quotes escaped
 		{"special*chars", `"special*chars"`},   // Special chars quoted
 		{"term:colon", `"term:colon"`},         // Colon quoted

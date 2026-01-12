@@ -38,43 +38,14 @@ type CheckIssue struct {
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
-	root, exitCode := getRepoRoot()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-
-	// Find repository
-	repoRoot, err := config.FindRepository(root)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: err.Error()})
-		}
-		os.Exit(ExitConfigError)
-	}
-
-	// Load config
-	cfg, err := config.Load(repoRoot)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: loading config: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("loading config: %v", err)})
-		}
-		os.Exit(ExitConfigError)
-	}
+	repoRoot := mustFindRepository()
+	cfg := mustLoadConfig(repoRoot)
 
 	// Read all references from JSONL (source of truth)
 	refsPath := config.RefsPath(repoRoot)
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: reading refs: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("reading refs: %v", err)})
-		}
-		os.Exit(ExitDataError)
+		exitWithError(ExitDataError, "reading refs: %v", err)
 	}
 
 	var issues []CheckIssue
@@ -98,7 +69,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 
 	// Check for missing PDFs (only if pdf_root is configured)
 	if cfg.PDFRoot != "" {
-		pdfRoot := expandPath(cfg.PDFRoot)
+		pdfRoot := config.ExpandPath(cfg.PDFRoot)
 		for _, ref := range refs {
 			if ref.PDFPath != "" {
 				fullPath := filepath.Join(pdfRoot, ref.PDFPath)
@@ -151,28 +122,4 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// formatIDList formats a list of IDs as a comma-separated string.
-func formatIDList(ids []string) string {
-	if len(ids) == 0 {
-		return ""
-	}
-	result := ids[0]
-	for i := 1; i < len(ids); i++ {
-		result += ", " + ids[i]
-	}
-	return result
-}
-
-// expandPath expands ~ to the user's home directory.
-func expandPath(path string) string {
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[1:])
-	}
-	return path
 }

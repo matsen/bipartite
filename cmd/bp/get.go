@@ -2,10 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -26,53 +24,18 @@ Example:
 }
 
 func runGet(cmd *cobra.Command, args []string) error {
-	root, exitCode := getRepoRoot()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-
-	// Find repository
-	repoRoot, err := config.FindRepository(root)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: err.Error()})
-		}
-		os.Exit(ExitConfigError)
-	}
-
-	// Open database
-	dbPath := config.DBPath(repoRoot)
-	db, err := storage.OpenDB(dbPath)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: opening database: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("opening database: %v", err)})
-		}
-		os.Exit(ExitError)
-	}
+	repoRoot := mustFindRepository()
+	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
 	id := args[0]
 	ref, err := db.GetByID(id)
 	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: getting reference: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("getting reference: %v", err)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "getting reference: %v", err)
 	}
 
 	if ref == nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: reference not found: %s\n", id)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("reference not found: %s", id)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "reference not found: %s", id)
 	}
 
 	if humanOutput {
@@ -86,10 +49,10 @@ func runGet(cmd *cobra.Command, args []string) error {
 
 func printRefDetail(ref storage.Reference) {
 	fmt.Println(ref.ID)
-	fmt.Println(strings.Repeat("═", 70))
+	fmt.Println(strings.Repeat("═", SummaryTitleLen))
 	fmt.Println()
 
-	fmt.Printf("Title:    %s\n", wrapText(ref.Title, 60, "          "))
+	fmt.Printf("Title:    %s\n", wrapText(ref.Title, TextWrapWidth, "          "))
 	fmt.Println()
 
 	// Authors
@@ -102,7 +65,7 @@ func printRefDetail(ref storage.Reference) {
 				authorNames = append(authorNames, a.Last)
 			}
 		}
-		fmt.Printf("Authors:  %s\n", wrapText(strings.Join(authorNames, ", "), 60, "          "))
+		fmt.Printf("Authors:  %s\n", wrapText(strings.Join(authorNames, ", "), TextWrapWidth, "          "))
 		fmt.Println()
 	}
 
@@ -128,7 +91,7 @@ func printRefDetail(ref storage.Reference) {
 	if ref.Abstract != "" {
 		fmt.Println()
 		fmt.Println("Abstract:")
-		fmt.Printf("  %s\n", wrapText(ref.Abstract, 68, "  "))
+		fmt.Printf("  %s\n", wrapText(ref.Abstract, DetailTextWrapWidth, "  "))
 	}
 
 	// PDF
@@ -145,30 +108,4 @@ func printRefDetail(ref storage.Reference) {
 			fmt.Printf("  [%d] %s\n", i+1, p)
 		}
 	}
-}
-
-func wrapText(text string, width int, indent string) string {
-	if len(text) <= width {
-		return text
-	}
-
-	var lines []string
-	words := strings.Fields(text)
-	currentLine := ""
-
-	for _, word := range words {
-		if currentLine == "" {
-			currentLine = word
-		} else if len(currentLine)+1+len(word) <= width {
-			currentLine += " " + word
-		} else {
-			lines = append(lines, currentLine)
-			currentLine = word
-		}
-	}
-	if currentLine != "" {
-		lines = append(lines, currentLine)
-	}
-
-	return strings.Join(lines, "\n"+indent)
 }

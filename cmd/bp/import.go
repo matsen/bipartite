@@ -62,56 +62,28 @@ type ImportDetail struct {
 }
 
 func runImport(cmd *cobra.Command, args []string) error {
-	root, exitCode := getRepoRoot()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
-
-	// Find repository
-	repoRoot, err := config.FindRepository(root)
-	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: err.Error()})
-		}
-		os.Exit(ExitConfigError)
-	}
+	repoRoot := mustFindRepository()
 
 	// Validate format
 	if importFormat != "paperpile" {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: unknown format: %s\n", importFormat)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("unknown format: %s", importFormat)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "unknown format: %s", importFormat)
 	}
 
 	// Read input file
 	inputPath := args[0]
 	data, err := os.ReadFile(inputPath)
 	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: reading file: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("reading file: %v", err)})
-		}
-		os.Exit(ExitError)
+		exitWithError(ExitError, "reading file: %v", err)
 	}
 
 	// Parse references
 	newRefs, parseErrors := importer.ParsePaperpile(data)
 	if len(parseErrors) > 0 && len(newRefs) == 0 {
 		// Only fatal if no refs were parsed
-		errMsgs := make([]string, len(parseErrors))
-		for i, e := range parseErrors {
-			errMsgs[i] = e.Error()
-		}
 		if humanOutput {
 			fmt.Fprintf(os.Stderr, "error: failed to parse any references\n")
-			for _, e := range errMsgs {
-				fmt.Fprintf(os.Stderr, "  - %s\n", e)
+			for _, e := range parseErrors {
+				fmt.Fprintf(os.Stderr, "  - %s\n", e.Error())
 			}
 		} else {
 			outputJSON(ErrorResponse{Error: "failed to parse any references"})
@@ -119,43 +91,37 @@ func runImport(cmd *cobra.Command, args []string) error {
 		os.Exit(ExitDataError)
 	}
 
-	// Load existing references
+	// Load existing references (persisted in repository)
 	refsPath := config.RefsPath(repoRoot)
-	existingRefs, err := storage.ReadAll(refsPath)
+	persistedRefs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: reading existing refs: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("reading existing refs: %v", err)})
-		}
-		os.Exit(ExitDataError)
+		exitWithError(ExitDataError, "reading existing refs: %v", err)
 	}
 
-	// Process imports
-	// Track all refs (existing + newly assigned) to avoid duplicates by ID and DOI
-	allRefs := make([]storage.Reference, len(existingRefs))
-	copy(allRefs, existingRefs)
+	// Build a working set that includes in-progress imports for deduplication.
+	// This set starts with persisted refs and grows as we process imports.
+	dedupeCheckRefs := make([]storage.Reference, len(persistedRefs))
+	copy(dedupeCheckRefs, persistedRefs)
 
 	var imported, updated, skipped int
 	var details []ImportDetail
 	var resultRefs []storage.RefWithAction
 
 	for _, newRef := range newRefs {
-		// Use allRefs to check DOI matches against both existing and newly imported refs
-		action := classifyImport(allRefs, newRef)
+		// Use dedupeCheckRefs to check DOI matches against both existing and newly imported refs
+		action := classifyImport(dedupeCheckRefs, newRef)
 
 		switch action.action {
 		case "import":
 			// Check for ID collision and generate unique ID if needed
-			// Use allRefs which includes both existing refs and already-imported ones
-			newRef.ID = storage.GenerateUniqueID(allRefs, newRef.ID)
+			newRef.ID = storage.GenerateUniqueID(dedupeCheckRefs, newRef.ID)
 			resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "import"})
-			// Add to allRefs so subsequent imports see this ID and DOI as taken
-			allRefs = append(allRefs, newRef)
+			// Add to dedupeCheckRefs so subsequent imports see this ID and DOI as taken
+			dedupeCheckRefs = append(dedupeCheckRefs, newRef)
 			imported++
 		case "update":
 			// For updates, determine if it's updating an existing ref or one from this batch
-			if action.existingIdx < len(existingRefs) {
+			if action.existingIdx < len(persistedRefs) {
 				// Updating an existing reference in the repo
 				resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "update", ExistingIdx: action.existingIdx})
 				updated++
@@ -172,7 +138,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 		details = append(details, ImportDetail{
 			ID:     newRef.ID,
 			Action: action.action,
-			Title:  truncateString(newRef.Title, 60),
+			Title:  truncateString(newRef.Title, TitleTruncateLen),
 			Reason: action.reason,
 		})
 	}
@@ -209,13 +175,8 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Actually perform the import
-	if err := applyImports(refsPath, existingRefs, resultRefs); err != nil {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: writing refs: %v\n", err)
-		} else {
-			outputJSON(ErrorResponse{Error: fmt.Sprintf("writing refs: %v", err)})
-		}
-		os.Exit(ExitError)
+	if err := applyImports(refsPath, persistedRefs, resultRefs); err != nil {
+		exitWithError(ExitError, "writing refs: %v", err)
 	}
 
 	// Output results
@@ -286,11 +247,4 @@ func applyImports(path string, existing []storage.Reference, actions []storage.R
 	}
 
 	return storage.WriteAll(path, newRefs)
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
