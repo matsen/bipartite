@@ -70,9 +70,13 @@ bp open <id>                     # Open PDF from linked folder
 bp export --bibtex               # Export to BibTeX
 bp export --bibtex --keys a,b,c  # Export specific papers
 
+# Metadata editing
+bp supersedes <id> <doi>         # Mark paper as superseding another (e.g., published replaces preprint)
+
 # Maintenance
 bp rebuild                       # Rebuild ephemeral DB from JSONL
 bp check                         # Verify integrity
+bp groom                         # Find duplicates, problems; suggest/apply fixes
 ```
 
 ## Architecture
@@ -97,22 +101,69 @@ Reference-manager-agnostic format. The schema is bipartite's own - importers tra
 ```
 
 Key fields:
-- `id`: Citekey, used as primary identifier (e.g., `Ahn2026-rs`)
-- `doi`: DOI if available (for deduplication, ASTA lookup)
+- `id`: Internal identifier, defaults to source's citekey (e.g., `Ahn2026-rs` from Paperpile)
+- `doi`: DOI if available (**primary key for deduplication** across re-imports)
+
+### Import Deduplication Logic
+
+1. **DOI match**: If incoming paper's DOI matches existing entry → update metadata, keep existing `id`
+2. **New paper, no ID collision**: Create entry using source's citekey as `id`
+3. **New paper, ID collision**: Verify papers are different (DOIs don't match), then create with modified `id` (e.g., `Ahn2026-rs-2`)
+
+This means `id` is stable once assigned. Re-imports update metadata but don't change identifiers. One import source at a time.
+
+### Grooming
+
+`bp groom` performs deeper analysis that would slow down regular imports:
+
+- **Duplicate detection**: Papers with same title/authors but different IDs (no DOI to match on)
+- **Missing PDFs**: Entries where `pdf_path` doesn't resolve to a file
+- **Preprint→published**: Suggest `supersedes` relationships (title matching, author overlap)
+- **Metadata quality**: Missing abstracts, malformed dates, etc.
+
+Interactive by default; `--fix` to auto-apply safe fixes, `--json` for agent consumption.
 - `title`, `authors`, `abstract`: Core metadata
 - `published`: Structured date
 - `venue`: Journal/preprint server
-- `pdf_path`: Relative path to PDF (combined with configured root)
+- `pdf_path`: Relative path to main PDF (combined with configured root)
+- `supplement_paths`: Optional array of relative paths to supplementary PDFs
+
+### Paperpile Attachment Structure
+
+Paperpile exports attachments in an `attachments` array per paper:
+
+```json
+"attachments": [
+  {
+    "_id": "...",
+    "article_pdf": 1,           // 1 = main PDF, 0 = supplement
+    "filename": "All Papers/M/Matsen et al. 2025 - A sitewise model....pdf",
+    "filesize": 1780084,
+    ...
+  },
+  {
+    "_id": "...",
+    "article_pdf": 0,           // This is a supplement
+    "filename": "All Papers/M/Matsen et al. 2025 - msaf186_supplementary_data.pdf",
+    ...
+  }
+]
+```
+
+The importer maps:
+- Attachment with `article_pdf: 1` → `pdf_path`
+- Attachments with `article_pdf: 0` → `supplement_paths`
+- `supersedes`: DOI of paper this one replaces (e.g., preprint → published)
 - `source`: Origin info for re-import matching
   - `type`: Reference manager (`paperpile`, `zotero`, `mendeley`, `manual`, `asta`)
-  - `id`: Manager-specific ID for matching on re-import
+  - `id`: Manager-specific ID (note: Paperpile may change this on re-import)
 
 ### Data Flow
 
-1. **Write path**: `bp add` → append to JSONL → rebuild DB index
+1. **Write path**: `bp import` → append to JSONL → rebuild DB index
 2. **Read path**: Query DB (fast) → return structured JSON
 3. **Sync path**: `git pull` → `bp rebuild` → fresh DB from merged JSONL
-4. **Import merge**: Match by `source.id` or `doi` → update/skip/add
+4. **Import merge**: Match by `doi` (primary) → replace existing entry with new data
 5. **Conflict resolution**: Agents merge JSONL conflicts intelligently
 
 ### PDF Access (Key Design Goal)
@@ -199,6 +250,7 @@ Connect to the broader academic graph:
 - Find related papers (citations, references)
 - Discover literature beyond your collection
 - Enrich local graph with external data
+- Auto-detect preprint→published relationships (populate `supersedes` field)
 
 Note: Direct DOI fetching from publishers is blocked (403s). ASTA provides an API that works.
 
@@ -239,6 +291,36 @@ Track how papers are discovered (inspired by beads' "discovered-from" dependency
 - Tests validate actual behavior, not fake implementations
 - No skipped tests or placeholders
 - Compatibility tests against real data
+
+### Agentic TDD
+
+Tests are written and run by agents in a fully autonomous loop:
+
+```
+1. Spec defines behavior
+2. Agent writes failing test with real fixture data
+3. Agent writes minimal implementation to pass
+4. Agent runs tests, iterates until green
+5. Agent moves to next spec item
+6. Human reviews at PR/checkpoint level
+```
+
+**Test fixtures**: Real entries extracted from Paperpile export (`_ignore/` folder, not committed), covering edge cases:
+- Papers with/without DOI
+- Single and multiple attachments (supplements)
+- Preprints and published versions
+- Various venues (journals, bioRxiv, conferences)
+- Missing fields (no abstract, partial dates)
+
+**Phase I test scope**:
+- Import parsing (Paperpile JSON → internal schema)
+- Deduplication logic (DOI match, ID collision, suffix generation)
+- JSONL serialization round-trip
+- DB rebuild from JSONL
+- Search and query operations
+- BibTeX export format
+- PDF path resolution
+- CLI commands (integration tests with temp directories)
 
 ### Simplicity
 
@@ -286,27 +368,37 @@ bp import --format paperpile --dry-run export.json  # Shows what would be import
 bp import --format paperpile export.json            # Orchestrated via beads for large imports
 
 # Re-import after adding papers
-# (idempotent - matches by source.id/doi, updates changed, adds new)
+# (idempotent - matches by doi, replaces existing entries, adds new)
 bp import --format paperpile export-updated.json
 ```
 
 ### Collaborative Research Group
 
 ```bash
-# Researcher A adds papers
-bp add 10.1234/paperA
-git commit -m "Add paper on phylogenetics"
+# Researcher A adds papers via their reference manager, then imports
+bp import --format paperpile researcher-a-export.json
+git commit -m "Add papers on phylogenetics"
 git push
 
-# Researcher B adds papers
-bp add 10.1234/paperB
-git commit -m "Add paper on ML"
+# Researcher B does the same
+bp import --format paperpile researcher-b-export.json
+git commit -m "Add papers on ML"
 git push
 
 # Merge
 git pull  # JSONL merges cleanly (append-only)
 bp rebuild  # Refresh local DB
 ```
+
+## Development Approach
+
+Bipartite will be built using the tools it's designed for:
+
+- **Beads orchestration**: Use beads to manage the agentic development loop
+- **Agent-written code**: Agents write the implementation, humans review and guide
+- **Dogfooding**: As soon as basic import works, use bipartite to manage literature for the project itself
+
+This is both practical (agents are good at this) and validating (if the CLI is awkward for agents to use during development, fix it).
 
 ## Technology Decisions
 
