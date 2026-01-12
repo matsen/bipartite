@@ -1,8 +1,6 @@
 # Private data (not for commit)
 _ignore/
-
-# Ephemeral cache
-.bipartite/cache/
+.bipartite/
 
 # Go build artifacts
 /bp
