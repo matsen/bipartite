@@ -26,4 +26,10 @@ Go 1.21+ (latest stable): Follow standard conventions
 - 001-core-reference-manager: Added Go 1.21+ (latest stable)
 
 <!-- MANUAL ADDITIONS START -->
+
+## Session Management
+
+- **Continuation prompts**: Save to `_ignore/CONTINUE.md`, never commit
+- The `_ignore/` directory is gitignored for local-only files
+
 <!-- MANUAL ADDITIONS END -->
