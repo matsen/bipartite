@@ -424,7 +424,7 @@ Specific tools to be determined during implementation. The constraints that matt
 - **Options**: To be researched (could be a dedicated graph DB, or graph-on-relational)
 
 ### General
-- **Language**: Should support fast CLI startup, good JSON handling
+- **Language**: **Go** - chosen for fast CLI startup, simple concurrency, single-binary deployment, excellent standard library for JSON/HTTP, and high-quality agent-generated code (simpler language = fewer agent mistakes)
 - **Parser libraries**: BibTeX generation for export (import is JSON, trivial to parse)
 - **Principle**: Prefer embeddable over client-server architectures
 

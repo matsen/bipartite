@@ -1,2 +1,3 @@
 # bipartite
-Connections between our research and the outside world
+
+Connecting research programs and the outside world
