@@ -1,0 +1,358 @@
+package storage
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/matsen/bipartite/internal/reference"
+	_ "modernc.org/sqlite"
+)
+
+// DB wraps a SQLite database connection.
+type DB struct {
+	db *sql.DB
+}
+
+// OpenDB opens or creates a SQLite database at the given path.
+func OpenDB(path string) (*DB, error) {
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, fmt.Errorf("opening database: %w", err)
+	}
+
+	// Set pragmas for better performance
+	db.SetMaxOpenConns(1) // SQLite doesn't support concurrent writes
+
+	// Create schema if needed
+	if err := createSchema(db); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("creating schema: %w", err)
+	}
+
+	return &DB{db: db}, nil
+}
+
+// Close closes the database connection.
+func (d *DB) Close() error {
+	return d.db.Close()
+}
+
+// createSchema creates the database schema if it doesn't exist.
+func createSchema(db *sql.DB) error {
+	schema := `
+		-- Main references table
+		CREATE TABLE IF NOT EXISTS refs (
+			id TEXT PRIMARY KEY,
+			doi TEXT,
+			title TEXT NOT NULL,
+			abstract TEXT,
+			venue TEXT,
+			pub_year INTEGER NOT NULL,
+			pub_month INTEGER,
+			pub_day INTEGER,
+			pdf_path TEXT,
+			source_type TEXT NOT NULL,
+			source_id TEXT,
+			supersedes TEXT,
+			authors_json TEXT NOT NULL,
+			supplement_paths_json TEXT
+		);
+
+		-- Index for DOI lookups
+		CREATE INDEX IF NOT EXISTS idx_refs_doi ON refs(doi) WHERE doi IS NOT NULL AND doi != '';
+
+		-- Full-text search virtual table (standalone, not external content)
+		CREATE VIRTUAL TABLE IF NOT EXISTS refs_fts USING fts5(
+			id,
+			title,
+			abstract,
+			authors_text
+		);
+	`
+
+	_, err := db.Exec(schema)
+	return err
+}
+
+// RebuildFromJSONL clears the database and rebuilds it from a JSONL file.
+func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
+	// Read all references from JSONL
+	refs, err := ReadAll(jsonlPath)
+	if err != nil {
+		return 0, fmt.Errorf("reading JSONL: %w", err)
+	}
+
+	// Clear existing data
+	if _, err := d.db.Exec("DELETE FROM refs"); err != nil {
+		return 0, fmt.Errorf("clearing refs table: %w", err)
+	}
+	if _, err := d.db.Exec("DELETE FROM refs_fts"); err != nil {
+		return 0, fmt.Errorf("clearing refs_fts table: %w", err)
+	}
+
+	// Prepare statements
+	refsStmt, err := d.db.Prepare(`
+		INSERT INTO refs (
+			id, doi, title, abstract, venue,
+			pub_year, pub_month, pub_day,
+			pdf_path, source_type, source_id, supersedes,
+			authors_json, supplement_paths_json
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("preparing refs insert: %w", err)
+	}
+	defer refsStmt.Close()
+
+	ftsStmt, err := d.db.Prepare(`
+		INSERT INTO refs_fts (id, title, abstract, authors_text)
+		VALUES (?, ?, ?, ?)
+	`)
+	if err != nil {
+		return 0, fmt.Errorf("preparing fts insert: %w", err)
+	}
+	defer ftsStmt.Close()
+
+	for _, ref := range refs {
+		authorsJSON, _ := json.Marshal(ref.Authors)
+		var supplementJSON []byte
+		if len(ref.SupplementPaths) > 0 {
+			supplementJSON, _ = json.Marshal(ref.SupplementPaths)
+		}
+
+		// Insert into refs table
+		_, err := refsStmt.Exec(
+			ref.ID, ref.DOI, ref.Title, ref.Abstract, ref.Venue,
+			ref.Published.Year, ref.Published.Month, ref.Published.Day,
+			ref.PDFPath, ref.Source.Type, ref.Source.ID, ref.Supersedes,
+			string(authorsJSON), nullableString(supplementJSON),
+		)
+		if err != nil {
+			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
+		}
+
+		// Build authors text for FTS
+		authorsText := formatAuthorsText(ref.Authors)
+
+		// Insert into FTS table
+		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText)
+		if err != nil {
+			return 0, fmt.Errorf("inserting fts for %s: %w", ref.ID, err)
+		}
+	}
+
+	return len(refs), nil
+}
+
+// formatAuthorsText creates a searchable text representation of authors.
+func formatAuthorsText(authors []reference.Author) string {
+	var names []string
+	for _, a := range authors {
+		if a.First != "" {
+			names = append(names, a.First+" "+a.Last)
+		} else {
+			names = append(names, a.Last)
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+// GetByID retrieves a reference by its ID.
+func (d *DB) GetByID(id string) (*Reference, error) {
+	row := d.db.QueryRow(`
+		SELECT id, doi, title, abstract, venue,
+			pub_year, pub_month, pub_day,
+			pdf_path, source_type, source_id, supersedes,
+			authors_json, supplement_paths_json
+		FROM refs WHERE id = ?
+	`, id)
+
+	return scanReference(row)
+}
+
+// Search performs a full-text search and returns matching references.
+func (d *DB) Search(query string, limit int) ([]Reference, error) {
+	// Escape special FTS5 characters and prepare query
+	ftsQuery := prepareFTSQuery(query)
+
+	rows, err := d.db.Query(`
+		SELECT r.id, r.doi, r.title, r.abstract, r.venue,
+			r.pub_year, r.pub_month, r.pub_day,
+			r.pdf_path, r.source_type, r.source_id, r.supersedes,
+			r.authors_json, r.supplement_paths_json
+		FROM refs r
+		WHERE r.id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
+		LIMIT ?
+	`, ftsQuery, limit)
+	if err != nil {
+		return nil, fmt.Errorf("searching: %w", err)
+	}
+	defer rows.Close()
+
+	return scanReferences(rows)
+}
+
+// SearchField performs a search on a specific field.
+func (d *DB) SearchField(field, value string, limit int) ([]Reference, error) {
+	var ftsQuery string
+
+	switch field {
+	case "author":
+		ftsQuery = "authors_text:" + prepareFTSQuery(value)
+	case "title":
+		ftsQuery = "title:" + prepareFTSQuery(value)
+	default:
+		return nil, fmt.Errorf("unknown search field: %s", field)
+	}
+
+	rows, err := d.db.Query(`
+		SELECT r.id, r.doi, r.title, r.abstract, r.venue,
+			r.pub_year, r.pub_month, r.pub_day,
+			r.pdf_path, r.source_type, r.source_id, r.supersedes,
+			r.authors_json, r.supplement_paths_json
+		FROM refs r
+		WHERE r.id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
+		LIMIT ?
+	`, ftsQuery, limit)
+	if err != nil {
+		return nil, fmt.Errorf("searching %s: %w", field, err)
+	}
+	defer rows.Close()
+
+	return scanReferences(rows)
+}
+
+// ListAll returns all references, optionally limited.
+func (d *DB) ListAll(limit int) ([]Reference, error) {
+	var query string
+	var args []interface{}
+
+	if limit > 0 {
+		query = `
+			SELECT id, doi, title, abstract, venue,
+				pub_year, pub_month, pub_day,
+				pdf_path, source_type, source_id, supersedes,
+				authors_json, supplement_paths_json
+			FROM refs
+			ORDER BY id
+			LIMIT ?
+		`
+		args = []interface{}{limit}
+	} else {
+		query = `
+			SELECT id, doi, title, abstract, venue,
+				pub_year, pub_month, pub_day,
+				pdf_path, source_type, source_id, supersedes,
+				authors_json, supplement_paths_json
+			FROM refs
+			ORDER BY id
+		`
+	}
+
+	rows, err := d.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listing refs: %w", err)
+	}
+	defer rows.Close()
+
+	return scanReferences(rows)
+}
+
+// Count returns the total number of references.
+func (d *DB) Count() (int, error) {
+	var count int
+	err := d.db.QueryRow("SELECT COUNT(*) FROM refs").Scan(&count)
+	return count, err
+}
+
+// scanner interface for sql.Row and sql.Rows
+type scanner interface {
+	Scan(dest ...interface{}) error
+}
+
+func scanReference(s scanner) (*Reference, error) {
+	var ref Reference
+	var authorsJSON, supplementJSON sql.NullString
+	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
+	var pubMonth, pubDay sql.NullInt64
+
+	err := s.Scan(
+		&ref.ID, &doi, &ref.Title, &abstract, &venue,
+		&ref.Published.Year, &pubMonth, &pubDay,
+		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
+		&authorsJSON, &supplementJSON,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	// Handle nullable fields
+	ref.DOI = doi.String
+	ref.Abstract = abstract.String
+	ref.Venue = venue.String
+	ref.PDFPath = pdfPath.String
+	ref.Source.ID = sourceID.String
+	ref.Supersedes = supersedes.String
+
+	if pubMonth.Valid {
+		ref.Published.Month = int(pubMonth.Int64)
+	}
+	if pubDay.Valid {
+		ref.Published.Day = int(pubDay.Int64)
+	}
+
+	// Parse JSON fields
+	if authorsJSON.Valid {
+		json.Unmarshal([]byte(authorsJSON.String), &ref.Authors)
+	}
+	if supplementJSON.Valid && supplementJSON.String != "" {
+		json.Unmarshal([]byte(supplementJSON.String), &ref.SupplementPaths)
+	}
+
+	return &ref, nil
+}
+
+func scanReferences(rows *sql.Rows) ([]Reference, error) {
+	var refs []Reference
+	for rows.Next() {
+		ref, err := scanReference(rows)
+		if err != nil {
+			return nil, err
+		}
+		if ref != nil {
+			refs = append(refs, *ref)
+		}
+	}
+	return refs, rows.Err()
+}
+
+func nullableString(b []byte) sql.NullString {
+	if len(b) == 0 {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: string(b), Valid: true}
+}
+
+// prepareFTSQuery escapes special characters for FTS5 queries.
+func prepareFTSQuery(query string) string {
+	// For simple queries, just quote the terms
+	// FTS5 uses double quotes for phrase matching
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return query
+	}
+
+	// If query contains special chars, quote it
+	if strings.ContainsAny(query, "\"*+-:(){}[]^~") {
+		// Escape internal quotes and wrap in quotes
+		query = strings.ReplaceAll(query, "\"", "\"\"")
+		return "\"" + query + "\""
+	}
+
+	return query
+}
