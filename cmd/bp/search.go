@@ -80,23 +80,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 func printRefSummary(num int, ref storage.Reference) {
 	fmt.Printf("[%d] %s\n", num, ref.ID)
-	fmt.Printf("    %s\n", truncateString(ref.Title, SummaryTitleLen))
+	fmt.Printf("    %s\n", truncateString(ref.Title, SearchTitleMaxLen))
 
-	// Format authors
+	// Format authors (max 3, then "et al.")
 	if len(ref.Authors) > 0 {
-		var authorNames []string
-		for i, a := range ref.Authors {
-			if i >= 3 {
-				authorNames = append(authorNames, "et al.")
-				break
-			}
-			if a.First != "" {
-				authorNames = append(authorNames, a.Last+" "+string(a.First[0]))
-			} else {
-				authorNames = append(authorNames, a.Last)
-			}
-		}
-		fmt.Printf("    %s\n", strings.Join(authorNames, ", "))
+		fmt.Printf("    %s\n", formatAuthorsShort(ref.Authors, 3))
 	}
 
 	// Format venue and year

@@ -113,20 +113,14 @@ func ValidatePDFRoot(path string) error {
 	}
 
 	// Expand ~ to home directory
-	if len(path) > 0 && path[0] == '~' {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("expanding ~: %w", err)
-		}
-		path = filepath.Join(home, path[1:])
-	}
+	expandedPath := ExpandPath(path)
 
-	info, err := os.Stat(path)
+	info, err := os.Stat(expandedPath)
 	if err != nil {
-		return fmt.Errorf("path does not exist: %s", path)
+		return fmt.Errorf("path does not exist: %s", expandedPath)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", path)
+		return fmt.Errorf("path is not a directory: %s", expandedPath)
 	}
 
 	return nil

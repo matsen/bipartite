@@ -61,6 +61,13 @@ type ImportDetail struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// importStats tracks import operation counts.
+type importStats struct {
+	imported int
+	updated  int
+	skipped  int
+}
+
 func runImport(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 
@@ -69,123 +76,138 @@ func runImport(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitError, "unknown format: %s", importFormat)
 	}
 
-	// Read input file
-	inputPath := args[0]
-	data, err := os.ReadFile(inputPath)
-	if err != nil {
-		exitWithError(ExitError, "reading file: %v", err)
-	}
+	// Parse input file
+	newRefs, parseErrors := parseImportFile(args[0])
 
-	// Parse references
-	newRefs, parseErrors := importer.ParsePaperpile(data)
-	if len(parseErrors) > 0 && len(newRefs) == 0 {
-		// Only fatal if no refs were parsed
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: failed to parse any references\n")
-			for _, e := range parseErrors {
-				fmt.Fprintf(os.Stderr, "  - %s\n", e.Error())
-			}
-		} else {
-			outputJSON(ErrorResponse{Error: "failed to parse any references"})
-		}
-		os.Exit(ExitDataError)
-	}
-
-	// Load existing references (persisted in repository)
+	// Load existing references
 	refsPath := config.RefsPath(repoRoot)
 	persistedRefs, err := storage.ReadAll(refsPath)
 	if err != nil {
 		exitWithError(ExitDataError, "reading existing refs: %v", err)
 	}
 
-	// Build a working set that includes in-progress imports for deduplication.
-	// This set starts with persisted refs and grows as we process imports.
-	dedupeCheckRefs := make([]storage.Reference, len(persistedRefs))
-	copy(dedupeCheckRefs, persistedRefs)
+	// Process imports and classify each reference
+	stats, details, resultRefs := processImports(newRefs, persistedRefs)
 
-	var imported, updated, skipped int
+	// Add parse errors to skipped count
+	errStrs := errorsToStrings(parseErrors)
+	stats.skipped += len(parseErrors)
+
+	// Report results (dry-run or actual)
+	if importDryRun {
+		reportDryRun(stats, details, errStrs)
+		return nil
+	}
+
+	// Actually perform the import
+	if err := persistImports(refsPath, persistedRefs, resultRefs); err != nil {
+		exitWithError(ExitError, "writing refs: %v", err)
+	}
+
+	reportImportResults(stats, errStrs)
+	return nil
+}
+
+// parseImportFile reads and parses the import file.
+func parseImportFile(path string) ([]storage.Reference, []error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		exitWithError(ExitError, "reading file: %v", err)
+	}
+
+	newRefs, parseErrors := importer.ParsePaperpile(data)
+	if len(parseErrors) > 0 && len(newRefs) == 0 {
+		exitWithError(ExitDataError, "failed to parse any references: %v", parseErrors[0])
+	}
+
+	return newRefs, parseErrors
+}
+
+// processImports classifies each reference and builds the action list.
+func processImports(newRefs, persistedRefs []storage.Reference) (importStats, []ImportDetail, []storage.RefWithAction) {
+	// Build a working set that includes both persisted refs AND in-progress imports.
+	// This enables deduplication within a single import batch.
+	workingRefSet := make([]storage.Reference, len(persistedRefs))
+	copy(workingRefSet, persistedRefs)
+
+	var stats importStats
 	var details []ImportDetail
 	var resultRefs []storage.RefWithAction
 
 	for _, newRef := range newRefs {
-		// Use dedupeCheckRefs to check DOI matches against both existing and newly imported refs
-		action := classifyImport(dedupeCheckRefs, newRef)
+		action := classifyImport(workingRefSet, newRef)
 
 		switch action.action {
 		case "import":
-			// Check for ID collision and generate unique ID if needed
-			newRef.ID = storage.GenerateUniqueID(dedupeCheckRefs, newRef.ID)
+			newRef.ID = storage.GenerateUniqueID(workingRefSet, newRef.ID)
 			resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "import"})
-			// Add to dedupeCheckRefs so subsequent imports see this ID and DOI as taken
-			dedupeCheckRefs = append(dedupeCheckRefs, newRef)
-			imported++
+			workingRefSet = append(workingRefSet, newRef)
+			stats.imported++
 		case "update":
-			// For updates, determine if it's updating an existing ref or one from this batch
 			if action.existingIdx < len(persistedRefs) {
-				// Updating an existing reference in the repo
 				resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "update", ExistingIdx: action.existingIdx})
-				updated++
+				stats.updated++
 			} else {
-				// DOI match against a ref already imported in this batch - skip as duplicate
-				skipped++
+				// DOI match within batch - skip as duplicate
+				stats.skipped++
 				action.action = "skip"
 				action.reason = "duplicate_in_batch"
 			}
 		case "skip":
-			skipped++
+			stats.skipped++
 		}
 
 		details = append(details, ImportDetail{
 			ID:     newRef.ID,
 			Action: action.action,
-			Title:  truncateString(newRef.Title, TitleTruncateLen),
+			Title:  truncateString(newRef.Title, ImportTitleMaxLen),
 			Reason: action.reason,
 		})
 	}
 
-	// Convert parse errors to strings
-	errStrs := make([]string, len(parseErrors))
-	for i, e := range parseErrors {
-		errStrs[i] = e.Error()
-	}
-	skipped += len(parseErrors)
+	return stats, details, resultRefs
+}
 
-	// Dry run: just report what would happen
-	if importDryRun {
-		if humanOutput {
-			fmt.Println("Dry run - would import from Paperpile export...")
-			fmt.Printf("  Would import: %d new references\n", imported)
-			fmt.Printf("  Would update: %d existing references (matched by DOI)\n", updated)
-			fmt.Printf("  Would skip:   %d (errors or duplicates)\n", skipped)
-			if len(parseErrors) > 0 {
-				fmt.Println("\nParse errors:")
-				for _, e := range errStrs {
-					fmt.Printf("  - %s\n", e)
-				}
+// errorsToStrings converts a slice of errors to strings.
+func errorsToStrings(errs []error) []string {
+	strs := make([]string, len(errs))
+	for i, e := range errs {
+		strs[i] = e.Error()
+	}
+	return strs
+}
+
+// reportDryRun outputs the dry-run results.
+func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
+	if humanOutput {
+		fmt.Println("Dry run - would import from Paperpile export...")
+		fmt.Printf("  Would import: %d new references\n", stats.imported)
+		fmt.Printf("  Would update: %d existing references (matched by DOI)\n", stats.updated)
+		fmt.Printf("  Would skip:   %d (errors or duplicates)\n", stats.skipped)
+		if len(errStrs) > 0 {
+			fmt.Println("\nParse errors:")
+			for _, e := range errStrs {
+				fmt.Printf("  - %s\n", e)
 			}
-		} else {
-			outputJSON(DryRunResult{
-				WouldImport: imported,
-				WouldUpdate: updated,
-				WouldSkip:   skipped,
-				Details:     details,
-			})
 		}
-		return nil
+	} else {
+		outputJSON(DryRunResult{
+			WouldImport: stats.imported,
+			WouldUpdate: stats.updated,
+			WouldSkip:   stats.skipped,
+			Details:     details,
+		})
 	}
+}
 
-	// Actually perform the import
-	if err := applyImports(refsPath, persistedRefs, resultRefs); err != nil {
-		exitWithError(ExitError, "writing refs: %v", err)
-	}
-
-	// Output results
+// reportImportResults outputs the actual import results.
+func reportImportResults(stats importStats, errStrs []string) {
 	if humanOutput {
 		fmt.Println("Importing from Paperpile export...")
-		fmt.Printf("  Imported: %d new references\n", imported)
-		fmt.Printf("  Updated:  %d existing references (matched by DOI)\n", updated)
-		fmt.Printf("  Skipped:  %d (errors or duplicates)\n", skipped)
-		if len(parseErrors) > 0 {
+		fmt.Printf("  Imported: %d new references\n", stats.imported)
+		fmt.Printf("  Updated:  %d existing references (matched by DOI)\n", stats.updated)
+		fmt.Printf("  Skipped:  %d (errors or duplicates)\n", stats.skipped)
+		if len(errStrs) > 0 {
 			fmt.Println("\nErrors:")
 			for _, e := range errStrs {
 				fmt.Printf("  - %s\n", e)
@@ -193,14 +215,12 @@ func runImport(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		outputJSON(ImportResult{
-			Imported: imported,
-			Updated:  updated,
-			Skipped:  skipped,
+			Imported: stats.imported,
+			Updated:  stats.updated,
+			Skipped:  stats.skipped,
 			Errors:   errStrs,
 		})
 	}
-
-	return nil
 }
 
 type importAction struct {
@@ -210,7 +230,13 @@ type importAction struct {
 }
 
 // classifyImport determines what to do with an incoming reference.
+// Panics if newRef has an empty ID, as this indicates a bug in the parser.
 func classifyImport(existing []storage.Reference, newRef storage.Reference) importAction {
+	// Fail-fast validation: every reference must have an ID
+	if newRef.ID == "" {
+		panic("classifyImport called with empty ID - parser bug")
+	}
+
 	// Check for DOI match first (primary deduplication)
 	if newRef.DOI != "" {
 		if idx, found := storage.FindByDOI(existing, newRef.DOI); found {
@@ -226,8 +252,8 @@ func classifyImport(existing []storage.Reference, newRef storage.Reference) impo
 	return importAction{action: "import"}
 }
 
-// applyImports writes the import results to the refs file.
-func applyImports(path string, existing []storage.Reference, actions []storage.RefWithAction) error {
+// persistImports writes the import results to the refs file.
+func persistImports(path string, existing []storage.Reference, actions []storage.RefWithAction) error {
 	// Build new refs list
 	newRefs := make([]storage.Reference, len(existing))
 	copy(newRefs, existing)

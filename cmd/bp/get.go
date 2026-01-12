@@ -49,7 +49,7 @@ func runGet(cmd *cobra.Command, args []string) error {
 
 func printRefDetail(ref storage.Reference) {
 	fmt.Println(ref.ID)
-	fmt.Println(strings.Repeat("═", SummaryTitleLen))
+	fmt.Println(strings.Repeat("═", DetailTitleMaxLen))
 	fmt.Println()
 
 	fmt.Printf("Title:    %s\n", wrapText(ref.Title, TextWrapWidth, "          "))
@@ -57,15 +57,7 @@ func printRefDetail(ref storage.Reference) {
 
 	// Authors
 	if len(ref.Authors) > 0 {
-		var authorNames []string
-		for _, a := range ref.Authors {
-			if a.First != "" {
-				authorNames = append(authorNames, a.First+" "+a.Last)
-			} else {
-				authorNames = append(authorNames, a.Last)
-			}
-		}
-		fmt.Printf("Authors:  %s\n", wrapText(strings.Join(authorNames, ", "), TextWrapWidth, "          "))
+		fmt.Printf("Authors:  %s\n", wrapText(formatAuthorsFull(ref.Authors), TextWrapWidth, "          "))
 		fmt.Println()
 	}
 

@@ -5,16 +5,24 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/matsen/bipartite/internal/reference"
 )
 
-// Constants for output formatting
+// Constants for output formatting.
+// Names indicate the context where each constant is used.
 const (
-	DefaultSearchLimit   = 50
-	TitleTruncateLen     = 60
-	SummaryTitleLen      = 70
-	ListTitleTruncateLen = 50
-	TextWrapWidth        = 60
-	DetailTextWrapWidth  = 68
+	DefaultSearchLimit = 50 // Default limit for search/list commands
+
+	// Title truncation lengths by context
+	ImportTitleMaxLen = 60 // Used in import command output
+	SearchTitleMaxLen = 70 // Used in search result summaries
+	ListTitleMaxLen   = 50 // Used in list command output
+	DetailTitleMaxLen = 70 // Used in get command detail view
+
+	// Text wrapping widths
+	TextWrapWidth       = 60 // Standard text wrap width
+	DetailTextWrapWidth = 68 // Wider wrap for detail views
 )
 
 // outputJSON writes a value as formatted JSON to stdout.
@@ -76,12 +84,6 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-// outputErrorJSON writes an error as JSON and returns the exit code.
-func outputErrorJSON(code int, message string) int {
-	outputJSON(ErrorResponse{Error: message})
-	return code
-}
-
 // truncateString truncates a string to maxLen, adding "..." if truncated.
 func truncateString(s string, maxLen int) string {
 	if len(s) <= maxLen {
@@ -120,4 +122,46 @@ func wrapText(text string, width int, indent string) string {
 // formatIDList formats a list of IDs as a comma-separated string.
 func formatIDList(ids []string) string {
 	return strings.Join(ids, ", ")
+}
+
+// formatAuthorFull formats an author as "First Last".
+func formatAuthorFull(a reference.Author) string {
+	if a.First != "" {
+		return a.First + " " + a.Last
+	}
+	return a.Last
+}
+
+// formatAuthorShort formats an author as "Last F" (abbreviated first name).
+func formatAuthorShort(a reference.Author) string {
+	if a.First != "" {
+		return a.Last + " " + string(a.First[0])
+	}
+	return a.Last
+}
+
+// formatAuthorsFull formats all authors as "First Last, First Last, ...".
+func formatAuthorsFull(authors []reference.Author) string {
+	names := make([]string, len(authors))
+	for i, a := range authors {
+		names[i] = formatAuthorFull(a)
+	}
+	return strings.Join(names, ", ")
+}
+
+// formatAuthorsShort formats authors with abbreviation and "et al." for more than maxCount.
+func formatAuthorsShort(authors []reference.Author, maxCount int) string {
+	if len(authors) == 0 {
+		return ""
+	}
+
+	var names []string
+	for i, a := range authors {
+		if i >= maxCount {
+			names = append(names, "et al.")
+			break
+		}
+		names = append(names, formatAuthorShort(a))
+	}
+	return strings.Join(names, ", ")
 }

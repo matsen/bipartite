@@ -48,7 +48,7 @@ func runList(cmd *cobra.Command, args []string) error {
 				fmt.Printf("%d references in repository:\n\n", len(refs))
 			}
 			for _, ref := range refs {
-				title := truncateString(ref.Title, ListTitleTruncateLen)
+				title := truncateString(ref.Title, ListTitleMaxLen)
 				fmt.Printf("  %-16s %s\n", ref.ID, title)
 			}
 		}
