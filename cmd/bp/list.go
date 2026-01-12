@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/matsen/bipartite/internal/storage"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +54,7 @@ func runList(cmd *cobra.Command, args []string) error {
 		}
 	} else {
 		if refs == nil {
-			refs = []storage.Reference{}
+			refs = []reference.Reference{}
 		}
 		outputJSON(refs)
 	}

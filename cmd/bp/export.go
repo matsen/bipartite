@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/matsen/bipartite/internal/export"
-	"github.com/matsen/bipartite/internal/storage"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +41,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
-	var refs []storage.Reference
+	var refs []reference.Reference
 	var err error
 
 	if exportKeys != "" {

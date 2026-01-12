@@ -122,14 +122,20 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 	defer ftsStmt.Close()
 
 	for _, ref := range refs {
-		authorsJSON, _ := json.Marshal(ref.Authors)
+		authorsJSON, err := json.Marshal(ref.Authors)
+		if err != nil {
+			return 0, fmt.Errorf("marshaling authors for %s: %w", ref.ID, err)
+		}
 		var supplementJSON []byte
 		if len(ref.SupplementPaths) > 0 {
-			supplementJSON, _ = json.Marshal(ref.SupplementPaths)
+			supplementJSON, err = json.Marshal(ref.SupplementPaths)
+			if err != nil {
+				return 0, fmt.Errorf("marshaling supplement paths for %s: %w", ref.ID, err)
+			}
 		}
 
 		// Insert into refs table
-		_, err := refsStmt.Exec(
+		_, err = refsStmt.Exec(
 			ref.ID, ref.DOI, ref.Title, ref.Abstract, ref.Venue,
 			ref.Published.Year, ref.Published.Month, ref.Published.Day,
 			ref.PDFPath, ref.Source.Type, ref.Source.ID, ref.Supersedes,
@@ -166,13 +172,13 @@ func formatAuthorsText(authors []reference.Author) string {
 }
 
 // GetByID retrieves a reference by its ID.
-func (d *DB) GetByID(id string) (*Reference, error) {
+func (d *DB) GetByID(id string) (*reference.Reference, error) {
 	row := d.db.QueryRow(`SELECT `+selectRefFields+` FROM refs WHERE id = ?`, id)
 	return scanReference(row)
 }
 
 // Search performs a full-text search and returns matching references.
-func (d *DB) Search(query string, limit int) ([]Reference, error) {
+func (d *DB) Search(query string, limit int) ([]reference.Reference, error) {
 	// Escape special FTS5 characters and prepare query
 	ftsQuery := prepareFTSQuery(query)
 
@@ -193,7 +199,7 @@ func (d *DB) Search(query string, limit int) ([]Reference, error) {
 }
 
 // SearchField performs a search on a specific field.
-func (d *DB) SearchField(field, value string, limit int) ([]Reference, error) {
+func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference, error) {
 	var ftsQuery string
 
 	switch field {
@@ -223,7 +229,7 @@ func (d *DB) SearchField(field, value string, limit int) ([]Reference, error) {
 }
 
 // ListAll returns all references, optionally limited.
-func (d *DB) ListAll(limit int) ([]Reference, error) {
+func (d *DB) ListAll(limit int) ([]reference.Reference, error) {
 	query := `SELECT ` + selectRefFields + ` FROM refs ORDER BY id`
 	var args []interface{}
 
@@ -253,8 +259,8 @@ type scanner interface {
 	Scan(dest ...interface{}) error
 }
 
-func scanReference(s scanner) (*Reference, error) {
-	var ref Reference
+func scanReference(s scanner) (*reference.Reference, error) {
+	var ref reference.Reference
 	var authorsJSON, supplementJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
 	var pubMonth, pubDay sql.NullInt64
@@ -302,8 +308,8 @@ func scanReference(s scanner) (*Reference, error) {
 	return &ref, nil
 }
 
-func scanReferences(rows *sql.Rows) ([]Reference, error) {
-	var refs []Reference
+func scanReferences(rows *sql.Rows) ([]reference.Reference, error) {
+	var refs []reference.Reference
 	for rows.Next() {
 		ref, err := scanReference(rows)
 		if err != nil {

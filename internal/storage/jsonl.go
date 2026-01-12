@@ -10,12 +10,9 @@ import (
 	"github.com/matsen/bipartite/internal/reference"
 )
 
-// Reference is an alias for reference.Reference for convenience.
-type Reference = reference.Reference
-
 // RefWithAction pairs a reference with an import action.
 type RefWithAction struct {
-	Ref         Reference
+	Ref         reference.Reference
 	Action      string // import, update
 	ExistingIdx int    // Index in existing refs (for updates)
 }

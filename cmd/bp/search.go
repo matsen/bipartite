@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/storage"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	defer db.Close()
 
 	query := args[0]
-	var refs []storage.Reference
+	var refs []reference.Reference
 	var err error
 
 	// Check for field-specific searches
@@ -59,7 +59,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	// Empty result is not an error
 	if refs == nil {
-		refs = []storage.Reference{}
+		refs = []reference.Reference{}
 	}
 
 	if humanOutput {
@@ -78,7 +78,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printRefSummary(num int, ref storage.Reference) {
+func printRefSummary(num int, ref reference.Reference) {
 	fmt.Printf("[%d] %s\n", num, ref.ID)
 	fmt.Printf("    %s\n", truncateString(ref.Title, SearchTitleMaxLen))
 

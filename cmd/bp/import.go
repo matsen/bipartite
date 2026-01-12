@@ -6,6 +6,7 @@ import (
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/importer"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -109,7 +110,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 }
 
 // parseImportFile reads and parses the import file.
-func parseImportFile(path string) ([]storage.Reference, []error) {
+func parseImportFile(path string) ([]reference.Reference, []error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		exitWithError(ExitError, "reading file: %v", err)
@@ -124,10 +125,10 @@ func parseImportFile(path string) ([]storage.Reference, []error) {
 }
 
 // processImports classifies each reference and builds the action list.
-func processImports(newRefs, persistedRefs []storage.Reference) (importStats, []ImportDetail, []storage.RefWithAction) {
+func processImports(newRefs, persistedRefs []reference.Reference) (importStats, []ImportDetail, []storage.RefWithAction) {
 	// Build a working set that includes both persisted refs AND in-progress imports.
 	// This enables deduplication within a single import batch.
-	workingRefSet := make([]storage.Reference, len(persistedRefs))
+	workingRefSet := make([]reference.Reference, len(persistedRefs))
 	copy(workingRefSet, persistedRefs)
 
 	var stats importStats
@@ -231,7 +232,7 @@ type importAction struct {
 
 // classifyImport determines what to do with an incoming reference.
 // Panics if newRef has an empty ID, as this indicates a bug in the parser.
-func classifyImport(existing []storage.Reference, newRef storage.Reference) importAction {
+func classifyImport(existing []reference.Reference, newRef reference.Reference) importAction {
 	// Fail-fast validation: every reference must have an ID
 	if newRef.ID == "" {
 		panic("classifyImport called with empty ID - parser bug")
@@ -253,9 +254,9 @@ func classifyImport(existing []storage.Reference, newRef storage.Reference) impo
 }
 
 // persistImports writes the import results to the refs file.
-func persistImports(path string, existing []storage.Reference, actions []storage.RefWithAction) error {
+func persistImports(path string, existing []reference.Reference, actions []storage.RefWithAction) error {
 	// Build new refs list
-	newRefs := make([]storage.Reference, len(existing))
+	newRefs := make([]reference.Reference, len(existing))
 	copy(newRefs, existing)
 
 	// Apply updates first

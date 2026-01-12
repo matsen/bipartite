@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/storage"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ func runGet(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func printRefDetail(ref storage.Reference) {
+func printRefDetail(ref reference.Reference) {
 	fmt.Println(ref.ID)
 	fmt.Println(strings.Repeat("═", DetailTitleMaxLen))
 	fmt.Println()
