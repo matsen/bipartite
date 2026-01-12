@@ -39,18 +39,18 @@ Supported formats:
 
 // ImportResult represents the result of an import operation.
 type ImportResult struct {
-	Imported int            `json:"imported"`
-	Updated  int            `json:"updated"`
-	Skipped  int            `json:"skipped"`
-	Errors   []string       `json:"errors"`
+	Imported int      `json:"imported"`
+	Updated  int      `json:"updated"`
+	Skipped  int      `json:"skipped"`
+	Errors   []string `json:"errors"`
 }
 
 // DryRunResult represents the result of a dry-run import.
 type DryRunResult struct {
-	WouldImport int             `json:"would_import"`
-	WouldUpdate int             `json:"would_update"`
-	WouldSkip   int             `json:"would_skip"`
-	Details     []ImportDetail  `json:"details,omitempty"`
+	WouldImport int            `json:"would_import"`
+	WouldUpdate int            `json:"would_update"`
+	WouldSkip   int            `json:"would_skip"`
+	Details     []ImportDetail `json:"details,omitempty"`
 }
 
 // ImportDetail describes a single import action.
