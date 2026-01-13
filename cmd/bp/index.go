@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/matsen/bipartite/internal/embedding"
@@ -51,21 +52,6 @@ Run 'ollama pull all-minilm:l6-v2' to download the model.`,
 	RunE: runIndexBuild,
 }
 
-// validateOllamaSetup checks that Ollama is running and has the required model.
-func validateOllamaSetup(ctx context.Context, provider *embedding.OllamaProvider) {
-	if err := provider.IsAvailable(ctx); err != nil {
-		exitWithError(ExitDataError, "Ollama is not running\n\nStart Ollama with 'ollama serve' or install from https://ollama.ai")
-	}
-
-	hasModel, err := provider.HasModel(ctx)
-	if err != nil {
-		exitWithError(ExitError, "checking model availability: %v", err)
-	}
-	if !hasModel {
-		exitWithError(ExitModelNotFound, "Embedding model '%s' not found\n\nRun 'ollama pull %s' to download it.", provider.ModelName(), provider.ModelName())
-	}
-}
-
 // outputBuildResults outputs the build statistics in the appropriate format.
 func outputBuildResults(provider *embedding.OllamaProvider, stats *semantic.BuildStats) {
 	if humanOutput {
@@ -92,9 +78,9 @@ func runIndexBuild(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 	repoRoot := mustFindRepository()
 
-	// Validate Ollama setup
+	// Validate Ollama setup (check both availability and model)
 	provider := embedding.NewOllamaProvider()
-	validateOllamaSetup(ctx, provider)
+	mustValidateOllama(ctx, provider, true)
 
 	// Open database and get references
 	db := mustOpenDatabase(repoRoot)
@@ -131,7 +117,7 @@ func runIndexBuild(cmd *cobra.Command, args []string) error {
 
 	// Clear progress line if we were showing progress
 	if humanOutput && !noProgress {
-		fmt.Fprintf(os.Stderr, "\r%s\r", "                                                  ")
+		fmt.Fprintf(os.Stderr, "\r%*s\r", progressLineClearWidth, "")
 	}
 
 	outputBuildResults(provider, stats)
@@ -159,8 +145,9 @@ var indexCheckCmd = &cobra.Command{
 	RunE:  runIndexCheck,
 }
 
-// findMissingPapers returns IDs of papers with abstracts that are not in the index.
-func findMissingPapers(db *storage.DB, idx *semantic.SemanticIndex) ([]string, error) {
+// findUnindexedPapersWithAbstracts returns IDs of papers that have abstracts
+// meeting the minimum length requirement but are not yet in the semantic index.
+func findUnindexedPapersWithAbstracts(db *storage.DB, idx *semantic.SemanticIndex) ([]string, error) {
 	paperIDs, err := db.ListPaperIDsWithAbstract(semantic.MinAbstractLength)
 	if err != nil {
 		return nil, fmt.Errorf("listing paper IDs: %w", err)
@@ -221,8 +208,8 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitError, "counting abstracts: %v", err)
 	}
 
-	// Find missing papers
-	missingIDs, err := findMissingPapers(db, idx)
+	// Find papers with abstracts that haven't been indexed
+	missingIDs, err := findUnindexedPapersWithAbstracts(db, idx)
 	if err != nil {
 		exitWithError(ExitError, "%v", err)
 	}
@@ -266,8 +253,26 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// progressBarWidth is the width in characters for terminal progress display.
-const progressBarWidth = 30
+const (
+	// progressBarWidth is the width in characters for terminal progress display.
+	progressBarWidth = 30
+	// progressLineClearWidth is the width needed to clear the entire progress line.
+	// Should be wider than progressBarWidth + surrounding text (numbers, percentage, brackets).
+	progressLineClearWidth = 50
+)
+
+// buildProgressBar creates a progress bar string of the given width.
+// Returns a string like "[=====>    ]" showing progress.
+func buildProgressBar(current, total, width int) string {
+	if total == 0 {
+		return strings.Repeat(" ", width)
+	}
+	filled := (width * current) / total
+	if filled >= width {
+		return strings.Repeat("=", width)
+	}
+	return strings.Repeat("=", filled) + ">" + strings.Repeat(" ", width-filled-1)
+}
 
 // printProgress prints a progress bar to stderr.
 func printProgress(current, total int) {
@@ -275,23 +280,6 @@ func printProgress(current, total int) {
 		return
 	}
 	pct := float64(current) / float64(total) * 100
-	filled := (progressBarWidth * current) / total
-
-	var bar string
-	if filled >= progressBarWidth {
-		// Complete - all filled
-		for i := 0; i < progressBarWidth; i++ {
-			bar += "="
-		}
-	} else {
-		// In progress - filled portion, arrow, empty portion
-		for i := 0; i < filled; i++ {
-			bar += "="
-		}
-		bar += ">"
-		for i := filled + 1; i < progressBarWidth; i++ {
-			bar += " "
-		}
-	}
+	bar := buildProgressBar(current, total, progressBarWidth)
 	fmt.Fprintf(os.Stderr, "\r[%s] %d/%d (%.0f%%)", bar, current, total, pct)
 }

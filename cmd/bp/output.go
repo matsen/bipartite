@@ -97,14 +97,28 @@ type PaperSearchResult struct {
 	Abstract   string             `json:"abstract,omitempty"`
 }
 
+// printSearchResultsHuman prints search results in human-readable format.
+// This is used by both semantic search and similar papers commands.
+func printSearchResultsHuman(results []PaperSearchResult) {
+	for i, r := range results {
+		fmt.Printf("%d. [%.2f] %s\n", i+1, r.Similarity, r.ID)
+		fmt.Printf("   %s\n", truncateString(r.Title, SearchTitleMaxLen))
+		fmt.Printf("   %s (%d)\n\n", formatAuthorsShort(r.Authors, 3), r.Year)
+	}
+}
+
 // buildSearchResults converts semantic search results to PaperSearchResult slice.
 // Set includeAbstract to true to populate the Abstract field.
+//
+// Papers that exist in the semantic index but are not found in the database
+// (e.g., deleted after indexing) are silently skipped. This graceful degradation
+// allows search to return partial results rather than failing entirely.
 func buildSearchResults(results []semantic.SearchResult, db *storage.DB, includeAbstract bool) []PaperSearchResult {
 	paperResults := make([]PaperSearchResult, 0, len(results))
 	for _, r := range results {
 		ref, err := db.GetByID(r.PaperID)
 		if err != nil || ref == nil {
-			continue // Skip if paper not found
+			continue // Skip papers deleted from DB after indexing
 		}
 		result := PaperSearchResult{
 			ID:         ref.ID,
@@ -137,20 +151,22 @@ func wrapText(text string, width int, indent string) string {
 
 	var lines []string
 	words := strings.Fields(text)
-	currentLine := ""
+	var currentLine strings.Builder
 
 	for _, word := range words {
-		if currentLine == "" {
-			currentLine = word
-		} else if len(currentLine)+1+len(word) <= width {
-			currentLine += " " + word
+		if currentLine.Len() == 0 {
+			currentLine.WriteString(word)
+		} else if currentLine.Len()+1+len(word) <= width {
+			currentLine.WriteString(" ")
+			currentLine.WriteString(word)
 		} else {
-			lines = append(lines, currentLine)
-			currentLine = word
+			lines = append(lines, currentLine.String())
+			currentLine.Reset()
+			currentLine.WriteString(word)
 		}
 	}
-	if currentLine != "" {
-		lines = append(lines, currentLine)
+	if currentLine.Len() > 0 {
+		lines = append(lines, currentLine.String())
 	}
 
 	return strings.Join(lines, "\n"+indent)

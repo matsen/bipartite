@@ -47,6 +47,14 @@ func (b *Builder) SetProgressReporter(reporter ProgressReporter) {
 }
 
 // Build creates a semantic index from all papers with abstracts.
+//
+// IMPORTANT: This method performs a FULL REBUILD of the index. When a database
+// connection is provided (via NewBuilder), it clears all existing embedding
+// metadata before indexing. This ensures the metadata table stays in sync with
+// the new index. If you need incremental updates, use a different approach.
+//
+// Papers are skipped if they have no abstract or an abstract shorter than
+// MinAbstractLength characters. Long abstracts are truncated to MaxAbstractLength.
 func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*SemanticIndex, *BuildStats, error) {
 	startTime := time.Now()
 
@@ -63,7 +71,7 @@ func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*Seman
 	}
 
 	total := len(refs)
-	processed := 0
+	papersExamined := 0
 
 	for _, ref := range refs {
 		// Check for cancellation
@@ -73,11 +81,11 @@ func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*Seman
 		default:
 		}
 
-		processed++
+		papersExamined++
 
-		// Report progress
+		// Report progress (shows papers examined, not papers indexed)
 		if b.progress != nil {
-			b.progress.OnProgress(processed, total)
+			b.progress.OnProgress(papersExamined, total)
 		}
 
 		// Skip papers without abstracts or with short abstracts

@@ -57,11 +57,9 @@ func runSemantic(cmd *cobra.Command, args []string) error {
 	// Load index
 	idx := mustLoadSemanticIndex(repoRoot)
 
-	// Check Ollama availability
+	// Check Ollama availability (no model check needed for query-only operations)
 	provider := embedding.NewOllamaProvider()
-	if err := provider.IsAvailable(ctx); err != nil {
-		exitWithError(ExitDataError, "Ollama is not running\n\nStart Ollama with 'ollama serve' or install from https://ollama.ai")
-	}
+	mustValidateOllama(ctx, provider, false)
 
 	// Generate query embedding
 	queryEmb, err := provider.Embed(ctx, query)
@@ -86,12 +84,7 @@ func runSemantic(cmd *cobra.Command, args []string) error {
 	if humanOutput {
 		fmt.Printf("Search: \"%s\"\n", query)
 		fmt.Printf("Found %d papers (threshold: %.1f)\n\n", len(semanticResults), semanticThreshold)
-
-		for i, r := range semanticResults {
-			fmt.Printf("%d. [%.2f] %s\n", i+1, r.Similarity, r.ID)
-			fmt.Printf("   %s\n", truncateString(r.Title, SearchTitleMaxLen))
-			fmt.Printf("   %s (%d)\n\n", formatAuthorsShort(r.Authors, 3), r.Year)
-		}
+		printSearchResultsHuman(semanticResults)
 	} else {
 		outputJSON(SemanticResponse{
 			Query:     query,

@@ -20,7 +20,11 @@ var (
 //   - 0.0 = vectors are orthogonal (no similarity)
 //   - -1.0 = vectors point in opposite directions
 //
-// Returns 0 for invalid inputs (different lengths or zero-length vectors).
+// IMPORTANT: Returns 0 for invalid inputs (mismatched lengths, empty vectors,
+// or zero-magnitude vectors). Since 0 is also a valid similarity score for
+// orthogonal vectors, callers MUST validate input dimensions before calling
+// this function to distinguish between "orthogonal" and "invalid input".
+// The Search() and FindSimilar() methods perform this validation automatically.
 func CosineSimilarity(a, b []float32) float32 {
 	if len(a) != len(b) || len(a) == 0 {
 		return 0
@@ -41,16 +45,17 @@ func CosineSimilarity(a, b []float32) float32 {
 	return dot / denominator
 }
 
-// similarityFilter determines whether a paper should be included in results.
-type similarityFilter func(paperID string, similarity float32) bool
+// paperFilter determines whether a paper should be included in results.
+type paperFilter func(paperID string, similarity float32) bool
 
-// computeSimilarities calculates similarity scores for all papers matching the filter.
+// findMatchingPapers calculates similarity scores, filters results, and sorts by similarity.
+// This is the core ranking algorithm used by Search() and FindSimilar().
 // Results are sorted by similarity (highest first).
-func (idx *SemanticIndex) computeSimilarities(query []float32, filter similarityFilter) []SearchResult {
+func (idx *SemanticIndex) findMatchingPapers(query []float32, shouldInclude paperFilter) []SearchResult {
 	results := make([]SearchResult, 0, len(idx.Embeddings))
 	for paperID, embedding := range idx.Embeddings {
 		sim := CosineSimilarity(query, embedding)
-		if filter(paperID, sim) {
+		if shouldInclude(paperID, sim) {
 			results = append(results, SearchResult{
 				PaperID:    paperID,
 				Similarity: sim,
@@ -87,7 +92,7 @@ func (idx *SemanticIndex) Search(query []float32, limit int, threshold float32) 
 		return nil, ErrNegativeLimit
 	}
 
-	results := idx.computeSimilarities(query, func(_ string, sim float32) bool {
+	results := idx.findMatchingPapers(query, func(_ string, sim float32) bool {
 		return sim >= threshold
 	})
 
@@ -105,7 +110,7 @@ func (idx *SemanticIndex) FindSimilar(paperID string, limit int) ([]SearchResult
 		return nil, ErrNegativeLimit
 	}
 
-	results := idx.computeSimilarities(embedding, func(id string, _ float32) bool {
+	results := idx.findMatchingPapers(embedding, func(id string, _ float32) bool {
 		return id != paperID
 	})
 

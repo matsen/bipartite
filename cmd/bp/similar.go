@@ -85,12 +85,7 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 	if humanOutput {
 		fmt.Printf("Papers similar to: %s\n", paperID)
 		fmt.Printf("\"%s\"\n\n", truncateString(sourcePaper.Title, DetailTitleMaxLen))
-
-		for i, r := range similarResults {
-			fmt.Printf("%d. [%.2f] %s\n", i+1, r.Similarity, r.ID)
-			fmt.Printf("   %s\n", truncateString(r.Title, SearchTitleMaxLen))
-			fmt.Printf("   %s (%d)\n\n", formatAuthorsShort(r.Authors, 3), r.Year)
-		}
+		printSearchResultsHuman(similarResults)
 	} else {
 		outputJSON(SimilarResponse{
 			Source: SimilarSource{

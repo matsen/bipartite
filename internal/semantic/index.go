@@ -20,14 +20,15 @@ const (
 	// IndexFileName is the name of the semantic index file.
 	IndexFileName = "semantic.gob"
 
-	// MinAbstractLength is the minimum abstract length to index.
-	// Abstracts shorter than this are typically too brief to generate
-	// meaningful semantic embeddings (corresponds to ~10-15 words).
+	// MinAbstractLength is the minimum abstract length (in characters) to index.
+	// Rationale: ~50 characters = ~10-15 words = minimum for meaningful embeddings.
+	// Shorter abstracts lack sufficient semantic content for reliable similarity.
 	MinAbstractLength = 50
 
-	// MaxAbstractLength is the maximum abstract length to embed.
-	// nomic-embed-text has 8192 token context. Set to ~2000 tokens
-	// worth of characters to leave room for tokenization overhead.
+	// MaxAbstractLength is the maximum abstract length (in characters) to embed.
+	// Rationale: nomic-embed-text has 8192 token context window.
+	// ~8000 characters ≈ ~2000 tokens, leaving headroom for tokenization overhead.
+	// Longer abstracts are truncated to this length before embedding.
 	MaxAbstractLength = 8000
 
 	// CurrentIndexVersion is the format version for compatibility checking.
