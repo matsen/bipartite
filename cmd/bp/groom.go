@@ -23,17 +23,9 @@ var groomCmd = &cobra.Command{
 
 // GroomResult is the response for the groom command.
 type GroomResult struct {
-	Status        string             `json:"status"`
-	OrphanedEdges []OrphanedEdgeInfo `json:"orphaned_edges"`
-	Fixed         bool               `json:"fixed"`
-}
-
-// OrphanedEdgeInfo contains info about an orphaned edge.
-type OrphanedEdgeInfo struct {
-	SourceID         string `json:"source_id"`
-	TargetID         string `json:"target_id"`
-	RelationshipType string `json:"relationship_type"`
-	Reason           string `json:"reason"` // "missing_source", "missing_target", or "missing_both"
+	Status        string                  `json:"status"`
+	OrphanedEdges []edge.OrphanedEdgeInfo `json:"orphaned_edges"`
+	Fixed         bool                    `json:"fixed"`
 }
 
 func runGroom(cmd *cobra.Command, args []string) error {
@@ -60,31 +52,8 @@ func runGroom(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "reading edges: %v", err)
 	}
 
-	// Find orphaned edges
-	var orphaned []OrphanedEdgeInfo
-	var validEdges []edge.Edge
-	for _, e := range edges {
-		sourceOK := validIDs[e.SourceID]
-		targetOK := validIDs[e.TargetID]
-
-		if !sourceOK || !targetOK {
-			info := OrphanedEdgeInfo{
-				SourceID:         e.SourceID,
-				TargetID:         e.TargetID,
-				RelationshipType: e.RelationshipType,
-			}
-			if !sourceOK && !targetOK {
-				info.Reason = "missing_both"
-			} else if !sourceOK {
-				info.Reason = "missing_source"
-			} else {
-				info.Reason = "missing_target"
-			}
-			orphaned = append(orphaned, info)
-		} else {
-			validEdges = append(validEdges, e)
-		}
-	}
+	// Find orphaned edges using shared detection function
+	orphaned, validEdges := edge.DetectOrphanedEdges(edges, validIDs)
 
 	// Determine status
 	status := "clean"
@@ -113,7 +82,7 @@ func runGroom(cmd *cobra.Command, args []string) error {
 
 	// Ensure orphaned is an empty array for JSON
 	if orphaned == nil {
-		orphaned = []OrphanedEdgeInfo{}
+		orphaned = []edge.OrphanedEdgeInfo{}
 	}
 
 	// Output results

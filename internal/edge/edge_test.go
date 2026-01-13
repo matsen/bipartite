@@ -127,3 +127,91 @@ func TestEdge_Key(t *testing.T) {
 		t.Errorf("RelationshipType = %q, want %q", key.RelationshipType, "extends")
 	}
 }
+
+func TestDetectOrphanedEdges(t *testing.T) {
+	edges := []Edge{
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s1"},
+		{SourceID: "A", TargetID: "X", RelationshipType: "extends", Summary: "s2"}, // X missing
+		{SourceID: "Y", TargetID: "B", RelationshipType: "cites", Summary: "s3"},   // Y missing
+		{SourceID: "Y", TargetID: "X", RelationshipType: "cites", Summary: "s4"},   // both missing
+	}
+	validIDs := map[string]bool{"A": true, "B": true}
+
+	orphaned, valid := DetectOrphanedEdges(edges, validIDs)
+
+	if len(valid) != 1 {
+		t.Errorf("expected 1 valid edge, got %d", len(valid))
+	}
+	if len(orphaned) != 3 {
+		t.Errorf("expected 3 orphaned edges, got %d", len(orphaned))
+	}
+
+	// Check reasons
+	reasonCounts := map[string]int{}
+	for _, o := range orphaned {
+		reasonCounts[o.Reason]++
+	}
+	if reasonCounts["missing_target"] != 1 {
+		t.Errorf("expected 1 missing_target, got %d", reasonCounts["missing_target"])
+	}
+	if reasonCounts["missing_source"] != 1 {
+		t.Errorf("expected 1 missing_source, got %d", reasonCounts["missing_source"])
+	}
+	if reasonCounts["missing_both"] != 1 {
+		t.Errorf("expected 1 missing_both, got %d", reasonCounts["missing_both"])
+	}
+}
+
+func TestDetectOrphanedEdges_NoOrphans(t *testing.T) {
+	edges := []Edge{
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s1"},
+		{SourceID: "B", TargetID: "A", RelationshipType: "extends", Summary: "s2"},
+	}
+	validIDs := map[string]bool{"A": true, "B": true}
+
+	orphaned, valid := DetectOrphanedEdges(edges, validIDs)
+
+	if len(valid) != 2 {
+		t.Errorf("expected 2 valid edges, got %d", len(valid))
+	}
+	if len(orphaned) != 0 {
+		t.Errorf("expected 0 orphaned edges, got %d", len(orphaned))
+	}
+}
+
+func TestFindDuplicateEdges(t *testing.T) {
+	edges := []Edge{
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s1"},
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s2"}, // duplicate
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s3"}, // duplicate
+		{SourceID: "A", TargetID: "C", RelationshipType: "extends", Summary: "s4"},
+		{SourceID: "B", TargetID: "C", RelationshipType: "cites", Summary: "s5"},
+	}
+
+	duplicates := FindDuplicateEdges(edges)
+
+	if len(duplicates) != 1 {
+		t.Errorf("expected 1 duplicate key, got %d", len(duplicates))
+	}
+
+	key := EdgeKey{SourceID: "A", TargetID: "B", RelationshipType: "cites"}
+	if count, ok := duplicates[key]; !ok {
+		t.Error("expected duplicate for A->B cites")
+	} else if count != 3 {
+		t.Errorf("expected count 3, got %d", count)
+	}
+}
+
+func TestFindDuplicateEdges_NoDuplicates(t *testing.T) {
+	edges := []Edge{
+		{SourceID: "A", TargetID: "B", RelationshipType: "cites", Summary: "s1"},
+		{SourceID: "A", TargetID: "C", RelationshipType: "extends", Summary: "s2"},
+		{SourceID: "B", TargetID: "C", RelationshipType: "cites", Summary: "s3"},
+	}
+
+	duplicates := FindDuplicateEdges(edges)
+
+	if len(duplicates) != 0 {
+		t.Errorf("expected 0 duplicates, got %d", len(duplicates))
+	}
+}

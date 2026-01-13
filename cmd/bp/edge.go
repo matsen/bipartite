@@ -57,6 +57,33 @@ var edgeCmd = &cobra.Command{
 	Long:  `Commands for managing directed edges between papers in the knowledge graph.`,
 }
 
+// loadPaperIDSet loads all paper IDs from refs and returns them as a set for O(1) lookup.
+func loadPaperIDSet(repoRoot string) map[string]bool {
+	refsPath := config.RefsPath(repoRoot)
+	refs, err := storage.ReadAll(refsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "reading refs: %v", err)
+	}
+
+	idSet := make(map[string]bool, len(refs))
+	for _, ref := range refs {
+		idSet[ref.ID] = true
+	}
+	return idSet
+}
+
+// validateEdgePapers checks that source and target papers exist.
+// Returns an error if validation fails, nil otherwise.
+func validateEdgePapers(e edge.Edge, paperIDs map[string]bool) error {
+	if !paperIDs[e.SourceID] {
+		return fmt.Errorf("source paper %q not found", e.SourceID)
+	}
+	if !paperIDs[e.TargetID] {
+		return fmt.Errorf("target paper %q not found", e.TargetID)
+	}
+	return nil
+}
+
 // EdgeAddResult is the response for the edge add command.
 type EdgeAddResult struct {
 	Action string    `json:"action"` // "added" or "updated"
@@ -86,31 +113,17 @@ func runEdgeAdd(cmd *cobra.Command, args []string) error {
 		Summary:          summary,
 	}
 
-	// Validate edge
+	// Validate edge structure
 	if err := e.ValidateForCreate(); err != nil {
 		exitWithError(ExitEdgeInvalidArgs, "invalid edge: %v", err)
 	}
 
-	// Load existing refs to validate paper IDs
-	refsPath := config.RefsPath(repoRoot)
-	refs, err := storage.ReadAll(refsPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading refs: %v", err)
-	}
-
-	// Build list of ref IDs
-	refIDs := make([]string, len(refs))
-	for i, ref := range refs {
-		refIDs[i] = ref.ID
-	}
-
-	// Validate source paper exists
-	if !storage.PaperExists(sourceID, refIDs) {
+	// Load paper IDs and validate endpoints
+	paperIDs := loadPaperIDSet(repoRoot)
+	if !paperIDs[sourceID] {
 		exitWithError(ExitEdgeSourceNotFound, "source paper %q not found", sourceID)
 	}
-
-	// Validate target paper exists
-	if !storage.PaperExists(targetID, refIDs) {
+	if !paperIDs[targetID] {
 		exitWithError(ExitEdgeTargetNotFound, "target paper %q not found", targetID)
 	}
 
@@ -194,22 +207,12 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	// Check file exists
 	f, err := os.Open(importPath)
 	if err != nil {
-		exitWithError(ExitEdgeSourceNotFound, "file not found: %s", importPath)
+		exitWithError(ExitEdgeInvalidArgs, "file not found: %s", importPath)
 	}
 	defer f.Close()
 
-	// Load existing refs to validate paper IDs
-	refsPath := config.RefsPath(repoRoot)
-	refs, err := storage.ReadAll(refsPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading refs: %v", err)
-	}
-
-	// Build list of ref IDs
-	refIDs := make([]string, len(refs))
-	for i, ref := range refs {
-		refIDs[i] = ref.ID
-	}
+	// Load paper IDs for validation
+	paperIDs := loadPaperIDSet(repoRoot)
 
 	// Load existing edges
 	edgesPath := config.EdgesPath(repoRoot)
@@ -219,87 +222,13 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Process import file
-	var result EdgeImportResult
-	result.Errors = []EdgeImportError{} // Initialize to empty array for JSON
-
-	scanner := bufio.NewScanner(f)
-	const maxCapacity = 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
-
-	lineNum := 0
-	for scanner.Scan() {
-		lineNum++
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		var e edge.Edge
-		if err := json.Unmarshal(line, &e); err != nil {
-			result.Errors = append(result.Errors, EdgeImportError{
-				Line:  lineNum,
-				Error: fmt.Sprintf("invalid JSON: %v", err),
-			})
-			result.Skipped++
-			continue
-		}
-
-		// Validate edge
-		if err := e.ValidateForCreate(); err != nil {
-			result.Errors = append(result.Errors, EdgeImportError{
-				Line:  lineNum,
-				Error: err.Error(),
-			})
-			result.Skipped++
-			continue
-		}
-
-		// Validate source paper exists
-		if !storage.PaperExists(e.SourceID, refIDs) {
-			result.Errors = append(result.Errors, EdgeImportError{
-				Line:  lineNum,
-				Error: fmt.Sprintf("source paper %q not found", e.SourceID),
-			})
-			result.Skipped++
-			continue
-		}
-
-		// Validate target paper exists
-		if !storage.PaperExists(e.TargetID, refIDs) {
-			result.Errors = append(result.Errors, EdgeImportError{
-				Line:  lineNum,
-				Error: fmt.Sprintf("target paper %q not found", e.TargetID),
-			})
-			result.Skipped++
-			continue
-		}
-
-		// Upsert edge
-		var updated bool
-		edges, updated = storage.UpsertEdge(edges, e)
-		if updated {
-			result.Updated++
-		} else {
-			result.Added++
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		exitWithError(ExitDataError, "reading import file: %v", err)
-	}
+	result := EdgeImportResult{Errors: []EdgeImportError{}}
+	edges = processImportFile(f, edges, paperIDs, &result)
 
 	// Check if all edges were invalid
 	if result.Added == 0 && result.Updated == 0 && result.Skipped > 0 {
-		if humanOutput {
-			fmt.Printf("Import failed: all %d edges were invalid\n", result.Skipped)
-			for _, e := range result.Errors {
-				fmt.Printf("  Line %d: %s\n", e.Line, e.Error)
-			}
-		} else {
-			outputJSON(result)
-		}
-		os.Exit(ExitEdgeTargetNotFound)
+		outputImportFailure(result)
+		os.Exit(ExitEdgeInvalidArgs)
 	}
 
 	// Write back to JSONL
@@ -329,6 +258,80 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// processImportFile reads edges from a file and validates/upserts them.
+func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, result *EdgeImportResult) []edge.Edge {
+	scanner := bufio.NewScanner(f)
+	const maxCapacity = 1024 * 1024
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+
+	lineNum := 0
+	for scanner.Scan() {
+		lineNum++
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+
+		var e edge.Edge
+		if err := json.Unmarshal(line, &e); err != nil {
+			result.Errors = append(result.Errors, EdgeImportError{
+				Line:  lineNum,
+				Error: fmt.Sprintf("invalid JSON: %v", err),
+			})
+			result.Skipped++
+			continue
+		}
+
+		// Validate edge structure
+		if err := e.ValidateForCreate(); err != nil {
+			result.Errors = append(result.Errors, EdgeImportError{
+				Line:  lineNum,
+				Error: err.Error(),
+			})
+			result.Skipped++
+			continue
+		}
+
+		// Validate paper endpoints using shared helper
+		if err := validateEdgePapers(e, paperIDs); err != nil {
+			result.Errors = append(result.Errors, EdgeImportError{
+				Line:  lineNum,
+				Error: err.Error(),
+			})
+			result.Skipped++
+			continue
+		}
+
+		// Upsert edge
+		var updated bool
+		edges, updated = storage.UpsertEdge(edges, e)
+		if updated {
+			result.Updated++
+		} else {
+			result.Added++
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		exitWithError(ExitDataError, "reading import file: %v", err)
+	}
+
+	return edges
+}
+
+// outputImportFailure outputs error information when all edges fail validation.
+func outputImportFailure(result EdgeImportResult) {
+	if humanOutput {
+		fmt.Printf("Import failed: all %d edges were invalid\n", result.Skipped)
+		for _, e := range result.Errors {
+			fmt.Printf("  Line %d: %s\n", e.Line, e.Error)
+		}
+	} else {
+		outputJSON(result)
+	}
 }
 
 // EdgeListResult is the response for the edge list command.

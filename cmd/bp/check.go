@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/edge"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -101,41 +102,26 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "reading edges: %v", err)
 	}
 
-	// Check for orphaned edges and duplicates
-	edgeKeys := make(map[string]int) // key -> count
-	for _, e := range edges {
-		// Check for orphaned edges
-		sourceOK := validIDs[e.SourceID]
-		targetOK := validIDs[e.TargetID]
-		if !sourceOK || !targetOK {
-			reason := "missing_target"
-			if !sourceOK && !targetOK {
-				reason = "missing_both"
-			} else if !sourceOK {
-				reason = "missing_source"
-			}
-			issues = append(issues, CheckIssue{
-				Type:     "orphaned_edge",
-				SourceID: e.SourceID,
-				TargetID: e.TargetID,
-				Reason:   reason,
-			})
-		}
-
-		// Check for duplicate edges
-		key := e.SourceID + "|" + e.TargetID + "|" + e.RelationshipType
-		edgeKeys[key]++
+	// Check for orphaned edges using shared detection function
+	orphaned, _ := edge.DetectOrphanedEdges(edges, validIDs)
+	for _, o := range orphaned {
+		issues = append(issues, CheckIssue{
+			Type:     "orphaned_edge",
+			SourceID: o.SourceID,
+			TargetID: o.TargetID,
+			Reason:   o.Reason,
+		})
 	}
-	for key, count := range edgeKeys {
-		if count > 1 {
-			parts := splitEdgeKey(key)
-			issues = append(issues, CheckIssue{
-				Type:     "duplicate_edge",
-				SourceID: parts[0],
-				TargetID: parts[1],
-				Reason:   fmt.Sprintf("type=%s, count=%d", parts[2], count),
-			})
-		}
+
+	// Check for duplicate edges using shared detection function
+	duplicates := edge.FindDuplicateEdges(edges)
+	for key, count := range duplicates {
+		issues = append(issues, CheckIssue{
+			Type:     "duplicate_edge",
+			SourceID: key.SourceID,
+			TargetID: key.TargetID,
+			Reason:   fmt.Sprintf("type=%s, count=%d", key.RelationshipType, count),
+		})
 	}
 
 	// Determine status
@@ -181,21 +167,4 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// splitEdgeKey splits an edge key back into its parts.
-func splitEdgeKey(key string) []string {
-	// Simple split - assumes no | in the IDs
-	result := make([]string, 3)
-	start := 0
-	idx := 0
-	for i, r := range key {
-		if r == '|' && idx < 2 {
-			result[idx] = key[start:i]
-			start = i + 1
-			idx++
-		}
-	}
-	result[2] = key[start:]
-	return result
 }

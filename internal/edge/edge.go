@@ -70,3 +70,57 @@ type EdgeKey struct {
 	TargetID         string
 	RelationshipType string
 }
+
+// OrphanedEdgeInfo contains information about an edge with missing endpoints.
+type OrphanedEdgeInfo struct {
+	SourceID         string `json:"source_id"`
+	TargetID         string `json:"target_id"`
+	RelationshipType string `json:"relationship_type"`
+	Reason           string `json:"reason"` // "missing_source", "missing_target", or "missing_both"
+}
+
+// DetectOrphanedEdges finds edges that reference papers not in the valid ID set.
+// Returns orphaned edges with their reasons and the list of valid edges.
+func DetectOrphanedEdges(edges []Edge, validIDs map[string]bool) (orphaned []OrphanedEdgeInfo, valid []Edge) {
+	for _, e := range edges {
+		sourceOK := validIDs[e.SourceID]
+		targetOK := validIDs[e.TargetID]
+
+		if !sourceOK || !targetOK {
+			info := OrphanedEdgeInfo{
+				SourceID:         e.SourceID,
+				TargetID:         e.TargetID,
+				RelationshipType: e.RelationshipType,
+			}
+			if !sourceOK && !targetOK {
+				info.Reason = "missing_both"
+			} else if !sourceOK {
+				info.Reason = "missing_source"
+			} else {
+				info.Reason = "missing_target"
+			}
+			orphaned = append(orphaned, info)
+		} else {
+			valid = append(valid, e)
+		}
+	}
+	return orphaned, valid
+}
+
+// FindDuplicateEdges finds edges that appear more than once in the list.
+// Returns a map of EdgeKey to count for keys that appear more than once.
+func FindDuplicateEdges(edges []Edge) map[EdgeKey]int {
+	counts := make(map[EdgeKey]int)
+	for _, e := range edges {
+		counts[e.Key()]++
+	}
+
+	// Filter to only duplicates
+	duplicates := make(map[EdgeKey]int)
+	for key, count := range counts {
+		if count > 1 {
+			duplicates[key] = count
+		}
+	}
+	return duplicates
+}
