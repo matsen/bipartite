@@ -1,5 +1,16 @@
 # Private data (not for commit)
 _ignore/
+.bipartite/
 
-# Ephemeral cache
-.bipartite/cache/
+# Go build artifacts
+/bp
+*.exe
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store

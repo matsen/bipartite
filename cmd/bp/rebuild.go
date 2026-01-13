@@ -1,0 +1,60 @@
+package main
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/matsen/bipartite/internal/config"
+	"github.com/spf13/cobra"
+)
+
+func init() {
+	rootCmd.AddCommand(rebuildCmd)
+}
+
+var rebuildCmd = &cobra.Command{
+	Use:   "rebuild",
+	Short: "Rebuild the query layer from source data",
+	Long: `Rebuild the SQLite query database from the JSONL source file.
+
+Use this after pulling changes from git or if the database becomes corrupted.`,
+	RunE: runRebuild,
+}
+
+// RebuildResult is the response for the rebuild command.
+type RebuildResult struct {
+	Status     string `json:"status"`
+	References int    `json:"references"`
+}
+
+func runRebuild(cmd *cobra.Command, args []string) error {
+	repoRoot := mustFindRepository()
+
+	// Ensure cache directory exists
+	cacheDir := config.CachePath(repoRoot)
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		exitWithError(ExitError, "creating cache directory: %v", err)
+	}
+
+	db := mustOpenDatabase(repoRoot)
+	defer db.Close()
+
+	// Rebuild from JSONL
+	refsPath := config.RefsPath(repoRoot)
+	count, err := db.RebuildFromJSONL(refsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "rebuilding database: %v", err)
+	}
+
+	// Output results
+	if humanOutput {
+		fmt.Printf("Rebuilt query database with %d references\n", count)
+	} else {
+		outputJSON(RebuildResult{
+			Status:     "rebuilt",
+			References: count,
+		})
+	}
+
+	return nil
+}

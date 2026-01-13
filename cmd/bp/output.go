@@ -1,0 +1,167 @@
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/matsen/bipartite/internal/reference"
+)
+
+// Constants for output formatting.
+// Names indicate the context where each constant is used.
+const (
+	DefaultSearchLimit = 50 // Default limit for search/list commands
+
+	// Title truncation lengths by context
+	ImportTitleMaxLen = 60 // Used in import command output
+	SearchTitleMaxLen = 70 // Used in search result summaries
+	ListTitleMaxLen   = 50 // Used in list command output
+	DetailTitleMaxLen = 70 // Used in get command detail view
+
+	// Text wrapping widths
+	TextWrapWidth       = 60 // Standard text wrap width
+	DetailTextWrapWidth = 68 // Wider wrap for detail views
+)
+
+// outputJSON writes a value as formatted JSON to stdout.
+func outputJSON(v interface{}) error {
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(v)
+}
+
+// outputJSONCompact writes a value as compact JSON to stdout.
+func outputJSONCompact(v interface{}) error {
+	enc := json.NewEncoder(os.Stdout)
+	return enc.Encode(v)
+}
+
+// outputHuman writes a human-readable string to stdout.
+func outputHuman(format string, args ...interface{}) {
+	fmt.Printf(format, args...)
+}
+
+// outputError writes an error message to stderr and returns the exit code.
+func outputError(code int, format string, args ...interface{}) int {
+	fmt.Fprintf(os.Stderr, "error: "+format+"\n", args...)
+	return code
+}
+
+// exitWithError outputs an error in the appropriate format (human or JSON) and exits.
+func exitWithError(code int, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	if humanOutput {
+		fmt.Fprintf(os.Stderr, "error: %s\n", msg)
+	} else {
+		outputJSON(ErrorResponse{Error: msg})
+	}
+	os.Exit(code)
+}
+
+// StatusResponse is a generic response for commands that return status.
+type StatusResponse struct {
+	Status string `json:"status"`
+	Path   string `json:"path,omitempty"`
+}
+
+// ConfigResponse is the response for config get commands.
+type ConfigResponse struct {
+	PDFRoot   string `json:"pdf_root,omitempty"`
+	PDFReader string `json:"pdf_reader,omitempty"`
+}
+
+// UpdateResponse is the response for config set commands.
+type UpdateResponse struct {
+	Status string `json:"status"`
+	Key    string `json:"key"`
+	Value  string `json:"value"`
+}
+
+// ErrorResponse is a JSON error response.
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+// truncateString truncates a string to maxLen, adding "..." if truncated.
+func truncateString(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
+// wrapText wraps text to the specified width with indentation on subsequent lines.
+func wrapText(text string, width int, indent string) string {
+	if len(text) <= width {
+		return text
+	}
+
+	var lines []string
+	words := strings.Fields(text)
+	currentLine := ""
+
+	for _, word := range words {
+		if currentLine == "" {
+			currentLine = word
+		} else if len(currentLine)+1+len(word) <= width {
+			currentLine += " " + word
+		} else {
+			lines = append(lines, currentLine)
+			currentLine = word
+		}
+	}
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
+
+	return strings.Join(lines, "\n"+indent)
+}
+
+// formatIDList formats a list of IDs as a comma-separated string.
+func formatIDList(ids []string) string {
+	return strings.Join(ids, ", ")
+}
+
+// formatAuthorFull formats an author as "First Last".
+func formatAuthorFull(a reference.Author) string {
+	if a.First != "" {
+		return a.First + " " + a.Last
+	}
+	return a.Last
+}
+
+// formatAuthorShort formats an author as "Last F" (abbreviated first name).
+func formatAuthorShort(a reference.Author) string {
+	if a.First != "" {
+		return a.Last + " " + string(a.First[0])
+	}
+	return a.Last
+}
+
+// formatAuthorsFull formats all authors as "First Last, First Last, ...".
+func formatAuthorsFull(authors []reference.Author) string {
+	names := make([]string, len(authors))
+	for i, a := range authors {
+		names[i] = formatAuthorFull(a)
+	}
+	return strings.Join(names, ", ")
+}
+
+// formatAuthorsShort formats authors with abbreviation and "et al." for more than maxCount.
+func formatAuthorsShort(authors []reference.Author, maxCount int) string {
+	if len(authors) == 0 {
+		return ""
+	}
+
+	var names []string
+	for i, a := range authors {
+		if i >= maxCount {
+			names = append(names, "et al.")
+			break
+		}
+		names = append(names, formatAuthorShort(a))
+	}
+	return strings.Join(names, ", ")
+}

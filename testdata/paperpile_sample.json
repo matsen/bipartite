@@ -1,0 +1,549 @@
+[
+  {
+    "_id": "2773420d-4009-0be9-920f-d674f7f86794",
+    "abstract": "Abstract Hemagglutinins (HA) from different influenza A virus subtypes share as little as ∼40% amino acid identity, yet their protein structure and cell entry function are highly conserved. Here we examine the extent that sequence constraints on HA differ across three subtypes. To do this, we first use pseudovirus deep mutational scanning to measure how all amino-acid mutations to an H7 HA affect its cell entry function. We then compare these new measurements to previously described measurements of how all mutations to H3 and H5 HAs affect cell entry function. We find that ∼50% of HA sites display substantially diverged preferences for different amino acids across the HA subtypes. The sites with the most divergent amino-acid preferences tend to be buried and have biochemically distinct wildtype amino acids in the different HA subtypes. We provide an example of how rewiring the interactions among contacting residues has dramatically shifted which amino acids are tolerated at specific sites. Overall, our results show how proteins with the same structure and function can become subject to very different site-specific evolutionary constraints as their sequences diverge.",
+    "accessed": {
+      "year": "2026",
+      "month": "1",
+      "day": "10"
+    },
+    "attachments": [
+      {
+        "_id": "b8a4b247-9d4f-444e-9e59-b5c18f6473cb",
+        "article_pdf": 1,
+        "created": 1768040532.324,
+        "filename": "All Papers/A/Ahn et al. 2026 - Influenza hemagglutinin subtypes have different sequence constraints despite sharing extremely similar structures.pdf",
+        "filesize": 10014308,
+        "gdrive_id": "1G492EdqijNb_bmx8OsWJbZs_K2wKwPb2",
+        "mimeType": "application/pdf",
+        "pub_id": "2773420d-4009-0be9-920f-d674f7f86794",
+        "source_filename": "2026.01.05.697808.full.pdf",
+        "xor_hash": [
+          "4NuMp9p0aYWviH2UWfIe+DDQS08="
+        ]
+      }
+    ],
+    "author": [
+      {
+        "last": "Ahn",
+        "first": "Jenny J",
+        "orcid": "0009-0000-3912-7162",
+        "initials": "JJ",
+        "formatted": "Ahn JJ"
+      },
+      {
+        "last": "Yu",
+        "first": "Timothy C",
+        "orcid": "0000-0001-9972-038X",
+        "initials": "TC",
+        "formatted": "Yu TC"
+      },
+      {
+        "last": "Dadonaite",
+        "first": "Bernadeta",
+        "orcid": "0000-0003-0908-6982",
+        "initials": "B",
+        "formatted": "Dadonaite B"
+      },
+      {
+        "last": "Radford",
+        "first": "Caelan E",
+        "orcid": "0009-0002-9985-5772",
+        "initials": "CE",
+        "formatted": "Radford CE"
+      },
+      {
+        "last": "Bloom",
+        "first": "Jesse D",
+        "orcid": "0000-0003-1267-3408",
+        "initials": "JD",
+        "formatted": "Bloom JD"
+      }
+    ],
+    "autoCleaned": 1,
+    "citedByLink": "http://scholar.google.com/scholar?hl=en&lr=&num=30&cites=http://dx.doi.org/10.64898/2026.01.05.697808",
+    "citekey": "Ahn2026-rs",
+    "copyright": "http://creativecommons.org/licenses/by/4.0/",
+    "created": 1768040528.618,
+    "doi": "10.64898/2026.01.05.697808",
+    "dup_sha1": "317d88a429fd12f7d4f932b813adcf2c20845307",
+    "folders": [],
+    "id_list": [
+      "sha1:864526d74a2ff89a5cd07603600dca0d765d703c",
+      "dup_sha1:317d88a429fd12f7d4f932b813adcf2c20845307",
+      "doi:10.64898/2026.01.05.697808",
+      "url:http://dx.doi.org/10.64898/2026.01.05.697808",
+      "url:https://www.biorxiv.org/content/biorxiv/early/2026/01/06/2026.01.05.697808.full.pdf",
+      "url:https://www.biorxiv.org/content/10.64898/2026.01.05.697808v1.abstract",
+      "url:https://www.biorxiv.org/content/10.64898/2026.01.05.697808v1",
+      "url:http://biorxiv.org/lookup/doi/10.64898/2026.01.05.697808"
+    ],
+    "incomplete": 0,
+    "institution": "bioRxiv",
+    "journal": "bioRxiv",
+    "labels": [],
+    "language": "en",
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "pages": "2026.01.05.697808",
+    "pdf_restricted": 0,
+    "published": {
+      "year": "2026",
+      "month": "1",
+      "day": "6"
+    },
+    "publisher": "openRxiv",
+    "pubtype": "PP_PREPRINT",
+    "sha1": "864526d74a2ff89a5cd07603600dca0d765d703c",
+    "subfolders": [
+      "All Papers/A"
+    ],
+    "title": "Influenza hemagglutinin subtypes have different sequence constraints despite sharing extremely similar structures",
+    "url": [
+      "https://www.biorxiv.org/content/10.64898/2026.01.05.697808v1.abstract",
+      "https://www.biorxiv.org/content/biorxiv/early/2026/01/06/2026.01.05.697808.full.pdf",
+      "https://www.biorxiv.org/content/10.64898/2026.01.05.697808v1",
+      "http://dx.doi.org/10.64898/2026.01.05.697808",
+      "http://biorxiv.org/lookup/doi/10.64898/2026.01.05.697808"
+    ]
+  },
+  {
+    "_id": "b663b963-ea26-0c4e-b07b-467141a47da8",
+    "abstract": "Bayesian phylodynamics is central to epidemiological studies, but exploring the complex tree space is computationally challenging. Phylodynamic datasets comprise many highly similar sequences, sampled through time, creating a uniquely structured landscape of optimal trees. Here, we show that phylodynamic tree landscapes are often highly rugged, with multiple peaks separated by difficult-to-cross valleys. These features lead to widespread sampling problems which are often driven by a few sequences. These problems can significantly impact phylodynamic estimates, especially those associated with particular clades, distorting biological conclusions. We develop diagnostics to identify problematic sequences and provide solutions to mitigate their impacts. We offer strategies to optimize phylodynamic analysis workflows and to develop algorithms for navigating rugged landscapes, thereby advancing infectious disease investigation. Phylodynamic analysis has been instrumental in elucidating epidemiological and evolutionary dynamics of pathogens. Bayesian phylodynamics integrates out phylogenetic uncertainty, which is typically substantial in phylodynamic datasets due to limited genetic diversity. Phylodynamic inference does not, however, scale with modern datasets, partly due to difficulties in traversing tree space. Here, we characterize tree space and landscape in phylodynamic inference and assess its impacts on analysis difficulty and key biological estimates. By running extensive Bayesian analyses of 15 classic large phylodynamic datasets and carefully analyzing the posterior samples, we find that the posterior tree landscape is diffuse yet rugged, leading to widespread tree sampling problems that usually stem from sequences in a small part of the tree. We develop clade-specific diagnostics to show that a few sequences—including putative recombinants and recurrent mutants—frequently drive the ruggedness and sampling problems, although existing data-quality tests show limited power to detect them. The sampling problems can significantly impact phylodynamic inferences or distort major biological conclusions; the impact is usually stronger on “local” estimates (e.g., introduction history) associated with particular clades than on “global” parameters (e.g., demographic trajectory) governed by general tree shape. We evaluate existing Markov chain Monte Carlo diagnostics and diagnostics developed here, and offer strategies for optimizing phylodynamic analysis settings and mitigating sampling problem impacts. Our findings highlight the need and directions to develop efficient traversal over rugged tree landscapes, ultimately advancing scalable and reliable phylodynamics.",
+    "accessed": {
+      "year": "2026",
+      "month": "1",
+      "day": "9"
+    },
+    "attachments": [
+      {
+        "_id": "ef812a48-9a92-4d35-b933-608e49ad4044",
+        "article_pdf": 1,
+        "created": 1768002018.9259999,
+        "filename": "All Papers/G/Gao et al. 2026 - Biological causes and impacts of rugged tree landscapes in phylodynamic inference.pdf",
+        "filesize": 17753158,
+        "gdrive_id": "12sjOjWqKQpAf4mZnvVs_ilCzcrZS0CGH",
+        "mimeType": "application/pdf",
+        "pub_id": "b663b963-ea26-0c4e-b07b-467141a47da8",
+        "source_filename": "gao-et-al-2026-biological-causes-and-impacts-of-rugged-tree-landscapes-in-phylodynamic-inference.pdf",
+        "xor_hash": [
+          "SH/0AS+Yq7CvKjBFS5XNJwau9hU="
+        ]
+      }
+    ],
+    "author": [
+      {
+        "first": "Jiansi",
+        "last": "Gao",
+        "initials": "J",
+        "formatted": "Gao J"
+      },
+      {
+        "first": "Marius",
+        "last": "Brusselmans",
+        "initials": "M",
+        "formatted": "Brusselmans M"
+      },
+      {
+        "first": "Luiz M",
+        "last": "Carvalho",
+        "initials": "LM",
+        "formatted": "Carvalho LM"
+      },
+      {
+        "first": "Marc A",
+        "last": "Suchard",
+        "initials": "MA",
+        "formatted": "Suchard MA"
+      },
+      {
+        "first": "Guy",
+        "last": "Baele",
+        "initials": "G",
+        "formatted": "Baele G"
+      },
+      {
+        "first": "Frederick A",
+        "last": "Matsen",
+        "initials": "FA",
+        "formatted": "Matsen FA"
+      }
+    ],
+    "autoCleaned": 1,
+    "citedByLink": "http://scholar.google.com/scholar?hl=en&lr=&num=30&cites=http://dx.doi.org/10.1073/pnas.2510938123",
+    "citekey": "Gao2026-gi",
+    "crawl_urls": [
+      "https://doi.org/10.1073/pnas.2510938123",
+      "https://www.pnas.org/doi/10.1073/pnas.2510938123",
+      "https://www.pnas.org/action/downloadcitation?doi=10.1073/pnas.2510938123&include=abs&format=bibtex",
+      "https://www.pnas.org/doi/abs/10.1073/pnas.2510938123",
+      "https://www.pnas.org/doi/pdf/10.1073/pnas.2510938123"
+    ],
+    "created": 1768002014.142,
+    "doi": "10.1073/pnas.2510938123",
+    "dup_sha1": "b03c6b3c82ef3821540258a7727bf2e8b8a5c604",
+    "eprint": "https://www.pnas.org/doi/pdf/10.1073/pnas.2510938123",
+    "folders": [
+      "fc8a78a3-1097-03eb-b84c-07faea90fb3c"
+    ],
+    "foldersNamed": [
+      "my papers"
+    ],
+    "id_list": [
+      "sha1:862471e3a8207d90c7c10abd232ce50c6c0fe77c",
+      "dup_sha1:b03c6b3c82ef3821540258a7727bf2e8b8a5c604",
+      "doi:10.1073/pnas.2510938123",
+      "url:http://dx.doi.org/10.1073/pnas.2510938123",
+      "url:https://www.pnas.org/doi/abs/10.1073/pnas.2510938123",
+      "url:https://www.pnas.org/doi/10.1073/pnas.2510938123",
+      "url:https://www.pnas.org/doi/pdf/10.1073/pnas.2510938123",
+      "url:https://doi.org/10.1073/pnas.2510938123",
+      "url:https://www.pnas.org/action/downloadcitation?doi=10.1073/pnas.2510938123&include=abs&format=bibtex"
+    ],
+    "incomplete": 0,
+    "issue": "2",
+    "journal": "Proceedings of the National Academy of Sciences",
+    "journalfull": "Proceedings of the National Academy of Sciences",
+    "labels": [],
+    "language": "en",
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "pages": "e2510938123",
+    "pdf_restricted": 0,
+    "published": {
+      "year": "2026",
+      "month": "1",
+      "day": "13"
+    },
+    "publisher": "National Academy of Sciences",
+    "pubtype": "PP_ARTICLE",
+    "sha1": "862471e3a8207d90c7c10abd232ce50c6c0fe77c",
+    "subfolders": [
+      "All Papers/G"
+    ],
+    "title": "Biological causes and impacts of rugged tree landscapes in phylodynamic inference",
+    "url": [
+      "http://dx.doi.org/10.1073/pnas.2510938123",
+      "https://www.pnas.org/doi/abs/10.1073/pnas.2510938123",
+      "https://www.pnas.org/doi/10.1073/pnas.2510938123",
+      "https://www.pnas.org/doi/pdf/10.1073/pnas.2510938123"
+    ],
+    "volume": "123"
+  },
+  {
+    "_id": "e6073822-688c-023f-9745-a4d2539680b7",
+    "abstract": "Abstract Protein language models have become essential tools for engineering novel functional proteins. The emerging paradigm of family-based language models makes use of homologous sequences to steer protein design and enhance zero-shot fitness prediction, by imbuing models with an ability to explicitly reason over evolutionary context. To provide an open foundation for this modelling approach, we introduce ProFam-1 , a 251M-parameter autoregressive protein family language model (pfLM) trained with next-token prediction on millions of protein families represented as concatenated, unaligned sets of sequences. ProFam-1 is competitive with state-of-the-art models on the ProteinGym zero-shot fitness prediction benchmark, achieving Spearman correlations of 0.47 for substitutions and 0.53 for indels. For homology-guided generation, ProFam-1 generates diverse sequences with predicted structural similarity, while preserving residue conservation and covariance patterns. All of ProFam’s training and inference pipelines, together with our curated, large-scale training dataset ProFam Atlas , are released fully open source, lowering the barrier to future method development.",
+    "accessed": {
+      "year": "2026",
+      "month": "1",
+      "day": "9"
+    },
+    "attachments": [
+      {
+        "_id": "3065a6a0-1b35-42b4-8a71-d9fb18b1c1ec",
+        "article_pdf": 1,
+        "created": 1767995805.8569999,
+        "filename": "All Papers/W/Wells et al. 2025 - ProFam - Open-source protein family language modelling for fitness prediction and design.pdf",
+        "filesize": 9812248,
+        "gdrive_id": "1kXf0X8Ydext8wDSqJ-TDsaguEL9_ZepN",
+        "mimeType": "application/pdf",
+        "pub_id": "e6073822-688c-023f-9745-a4d2539680b7",
+        "source_filename": "2025.12.19.695431.full.pdf",
+        "xor_hash": [
+          "XZxMUUIYvRtm6gTPOSWeQGC9FZI="
+        ]
+      }
+    ],
+    "author": [
+      {
+        "last": "Wells",
+        "first": "Jude",
+        "orcid": "0000-0002-5358-2310",
+        "initials": "J",
+        "formatted": "Wells J"
+      },
+      {
+        "last": "Hooker",
+        "first": "Alex Hawkins",
+        "orcid": "0009-0005-0151-9431",
+        "initials": "AH",
+        "formatted": "Hooker AH"
+      },
+      {
+        "last": "Livne",
+        "first": "Micha",
+        "orcid": "0000-0002-8094-7426",
+        "initials": "M",
+        "formatted": "Livne M"
+      },
+      {
+        "last": "Lin",
+        "first": "Weining",
+        "orcid": "0000-0001-8604-7309",
+        "initials": "W",
+        "formatted": "Lin W"
+      },
+      {
+        "last": "Miller",
+        "first": "David",
+        "orcid": "0000-0001-5197-4874",
+        "initials": "D",
+        "formatted": "Miller D"
+      },
+      {
+        "last": "Dallago",
+        "first": "Christian",
+        "orcid": "0000-0003-4650-6181",
+        "initials": "C",
+        "formatted": "Dallago C"
+      },
+      {
+        "last": "Bordin",
+        "first": "Nicola",
+        "orcid": "0000-0002-6568-9035",
+        "initials": "N",
+        "formatted": "Bordin N"
+      },
+      {
+        "last": "Paige",
+        "first": "Brooks",
+        "orcid": "0000-0002-4797-1563",
+        "initials": "B",
+        "formatted": "Paige B"
+      },
+      {
+        "last": "Rost",
+        "first": "Burkhard",
+        "orcid": "0000-0003-0179-8424",
+        "initials": "B",
+        "formatted": "Rost B"
+      },
+      {
+        "last": "Orengo",
+        "first": "Christine",
+        "orcid": "0000-0002-7141-8936",
+        "initials": "C",
+        "formatted": "Orengo C"
+      },
+      {
+        "last": "Heinzinger",
+        "first": "Michael",
+        "orcid": "0000-0002-9601-3580",
+        "initials": "M",
+        "formatted": "Heinzinger M"
+      }
+    ],
+    "autoCleaned": 1,
+    "citedByLink": "http://scholar.google.com/scholar?hl=en&lr=&num=30&cites=http://dx.doi.org/10.64898/2025.12.19.695431",
+    "citekey": "Wells2025-sl",
+    "copyright": "http://creativecommons.org/licenses/by/4.0/",
+    "created": 1767995801.477,
+    "doi": "10.64898/2025.12.19.695431",
+    "dup_sha1": "3188de7a23709dec0a9866291bf022d5ca3dc594",
+    "folders": [],
+    "id_list": [
+      "sha1:29b579d33cfc872e1557b0e4a0d565ee2949a862",
+      "dup_sha1:3188de7a23709dec0a9866291bf022d5ca3dc594",
+      "doi:10.64898/2025.12.19.695431",
+      "url:http://dx.doi.org/10.64898/2025.12.19.695431",
+      "url:https://www.biorxiv.org/content/biorxiv/early/2025/12/21/2025.12.19.695431.full.pdf",
+      "url:https://www.biorxiv.org/content/10.64898/2025.12.19.695431v1.abstract",
+      "url:https://www.biorxiv.org/content/10.64898/2025.12.19.695431v1",
+      "url:http://biorxiv.org/lookup/doi/10.64898/2025.12.19.695431"
+    ],
+    "incomplete": 0,
+    "institution": "bioRxiv",
+    "journal": "bioRxiv",
+    "labels": [],
+    "language": "en",
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "pages": "2025.12.19.695431",
+    "pdf_restricted": 0,
+    "published": {
+      "year": "2025",
+      "month": "12",
+      "day": "21"
+    },
+    "publisher": "openRxiv",
+    "pubtype": "PP_PREPRINT",
+    "sha1": "29b579d33cfc872e1557b0e4a0d565ee2949a862",
+    "subfolders": [
+      "All Papers/W"
+    ],
+    "title": "ProFam: Open-source protein family language modelling for fitness prediction and design",
+    "url": [
+      "https://www.biorxiv.org/content/10.64898/2025.12.19.695431v1.abstract",
+      "https://www.biorxiv.org/content/biorxiv/early/2025/12/21/2025.12.19.695431.full.pdf",
+      "https://www.biorxiv.org/content/10.64898/2025.12.19.695431v1",
+      "http://dx.doi.org/10.64898/2025.12.19.695431",
+      "http://biorxiv.org/lookup/doi/10.64898/2025.12.19.695431"
+    ]
+  },
+  {
+    "_id": "52ab50b5-6b43-032b-aaaf-7bfc73fb501f",
+    "abstract": "BACKGROUND: In Bayesian phylogenetic inference we are interested in distributions over a space of trees. The number of trees in a tree space is an important characteristic of the space and is useful for specifying prior distributions. When all samples come from the same time point and no prior information available on divergence times, the tree counting problem is easy. However, when fossil evidence is used in the inference to constrain the tree or data are sampled serially, new tree spaces arise and counting the number of trees is more difficult. RESULTS: We describe an algorithm that is polynomial in the number of sampled individuals for counting of resolutions of a constraint tree assuming that the number of constraints is fixed. We generalise this algorithm to counting resolutions of a fully ranked constraint tree. We describe a quadratic algorithm for counting the number of possible fully ranked trees on n sampled individuals. We introduce a new type of tree, called a fully ranked tree with sampled ancestors, and describe a cubic time algorithm for counting the number of such trees on n sampled individuals. CONCLUSIONS: These algorithms should be employed for Bayesian Markov chain Monte Carlo inference when fossil data are included or data are serially sampled.",
+    "accessed": {
+      "year": "2026",
+      "month": "1",
+      "day": "7"
+    },
+    "attachments": [
+      {
+        "_id": "7caab023-b4dc-46a9-8b69-24ee1dcc0a45",
+        "article_pdf": 1,
+        "created": 1767815029.804,
+        "filename": "All Papers/G/Gavryushkina et al. 2013 - Recursive algorithms for phylogenetic tree counting.pdf",
+        "filesize": 644257,
+        "gdrive_id": "1GlvdrbJ6CNgqbCL0PNdaHIWVFYL8i3Od",
+        "mimeType": "application/pdf",
+        "pub_id": "52ab50b5-6b43-032b-aaaf-7bfc73fb501f",
+        "source_filename": "1748-7188-8-26.pdf",
+        "xor_hash": [
+          "6QXtpiU0r8/az7em1TswYS6rSV0="
+        ]
+      }
+    ],
+    "author": [
+      {
+        "first": "Alexandra",
+        "last": "Gavryushkina",
+        "initials": "A",
+        "formatted": "Gavryushkina A"
+      },
+      {
+        "first": "David",
+        "last": "Welch",
+        "initials": "D",
+        "formatted": "Welch D"
+      },
+      {
+        "first": "Alexei J",
+        "last": "Drummond",
+        "initials": "AJ",
+        "formatted": "Drummond AJ"
+      }
+    ],
+    "autoCleaned": 1,
+    "citedByLink": "http://scholar.google.com/scholar?hl=en&lr=&num=30&cites=http://dx.doi.org/10.1186/1748-7188-8-26",
+    "citekey": "Gavryushkina2013-eq",
+    "created": 1767815028.784,
+    "doi": "10.1186/1748-7188-8-26",
+    "dup_sha1": "1f0f7d1844819c2a69c90607a5c6a3182c13438f",
+    "folders": [],
+    "id_list": [
+      "sha1:0625c2b36792ec16dc56ef6b53fa1d40fd78bdd9",
+      "dup_sha1:1f0f7d1844819c2a69c90607a5c6a3182c13438f",
+      "doi:10.1186/1748-7188-8-26",
+      "pmc:PMC3829674",
+      "pmid:24164709",
+      "url:http://dx.doi.org/10.1186/1748-7188-8-26",
+      "url:https://link.springer.com/article/10.1186/1748-7188-8-26",
+      "url:https://almob.biomedcentral.com/articles/10.1186/1748-7188-8-26",
+      "url:https://www.ncbi.nlm.nih.gov/pubmed/24164709",
+      "url:https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3829674",
+      "url:https://link.springer.com/content/pdf/10.1186/1748-7188-8-26.pdf"
+    ],
+    "incomplete": 0,
+    "issn": "1748-7188",
+    "issn_alt": "1748-7188",
+    "issue": "1",
+    "journal": "Algorithms Mol. Biol.",
+    "journalfull": "Algorithms for Molecular Biology",
+    "kind": "Research Article",
+    "labels": [],
+    "language": "en",
+    "number": "26",
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "pages": "26",
+    "pdf_restricted": 0,
+    "pmc": "PMC3829674",
+    "pmid": "24164709",
+    "published": {
+      "year": "2013",
+      "month": "10",
+      "day": "28"
+    },
+    "publisher": "Springer Science and Business Media LLC",
+    "pubtype": "PP_ARTICLE",
+    "sha1": "0625c2b36792ec16dc56ef6b53fa1d40fd78bdd9",
+    "subfolders": [
+      "All Papers/G"
+    ],
+    "title": "Recursive algorithms for phylogenetic tree counting",
+    "url": [
+      "http://dx.doi.org/10.1186/1748-7188-8-26",
+      "https://link.springer.com/article/10.1186/1748-7188-8-26",
+      "https://almob.biomedcentral.com/articles/10.1186/1748-7188-8-26",
+      "https://link.springer.com/content/pdf/10.1186/1748-7188-8-26.pdf",
+      "https://www.ncbi.nlm.nih.gov/pubmed/24164709",
+      "https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3829674"
+    ],
+    "volume": "8"
+  },
+  {
+    "_id": "403fd76a-98ea-0db4-9aa3-ce843b90dd95",
+    "abstract": "We enumerate the strict ordinate binary trees according to two parameters: the direct antecedent of the greatest vertex and the vertex which is at the end of the lower sequence of vertices. A similar study concerning André's trees had led us to Entringer's integers.",
+    "attachments": [
+      {
+        "_id": "5ade7307-e741-4878-b6df-4e896f27d031",
+        "article_pdf": 1,
+        "created": 1767814909.442,
+        "filename": "All Papers/P/Poupard 1989 - Deux propriétés des arbres binaires ordonnés stricts.pdf",
+        "filesize": 358476,
+        "gdrive_id": "1phO8oLv2GOQj7lPFn_jsaz7zf4KZQQPu",
+        "mimeType": "application/pdf",
+        "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+        "pub_id": "403fd76a-98ea-0db4-9aa3-ce843b90dd95",
+        "source_filename": "poupard.pdf",
+        "xor_hash": [
+          "5Q0DjjJWbot5WOyI86FffhXxs00="
+        ]
+      }
+    ],
+    "author": [
+      {
+        "initials": "C",
+        "first": "Christiane",
+        "formatted": "Poupard C",
+        "last": "Poupard"
+      }
+    ],
+    "citedByLink": "http://scholar.google.com/scholar?hl=en&lr=&num=30&cites=http://dx.doi.org/10.1016/s0195-6698(89)80009-5",
+    "citekey": "Poupard1989-mb",
+    "copyright": "https://www.elsevier.com/open-access/userlicense/1.0/",
+    "created": 1767814909.166,
+    "doi": "10.1016/s0195-6698(89)80009-5",
+    "dup_sha1": "66c2c2f3264abb3299ed404fe4e350311f3d1cdc",
+    "folders": [],
+    "id_list": [
+      "sha1:da0b41c449f6a9cf304fa8d6cd00cede882b3616",
+      "dup_sha1:66c2c2f3264abb3299ed404fe4e350311f3d1cdc",
+      "doi:10.1016/s0195-6698(89)80009-5",
+      "url:http://dx.doi.org/10.1016/s0195-6698(89)80009-5",
+      "url:http://dx.doi.org/10.1016/S0195-6698(89)80009-5",
+      "url:https://linkinghub.elsevier.com/retrieve/pii/S0195669889800095"
+    ],
+    "incomplete": 0,
+    "issn": "0195-6698",
+    "issn_alt": "1095-9971",
+    "issue": "4",
+    "journal": "Eur. J. Comb.",
+    "journalfull": "Journal europeen de combinatoire [European Journal of Combinatorics]",
+    "labels": [],
+    "language": "en",
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "pages": "369-374",
+    "published": {
+      "month": "7",
+      "year": "1989"
+    },
+    "publisher": "Elsevier BV",
+    "pubtype": "PP_ARTICLE",
+    "sha1": "da0b41c449f6a9cf304fa8d6cd00cede882b3616",
+    "title": "Deux propriétés des arbres binaires ordonnés stricts",
+    "url": [
+      "http://dx.doi.org/10.1016/S0195-6698(89)80009-5",
+      "https://linkinghub.elsevier.com/retrieve/pii/S0195669889800095",
+      "http://dx.doi.org/10.1016/s0195-6698(89)80009-5"
+    ],
+    "volume": "10"
+  }
+]
