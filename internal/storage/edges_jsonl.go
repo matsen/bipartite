@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/matsen/bipartite/internal/edge"
@@ -13,6 +14,7 @@ import (
 const EdgesFile = "edges.jsonl"
 
 // ReadAllEdges reads all edges from a JSONL file.
+// Returns an error if any edge fails structural validation (fail-fast).
 func ReadAllEdges(path string) ([]edge.Edge, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -43,6 +45,12 @@ func ReadAllEdges(path string) ([]edge.Edge, error) {
 		if err := json.Unmarshal(line, &e); err != nil {
 			return nil, fmt.Errorf("parsing line %d: %w", lineNum, err)
 		}
+
+		// Fail fast: validate edge structure before adding to collection
+		if err := e.ValidateForCreate(); err != nil {
+			return nil, fmt.Errorf("invalid edge at line %d: %w", lineNum, err)
+		}
+
 		edges = append(edges, e)
 	}
 
@@ -53,6 +61,21 @@ func ReadAllEdges(path string) ([]edge.Edge, error) {
 	return edges, nil
 }
 
+// writeEdgeJSONL marshals an edge to JSON and writes it as a JSONL line.
+func writeEdgeJSONL(w io.Writer, e edge.Edge) error {
+	data, err := json.Marshal(e)
+	if err != nil {
+		return fmt.Errorf("encoding edge: %w", err)
+	}
+	if _, err := w.Write(data); err != nil {
+		return fmt.Errorf("writing edge: %w", err)
+	}
+	if _, err := w.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("writing newline: %w", err)
+	}
+	return nil
+}
+
 // AppendEdge adds an edge to the end of a JSONL file.
 func AppendEdge(path string, e edge.Edge) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -61,19 +84,7 @@ func AppendEdge(path string, e edge.Edge) error {
 	}
 	defer f.Close()
 
-	data, err := json.Marshal(e)
-	if err != nil {
-		return fmt.Errorf("encoding edge: %w", err)
-	}
-
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("writing edge: %w", err)
-	}
-	if _, err := f.WriteString("\n"); err != nil {
-		return fmt.Errorf("writing newline: %w", err)
-	}
-
-	return nil
+	return writeEdgeJSONL(f, e)
 }
 
 // WriteAllEdges writes all edges to a JSONL file, replacing existing content.
@@ -84,25 +95,18 @@ func WriteAllEdges(path string, edges []edge.Edge) error {
 	}
 	defer f.Close()
 
-	for i, e := range edges {
-		data, err := json.Marshal(e)
-		if err != nil {
-			return fmt.Errorf("encoding edge %d: %w", i, err)
-		}
-
-		if _, err := f.Write(data); err != nil {
-			return fmt.Errorf("writing edge %d: %w", i, err)
-		}
-		if _, err := f.WriteString("\n"); err != nil {
-			return fmt.Errorf("writing newline: %w", err)
+	for _, e := range edges {
+		if err := writeEdgeJSONL(f, e); err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-// FindEdgeByKey searches for an edge by its key (source_id, target_id, relationship_type).
-func FindEdgeByKey(edges []edge.Edge, key edge.EdgeKey) (int, bool) {
+// FindEdgeInSlice searches for an edge by its key in an in-memory slice.
+// Returns the index and true if found, -1 and false otherwise.
+func FindEdgeInSlice(edges []edge.Edge, key edge.EdgeKey) (int, bool) {
 	for i, e := range edges {
 		if e.SourceID == key.SourceID && e.TargetID == key.TargetID && e.RelationshipType == key.RelationshipType {
 			return i, true
@@ -111,30 +115,28 @@ func FindEdgeByKey(edges []edge.Edge, key edge.EdgeKey) (int, bool) {
 	return -1, false
 }
 
-// UpsertEdge adds or updates an edge in the list.
-// Returns true if the edge was updated, false if it was added.
-func UpsertEdge(edges []edge.Edge, newEdge edge.Edge) ([]edge.Edge, bool) {
+// UpsertEdgeInSlice adds or updates an edge in an in-memory slice.
+// Returns the updated slice and true if the edge was updated, false if added.
+func UpsertEdgeInSlice(edges []edge.Edge, newEdge edge.Edge) ([]edge.Edge, bool) {
 	key := newEdge.Key()
-	idx, found := FindEdgeByKey(edges, key)
+	idx, found := FindEdgeInSlice(edges, key)
 	if found {
-		// Update existing edge (preserve created_at if not provided)
-		if newEdge.CreatedAt == "" && edges[idx].CreatedAt != "" {
-			newEdge.CreatedAt = edges[idx].CreatedAt
-		}
+		newEdge.MergeCreatedAt(edges[idx])
 		edges[idx] = newEdge
 		return edges, true
 	}
-	// Add new edge
 	newEdge.SetCreatedAt()
 	return append(edges, newEdge), false
 }
 
-// PaperExists checks if a paper ID exists in the refs slice.
-func PaperExists(paperID string, refIDs []string) bool {
-	for _, id := range refIDs {
-		if id == paperID {
-			return true
-		}
-	}
-	return false
+// FindEdgeByKey is an alias for FindEdgeInSlice for backward compatibility.
+// Deprecated: Use FindEdgeInSlice instead.
+func FindEdgeByKey(edges []edge.Edge, key edge.EdgeKey) (int, bool) {
+	return FindEdgeInSlice(edges, key)
+}
+
+// UpsertEdge is an alias for UpsertEdgeInSlice for backward compatibility.
+// Deprecated: Use UpsertEdgeInSlice instead.
+func UpsertEdge(edges []edge.Edge, newEdge edge.Edge) ([]edge.Edge, bool) {
+	return UpsertEdgeInSlice(edges, newEdge)
 }

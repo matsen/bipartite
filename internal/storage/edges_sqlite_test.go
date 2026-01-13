@@ -323,11 +323,7 @@ func TestDB_GetAllEdges_Empty(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Create the schema first
-	if err := db.createEdgesSchema(); err != nil {
-		t.Fatal(err)
-	}
-
+	// Schema is created automatically by GetAllEdges via ensureEdgesSchema
 	edges, err := db.GetAllEdges()
 	if err != nil {
 		t.Fatalf("GetAllEdges failed: %v", err)

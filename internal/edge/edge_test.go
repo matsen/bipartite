@@ -109,6 +109,68 @@ func TestEdge_SetCreatedAt(t *testing.T) {
 	})
 }
 
+func TestEdge_MergeCreatedAt(t *testing.T) {
+	t.Run("copies timestamp from existing when new is empty", func(t *testing.T) {
+		newEdge := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "new summary",
+		}
+		existing := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "old summary",
+			CreatedAt:        "2024-01-01T00:00:00Z",
+		}
+		newEdge.MergeCreatedAt(existing)
+		if newEdge.CreatedAt != "2024-01-01T00:00:00Z" {
+			t.Errorf("expected CreatedAt to be copied, got %q", newEdge.CreatedAt)
+		}
+	})
+
+	t.Run("preserves new timestamp when set", func(t *testing.T) {
+		newEdge := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "new summary",
+			CreatedAt:        "2025-01-01T00:00:00Z",
+		}
+		existing := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "old summary",
+			CreatedAt:        "2024-01-01T00:00:00Z",
+		}
+		newEdge.MergeCreatedAt(existing)
+		if newEdge.CreatedAt != "2025-01-01T00:00:00Z" {
+			t.Errorf("expected new CreatedAt to be preserved, got %q", newEdge.CreatedAt)
+		}
+	})
+
+	t.Run("handles empty existing timestamp", func(t *testing.T) {
+		newEdge := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "new summary",
+		}
+		existing := Edge{
+			SourceID:         "A",
+			TargetID:         "B",
+			RelationshipType: "cites",
+			Summary:          "old summary",
+		}
+		newEdge.MergeCreatedAt(existing)
+		if newEdge.CreatedAt != "" {
+			t.Errorf("expected CreatedAt to remain empty, got %q", newEdge.CreatedAt)
+		}
+	})
+}
+
 func TestEdge_Key(t *testing.T) {
 	e := Edge{
 		SourceID:         "Smith2024",

@@ -55,6 +55,13 @@ func (e *Edge) SetCreatedAt() {
 	}
 }
 
+// MergeCreatedAt preserves the existing CreatedAt timestamp if the new one is empty.
+func (e *Edge) MergeCreatedAt(existing Edge) {
+	if e.CreatedAt == "" && existing.CreatedAt != "" {
+		e.CreatedAt = existing.CreatedAt
+	}
+}
+
 // Key returns the unique identity tuple for this edge.
 func (e *Edge) Key() EdgeKey {
 	return EdgeKey{

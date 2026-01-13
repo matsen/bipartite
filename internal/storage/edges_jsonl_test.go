@@ -238,26 +238,3 @@ func TestUpsertEdge(t *testing.T) {
 		}
 	})
 }
-
-func TestPaperExists(t *testing.T) {
-	refIDs := []string{"Smith2024", "Jones2023", "Brown2022"}
-
-	tests := []struct {
-		paperID string
-		want    bool
-	}{
-		{"Smith2024", true},
-		{"Jones2023", true},
-		{"Unknown", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.paperID, func(t *testing.T) {
-			got := PaperExists(tt.paperID, refIDs)
-			if got != tt.want {
-				t.Errorf("PaperExists(%q) = %v, want %v", tt.paperID, got, tt.want)
-			}
-		})
-	}
-}
