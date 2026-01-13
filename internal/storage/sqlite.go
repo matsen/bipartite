@@ -76,6 +76,14 @@ func createSchema(db *sql.DB) error {
 			abstract,
 			authors_text
 		);
+
+		-- Embedding metadata for semantic index staleness detection (Phase II)
+		CREATE TABLE IF NOT EXISTS embedding_metadata (
+			paper_id TEXT PRIMARY KEY,
+			model_name TEXT NOT NULL,
+			indexed_at INTEGER NOT NULL,
+			abstract_hash TEXT NOT NULL
+		);
 	`
 
 	_, err := db.Exec(schema)
@@ -346,4 +354,77 @@ func prepareFTSQuery(query string) string {
 	}
 
 	return query
+}
+
+// EmbeddingMetadata represents embedding metadata stored in the database.
+type EmbeddingMetadata struct {
+	PaperID      string
+	ModelName    string
+	IndexedAt    int64  // Unix timestamp
+	AbstractHash string // SHA256 of abstract
+}
+
+// SaveEmbeddingMetadata saves or updates embedding metadata for a paper.
+func (d *DB) SaveEmbeddingMetadata(meta EmbeddingMetadata) error {
+	_, err := d.db.Exec(`
+		INSERT OR REPLACE INTO embedding_metadata (paper_id, model_name, indexed_at, abstract_hash)
+		VALUES (?, ?, ?, ?)
+	`, meta.PaperID, meta.ModelName, meta.IndexedAt, meta.AbstractHash)
+	return err
+}
+
+// GetEmbeddingMetadata retrieves embedding metadata for a paper.
+func (d *DB) GetEmbeddingMetadata(paperID string) (*EmbeddingMetadata, error) {
+	var meta EmbeddingMetadata
+	err := d.db.QueryRow(`
+		SELECT paper_id, model_name, indexed_at, abstract_hash
+		FROM embedding_metadata
+		WHERE paper_id = ?
+	`, paperID).Scan(&meta.PaperID, &meta.ModelName, &meta.IndexedAt, &meta.AbstractHash)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &meta, nil
+}
+
+// ClearEmbeddingMetadata removes all embedding metadata.
+func (d *DB) ClearEmbeddingMetadata() error {
+	_, err := d.db.Exec("DELETE FROM embedding_metadata")
+	return err
+}
+
+// CountEmbeddingMetadata returns the number of papers with embedding metadata.
+func (d *DB) CountEmbeddingMetadata() (int, error) {
+	var count int
+	err := d.db.QueryRow("SELECT COUNT(*) FROM embedding_metadata").Scan(&count)
+	return count, err
+}
+
+// CountPapersWithAbstract returns the number of papers that have abstracts.
+func (d *DB) CountPapersWithAbstract(minLength int) (int, error) {
+	var count int
+	err := d.db.QueryRow("SELECT COUNT(*) FROM refs WHERE abstract IS NOT NULL AND LENGTH(abstract) >= ?", minLength).Scan(&count)
+	return count, err
+}
+
+// ListPaperIDsWithAbstract returns IDs of papers that have abstracts of sufficient length.
+func (d *DB) ListPaperIDsWithAbstract(minLength int) ([]string, error) {
+	rows, err := d.db.Query("SELECT id FROM refs WHERE abstract IS NOT NULL AND LENGTH(abstract) >= ?", minLength)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }

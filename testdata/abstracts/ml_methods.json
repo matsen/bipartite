@@ -1,0 +1,7 @@
+{
+  "id": "ml-test-001",
+  "title": "Deep Learning for Protein Structure Prediction",
+  "authors": [{"first": "Jane", "last": "Smith"}],
+  "abstract": "We introduce a novel deep neural network architecture for predicting protein tertiary structure from amino acid sequences. Our model combines attention mechanisms with graph neural networks to capture both local and long-range interactions between residues. Training on a large corpus of experimentally determined structures, the network learns to predict inter-residue distances and dihedral angles with high accuracy. The resulting structure predictions achieve competitive performance on CASP benchmark datasets, demonstrating the power of end-to-end learning for this challenging computational biology problem.",
+  "year": 2023
+}
