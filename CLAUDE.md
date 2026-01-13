@@ -5,6 +5,8 @@ Auto-generated from all feature plans. Last updated: 2026-01-12
 ## Active Technologies
 - Go 1.21+ (continuing Phase I) + Ollama (local embeddings), pure Go vector storage (002-rag-index)
 - GOB-serialized vector index (ephemeral, gitignored) (002-rag-index)
+- Go 1.25.5 (continuing Phase I/II) + spf13/cobra (CLI), modernc.org/sqlite (storage) - no new dependencies (003-knowledge-graph)
+- JSONL (edges.jsonl) + ephemeral SQLite (edge index rebuilt on `bp rebuild`) (003-knowledge-graph)
 
 - Go 1.21+ (latest stable) (001-core-reference-manager)
 
@@ -24,6 +26,7 @@ tests/
 Go 1.21+ (latest stable): Follow standard conventions
 
 ## Recent Changes
+- 003-knowledge-graph: Added Go 1.25.5 (continuing Phase I/II) + spf13/cobra (CLI), modernc.org/sqlite (storage) - no new dependencies
 - 002-rag-index: Added Go 1.21+ (continuing Phase I) + Ollama (local embeddings), pure Go vector storage
 
 - 001-core-reference-manager: Added Go 1.21+ (latest stable)
