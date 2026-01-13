@@ -25,6 +25,7 @@ Use this after pulling changes from git or if the database becomes corrupted.`,
 type RebuildResult struct {
 	Status     string `json:"status"`
 	References int    `json:"references"`
+	Edges      int    `json:"edges"`
 }
 
 func runRebuild(cmd *cobra.Command, args []string) error {
@@ -39,20 +40,28 @@ func runRebuild(cmd *cobra.Command, args []string) error {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
-	// Rebuild from JSONL
+	// Rebuild refs from JSONL
 	refsPath := config.RefsPath(repoRoot)
-	count, err := db.RebuildFromJSONL(refsPath)
+	refsCount, err := db.RebuildFromJSONL(refsPath)
 	if err != nil {
-		exitWithError(ExitDataError, "rebuilding database: %v", err)
+		exitWithError(ExitDataError, "rebuilding refs database: %v", err)
+	}
+
+	// Rebuild edges from JSONL
+	edgesPath := config.EdgesPath(repoRoot)
+	edgesCount, err := db.RebuildEdgesFromJSONL(edgesPath)
+	if err != nil {
+		exitWithError(ExitDataError, "rebuilding edges database: %v", err)
 	}
 
 	// Output results
 	if humanOutput {
-		fmt.Printf("Rebuilt query database with %d references\n", count)
+		fmt.Printf("Rebuilt query database with %d references and %d edges\n", refsCount, edgesCount)
 	} else {
 		outputJSON(RebuildResult{
 			Status:     "rebuilt",
-			References: count,
+			References: refsCount,
+			Edges:      edgesCount,
 		})
 	}
 

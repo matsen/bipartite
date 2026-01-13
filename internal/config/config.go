@@ -18,6 +18,7 @@ const (
 	BipartiteDir = ".bipartite"
 	ConfigFile   = "config.json"
 	RefsFile     = "refs.jsonl"
+	EdgesFile    = "edges.jsonl"
 	CacheDir     = "cache"
 	DBFile       = "refs.db"
 )
@@ -38,6 +39,11 @@ func ConfigPath(root string) string {
 // RefsPath returns the path to refs.jsonl from a root path.
 func RefsPath(root string) string {
 	return filepath.Join(root, BipartiteDir, RefsFile)
+}
+
+// EdgesPath returns the path to edges.jsonl from a root path.
+func EdgesPath(root string) string {
+	return filepath.Join(root, BipartiteDir, EdgesFile)
 }
 
 // CachePath returns the path to the cache directory from a root path.

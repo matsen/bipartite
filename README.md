@@ -56,6 +56,19 @@ bp open Smith2026-ab
 | `bp open <id>` | Open PDF in configured viewer |
 | `bp export --bibtex` | Export to BibTeX format |
 | `bp check` | Validate repository integrity |
+| `bp groom` | Detect orphaned edges; use `--fix` to remove |
+
+### Knowledge Graph Commands
+
+| Command | Description |
+|---------|-------------|
+| `bp edge add -s <source> -t <target> -r <type> -m <summary>` | Add a directed edge between papers |
+| `bp edge import <file>` | Bulk import edges from JSONL |
+| `bp edge list <paper-id>` | List edges for a paper (`--incoming`, `--all`) |
+| `bp edge search --type <type>` | Find edges by relationship type |
+| `bp edge export` | Export edges to JSONL (`--paper` to filter) |
+
+Relationship types: `cites`, `extends`, `contradicts`, `implements`, `applies-to`, `builds-on` (custom types also allowed).
 
 All commands output JSON by default. Use `--human` for readable output.
 
@@ -80,13 +93,14 @@ Tested on a 6,400 paper library (32MB Paperpile export):
 
 ```
 .bipartite/
-├── refs.jsonl      # Source of truth - human-readable, git-mergeable
+├── refs.jsonl      # Papers - human-readable, git-mergeable
+├── edges.jsonl     # Knowledge graph edges - git-mergeable
 ├── config.json     # Local configuration
 └── cache/
     └── refs.db     # SQLite with FTS5 - ephemeral, gitignored
 ```
 
-The JSONL file can be version-controlled and merged. The SQLite cache is rebuilt with `bp rebuild` after pulling changes.
+JSONL files are the source of truth and can be version-controlled. The SQLite cache is rebuilt with `bp rebuild` after pulling changes.
 
 ## Collaboration Workflow
 
@@ -109,9 +123,10 @@ bp rebuild  # Refresh local index
 
 ## Roadmap
 
-- **Phase I** (current): Core reference manager with Paperpile import
-- **Phase II**: RAG index for semantic search over abstracts
-- **Phase III**: Knowledge graph with relational summaries
+- **Phase I** ✓: Core reference manager with Paperpile import
+- **Phase II** ✓: RAG index for semantic search over abstracts
+- **Phase III-a** ✓: Knowledge graph with directed edges between papers
+- **Phase III-b**: Concept nodes and artifact connections
 - **Phase IV**: Semantic Scholar integration for metadata enrichment
 
 See [VISION.md](VISION.md) for details.

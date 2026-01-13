@@ -1,0 +1,20 @@
+{"source_id":"Matsen2025-oj","target_id":"Sung2025-hz","relationship_type":"builds-on","summary":"DASM builds on the thrifty mutation model to separate nucleotide-level mutation processes from amino acid selection effects"}
+{"source_id":"Matsen2025-oj","target_id":"Devlin2018-bd","relationship_type":"extends","summary":"Extends BERT-style masked language modeling by introducing an evolutionary framework that factors out mutation from selection"}
+{"source_id":"Matsen2025-oj","target_id":"Ruffolo2021-ne","relationship_type":"contradicts","summary":"Shows that standard antibody language models like AntiBERTy conflate mutation bias with functional effects, degrading prediction accuracy"}
+{"source_id":"Matsen2025-oj","target_id":"Leem2022-pd","relationship_type":"contradicts","summary":"Demonstrates that AntiBERTa's masked objective implicitly learns mutation patterns rather than pure selection effects"}
+{"source_id":"Matsen2025-oj","target_id":"Chungyoun2024-fc","relationship_type":"applies-to","summary":"Evaluates DASM performance using the FLAb benchmark for antibody fitness prediction"}
+{"source_id":"Matsen2025-oj","target_id":"Hie2024-rz","relationship_type":"contradicts","summary":"Shows that ESM-based approaches for antibody evolution include mutation bias that DASM explicitly removes"}
+{"source_id":"Matsen2025-oj","target_id":"Olsen2024-pu","relationship_type":"cites","summary":"Cites prior work on germline bias in antibody language models that motivates the DASM approach"}
+{"source_id":"Matsen2025-oj","target_id":"Tang2022-iq","relationship_type":"cites","summary":"Cites deep learning model of SHM that reveals importance of sequence context beyond hotspots"}
+{"source_id":"Matsen2025-oj","target_id":"Spisak2020-zy","relationship_type":"cites","summary":"Cites work on learning the heterogeneous hypermutation landscape of immunoglobulins"}
+{"source_id":"Matsen2025-oj","target_id":"Lucaci2021-vh","relationship_type":"cites","summary":"Cites evidence for instantaneous multiple-nucleotide changes in somatic hypermutation"}
+{"source_id":"Sung2025-hz","target_id":"Spisak2020-zy","relationship_type":"extends","summary":"Thrifty extends the S5F model to handle wider sequence context in hypermutation modeling"}
+{"source_id":"Im2025-hi","target_id":"Devlin2018-bd","relationship_type":"builds-on","summary":"SHIVER builds on BERT architecture with specialized vocabulary for hypermutation-informed representations"}
+{"source_id":"Ng2025-nf","target_id":"Olsen2024-pu","relationship_type":"extends","summary":"Extends germline bias analysis with preferential masking to focus learning on somatically hypermutated positions"}
+{"source_id":"Ruffolo2021-ne","target_id":"Devlin2018-bd","relationship_type":"builds-on","summary":"AntiBERTy applies BERT pre-training to antibody sequences for affinity maturation prediction"}
+{"source_id":"Leem2022-pd","target_id":"Devlin2018-bd","relationship_type":"builds-on","summary":"AntiBERTa uses self-supervised learning from BERT to decipher antibody language"}
+{"source_id":"Hie2024-rz","target_id":"Chungyoun2024-fc","relationship_type":"applies-to","summary":"Evaluates ESM-based antibody evolution approach using FLAb benchmark"}
+{"source_id":"Chungyoun2024-fc","target_id":"Ruffolo2021-ne","relationship_type":"cites","summary":"FLAb benchmark includes AntiBERTy as one of the evaluated methods"}
+{"source_id":"Chungyoun2024-fc","target_id":"Leem2022-pd","relationship_type":"cites","summary":"FLAb benchmark includes AntiBERTa as one of the evaluated methods"}
+{"source_id":"Johnson2025-yr","target_id":"Sung2025-hz","relationship_type":"builds-on","summary":"Nucleotide context models build on thrifty for improved protein language model comparison"}
+{"source_id":"Glanzer2025-td","target_id":"Olsen2024-pu","relationship_type":"extends","summary":"Reveals additional biases in antibody language models through systematic benchmarking"}
