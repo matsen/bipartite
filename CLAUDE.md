@@ -1,35 +1,42 @@
 # bipartite Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-01-12
-
 ## Active Technologies
-- Go 1.21+ (continuing Phase I) + Ollama (local embeddings), pure Go vector storage (002-rag-index)
-- GOB-serialized vector index (ephemeral, gitignored) (002-rag-index)
-- Go 1.25.5 (continuing Phase I/II) + spf13/cobra (CLI), modernc.org/sqlite (storage) - no new dependencies (003-knowledge-graph)
-- JSONL (edges.jsonl) + ephemeral SQLite (edge index rebuilt on `bp rebuild`) (003-knowledge-graph)
-
-- Go 1.21+ (latest stable) (001-core-reference-manager)
+- **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
+- **Ollama** for local embeddings, pure Go vector storage
+- **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
+- **Vector index**: GOB-serialized (ephemeral, gitignored)
 
 ## Project Structure
 
 ```text
-src/
-tests/
+cmd/           # CLI command implementations
+internal/      # Internal packages (store, index, etc.)
+specs/         # Feature specifications
+testdata/      # Test fixtures
+tests/         # Integration tests
 ```
 
 ## Commands
 
-# Add commands for Go 1.21+ (latest stable)
+```bash
+# Build and run
+go build -o bp . && ./bp --help
+
+# Common operations
+./bp import --format paperpile export.json   # Import references
+./bp rebuild                                  # Rebuild SQLite index after import
+./bp search <query>                          # Search by keyword
+./bp semantic <query>                        # Semantic similarity search
+./bp get <id>                                # Get reference by ID
+./bp list                                    # List all references
+./bp export                                  # Export to BibTeX
+
+# Add --human flag for readable output (default is JSON)
+```
 
 ## Code Style
 
-Go 1.21+ (latest stable): Follow standard conventions
-
-## Recent Changes
-- 003-knowledge-graph: Added Go 1.25.5 (continuing Phase I/II) + spf13/cobra (CLI), modernc.org/sqlite (storage) - no new dependencies
-- 002-rag-index: Added Go 1.21+ (continuing Phase I) + Ollama (local embeddings), pure Go vector storage
-
-- 001-core-reference-manager: Added Go 1.21+ (latest stable)
+Follow standard Go conventions (`go fmt`, `go vet`)
 
 <!-- MANUAL ADDITIONS START -->
 
