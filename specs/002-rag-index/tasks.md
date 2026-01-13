@@ -152,7 +152,7 @@
 - [X] T046 [P] Verify all error messages match contracts/cli.md standard errors
 - [X] T047 Implement lazy loading for SemanticIndex (load only when needed) in internal/semantic/index.go
 - [X] T048 Verify index file is in .bipartite/cache/semantic.gob (gitignored location)
-- [ ] T049 Run quickstart.md validation workflow manually
+- [X] T049 Run quickstart.md validation workflow manually
 
 ---
 
@@ -231,7 +231,7 @@ T016 → T017 (index build) → T018 → T019 (search) → T020 → T021 (CLI) �
 
 - All commands output JSON by default, `--human` for readable format (Phase I pattern)
 - Index stored in `.bipartite/cache/semantic.gob` (gitignored, ephemeral)
-- Embedding model: `all-minilm:l6-v2` via Ollama (384 dimensions)
+- Embedding model: `nomic-embed-text` via Ollama (768 dimensions, 8K context)
 - Ollama must be running for index build and semantic search
 - Papers without abstracts are skipped during indexing (tracked in statistics)
 - Minimum abstract length: 50 characters

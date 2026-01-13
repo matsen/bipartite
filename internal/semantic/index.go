@@ -25,6 +25,11 @@ const (
 	// meaningful semantic embeddings (corresponds to ~10-15 words).
 	MinAbstractLength = 50
 
+	// MaxAbstractLength is the maximum abstract length to embed.
+	// nomic-embed-text has 8192 token context. Set to ~2000 tokens
+	// worth of characters to leave room for tokenization overhead.
+	MaxAbstractLength = 8000
+
 	// CurrentIndexVersion is the format version for compatibility checking.
 	// Increment this when making breaking changes to the index format.
 	CurrentIndexVersion = 1

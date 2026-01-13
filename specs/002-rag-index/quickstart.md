@@ -9,7 +9,7 @@ This guide walks through setting up and using semantic search in bipartite.
 
 1. **bipartite Phase I complete**: You have an initialized repository with imported papers
 2. **Ollama installed**: Install from [ollama.ai](https://ollama.ai)
-3. **Embedding model pulled**: Run `ollama pull all-minilm:l6-v2`
+3. **Embedding model pulled**: Run `ollama pull nomic-embed-text`
 
 ## Setup
 
@@ -26,10 +26,10 @@ curl http://localhost:11434/api/tags
 ### 2. Pull the Embedding Model
 
 ```bash
-ollama pull all-minilm:l6-v2
+ollama pull nomic-embed-text
 ```
 
-This downloads the ~22MB model for generating embeddings locally.
+This downloads the ~274MB model for generating embeddings locally.
 
 ### 3. Build the Semantic Index
 
@@ -150,7 +150,7 @@ ollama serve
 
 ```bash
 # Pull the embedding model
-ollama pull all-minilm:l6-v2
+ollama pull nomic-embed-text
 ```
 
 ### "Semantic index not found"
@@ -194,7 +194,7 @@ Use this to verify Phase II is working:
 curl -s http://localhost:11434/api/tags | jq .models
 
 # 2. Model available
-ollama list | grep all-minilm
+ollama list | grep nomic-embed
 
 # 3. Index built
 bp index check

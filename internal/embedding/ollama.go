@@ -15,10 +15,11 @@ const (
 	DefaultOllamaURL = "http://localhost:11434"
 
 	// DefaultModel is the default embedding model.
-	DefaultModel = "all-minilm:l6-v2"
+	// nomic-embed-text has 8192 token context and 768 dimensions.
+	DefaultModel = "nomic-embed-text"
 
-	// DefaultDimensions is the expected output dimensions for all-minilm.
-	DefaultDimensions = 384
+	// DefaultDimensions is the expected output dimensions for nomic-embed-text.
+	DefaultDimensions = 768
 
 	// DefaultTimeout is the timeout for embedding requests.
 	DefaultTimeout = 30 * time.Second
@@ -187,7 +188,8 @@ func (p *OllamaProvider) HasModel(ctx context.Context) (bool, error) {
 	}
 
 	for _, m := range result.Models {
-		if m.Name == p.model {
+		// Match exact name or name:latest for models without explicit tag
+		if m.Name == p.model || m.Name == p.model+":latest" {
 			return true, nil
 		}
 	}

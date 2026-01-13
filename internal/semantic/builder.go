@@ -86,8 +86,14 @@ func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*Seman
 			continue
 		}
 
+		// Truncate long abstracts to fit model context
+		abstract := ref.Abstract
+		if len(abstract) > MaxAbstractLength {
+			abstract = abstract[:MaxAbstractLength]
+		}
+
 		// Generate embedding
-		emb, err := b.provider.Embed(ctx, ref.Abstract)
+		emb, err := b.provider.Embed(ctx, abstract)
 		if err != nil {
 			return nil, nil, fmt.Errorf("embedding paper %s: %w", ref.ID, err)
 		}
