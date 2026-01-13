@@ -5,6 +5,10 @@ import "time"
 
 // SemanticIndex holds embeddings for all indexed papers.
 type SemanticIndex struct {
+	// Version is the format version for compatibility checking.
+	// Check against CurrentIndexVersion when loading.
+	Version int `json:"version"`
+
 	// Metadata about the index
 	ModelName       string    `json:"model_name"`        // e.g., "all-minilm:l6-v2"
 	Dimensions      int       `json:"dimensions"`        // 384 for all-minilm

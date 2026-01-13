@@ -11,8 +11,9 @@ import (
 
 // Errors returned by semantic index operations.
 var (
-	ErrIndexNotFound   = errors.New("semantic index not found")
-	ErrPaperNotIndexed = errors.New("paper not in semantic index")
+	ErrIndexNotFound      = errors.New("semantic index not found")
+	ErrPaperNotIndexed    = errors.New("paper not in semantic index")
+	ErrUnsupportedVersion = errors.New("unsupported index version")
 )
 
 const (
@@ -20,7 +21,13 @@ const (
 	IndexFileName = "semantic.gob"
 
 	// MinAbstractLength is the minimum abstract length to index.
+	// Abstracts shorter than this are typically too brief to generate
+	// meaningful semantic embeddings (corresponds to ~10-15 words).
 	MinAbstractLength = 50
+
+	// CurrentIndexVersion is the format version for compatibility checking.
+	// Increment this when making breaking changes to the index format.
+	CurrentIndexVersion = 1
 )
 
 // IndexPath returns the path to the semantic index file.
@@ -31,6 +38,7 @@ func IndexPath(repoRoot string) string {
 // NewSemanticIndex creates a new empty semantic index.
 func NewSemanticIndex(modelName string, dimensions int) *SemanticIndex {
 	return &SemanticIndex{
+		Version:    CurrentIndexVersion,
 		ModelName:  modelName,
 		Dimensions: dimensions,
 		CreatedAt:  time.Now(),
@@ -39,6 +47,7 @@ func NewSemanticIndex(modelName string, dimensions int) *SemanticIndex {
 }
 
 // AddEmbedding adds a paper embedding to the index.
+// The PaperCount field is automatically updated to reflect the current number of embeddings.
 func (idx *SemanticIndex) AddEmbedding(paperID string, embedding []float32) error {
 	if len(embedding) != idx.Dimensions {
 		return fmt.Errorf("embedding dimension mismatch: got %d, want %d", len(embedding), idx.Dimensions)
@@ -86,6 +95,7 @@ func (idx *SemanticIndex) Save(repoRoot string) error {
 }
 
 // Load reads the semantic index from disk.
+// Returns ErrUnsupportedVersion if the index was created with an incompatible format.
 func Load(repoRoot string) (*SemanticIndex, error) {
 	indexPath := IndexPath(repoRoot)
 
@@ -102,6 +112,12 @@ func Load(repoRoot string) (*SemanticIndex, error) {
 	dec := gob.NewDecoder(f)
 	if err := dec.Decode(&idx); err != nil {
 		return nil, fmt.Errorf("decoding index: %w", err)
+	}
+
+	// Check version compatibility (version 0 means old index without version field)
+	if idx.Version != 0 && idx.Version != CurrentIndexVersion {
+		return nil, fmt.Errorf("%w: got %d, want %d (rebuild with 'bp index build')",
+			ErrUnsupportedVersion, idx.Version, CurrentIndexVersion)
 	}
 
 	return &idx, nil

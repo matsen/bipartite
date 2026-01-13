@@ -1,12 +1,26 @@
 package semantic
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"sort"
 )
 
+// Errors returned by search operations.
+var (
+	ErrEmptyIndex        = errors.New("index has no embeddings")
+	ErrDimensionMismatch = errors.New("query dimensions don't match index dimensions")
+	ErrNegativeLimit     = errors.New("limit cannot be negative")
+)
+
 // CosineSimilarity computes the cosine similarity between two vectors.
-// Returns a value between -1 and 1, where 1 means identical direction.
+// Returns a value between -1 and 1, where:
+//   - 1.0 = vectors point in identical direction
+//   - 0.0 = vectors are orthogonal (no similarity)
+//   - -1.0 = vectors point in opposite directions
+//
+// Returns 0 for invalid inputs (different lengths or zero-length vectors).
 func CosineSimilarity(a, b []float32) float32 {
 	if len(a) != len(b) || len(a) == 0 {
 		return 0
@@ -27,17 +41,16 @@ func CosineSimilarity(a, b []float32) float32 {
 	return dot / denominator
 }
 
-// Search finds papers similar to a query embedding.
-// Results are sorted by similarity (highest first) and filtered by threshold.
-func (idx *SemanticIndex) Search(query []float32, limit int, threshold float32) []SearchResult {
-	if idx.Embeddings == nil || len(query) != idx.Dimensions {
-		return nil
-	}
+// similarityFilter determines whether a paper should be included in results.
+type similarityFilter func(paperID string, similarity float32) bool
 
+// computeSimilarities calculates similarity scores for all papers matching the filter.
+// Results are sorted by similarity (highest first).
+func (idx *SemanticIndex) computeSimilarities(query []float32, filter similarityFilter) []SearchResult {
 	results := make([]SearchResult, 0, len(idx.Embeddings))
 	for paperID, embedding := range idx.Embeddings {
 		sim := CosineSimilarity(query, embedding)
-		if sim >= threshold {
+		if filter(paperID, sim) {
 			results = append(results, SearchResult{
 				PaperID:    paperID,
 				Similarity: sim,
@@ -45,17 +58,40 @@ func (idx *SemanticIndex) Search(query []float32, limit int, threshold float32) 
 		}
 	}
 
-	// Sort by similarity descending
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Similarity > results[j].Similarity
 	})
 
-	// Apply limit
+	return results
+}
+
+// applyLimit truncates results to the specified limit.
+func applyLimit(results []SearchResult, limit int) []SearchResult {
 	if limit > 0 && len(results) > limit {
-		results = results[:limit]
+		return results[:limit]
+	}
+	return results
+}
+
+// Search finds papers similar to a query embedding.
+// Results are sorted by similarity (highest first) and filtered by threshold.
+// Returns an error if the index is empty, query dimensions don't match, or limit is negative.
+func (idx *SemanticIndex) Search(query []float32, limit int, threshold float32) ([]SearchResult, error) {
+	if idx.Embeddings == nil || len(idx.Embeddings) == 0 {
+		return nil, ErrEmptyIndex
+	}
+	if len(query) != idx.Dimensions {
+		return nil, fmt.Errorf("%w: got %d, want %d", ErrDimensionMismatch, len(query), idx.Dimensions)
+	}
+	if limit < 0 {
+		return nil, ErrNegativeLimit
 	}
 
-	return results
+	results := idx.computeSimilarities(query, func(_ string, sim float32) bool {
+		return sim >= threshold
+	})
+
+	return applyLimit(results, limit), nil
 }
 
 // FindSimilar finds papers similar to a given paper by ID.
@@ -65,30 +101,15 @@ func (idx *SemanticIndex) FindSimilar(paperID string, limit int) ([]SearchResult
 	if !exists {
 		return nil, ErrPaperNotIndexed
 	}
-
-	results := make([]SearchResult, 0, len(idx.Embeddings)-1)
-	for id, emb := range idx.Embeddings {
-		if id == paperID {
-			continue // Skip the source paper
-		}
-		sim := CosineSimilarity(embedding, emb)
-		results = append(results, SearchResult{
-			PaperID:    id,
-			Similarity: sim,
-		})
+	if limit < 0 {
+		return nil, ErrNegativeLimit
 	}
 
-	// Sort by similarity descending
-	sort.Slice(results, func(i, j int) bool {
-		return results[i].Similarity > results[j].Similarity
+	results := idx.computeSimilarities(embedding, func(id string, _ float32) bool {
+		return id != paperID
 	})
 
-	// Apply limit
-	if limit > 0 && len(results) > limit {
-		results = results[:limit]
-	}
-
-	return results, nil
+	return applyLimit(results, limit), nil
 }
 
 // HasPaper checks if a paper is in the index.

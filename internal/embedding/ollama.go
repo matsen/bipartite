@@ -22,6 +22,12 @@ const (
 
 	// DefaultTimeout is the timeout for embedding requests.
 	DefaultTimeout = 30 * time.Second
+
+	// apiPathTags is the Ollama API endpoint for listing models.
+	apiPathTags = "/api/tags"
+
+	// apiPathEmbeddings is the Ollama API endpoint for generating embeddings.
+	apiPathEmbeddings = "/api/embeddings"
 )
 
 // OllamaProvider generates embeddings using the Ollama API.
@@ -77,6 +83,36 @@ func NewOllamaProvider(opts ...OllamaOption) *OllamaProvider {
 	return p
 }
 
+// doGet performs a GET request to the specified path and returns the response.
+// The caller is responsible for closing the response body.
+func (p *OllamaProvider) doGet(ctx context.Context, path string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.baseURL+path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+
+	resp, err := p.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("sending request: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		defer resp.Body.Close()
+		return nil, fmt.Errorf("ollama returned status %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
+
+// formatErrorBody reads and formats the response body for error messages.
+func formatErrorBody(body io.Reader) string {
+	respBody, err := io.ReadAll(body)
+	if err != nil {
+		return fmt.Sprintf("(failed to read response body: %v)", err)
+	}
+	return string(respBody)
+}
+
 // Embed generates an embedding for the given text.
 func (p *OllamaProvider) Embed(ctx context.Context, text string) (Embedding, error) {
 	reqBody := ollamaEmbedRequest{
@@ -89,7 +125,7 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) (Embedding, err
 		return Embedding{}, fmt.Errorf("marshaling request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+"/api/embeddings", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.baseURL+apiPathEmbeddings, bytes.NewReader(body))
 	if err != nil {
 		return Embedding{}, fmt.Errorf("creating request: %w", err)
 	}
@@ -102,8 +138,7 @@ func (p *OllamaProvider) Embed(ctx context.Context, text string) (Embedding, err
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return Embedding{}, fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, string(respBody))
+		return Embedding{}, fmt.Errorf("ollama returned status %d: %s", resp.StatusCode, formatErrorBody(resp.Body))
 	}
 
 	var result ollamaEmbedResponse
@@ -130,40 +165,21 @@ func (p *OllamaProvider) Dimensions() int {
 
 // IsAvailable checks if Ollama is running and accessible.
 func (p *OllamaProvider) IsAvailable(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.baseURL+"/api/tags", nil)
-	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
-	}
-
-	resp, err := p.client.Do(req)
+	resp, err := p.doGet(ctx, apiPathTags)
 	if err != nil {
 		return fmt.Errorf("ollama is not running: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("ollama returned unexpected status: %d", resp.StatusCode)
-	}
-
+	resp.Body.Close()
 	return nil
 }
 
 // HasModel checks if the required model is available in Ollama.
 func (p *OllamaProvider) HasModel(ctx context.Context) (bool, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, p.baseURL+"/api/tags", nil)
-	if err != nil {
-		return false, fmt.Errorf("creating request: %w", err)
-	}
-
-	resp, err := p.client.Do(req)
+	resp, err := p.doGet(ctx, apiPathTags)
 	if err != nil {
 		return false, fmt.Errorf("checking models: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return false, fmt.Errorf("ollama returned status %d", resp.StatusCode)
-	}
 
 	var result ollamaTagsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {

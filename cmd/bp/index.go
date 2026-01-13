@@ -8,6 +8,7 @@ import (
 
 	"github.com/matsen/bipartite/internal/embedding"
 	"github.com/matsen/bipartite/internal/semantic"
+	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -50,17 +51,12 @@ Run 'ollama pull all-minilm:l6-v2' to download the model.`,
 	RunE: runIndexBuild,
 }
 
-func runIndexBuild(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-	repoRoot := mustFindRepository()
-
-	// Check Ollama availability
-	provider := embedding.NewOllamaProvider()
+// validateOllamaSetup checks that Ollama is running and has the required model.
+func validateOllamaSetup(ctx context.Context, provider *embedding.OllamaProvider) {
 	if err := provider.IsAvailable(ctx); err != nil {
 		exitWithError(ExitDataError, "Ollama is not running\n\nStart Ollama with 'ollama serve' or install from https://ollama.ai")
 	}
 
-	// Check model availability
 	hasModel, err := provider.HasModel(ctx)
 	if err != nil {
 		exitWithError(ExitError, "checking model availability: %v", err)
@@ -68,54 +64,10 @@ func runIndexBuild(cmd *cobra.Command, args []string) error {
 	if !hasModel {
 		exitWithError(ExitModelNotFound, "Embedding model '%s' not found\n\nRun 'ollama pull %s' to download it.", provider.ModelName(), provider.ModelName())
 	}
+}
 
-	// Open database
-	db := mustOpenDatabase(repoRoot)
-	defer db.Close()
-
-	// Get all references
-	refs, err := db.ListAll(0)
-	if err != nil {
-		exitWithError(ExitError, "listing references: %v", err)
-	}
-
-	// Build index
-	builder := semantic.NewBuilder(provider, db)
-
-	// Set progress reporter unless suppressed
-	if !noProgress && humanOutput {
-		builder.SetProgressReporter(semantic.ProgressFunc(func(current, total int) {
-			printProgress(current, total)
-		}))
-	}
-
-	if humanOutput && !noProgress {
-		fmt.Fprintf(os.Stderr, "Building semantic index...\n")
-	}
-
-	idx, stats, err := builder.Build(ctx, refs)
-	if err != nil {
-		exitWithError(ExitError, "building index: %v", err)
-	}
-
-	// Save index
-	if err := idx.Save(repoRoot); err != nil {
-		exitWithError(ExitError, "saving index: %v", err)
-	}
-
-	// Get index size
-	indexSize, err := semantic.IndexSize(repoRoot)
-	if err != nil {
-		indexSize = 0 // Non-fatal
-	}
-	stats.IndexSizeBytes = indexSize
-
-	// Clear progress line if we were showing progress
-	if humanOutput && !noProgress {
-		fmt.Fprintf(os.Stderr, "\r%s\r", "                                                  ")
-	}
-
-	// Output results
+// outputBuildResults outputs the build statistics in the appropriate format.
+func outputBuildResults(provider *embedding.OllamaProvider, stats *semantic.BuildStats) {
 	if humanOutput {
 		fmt.Printf("\nBuild complete:\n")
 		fmt.Printf("  Papers indexed: %d\n", stats.PapersIndexed)
@@ -134,7 +86,55 @@ func runIndexBuild(cmd *cobra.Command, args []string) error {
 			IndexSizeBytes:  stats.IndexSizeBytes,
 		})
 	}
+}
 
+func runIndexBuild(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+	repoRoot := mustFindRepository()
+
+	// Validate Ollama setup
+	provider := embedding.NewOllamaProvider()
+	validateOllamaSetup(ctx, provider)
+
+	// Open database and get references
+	db := mustOpenDatabase(repoRoot)
+	defer db.Close()
+
+	refs, err := db.ListAll(0)
+	if err != nil {
+		exitWithError(ExitError, "listing references: %v", err)
+	}
+
+	// Build index with progress reporting
+	builder := semantic.NewBuilder(provider, db)
+	if !noProgress && humanOutput {
+		builder.SetProgressReporter(semantic.ProgressFunc(printProgress))
+		fmt.Fprintf(os.Stderr, "Building semantic index...\n")
+	}
+
+	idx, stats, err := builder.Build(ctx, refs)
+	if err != nil {
+		exitWithError(ExitError, "building index: %v", err)
+	}
+
+	// Save index
+	if err := idx.Save(repoRoot); err != nil {
+		exitWithError(ExitError, "saving index: %v", err)
+	}
+
+	// Get index size (non-fatal if it fails)
+	if indexSize, err := semantic.IndexSize(repoRoot); err == nil {
+		stats.IndexSizeBytes = indexSize
+	} else if humanOutput {
+		fmt.Fprintf(os.Stderr, "Warning: could not determine index size: %v\n", err)
+	}
+
+	// Clear progress line if we were showing progress
+	if humanOutput && !noProgress {
+		fmt.Fprintf(os.Stderr, "\r%s\r", "                                                  ")
+	}
+
+	outputBuildResults(provider, stats)
 	return nil
 }
 
@@ -157,6 +157,47 @@ var indexCheckCmd = &cobra.Command{
 	Short: "Check semantic index health",
 	Long:  `Check the health and status of the semantic index.`,
 	RunE:  runIndexCheck,
+}
+
+// findMissingPapers returns IDs of papers with abstracts that are not in the index.
+func findMissingPapers(db *storage.DB, idx *semantic.SemanticIndex) ([]string, error) {
+	paperIDs, err := db.ListPaperIDsWithAbstract(semantic.MinAbstractLength)
+	if err != nil {
+		return nil, fmt.Errorf("listing paper IDs: %w", err)
+	}
+
+	var missingIDs []string
+	for _, id := range paperIDs {
+		if !idx.HasPaper(id) {
+			missingIDs = append(missingIDs, id)
+		}
+	}
+	return missingIDs, nil
+}
+
+// outputCheckResults outputs the index check results in the appropriate format.
+func outputCheckResults(result IndexCheckResult, exitCode int) {
+	if humanOutput {
+		fmt.Printf("Semantic Index Status: %s\n\n", result.Status)
+		fmt.Printf("Papers:\n")
+		fmt.Printf("  Total in database: %d\n", result.PapersTotal)
+		fmt.Printf("  With abstracts: %d\n", result.PapersWithAbstract)
+		fmt.Printf("  In semantic index: %d\n", result.PapersIndexed)
+		fmt.Printf("  Missing from index: %d\n", result.PapersMissing)
+		fmt.Printf("\nIndex Info:\n")
+		fmt.Printf("  Model: %s\n", result.Model)
+		fmt.Printf("  Created: %s\n", result.IndexCreated)
+		fmt.Printf("  Size: %s\n", formatBytes(result.IndexSizeBytes))
+		if result.Recommendation != "" {
+			fmt.Printf("\n%s\n", result.Recommendation)
+		}
+	} else {
+		outputJSON(result)
+	}
+
+	if exitCode != ExitSuccess {
+		os.Exit(exitCode)
+	}
 }
 
 func runIndexCheck(cmd *cobra.Command, args []string) error {
@@ -187,22 +228,15 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 	}
 
 	// Find missing papers
-	paperIDs, err := db.ListPaperIDsWithAbstract(semantic.MinAbstractLength)
+	missingIDs, err := findMissingPapers(db, idx)
 	if err != nil {
-		exitWithError(ExitError, "listing paper IDs: %v", err)
-	}
-
-	var missingIDs []string
-	for _, id := range paperIDs {
-		if !idx.HasPaper(id) {
-			missingIDs = append(missingIDs, id)
-		}
+		exitWithError(ExitError, "%v", err)
 	}
 
 	// Get index size
 	indexSize, _ := semantic.IndexSize(repoRoot)
 
-	// Determine status
+	// Determine status and exit code
 	status := "healthy"
 	var recommendation string
 	exitCode := ExitSuccess
@@ -229,30 +263,12 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 		result.MissingIDs = missingIDs
 	}
 
-	// Output results
-	if humanOutput {
-		fmt.Printf("Semantic Index Status: %s\n\n", status)
-		fmt.Printf("Papers:\n")
-		fmt.Printf("  Total in database: %d\n", totalCount)
-		fmt.Printf("  With abstracts: %d\n", abstractCount)
-		fmt.Printf("  In semantic index: %d\n", idx.PaperCount)
-		fmt.Printf("  Missing from index: %d\n", len(missingIDs))
-		fmt.Printf("\nIndex Info:\n")
-		fmt.Printf("  Model: %s\n", idx.ModelName)
-		fmt.Printf("  Created: %s\n", idx.CreatedAt.Format("2006-01-02 15:04:05"))
-		fmt.Printf("  Size: %s\n", formatBytes(indexSize))
-		if recommendation != "" {
-			fmt.Printf("\n%s\n", recommendation)
-		}
-	} else {
-		outputJSON(result)
-	}
-
-	if exitCode != ExitSuccess {
-		os.Exit(exitCode)
-	}
+	outputCheckResults(result, exitCode)
 	return nil
 }
+
+// progressBarWidth is the width in characters for terminal progress display.
+const progressBarWidth = 30
 
 // printProgress prints a progress bar to stderr.
 func printProgress(current, total int) {
@@ -260,15 +276,21 @@ func printProgress(current, total int) {
 		return
 	}
 	pct := float64(current) / float64(total) * 100
-	barWidth := 30
-	filled := int(float64(barWidth) * float64(current) / float64(total))
-	bar := ""
-	for i := 0; i < barWidth; i++ {
-		if i < filled {
+	filled := (progressBarWidth * current) / total
+
+	var bar string
+	if filled >= progressBarWidth {
+		// Complete - all filled
+		for i := 0; i < progressBarWidth; i++ {
 			bar += "="
-		} else if i == filled {
-			bar += ">"
-		} else {
+		}
+	} else {
+		// In progress - filled portion, arrow, empty portion
+		for i := 0; i < filled; i++ {
+			bar += "="
+		}
+		bar += ">"
+		for i := filled + 1; i < progressBarWidth; i++ {
 			bar += " "
 		}
 	}

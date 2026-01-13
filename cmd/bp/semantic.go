@@ -88,7 +88,10 @@ func runSemantic(cmd *cobra.Command, args []string) error {
 	}
 
 	// Search
-	results := idx.Search(queryEmb.Vector, semanticLimit, semanticThreshold)
+	results, err := idx.Search(queryEmb.Vector, semanticLimit, semanticThreshold)
+	if err != nil {
+		exitWithError(ExitError, "searching index: %v", err)
+	}
 
 	// Open database to get full paper info
 	db := mustOpenDatabase(repoRoot)

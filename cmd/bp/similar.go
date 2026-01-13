@@ -71,31 +71,26 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
-	// Get source paper
+	// Check if paper is in index first (more efficient than DB lookup)
+	if !idx.HasPaper(paperID) {
+		// Paper not in index - check if it exists at all to provide helpful error
+		sourcePaper, _ := db.GetByID(paperID)
+		if sourcePaper == nil {
+			exitWithError(ExitError, "Paper '%s' not found in database", paperID)
+		}
+		// Paper exists but not indexed - likely no/short abstract
+		exitWithError(ExitNoAbstract, "Paper '%s' is not in the semantic index\n\nThis paper may have no abstract or an abstract shorter than %d characters.\nRebuild the index with 'bp index build' if you recently added an abstract.", paperID, semantic.MinAbstractLength)
+	}
+
+	// Get source paper info for display
 	sourcePaper, err := db.GetByID(paperID)
 	if err != nil {
-		exitWithError(ExitError, "looking up paper: %v", err)
-	}
-	if sourcePaper == nil {
-		exitWithError(ExitError, "Paper '%s' not found", paperID)
-	}
-
-	// Check if paper has abstract (needed for similarity)
-	if sourcePaper.Abstract == "" {
-		exitWithError(ExitNoAbstract, "Paper '%s' has no abstract\n\nSimilarity search requires papers with abstracts.", paperID)
-	}
-
-	// Check if paper is in index
-	if !idx.HasPaper(paperID) {
-		exitWithError(ExitNoAbstract, "Paper '%s' has no abstract\n\nSimilarity search requires papers with abstracts.", paperID)
+		exitWithError(ExitError, "looking up paper details: %v", err)
 	}
 
 	// Find similar papers
 	results, err := idx.FindSimilar(paperID, similarLimit)
 	if err != nil {
-		if err == semantic.ErrPaperNotIndexed {
-			exitWithError(ExitNoAbstract, "Paper '%s' has no abstract\n\nSimilarity search requires papers with abstracts.", paperID)
-		}
 		exitWithError(ExitError, "finding similar papers: %v", err)
 	}
 
