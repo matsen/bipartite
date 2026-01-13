@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/matsen/bipartite/internal/embedding"
-	"github.com/matsen/bipartite/internal/reference"
-	"github.com/matsen/bipartite/internal/semantic"
 	"github.com/spf13/cobra"
 )
 
@@ -23,23 +21,13 @@ func init() {
 	semanticCmd.Flags().Float32VarP(&semanticThreshold, "threshold", "t", 0.5, "Minimum similarity threshold (0.0-1.0)")
 }
 
-// SemanticResult represents a paper in semantic search results.
-type SemanticResult struct {
-	ID         string             `json:"id"`
-	Title      string             `json:"title"`
-	Authors    []reference.Author `json:"authors"`
-	Year       int                `json:"year"`
-	Similarity float32            `json:"similarity"`
-	Abstract   string             `json:"abstract,omitempty"`
-}
-
 // SemanticResponse is the response for the semantic search command.
 type SemanticResponse struct {
-	Query     string           `json:"query"`
-	Results   []SemanticResult `json:"results"`
-	Total     int              `json:"total"`
-	Threshold float32          `json:"threshold"`
-	Model     string           `json:"model"`
+	Query     string              `json:"query"`
+	Results   []PaperSearchResult `json:"results"`
+	Total     int                 `json:"total"`
+	Threshold float32             `json:"threshold"`
+	Model     string              `json:"model"`
 }
 
 var semanticCmd = &cobra.Command{
@@ -67,13 +55,7 @@ func runSemantic(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 
 	// Load index
-	idx, err := semantic.Load(repoRoot)
-	if err != nil {
-		if err == semantic.ErrIndexNotFound {
-			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bp index build' to create the index.")
-		}
-		exitWithError(ExitError, "loading index: %v", err)
-	}
+	idx := mustLoadSemanticIndex(repoRoot)
 
 	// Check Ollama availability
 	provider := embedding.NewOllamaProvider()
@@ -98,21 +80,7 @@ func runSemantic(cmd *cobra.Command, args []string) error {
 	defer db.Close()
 
 	// Build response
-	semanticResults := make([]SemanticResult, 0, len(results))
-	for _, r := range results {
-		ref, err := db.GetByID(r.PaperID)
-		if err != nil || ref == nil {
-			continue // Skip if paper not found
-		}
-		semanticResults = append(semanticResults, SemanticResult{
-			ID:         ref.ID,
-			Title:      ref.Title,
-			Authors:    ref.Authors,
-			Year:       ref.Published.Year,
-			Similarity: r.Similarity,
-			Abstract:   ref.Abstract,
-		})
-	}
+	semanticResults := buildSearchResults(results, db, true)
 
 	// Output
 	if humanOutput {

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/semantic"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -87,4 +88,16 @@ func mustLoadConfig(repoRoot string) *config.Config {
 		exitWithError(ExitConfigError, "loading config: %v", err)
 	}
 	return cfg
+}
+
+// mustLoadSemanticIndex loads the semantic index, exits on error.
+func mustLoadSemanticIndex(repoRoot string) *semantic.SemanticIndex {
+	idx, err := semantic.Load(repoRoot)
+	if err != nil {
+		if err == semantic.ErrIndexNotFound {
+			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bp index build' to create the index.")
+		}
+		exitWithError(ExitError, "loading index: %v", err)
+	}
+	return idx
 }

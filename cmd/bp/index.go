@@ -204,13 +204,7 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 
 	// Load index
-	idx, err := semantic.Load(repoRoot)
-	if err != nil {
-		if err == semantic.ErrIndexNotFound {
-			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bp index build' to create the index.")
-		}
-		exitWithError(ExitError, "loading index: %v", err)
-	}
+	idx := mustLoadSemanticIndex(repoRoot)
 
 	// Open database
 	db := mustOpenDatabase(repoRoot)
@@ -233,8 +227,13 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitError, "%v", err)
 	}
 
-	// Get index size
-	indexSize, _ := semantic.IndexSize(repoRoot)
+	// Get index size (non-fatal if it fails)
+	var indexSize int64
+	if size, err := semantic.IndexSize(repoRoot); err == nil {
+		indexSize = size
+	} else if humanOutput {
+		fmt.Fprintf(os.Stderr, "Warning: could not determine index size: %v\n", err)
+	}
 
 	// Determine status and exit code
 	status := "healthy"
@@ -295,28 +294,4 @@ func printProgress(current, total int) {
 		}
 	}
 	fmt.Fprintf(os.Stderr, "\r[%s] %d/%d (%.0f%%)", bar, current, total, pct)
-}
-
-// formatDuration formats a duration in a human-readable way.
-func formatDuration(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%.1fs", d.Seconds())
-	}
-	minutes := int(d.Minutes())
-	seconds := int(d.Seconds()) % 60
-	return fmt.Sprintf("%dm %ds", minutes, seconds)
-}
-
-// formatBytes formats bytes in a human-readable way.
-func formatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }

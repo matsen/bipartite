@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/matsen/bipartite/internal/reference"
 	"github.com/matsen/bipartite/internal/semantic"
 	"github.com/spf13/cobra"
 )
@@ -24,21 +23,12 @@ type SimilarSource struct {
 	Title string `json:"title"`
 }
 
-// SimilarResult represents a paper in similar papers results.
-type SimilarResult struct {
-	ID         string             `json:"id"`
-	Title      string             `json:"title"`
-	Authors    []reference.Author `json:"authors"`
-	Year       int                `json:"year"`
-	Similarity float32            `json:"similarity"`
-}
-
 // SimilarResponse is the response for the similar papers command.
 type SimilarResponse struct {
-	Source  SimilarSource   `json:"source"`
-	Similar []SimilarResult `json:"similar"`
-	Total   int             `json:"total"`
-	Model   string          `json:"model"`
+	Source  SimilarSource       `json:"source"`
+	Similar []PaperSearchResult `json:"similar"`
+	Total   int                 `json:"total"`
+	Model   string              `json:"model"`
 }
 
 var similarCmd = &cobra.Command{
@@ -59,13 +49,7 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 
 	// Load index
-	idx, err := semantic.Load(repoRoot)
-	if err != nil {
-		if err == semantic.ErrIndexNotFound {
-			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bp index build' to create the index.")
-		}
-		exitWithError(ExitError, "loading index: %v", err)
-	}
+	idx := mustLoadSemanticIndex(repoRoot)
 
 	// Open database
 	db := mustOpenDatabase(repoRoot)
@@ -95,20 +79,7 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 	}
 
 	// Build response
-	similarResults := make([]SimilarResult, 0, len(results))
-	for _, r := range results {
-		ref, err := db.GetByID(r.PaperID)
-		if err != nil || ref == nil {
-			continue // Skip if paper not found
-		}
-		similarResults = append(similarResults, SimilarResult{
-			ID:         ref.ID,
-			Title:      ref.Title,
-			Authors:    ref.Authors,
-			Year:       ref.Published.Year,
-			Similarity: r.Similarity,
-		})
-	}
+	similarResults := buildSearchResults(results, db, false)
 
 	// Output
 	if humanOutput {

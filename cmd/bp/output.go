@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/semantic"
+	"github.com/matsen/bipartite/internal/storage"
 )
 
 // Constants for output formatting.
@@ -82,6 +85,40 @@ type UpdateResponse struct {
 // ErrorResponse is a JSON error response.
 type ErrorResponse struct {
 	Error string `json:"error"`
+}
+
+// PaperSearchResult represents a paper in search results (semantic search and similar papers).
+type PaperSearchResult struct {
+	ID         string             `json:"id"`
+	Title      string             `json:"title"`
+	Authors    []reference.Author `json:"authors"`
+	Year       int                `json:"year"`
+	Similarity float32            `json:"similarity"`
+	Abstract   string             `json:"abstract,omitempty"`
+}
+
+// buildSearchResults converts semantic search results to PaperSearchResult slice.
+// Set includeAbstract to true to populate the Abstract field.
+func buildSearchResults(results []semantic.SearchResult, db *storage.DB, includeAbstract bool) []PaperSearchResult {
+	paperResults := make([]PaperSearchResult, 0, len(results))
+	for _, r := range results {
+		ref, err := db.GetByID(r.PaperID)
+		if err != nil || ref == nil {
+			continue // Skip if paper not found
+		}
+		result := PaperSearchResult{
+			ID:         ref.ID,
+			Title:      ref.Title,
+			Authors:    ref.Authors,
+			Year:       ref.Published.Year,
+			Similarity: r.Similarity,
+		}
+		if includeAbstract {
+			result.Abstract = ref.Abstract
+		}
+		paperResults = append(paperResults, result)
+	}
+	return paperResults
 }
 
 // truncateString truncates a string to maxLen, adding "..." if truncated.
@@ -164,4 +201,28 @@ func formatAuthorsShort(authors []reference.Author, maxCount int) string {
 		names = append(names, formatAuthorShort(a))
 	}
 	return strings.Join(names, ", ")
+}
+
+// formatDuration formats a duration in a human-readable way.
+func formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%.1fs", d.Seconds())
+	}
+	minutes := int(d.Minutes())
+	seconds := int(d.Seconds()) % 60
+	return fmt.Sprintf("%dm %ds", minutes, seconds)
+}
+
+// formatBytes formats bytes in a human-readable way.
+func formatBytes(bytes int64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := int64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
