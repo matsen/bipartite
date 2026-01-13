@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/edge"
@@ -118,13 +119,14 @@ func runEdgeAdd(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitEdgeInvalidArgs, "invalid edge: %v", err)
 	}
 
-	// Load paper IDs and validate endpoints
+	// Load paper IDs and validate endpoints using shared helper
 	paperIDs := loadPaperIDSet(repoRoot)
-	if !paperIDs[sourceID] {
-		exitWithError(ExitEdgeSourceNotFound, "source paper %q not found", sourceID)
-	}
-	if !paperIDs[targetID] {
-		exitWithError(ExitEdgeTargetNotFound, "target paper %q not found", targetID)
+	if err := validateEdgePapers(e, paperIDs); err != nil {
+		if strings.Contains(err.Error(), "source paper") {
+			exitWithError(ExitEdgeSourceNotFound, "%v", err)
+		} else {
+			exitWithError(ExitEdgeTargetNotFound, "%v", err)
+		}
 	}
 
 	// Load existing edges
@@ -223,7 +225,10 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 	// Process import file
 	result := EdgeImportResult{Errors: []EdgeImportError{}}
-	edges = processImportFile(f, edges, paperIDs, &result)
+	edges, err = processImportFile(f, edges, paperIDs, &result)
+	if err != nil {
+		exitWithError(ExitDataError, "%v", err)
+	}
 
 	// Check if all edges were invalid
 	if result.Added == 0 && result.Updated == 0 && result.Skipped > 0 {
@@ -261,7 +266,8 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 }
 
 // processImportFile reads edges from a file and validates/upserts them.
-func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, result *EdgeImportResult) []edge.Edge {
+// Returns the updated edges slice and any file reading error.
+func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
 	scanner := bufio.NewScanner(f)
 	const maxCapacity = 1024 * 1024
 	buf := make([]byte, maxCapacity)
@@ -316,10 +322,10 @@ func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, 
 	}
 
 	if err := scanner.Err(); err != nil {
-		exitWithError(ExitDataError, "reading import file: %v", err)
+		return nil, fmt.Errorf("reading import file: %w", err)
 	}
 
-	return edges
+	return edges, nil
 }
 
 // outputImportFailure outputs error information when all edges fail validation.
