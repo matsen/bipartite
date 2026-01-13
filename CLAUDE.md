@@ -38,6 +38,10 @@ Go 1.21+ (latest stable): Follow standard conventions
 - **Continuation prompts**: Save to `_ignore/CONTINUE.md`, never commit
 - The `_ignore/` directory is gitignored for local-only files
 
+## Git Workflow
+
+- **PR merge strategy**: Always use squash and merge (`gh pr merge --squash`)
+
 ## Ralph Loop
 
 - Use `/ralph-loop:ralph-loop` (full qualified name) to start the autonomous task loop
