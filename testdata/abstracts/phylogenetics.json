@@ -1,0 +1,7 @@
+{
+  "id": "phylo-test-001",
+  "title": "Bayesian Methods for Phylogenetic Inference",
+  "authors": [{"first": "Frederick", "last": "Matsen"}],
+  "abstract": "We present novel Bayesian methods for inferring phylogenetic trees from molecular sequence data. Our approach combines Markov chain Monte Carlo sampling with efficient tree proposal mechanisms to explore the space of possible evolutionary relationships. The method demonstrates improved convergence properties compared to traditional maximum likelihood approaches, particularly for large datasets with complex substitution models. We validate our implementation using both simulated and empirical datasets, showing that posterior tree distributions accurately reflect phylogenetic uncertainty.",
+  "year": 2024
+}

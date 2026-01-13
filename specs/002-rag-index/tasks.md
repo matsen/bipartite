@@ -26,9 +26,9 @@
 
 **Purpose**: Project initialization and new package structure
 
-- [ ] T001 Create embedding package directory structure at internal/embedding/
-- [ ] T002 Create semantic package directory structure at internal/semantic/
-- [ ] T003 [P] Create test fixtures directory at testdata/abstracts/
+- [X] T001 Create embedding package directory structure at internal/embedding/
+- [X] T002 Create semantic package directory structure at internal/semantic/
+- [X] T003 [P] Create test fixtures directory at testdata/abstracts/
 
 ---
 
@@ -40,24 +40,24 @@
 
 ### Embedding Infrastructure
 
-- [ ] T004 Define Embedding types and interfaces in internal/embedding/embedding.go
-- [ ] T005 Define Provider interface in internal/embedding/provider.go
-- [ ] T006 Implement Ollama provider in internal/embedding/ollama.go (HTTP client for localhost:11434)
-- [ ] T007 [P] Implement Ollama availability check (GET /api/tags) in internal/embedding/ollama.go
-- [ ] T008 [P] Implement model existence check in internal/embedding/ollama.go
+- [X] T004 Define Embedding types and interfaces in internal/embedding/embedding.go
+- [X] T005 Define Provider interface in internal/embedding/provider.go
+- [X] T006 Implement Ollama provider in internal/embedding/ollama.go (HTTP client for localhost:11434)
+- [X] T007 [P] Implement Ollama availability check (GET /api/tags) in internal/embedding/ollama.go
+- [X] T008 [P] Implement model existence check in internal/embedding/ollama.go
 
 ### Semantic Index Infrastructure
 
-- [ ] T009 Define SemanticIndex struct and types in internal/semantic/types.go
-- [ ] T010 Implement cosine similarity function in internal/semantic/search.go
-- [ ] T011 Implement GOB serialization (save/load) for SemanticIndex in internal/semantic/index.go
-- [ ] T012 Add embedding_metadata table schema to internal/storage/schema.go
+- [X] T009 Define SemanticIndex struct and types in internal/semantic/types.go
+- [X] T010 Implement cosine similarity function in internal/semantic/search.go
+- [X] T011 Implement GOB serialization (save/load) for SemanticIndex in internal/semantic/index.go
+- [X] T012 Add embedding_metadata table schema to internal/storage/schema.go
 
 ### Test Fixtures
 
-- [ ] T013 [P] Create phylogenetics test fixture in testdata/abstracts/phylogenetics.json
-- [ ] T014 [P] Create ML methods test fixture in testdata/abstracts/ml_methods.json
-- [ ] T015 [P] Create no-abstract test fixture in testdata/abstracts/no_abstract.json
+- [X] T013 [P] Create phylogenetics test fixture in testdata/abstracts/phylogenetics.json
+- [X] T014 [P] Create ML methods test fixture in testdata/abstracts/ml_methods.json
+- [X] T015 [P] Create no-abstract test fixture in testdata/abstracts/no_abstract.json
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -71,17 +71,17 @@
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement index build logic (iterate papers, call embedding provider, populate SemanticIndex) in internal/semantic/index.go
-- [ ] T017 [US1] Implement progress reporting for index build (to stderr) in internal/semantic/index.go
-- [ ] T018 [US1] Implement semantic search function (query embedding + cosine similarity ranking) in internal/semantic/search.go
-- [ ] T019 [US1] Implement threshold filtering and limit in internal/semantic/search.go
-- [ ] T020 [US1] Create bp index build command with --no-progress and --human flags in cmd/bp/index.go
-- [ ] T021 [US1] Create bp semantic command with --limit, --threshold, --human flags in cmd/bp/semantic.go
-- [ ] T022 [US1] Implement JSON output format for bp semantic per contracts/cli.md
-- [ ] T023 [US1] Implement human-readable output format for bp semantic per contracts/cli.md
-- [ ] T024 [US1] Add error handling: empty query, index not found, Ollama not available in cmd/bp/semantic.go
-- [ ] T025 [US1] Wire index build command to main.go and register subcommand in cmd/bp/main.go
-- [ ] T026 [US1] Wire semantic command to main.go and register subcommand in cmd/bp/main.go
+- [X] T016 [US1] Implement index build logic (iterate papers, call embedding provider, populate SemanticIndex) in internal/semantic/builder.go
+- [X] T017 [US1] Implement progress reporting for index build (to stderr) in internal/semantic/builder.go
+- [X] T018 [US1] Implement semantic search function (query embedding + cosine similarity ranking) in internal/semantic/search.go
+- [X] T019 [US1] Implement threshold filtering and limit in internal/semantic/search.go
+- [X] T020 [US1] Create bp index build command with --no-progress and --human flags in cmd/bp/index.go
+- [X] T021 [US1] Create bp semantic command with --limit, --threshold, --human flags in cmd/bp/semantic.go
+- [X] T022 [US1] Implement JSON output format for bp semantic per contracts/cli.md
+- [X] T023 [US1] Implement human-readable output format for bp semantic per contracts/cli.md
+- [X] T024 [US1] Add error handling: empty query, index not found, Ollama not available in cmd/bp/semantic.go
+- [X] T025 [US1] Wire index build command to main.go and register subcommand in cmd/bp/index.go
+- [X] T026 [US1] Wire semantic command to main.go and register subcommand in cmd/bp/semantic.go
 
 **Checkpoint**: User Story 1 complete - semantic search works with index build
 
@@ -95,12 +95,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement find-similar function (lookup paper embedding, compute similarities) in internal/semantic/search.go
-- [ ] T028 [US2] Create bp similar command with --limit and --human flags in cmd/bp/similar.go
-- [ ] T029 [US2] Implement JSON output format for bp similar per contracts/cli.md
-- [ ] T030 [US2] Implement human-readable output format for bp similar per contracts/cli.md
-- [ ] T031 [US2] Add error handling: paper not found, paper has no abstract, index not found in cmd/bp/similar.go
-- [ ] T032 [US2] Wire similar command to main.go and register subcommand in cmd/bp/main.go
+- [X] T027 [US2] Implement find-similar function (lookup paper embedding, compute similarities) in internal/semantic/search.go
+- [X] T028 [US2] Create bp similar command with --limit and --human flags in cmd/bp/similar.go
+- [X] T029 [US2] Implement JSON output format for bp similar per contracts/cli.md
+- [X] T030 [US2] Implement human-readable output format for bp similar per contracts/cli.md
+- [X] T031 [US2] Add error handling: paper not found, paper has no abstract, index not found in cmd/bp/similar.go
+- [X] T032 [US2] Wire similar command to main.go and register subcommand in cmd/bp/similar.go
 
 **Checkpoint**: User Stories 1 AND 2 work independently
 
@@ -114,12 +114,12 @@
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Implement skip logic for papers without abstracts (with count tracking) in internal/semantic/index.go
-- [ ] T034 [US3] Implement skip logic for abstracts <50 characters (with warning) in internal/semantic/index.go
-- [ ] T035 [US3] Implement build statistics collection (indexed, skipped, duration, size) in internal/semantic/index.go
-- [ ] T036 [US3] Implement JSON output for bp index build per contracts/cli.md
-- [ ] T037 [US3] Implement human-readable output for bp index build per contracts/cli.md
-- [ ] T038 [US3] Store embedding metadata (paper_id, model_name, indexed_at, abstract_hash) in refs.db
+- [X] T033 [US3] Implement skip logic for papers without abstracts (with count tracking) in internal/semantic/builder.go
+- [X] T034 [US3] Implement skip logic for abstracts <50 characters (with warning) in internal/semantic/builder.go
+- [X] T035 [US3] Implement build statistics collection (indexed, skipped, duration, size) in internal/semantic/builder.go
+- [X] T036 [US3] Implement JSON output for bp index build per contracts/cli.md
+- [X] T037 [US3] Implement human-readable output for bp index build per contracts/cli.md
+- [X] T038 [US3] Store embedding metadata (paper_id, model_name, indexed_at, abstract_hash) in refs.db
 
 **Checkpoint**: User Stories 1, 2, AND 3 work independently
 
@@ -133,12 +133,12 @@
 
 ### Implementation for User Story 4
 
-- [ ] T039 [US4] Implement index health check logic (compare indexed vs papers with abstracts) in internal/semantic/index.go
-- [ ] T040 [US4] Implement missing papers detection in internal/semantic/index.go
-- [ ] T041 [US4] Create bp index check command with --human flag in cmd/bp/index.go
-- [ ] T042 [US4] Implement JSON output for bp index check per contracts/cli.md
-- [ ] T043 [US4] Implement human-readable output for bp index check per contracts/cli.md
-- [ ] T044 [US4] Add exit codes per contracts/cli.md (0=healthy, 2=not found, 6=stale)
+- [X] T039 [US4] Implement index health check logic (compare indexed vs papers with abstracts) in cmd/bp/index.go
+- [X] T040 [US4] Implement missing papers detection in cmd/bp/index.go
+- [X] T041 [US4] Create bp index check command with --human flag in cmd/bp/index.go
+- [X] T042 [US4] Implement JSON output for bp index check per contracts/cli.md
+- [X] T043 [US4] Implement human-readable output for bp index check per contracts/cli.md
+- [X] T044 [US4] Add exit codes per contracts/cli.md (0=healthy, 2=not found, 6=stale)
 
 **Checkpoint**: All user stories complete and independently functional
 
@@ -148,10 +148,10 @@
 
 **Purpose**: Final validation, error handling consistency, and edge cases
 
-- [ ] T045 [P] Verify all exit codes match contracts/cli.md specification across all commands
-- [ ] T046 [P] Verify all error messages match contracts/cli.md standard errors
-- [ ] T047 Implement lazy loading for SemanticIndex (load only when needed) in internal/semantic/index.go
-- [ ] T048 Verify index file is in .bipartite/cache/semantic.gob (gitignored location)
+- [X] T045 [P] Verify all exit codes match contracts/cli.md specification across all commands
+- [X] T046 [P] Verify all error messages match contracts/cli.md standard errors
+- [X] T047 Implement lazy loading for SemanticIndex (load only when needed) in internal/semantic/index.go
+- [X] T048 Verify index file is in .bipartite/cache/semantic.gob (gitignored location)
 - [ ] T049 Run quickstart.md validation workflow manually
 
 ---
