@@ -25,6 +25,7 @@ var checkCmd = &cobra.Command{
 type CheckResult struct {
 	Status     string       `json:"status"`
 	References int          `json:"references"`
+	Edges      int          `json:"edges"`
 	Issues     []CheckIssue `json:"issues"`
 }
 
@@ -35,6 +36,9 @@ type CheckIssue struct {
 	IDs      []string `json:"ids,omitempty"`
 	Expected string   `json:"expected,omitempty"`
 	DOI      string   `json:"doi,omitempty"`
+	SourceID string   `json:"source_id,omitempty"`
+	TargetID string   `json:"target_id,omitempty"`
+	Reason   string   `json:"reason,omitempty"`
 }
 
 func runCheck(cmd *cobra.Command, args []string) error {
@@ -46,6 +50,12 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
 		exitWithError(ExitDataError, "reading refs: %v", err)
+	}
+
+	// Build set of valid paper IDs for edge checking
+	validIDs := make(map[string]bool)
+	for _, ref := range refs {
+		validIDs[ref.ID] = true
 	}
 
 	var issues []CheckIssue
@@ -84,6 +94,50 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Check edges for integrity
+	edgesPath := config.EdgesPath(repoRoot)
+	edges, err := storage.ReadAllEdges(edgesPath)
+	if err != nil && !os.IsNotExist(err) {
+		exitWithError(ExitDataError, "reading edges: %v", err)
+	}
+
+	// Check for orphaned edges and duplicates
+	edgeKeys := make(map[string]int) // key -> count
+	for _, e := range edges {
+		// Check for orphaned edges
+		sourceOK := validIDs[e.SourceID]
+		targetOK := validIDs[e.TargetID]
+		if !sourceOK || !targetOK {
+			reason := "missing_target"
+			if !sourceOK && !targetOK {
+				reason = "missing_both"
+			} else if !sourceOK {
+				reason = "missing_source"
+			}
+			issues = append(issues, CheckIssue{
+				Type:     "orphaned_edge",
+				SourceID: e.SourceID,
+				TargetID: e.TargetID,
+				Reason:   reason,
+			})
+		}
+
+		// Check for duplicate edges
+		key := e.SourceID + "|" + e.TargetID + "|" + e.RelationshipType
+		edgeKeys[key]++
+	}
+	for key, count := range edgeKeys {
+		if count > 1 {
+			parts := splitEdgeKey(key)
+			issues = append(issues, CheckIssue{
+				Type:     "duplicate_edge",
+				SourceID: parts[0],
+				TargetID: parts[1],
+				Reason:   fmt.Sprintf("type=%s, count=%d", parts[2], count),
+			})
+		}
+	}
+
 	// Determine status
 	status := "ok"
 	if len(issues) > 0 {
@@ -98,7 +152,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	// Output results
 	if humanOutput {
 		if len(issues) == 0 {
-			fmt.Printf("Repository check: OK\n\n%d references checked\n", len(refs))
+			fmt.Printf("Repository check: OK\n\n%d references, %d edges checked\n", len(refs), len(edges))
 		} else {
 			fmt.Printf("Repository check: %d issues found\n\n", len(issues))
 			for _, issue := range issues {
@@ -109,17 +163,39 @@ func runCheck(cmd *cobra.Command, args []string) error {
 				case "duplicate_doi":
 					fmt.Printf("  [WARN] Duplicate DOI %s\n", issue.DOI)
 					fmt.Printf("         Found in: %s\n\n", formatIDList(issue.IDs))
+				case "orphaned_edge":
+					fmt.Printf("  [WARN] Orphaned edge: %s --> %s (%s)\n\n", issue.SourceID, issue.TargetID, issue.Reason)
+				case "duplicate_edge":
+					fmt.Printf("  [WARN] Duplicate edge: %s --> %s (%s)\n\n", issue.SourceID, issue.TargetID, issue.Reason)
 				}
 			}
-			fmt.Printf("%d references checked\n", len(refs))
+			fmt.Printf("%d references, %d edges checked\n", len(refs), len(edges))
 		}
 	} else {
 		outputJSON(CheckResult{
 			Status:     status,
 			References: len(refs),
+			Edges:      len(edges),
 			Issues:     issues,
 		})
 	}
 
 	return nil
+}
+
+// splitEdgeKey splits an edge key back into its parts.
+func splitEdgeKey(key string) []string {
+	// Simple split - assumes no | in the IDs
+	result := make([]string, 3)
+	start := 0
+	idx := 0
+	for i, r := range key {
+		if r == '|' && idx < 2 {
+			result[idx] = key[start:i]
+			start = i + 1
+			idx++
+		}
+	}
+	result[2] = key[start:]
+	return result
 }
