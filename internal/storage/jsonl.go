@@ -13,7 +13,7 @@ import (
 // RefWithAction pairs a reference with an import action.
 type RefWithAction struct {
 	Ref         reference.Reference
-	Action      string // import, update
+	Action      string // new, update
 	ExistingIdx int    // Index in existing refs (for updates)
 }
 
