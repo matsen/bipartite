@@ -40,15 +40,15 @@ Supported formats:
 
 // ImportResult represents the result of an import operation.
 type ImportResult struct {
-	Imported int      `json:"imported"`
-	Updated  int      `json:"updated"`
-	Skipped  int      `json:"skipped"`
-	Errors   []string `json:"errors"`
+	New     int      `json:"new"`
+	Updated int      `json:"updated"`
+	Skipped int      `json:"skipped"`
+	Errors  []string `json:"errors"`
 }
 
 // DryRunResult represents the result of a dry-run import.
 type DryRunResult struct {
-	WouldImport int            `json:"would_import"`
+	WouldAdd    int            `json:"would_add"`
 	WouldUpdate int            `json:"would_update"`
 	WouldSkip   int            `json:"would_skip"`
 	Details     []ImportDetail `json:"details,omitempty"`
@@ -57,14 +57,14 @@ type DryRunResult struct {
 // ImportDetail describes a single import action.
 type ImportDetail struct {
 	ID     string `json:"id"`
-	Action string `json:"action"` // import, update, skip
+	Action string `json:"action"` // new, update, skip
 	Title  string `json:"title"`
 	Reason string `json:"reason,omitempty"`
 }
 
 // importStats tracks import operation counts.
 type importStats struct {
-	imported int
+	newCount int
 	updated  int
 	skipped  int
 }
@@ -139,17 +139,20 @@ func processImports(newRefs, persistedRefs []reference.Reference) (importStats, 
 		action := classifyImport(workingRefSet, newRef)
 
 		switch action.action {
-		case "import":
+		case "new":
 			newRef.ID = storage.GenerateUniqueID(workingRefSet, newRef.ID)
-			resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "import"})
+			resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "new"})
 			workingRefSet = append(workingRefSet, newRef)
-			stats.imported++
+			stats.newCount++
 		case "update":
+			// If existingIdx is within persistedRefs bounds, it's a match against
+			// an already-persisted reference. Otherwise, it matched something we
+			// added earlier in this same import batch (workingRefSet grows as we go).
 			if action.existingIdx < len(persistedRefs) {
 				resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "update", ExistingIdx: action.existingIdx})
 				stats.updated++
 			} else {
-				// DOI match within batch - skip as duplicate
+				// DOI/ID match within batch - skip as duplicate
 				stats.skipped++
 				action.action = "skip"
 				action.reason = "duplicate_in_batch"
@@ -182,8 +185,8 @@ func errorsToStrings(errs []error) []string {
 func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 	if humanOutput {
 		fmt.Println("Dry run - would import from Paperpile export...")
-		fmt.Printf("  Would import: %d new references\n", stats.imported)
-		fmt.Printf("  Would update: %d existing references (matched by DOI)\n", stats.updated)
+		fmt.Printf("  Would add:    %d new references\n", stats.newCount)
+		fmt.Printf("  Would update: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Would skip:   %d (errors or duplicates)\n", stats.skipped)
 		if len(errStrs) > 0 {
 			fmt.Println("\nParse errors:")
@@ -193,7 +196,7 @@ func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 		}
 	} else {
 		outputJSON(DryRunResult{
-			WouldImport: stats.imported,
+			WouldAdd:    stats.newCount,
 			WouldUpdate: stats.updated,
 			WouldSkip:   stats.skipped,
 			Details:     details,
@@ -204,10 +207,10 @@ func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 // reportImportResults outputs the actual import results.
 func reportImportResults(stats importStats, errStrs []string) {
 	if humanOutput {
-		fmt.Println("Importing from Paperpile export...")
-		fmt.Printf("  Imported: %d new references\n", stats.imported)
-		fmt.Printf("  Updated:  %d existing references (matched by DOI)\n", stats.updated)
-		fmt.Printf("  Skipped:  %d (errors or duplicates)\n", stats.skipped)
+		fmt.Println("Imported from Paperpile export:")
+		fmt.Printf("  Added:   %d new references\n", stats.newCount)
+		fmt.Printf("  Updated: %d existing references (matched by DOI or ID)\n", stats.updated)
+		fmt.Printf("  Skipped: %d (errors or duplicates)\n", stats.skipped)
 		if len(errStrs) > 0 {
 			fmt.Println("\nErrors:")
 			for _, e := range errStrs {
@@ -216,16 +219,16 @@ func reportImportResults(stats importStats, errStrs []string) {
 		}
 	} else {
 		outputJSON(ImportResult{
-			Imported: stats.imported,
-			Updated:  stats.updated,
-			Skipped:  stats.skipped,
-			Errors:   errStrs,
+			New:     stats.newCount,
+			Updated: stats.updated,
+			Skipped: stats.skipped,
+			Errors:  errStrs,
 		})
 	}
 }
 
 type importAction struct {
-	action      string // import, update, skip
+	action      string // new, update, skip
 	reason      string
 	existingIdx int
 }
@@ -249,8 +252,17 @@ func classifyImport(existing []reference.Reference, newRef reference.Reference) 
 		}
 	}
 
-	// No DOI match means new import
-	return importAction{action: "import"}
+	// Check for ID match (secondary deduplication)
+	if idx, found := storage.FindByID(existing, newRef.ID); found {
+		return importAction{
+			action:      "update",
+			reason:      "id_match",
+			existingIdx: idx,
+		}
+	}
+
+	// No match - genuinely new
+	return importAction{action: "new"}
 }
 
 // persistImports writes the import results to the refs file.
@@ -266,9 +278,9 @@ func persistImports(path string, existing []reference.Reference, actions []stora
 		}
 	}
 
-	// Append new imports
+	// Append new entries
 	for _, a := range actions {
-		if a.Action == "import" {
+		if a.Action == "new" {
 			newRefs = append(newRefs, a.Ref)
 		}
 	}
