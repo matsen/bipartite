@@ -145,6 +145,9 @@ func processImports(newRefs, persistedRefs []reference.Reference) (importStats, 
 			workingRefSet = append(workingRefSet, newRef)
 			stats.newCount++
 		case "update":
+			// If existingIdx is within persistedRefs bounds, it's a match against
+			// an already-persisted reference. Otherwise, it matched something we
+			// added earlier in this same import batch (workingRefSet grows as we go).
 			if action.existingIdx < len(persistedRefs) {
 				resultRefs = append(resultRefs, storage.RefWithAction{Ref: newRef, Action: "update", ExistingIdx: action.existingIdx})
 				stats.updated++
@@ -204,7 +207,7 @@ func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 // reportImportResults outputs the actual import results.
 func reportImportResults(stats importStats, errStrs []string) {
 	if humanOutput {
-		fmt.Println("Importing from Paperpile export...")
+		fmt.Println("Imported from Paperpile export:")
 		fmt.Printf("  Added:   %d new references\n", stats.newCount)
 		fmt.Printf("  Updated: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Skipped: %d (errors or duplicates)\n", stats.skipped)
