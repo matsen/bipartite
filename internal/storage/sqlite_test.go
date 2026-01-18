@@ -243,6 +243,15 @@ func TestDB_Search(t *testing.T) {
 		{"Smith", 10, nil, 1},
 		{"Jones", 10, nil, 1},
 
+		// Year search
+		{"2026", 10, []string{"Smith2026-ab"}, 1},
+		{"2025", 10, []string{"Jones2025-cd"}, 1},
+		{"2024", 10, []string{"Brown2024-ef"}, 1},
+
+		// Combined author and year search
+		{"Smith 2026", 10, []string{"Smith2026-ab"}, 1},
+		{"Jones 2025", 10, []string{"Jones2025-cd"}, 1},
+
 		// No results
 		{"nonexistent query xyz", 10, nil, 0},
 

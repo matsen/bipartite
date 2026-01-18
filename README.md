@@ -50,7 +50,7 @@ bp open Smith2026-ab
 | `bp config [key] [value]` | Get/set configuration |
 | `bp import --format paperpile <file>` | Import from Paperpile JSON |
 | `bp rebuild` | Rebuild search index from source data |
-| `bp search <query>` | Full-text search across titles, abstracts, authors |
+| `bp search <query>` | Full-text search across titles, abstracts, authors, years |
 | `bp list` | List all references |
 | `bp get <id>` | Get a specific reference by ID |
 | `bp open <id>` | Open PDF in configured viewer |
