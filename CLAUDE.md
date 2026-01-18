@@ -20,7 +20,7 @@ tests/         # Integration tests
 
 ```bash
 # Build and run
-go build -o bp . && ./bp --help
+go build -o bp ./cmd/bp && ./bp --help
 
 # Common operations
 ./bp import --format paperpile export.json   # Import references
@@ -48,6 +48,16 @@ Follow standard Go conventions (`go fmt`, `go vet`)
 ## Git Workflow
 
 - **PR merge strategy**: Always use squash and merge (`gh pr merge --squash`)
+
+## SQLite Schema Changes
+
+When modifying SQLite schema (e.g., adding columns to FTS5 tables):
+
+1. **Rebuild the binary**: `go build -o bp ./cmd/bp`
+2. **Delete the old database**: `rm .bipartite/cache/refs.db`
+3. **Rebuild the index**: `./bp rebuild`
+
+Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you must delete the database file for schema changes to take effect.
 
 ## Ralph Loop
 
