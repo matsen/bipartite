@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/reference"
@@ -74,7 +75,8 @@ func createSchema(db *sql.DB) error {
 			id,
 			title,
 			abstract,
-			authors_text
+			authors_text,
+			pub_year
 		);
 
 		-- Embedding metadata for semantic index staleness detection (Phase II)
@@ -121,8 +123,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 	defer refsStmt.Close()
 
 	ftsStmt, err := d.db.Prepare(`
-		INSERT INTO refs_fts (id, title, abstract, authors_text)
-		VALUES (?, ?, ?, ?)
+		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year)
+		VALUES (?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing fts insert: %w", err)
@@ -157,7 +159,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		authorsText := formatAuthorsText(ref.Authors)
 
 		// Insert into FTS table
-		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText)
+		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year))
 		if err != nil {
 			return 0, fmt.Errorf("inserting fts for %s: %w", ref.ID, err)
 		}
