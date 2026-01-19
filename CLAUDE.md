@@ -5,6 +5,10 @@
 - **Ollama** for local embeddings, pure Go vector storage
 - **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
+- Go 1.25.5 (existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), standard library net/http (API calls) (004-asta-integration)
+- JSONL (refs.jsonl) + ephemeral SQLite (existing infrastructure) (004-asta-integration)
+- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), net/http (API calls), pdfcpu (PDF parsing) (004-asta-integration)
+- JSONL (refs.jsonl) + ephemeral SQLite + in-memory LRU cache for API responses (004-asta-integration)
 
 ## Project Structure
 
@@ -91,3 +95,7 @@ Before any pull request, ensure the following workflow is completed:
 7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
 
 <!-- MANUAL ADDITIONS END -->
+
+## Recent Changes
+- 004-asta-integration: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), net/http (API calls), pdfcpu (PDF parsing)
+- 004-asta-integration: Added Go 1.25.5 (existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), standard library net/http (API calls)

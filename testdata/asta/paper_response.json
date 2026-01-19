@@ -1,0 +1,22 @@
+{
+  "paperId": "649def34f8be52c8b66281af98ae884c09aef38b",
+  "externalIds": {
+    "DOI": "10.1093/sysbio/syy032",
+    "ArXiv": null,
+    "PubMed": "29718477",
+    "CorpusId": 13756489
+  },
+  "title": "Variational Bayesian Phylogenetic Inference",
+  "abstract": "Bayesian phylogenetic inference requires computing the posterior distribution over tree topologies and continuous parameters. We present a variational inference framework that approximates the posterior distribution using a flexible family of distributions.",
+  "authors": [
+    {"authorId": "2111234", "name": "Cheng Zhang"},
+    {"authorId": "145102859", "name": "Frederick A. Matsen IV"}
+  ],
+  "year": 2019,
+  "venue": "Systematic Biology",
+  "publicationDate": "2019-01-01",
+  "citationCount": 95,
+  "referenceCount": 67,
+  "isOpenAccess": true,
+  "fieldsOfStudy": ["Biology", "Computer Science"]
+}

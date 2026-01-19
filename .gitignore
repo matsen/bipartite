@@ -1,6 +1,7 @@
 # Private data (not for commit)
 _ignore/
 .bipartite/
+.env
 
 # Go build artifacts
 /bp

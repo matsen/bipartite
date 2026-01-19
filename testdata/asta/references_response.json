@@ -1,0 +1,38 @@
+{
+  "offset": 0,
+  "data": [
+    {
+      "citedPaper": {
+        "paperId": "111222333444555666777888999000aaabbbcccd",
+        "externalIds": {
+          "DOI": "10.1093/molbev/msx149",
+          "CorpusId": 11111111
+        },
+        "title": "IQ-TREE 2: New Models and Efficient Methods",
+        "authors": [
+          {"authorId": "11111", "name": "Bui Quang Minh"},
+          {"authorId": "22222", "name": "Heiko A. Schmidt"}
+        ],
+        "year": 2020,
+        "venue": "Molecular Biology and Evolution"
+      }
+    },
+    {
+      "citedPaper": {
+        "paperId": "222333444555666777888999000aaabbbcccddd",
+        "externalIds": {
+          "DOI": "10.1080/10635150390235520",
+          "PubMed": "12801012",
+          "CorpusId": 22222222
+        },
+        "title": "MrBayes 3: Bayesian phylogenetic inference under mixed models",
+        "authors": [
+          {"authorId": "33333", "name": "Fredrik Ronquist"},
+          {"authorId": "44444", "name": "John P. Huelsenbeck"}
+        ],
+        "year": 2003,
+        "venue": "Bioinformatics"
+      }
+    }
+  ]
+}
