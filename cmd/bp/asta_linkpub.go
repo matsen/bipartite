@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -112,7 +111,8 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 			if asta.IsRateLimited(err) {
 				return outputAstaRateLimited(err)
 			}
-			// Log and continue on other errors
+			// Warn about unexpected errors instead of silently ignoring
+			warnAPIError("Failed to find published version", ref.ID, err)
 			continue
 		}
 
@@ -190,7 +190,7 @@ func isPreprint(ref reference.Reference) bool {
 
 func findPublishedVersion(ctx context.Context, client *asta.Client, preprint reference.Reference) (*asta.S2Paper, error) {
 	// Search by title
-	searchResp, err := client.SearchByTitle(ctx, preprint.Title, 10)
+	searchResp, err := client.SearchByTitle(ctx, preprint.Title, AstaSearchLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -205,13 +205,13 @@ func findPublishedVersion(ctx context.Context, client *asta.Client, preprint ref
 			continue
 		}
 
-		// Check title similarity (basic check)
-		if !titlesMatch(preprint.Title, paper.Title) {
+		// Check title similarity with strict matching
+		if !titlesMatchStrict(preprint.Title, paper.Title) {
 			continue
 		}
 
-		// Check author overlap
-		if !authorsOverlap(preprint.Authors, paper.Authors) {
+		// Check author overlap with strict matching
+		if !authorsOverlapStrict(preprint.Authors, paper.Authors) {
 			continue
 		}
 
@@ -226,73 +226,16 @@ func findPublishedVersion(ctx context.Context, client *asta.Client, preprint ref
 	return nil, nil
 }
 
-func titlesMatch(t1, t2 string) bool {
-	// Normalize titles for comparison
-	norm1 := normalizeTitle(t1)
-	norm2 := normalizeTitle(t2)
-
-	// Exact match after normalization
-	if norm1 == norm2 {
-		return true
-	}
-
-	// Check if one is a prefix of the other (common with subtitles)
-	if strings.HasPrefix(norm1, norm2) || strings.HasPrefix(norm2, norm1) {
-		return true
-	}
-
-	return false
-}
-
-func normalizeTitle(title string) string {
-	title = strings.ToLower(title)
-	title = strings.TrimSpace(title)
-	// Remove common punctuation
-	title = strings.ReplaceAll(title, ":", " ")
-	title = strings.ReplaceAll(title, "-", " ")
-	title = strings.ReplaceAll(title, "  ", " ")
-	return title
-}
-
-func authorsOverlap(refAuthors []reference.Author, s2Authors []asta.S2Author) bool {
-	if len(refAuthors) == 0 || len(s2Authors) == 0 {
-		return true // Can't compare, assume match
-	}
-
-	// Check if first author matches
-	firstRefLast := strings.ToLower(refAuthors[0].Last)
-	firstS2Name := strings.ToLower(s2Authors[0].Name)
-
-	return strings.Contains(firstS2Name, firstRefLast)
-}
-
 func outputLinkPubResult(result AstaLinkPubResult) error {
 	if humanOutput {
 		fmt.Printf("Summary: %d linked, %d no published version, %d already linked\n",
 			len(result.Linked), len(result.NoPublishedFound), len(result.AlreadyLinked))
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
 
 func outputLinkPubError(exitCode int, context string, err error) error {
-	result := AstaLinkPubResult{
-		Error: &AstaErrorResult{
-			Code:    "api_error",
-			Message: fmt.Sprintf("%s: %v", context, err),
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", context, err)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
+	return outputGenericError(exitCode, "api_error", context, err)
 }

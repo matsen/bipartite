@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
@@ -149,9 +147,7 @@ func runAstaReferences(cmd *cobra.Command, args []string) error {
 	if humanOutput {
 		outputReferencesHuman(result)
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
@@ -180,43 +176,9 @@ func outputReferencesHuman(result AstaReferencesResult) {
 }
 
 func outputReferencesNotFound(paperID string) error {
-	result := AstaReferencesResult{
-		PaperID: paperID,
-		Error: &AstaErrorResult{
-			Code:       "not_found",
-			Message:    "Paper not found",
-			PaperID:    paperID,
-			Suggestion: "Verify the paper ID is correct",
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: Paper not found\n")
-		fmt.Fprintf(os.Stderr, "  Paper ID: %s\n", paperID)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(ExitAstaNotFound)
-	return nil
+	return outputGenericNotFound(paperID, "Paper not found")
 }
 
 func outputReferencesError(exitCode int, context string, err error) error {
-	result := AstaReferencesResult{
-		Error: &AstaErrorResult{
-			Code:    "api_error",
-			Message: fmt.Sprintf("%s: %v", context, err),
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", context, err)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
+	return outputGenericError(exitCode, "api_error", context, err)
 }

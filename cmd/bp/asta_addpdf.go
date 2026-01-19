@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,7 +116,7 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 		}
 
 		// Search by title
-		searchResp, err := client.SearchByTitle(ctx, title, 5)
+		searchResp, err := client.SearchByTitle(ctx, title, PDFSearchLimit)
 		if err != nil {
 			if asta.IsRateLimited(err) {
 				return outputAstaRateLimited(err)
@@ -171,14 +170,7 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 }
 
 func outputAddPdfResult(action, doiSource string, ref reference.Reference) error {
-	authors := make([]string, 0, len(ref.Authors))
-	for _, a := range ref.Authors {
-		if a.First != "" {
-			authors = append(authors, a.First+" "+a.Last)
-		} else {
-			authors = append(authors, a.Last)
-		}
-	}
+	authors := formatAuthors(ref.Authors)
 
 	result := AstaAddPdfResult{
 		Action:    action,
@@ -194,18 +186,16 @@ func outputAddPdfResult(action, doiSource string, ref reference.Reference) error
 	}
 
 	if humanOutput {
-		fmt.Printf("%s: %s\n", capitalize(action), ref.ID)
+		fmt.Printf("%s: %s\n", capitalizeFirst(action), ref.ID)
 		fmt.Printf("  Title: %s\n", ref.Title)
-		fmt.Printf("  Authors: %s\n", joinAuthors(authors))
+		fmt.Printf("  Authors: %s\n", joinAuthorsDisplay(authors))
 		fmt.Printf("  Year: %d\n", ref.Published.Year)
 		if ref.Venue != "" {
 			fmt.Printf("  Venue: %s\n", ref.Venue)
 		}
 		fmt.Printf("  DOI source: %s\n", doiSource)
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
@@ -227,9 +217,7 @@ func outputAddPdfDuplicate(existingID, doi string) error {
 			fmt.Fprintf(os.Stderr, "  DOI: %s\n", doi)
 		}
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	os.Exit(ExitAstaDuplicate)
 	return nil
@@ -267,34 +255,12 @@ func outputAddPdfMultipleMatches(papers []asta.S2Paper) error {
 		}
 		fmt.Fprintf(os.Stderr, "\nUse 'bp asta add DOI:...' with the correct DOI\n")
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	os.Exit(ExitAstaDuplicate) // Exit code 2 for multiple matches
 	return nil
 }
 
 func outputAddPdfError(exitCode int, context string, err error) error {
-	msg := context
-	if err != nil {
-		msg = fmt.Sprintf("%s: %v", context, err)
-	}
-
-	result := AstaAddPdfResult{
-		Error: &AstaErrorResult{
-			Code:    "error",
-			Message: msg,
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", msg)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
+	return outputGenericError(exitCode, "error", context, err)
 }

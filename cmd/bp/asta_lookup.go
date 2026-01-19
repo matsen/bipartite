@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/asta"
@@ -160,9 +158,7 @@ func runAstaLookup(cmd *cobra.Command, args []string) error {
 	if humanOutput {
 		outputLookupHuman(result)
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
@@ -252,42 +248,9 @@ func outputLookupHuman(result AstaLookupResult) {
 }
 
 func outputLookupNotFound(paperID string) error {
-	result := AstaLookupResult{
-		Error: &AstaErrorResult{
-			Code:       "not_found",
-			Message:    "Paper not found in Semantic Scholar",
-			PaperID:    paperID,
-			Suggestion: "Verify the paper ID is correct",
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: Paper not found\n")
-		fmt.Fprintf(os.Stderr, "  Paper ID: %s\n", paperID)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(ExitAstaNotFound)
-	return nil
+	return outputGenericNotFound(paperID, "Paper not found in Semantic Scholar")
 }
 
 func outputLookupError(exitCode int, context string, err error) error {
-	result := AstaLookupResult{
-		Error: &AstaErrorResult{
-			Code:    "api_error",
-			Message: fmt.Sprintf("%s: %v", context, err),
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", context, err)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
+	return outputGenericError(exitCode, "api_error", context, err)
 }

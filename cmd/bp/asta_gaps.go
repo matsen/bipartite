@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -108,7 +107,7 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 		s2ID := "DOI:" + ref.DOI
 
 		// Fetch references for this paper
-		refsResp, err := client.GetReferences(ctx, s2ID, 500) // Get up to 500 refs per paper
+		refsResp, err := client.GetReferences(ctx, s2ID, GapsReferencesLimit)
 		if err != nil {
 			if asta.IsNotFound(err) {
 				continue // Skip papers not in S2
@@ -116,7 +115,8 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 			if asta.IsRateLimited(err) {
 				return outputAstaRateLimited(err)
 			}
-			// Log and continue on other errors
+			// Warn about unexpected errors instead of silently ignoring
+			warnAPIError("Failed to fetch references", ref.ID, err)
 			continue
 		}
 
@@ -187,9 +187,7 @@ func outputGapsResult(result AstaGapsResult) error {
 	if humanOutput {
 		outputGapsHuman(result)
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
@@ -222,20 +220,5 @@ func outputGapsHuman(result AstaGapsResult) {
 }
 
 func outputGapsError(exitCode int, context string, err error) error {
-	result := AstaGapsResult{
-		Error: &AstaErrorResult{
-			Code:    "api_error",
-			Message: fmt.Sprintf("%s: %v", context, err),
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", context, err)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
+	return outputGenericError(exitCode, "api_error", context, err)
 }

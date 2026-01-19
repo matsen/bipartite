@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
@@ -179,14 +178,7 @@ func updateExistingPaper(refsPath string, refs []reference.Reference, existingID
 }
 
 func outputAstaAddResult(action string, ref reference.Reference) error {
-	authors := make([]string, 0, len(ref.Authors))
-	for _, a := range ref.Authors {
-		if a.First != "" {
-			authors = append(authors, a.First+" "+a.Last)
-		} else {
-			authors = append(authors, a.Last)
-		}
-	}
+	authors := formatAuthors(ref.Authors)
 
 	result := AstaAddResult{
 		Action: action,
@@ -201,41 +193,21 @@ func outputAstaAddResult(action string, ref reference.Reference) error {
 	}
 
 	if humanOutput {
-		fmt.Printf("%s: %s\n", capitalize(action), ref.ID)
+		fmt.Printf("%s: %s\n", capitalizeFirst(action), ref.ID)
 		fmt.Printf("  Title: %s\n", ref.Title)
-		fmt.Printf("  Authors: %s\n", joinAuthors(authors))
+		fmt.Printf("  Authors: %s\n", joinAuthorsDisplay(authors))
 		fmt.Printf("  Year: %d\n", ref.Published.Year)
 		if ref.Venue != "" {
 			fmt.Printf("  Venue: %s\n", ref.Venue)
 		}
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	return nil
 }
 
 func outputAstaNotFound(paperID, message string) error {
-	result := AstaAddResult{
-		Error: &AstaErrorResult{
-			Code:       "not_found",
-			Message:    message,
-			PaperID:    paperID,
-			Suggestion: "Verify the paper ID is correct",
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s\n", message)
-		fmt.Fprintf(os.Stderr, "  Paper ID: %s\n", paperID)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(ExitAstaNotFound)
-	return nil
+	return outputGenericNotFound(paperID, message)
 }
 
 func outputAstaDuplicate(existingID, doi string) error {
@@ -256,85 +228,16 @@ func outputAstaDuplicate(existingID, doi string) error {
 		}
 		fmt.Fprintf(os.Stderr, "  Use --update to refresh metadata\n")
 	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
+		outputJSON(result)
 	}
 	os.Exit(ExitAstaDuplicate)
 	return nil
 }
 
 func outputAstaRateLimited(err error) error {
-	apiErr, _ := err.(*asta.APIError)
-	retryAfter := 300
-	if apiErr != nil && apiErr.RetryAfter > 0 {
-		retryAfter = apiErr.RetryAfter
-	}
-
-	result := AstaAddResult{
-		Error: &AstaErrorResult{
-			Code:       "rate_limited",
-			Message:    "Semantic Scholar rate limit exceeded",
-			Suggestion: fmt.Sprintf("Wait %d seconds or add S2_API_KEY to .env", retryAfter),
-			RetryAfter: retryAfter,
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: Rate limit exceeded\n")
-		fmt.Fprintf(os.Stderr, "  Wait %d seconds before retrying\n", retryAfter)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(ExitAstaAPIError)
-	return nil
+	return outputGenericRateLimited(err)
 }
 
 func outputAstaError(exitCode int, context string, err error) error {
-	result := AstaAddResult{
-		Error: &AstaErrorResult{
-			Code:    "api_error",
-			Message: fmt.Sprintf("%s: %v", context, err),
-		},
-	}
-
-	if humanOutput {
-		fmt.Fprintf(os.Stderr, "Error: %s: %v\n", context, err)
-	} else {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		enc.Encode(result)
-	}
-	os.Exit(exitCode)
-	return nil
-}
-
-func capitalize(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	return string(s[0]-32) + s[1:]
-}
-
-func joinAuthors(authors []string) string {
-	if len(authors) == 0 {
-		return ""
-	}
-	if len(authors) == 1 {
-		return authors[0]
-	}
-	if len(authors) == 2 {
-		return authors[0] + " and " + authors[1]
-	}
-	result := ""
-	for i, a := range authors {
-		if i == len(authors)-1 {
-			result += "and " + a
-		} else {
-			result += a + ", "
-		}
-	}
-	return result
+	return outputGenericError(exitCode, "api_error", context, err)
 }
