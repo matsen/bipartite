@@ -36,6 +36,6 @@ type PublicationDate struct {
 
 // ImportSource tracks where a reference was imported from.
 type ImportSource struct {
-	Type string `json:"type"` // paperpile, zotero, mendeley, manual, asta
+	Type string `json:"type"` // paperpile, zotero, mendeley, manual, s2
 	ID   string `json:"id"`   // Original ID from source system
 }

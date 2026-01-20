@@ -3,6 +3,7 @@
 ## Active Technologies
 - **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
 - **Ollama** for local embeddings, pure Go vector storage
+- **Semantic Scholar API** for paper metadata (internal/s2 package)
 - **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
 
@@ -10,7 +11,7 @@
 
 ```text
 cmd/           # CLI command implementations
-internal/      # Internal packages (store, index, etc.)
+internal/      # Internal packages (s2, store, index, etc.)
 specs/         # Feature specifications
 testdata/      # Test fixtures
 tests/         # Integration tests
@@ -30,6 +31,13 @@ go build -o bp ./cmd/bp && ./bp --help
 ./bp get <id>                                # Get reference by ID
 ./bp list                                    # List all references
 ./bp export                                  # Export to BibTeX
+
+# Semantic Scholar (S2) commands
+./bp s2 add DOI:10.1234/example              # Add paper by DOI
+./bp s2 lookup DOI:10.1234/example           # Look up paper info
+./bp s2 citations <paper-id>                 # Find citing papers
+./bp s2 references <paper-id>                # Find referenced papers
+./bp s2 gaps                                 # Find literature gaps
 
 # Add --human flag for readable output (default is JSON)
 ```

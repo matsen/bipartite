@@ -1,0 +1,35 @@
+{
+  "offset": 0,
+  "data": [
+    {
+      "citingPaper": {
+        "paperId": "abc123def456789012345678901234567890abcd",
+        "externalIds": {
+          "DOI": "10.1234/citation.2020.001",
+          "CorpusId": 12345678
+        },
+        "title": "Building on Variational Phylogenetics",
+        "authors": [
+          {"authorId": "12345", "name": "Jane Doe"}
+        ],
+        "year": 2020,
+        "venue": "Nature Methods"
+      }
+    },
+    {
+      "citingPaper": {
+        "paperId": "def456789012345678901234567890abcdef1234",
+        "externalIds": {
+          "DOI": "10.5678/citation.2021.002",
+          "CorpusId": 23456789
+        },
+        "title": "Advances in Bayesian Phylogenetics",
+        "authors": [
+          {"authorId": "67890", "name": "John Smith Jr."}
+        ],
+        "year": 2021,
+        "venue": "PLOS Computational Biology"
+      }
+    }
+  ]
+}
