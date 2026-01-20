@@ -6,6 +6,8 @@
 - **Semantic Scholar API** for paper metadata (internal/s2 package)
 - **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
+- Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), golang.org/x/time/rate (rate limiting), joho/godotenv (env loading) (005-asta-mcp-integration)
+- N/A (ASTA is read-only external API, no local persistence) (005-asta-mcp-integration)
 
 ## Project Structure
 
@@ -38,6 +40,15 @@ go build -o bp ./cmd/bp && ./bp --help
 ./bp s2 citations <paper-id>                 # Find citing papers
 ./bp s2 references <paper-id>                # Find referenced papers
 ./bp s2 gaps                                 # Find literature gaps
+
+# ASTA (Academic Search Tool API) commands - read-only exploration
+./bp asta search "phylogenetics"             # Search papers by keyword
+./bp asta snippet "variational inference"    # Search text snippets in papers
+./bp asta paper DOI:10.1093/sysbio/syy032    # Get paper details
+./bp asta citations DOI:10.1093/sysbio/syy032 # Get citing papers
+./bp asta references DOI:10.1093/sysbio/syy032 # Get referenced papers
+./bp asta author "Frederick Matsen"          # Search for authors
+./bp asta author-papers 145666442            # Get papers by author ID
 
 # Add --human flag for readable output (default is JSON)
 ```
@@ -99,3 +110,6 @@ Before any pull request, ensure the following workflow is completed:
 7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
 
 <!-- MANUAL ADDITIONS END -->
+
+## Recent Changes
+- 005-asta-mcp-integration: Added ASTA MCP commands (bp asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API
