@@ -7,18 +7,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaLinkPubAuto bool
+	s2LinkPubAuto bool
 )
 
-var astaLinkPubCmd = &cobra.Command{
+var s2LinkPubCmd = &cobra.Command{
 	Use:   "link-published",
 	Short: "Find and link preprints to their published versions",
 	Long: `Scan collection for preprints and find their published versions.
@@ -27,35 +27,35 @@ Identifies papers from bioRxiv, medRxiv, or arXiv and searches
 Semantic Scholar for published versions with matching titles.
 
 Examples:
-  bp asta link-published --human
-  bp asta link-published --auto`,
+  bp s2 link-published --human
+  bp s2 link-published --auto`,
 	Args: cobra.NoArgs,
-	RunE: runAstaLinkPub,
+	RunE: runS2LinkPub,
 }
 
 func init() {
-	astaCmd.AddCommand(astaLinkPubCmd)
-	astaLinkPubCmd.Flags().BoolVar(&astaLinkPubAuto, "auto", false, "Automatically link without confirmation")
+	s2Cmd.AddCommand(s2LinkPubCmd)
+	s2LinkPubCmd.Flags().BoolVar(&s2LinkPubAuto, "auto", false, "Automatically link without confirmation")
 }
 
-// AstaLinkPubResult is the JSON output for the link-published command.
-type AstaLinkPubResult struct {
-	Linked           []AstaLinkInfo   `json:"linked"`
-	NoPublishedFound []string         `json:"no_published_found"`
-	AlreadyLinked    []string         `json:"already_linked"`
-	TotalPreprints   int              `json:"total_preprints"`
-	Error            *AstaErrorResult `json:"error,omitempty"`
+// S2LinkPubResult is the JSON output for the link-published command.
+type S2LinkPubResult struct {
+	Linked           []S2LinkInfo   `json:"linked"`
+	NoPublishedFound []string       `json:"no_published_found"`
+	AlreadyLinked    []string       `json:"already_linked"`
+	TotalPreprints   int            `json:"total_preprints"`
+	Error            *S2ErrorResult `json:"error,omitempty"`
 }
 
-// AstaLinkInfo represents a linked preprint-published pair.
-type AstaLinkInfo struct {
+// S2LinkInfo represents a linked preprint-published pair.
+type S2LinkInfo struct {
 	PreprintID     string `json:"preprint_id"`
 	PreprintDOI    string `json:"preprint_doi"`
 	PublishedDOI   string `json:"published_doi"`
 	PublishedVenue string `json:"published_venue"`
 }
 
-func runAstaLinkPub(cmd *cobra.Command, args []string) error {
+func runS2LinkPub(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Find repository and load refs
@@ -63,17 +63,17 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 	refsPath := config.RefsPath(repoRoot)
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputLinkPubError(ExitAstaAPIError, "reading refs", err)
+		return outputLinkPubError(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create client
-	client := asta.NewClient()
+	client := s2.NewClient()
 
 	// Find preprints
 	preprints := findPreprints(refs)
 	if len(preprints) == 0 {
-		return outputLinkPubResult(AstaLinkPubResult{
-			Linked:           []AstaLinkInfo{},
+		return outputLinkPubResult(S2LinkPubResult{
+			Linked:           []S2LinkInfo{},
 			NoPublishedFound: []string{},
 			AlreadyLinked:    []string{},
 			TotalPreprints:   0,
@@ -84,8 +84,8 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(os.Stderr, "Scanning %d preprints for published versions...\n\n", len(preprints))
 	}
 
-	result := AstaLinkPubResult{
-		Linked:           []AstaLinkInfo{},
+	result := S2LinkPubResult{
+		Linked:           []S2LinkInfo{},
 		NoPublishedFound: []string{},
 		AlreadyLinked:    []string{},
 		TotalPreprints:   len(preprints),
@@ -108,8 +108,8 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 		// Search for published version
 		published, err := findPublishedVersion(ctx, client, ref)
 		if err != nil {
-			if asta.IsRateLimited(err) {
-				return outputAstaRateLimited(err)
+			if s2.IsRateLimited(err) {
+				return outputS2RateLimited(err)
 			}
 			// Warn about unexpected errors instead of silently ignoring
 			warnAPIError("Failed to find published version", ref.ID, err)
@@ -124,12 +124,12 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 		// Found published version
 		if humanOutput {
 			fmt.Printf("  %s (%s)\n", ref.ID, ref.DOI)
-			fmt.Printf("    → Published in %s: %s\n", published.Venue, published.ExternalIDs.DOI)
+			fmt.Printf("    -> Published in %s: %s\n", published.Venue, published.ExternalIDs.DOI)
 		}
 
 		// Confirm or auto-link
-		shouldLink := astaLinkPubAuto
-		if !astaLinkPubAuto && humanOutput {
+		shouldLink := s2LinkPubAuto
+		if !s2LinkPubAuto && humanOutput {
 			fmt.Print("    Link? [y/N] ")
 			reader := bufio.NewReader(os.Stdin)
 			input, _ := reader.ReadString('\n')
@@ -141,7 +141,7 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 			ref.Supersedes = published.ExternalIDs.DOI
 			updatedRefs[idx] = ref
 
-			result.Linked = append(result.Linked, AstaLinkInfo{
+			result.Linked = append(result.Linked, S2LinkInfo{
 				PreprintID:     ref.ID,
 				PreprintDOI:    ref.DOI,
 				PublishedDOI:   published.ExternalIDs.DOI,
@@ -164,7 +164,7 @@ func runAstaLinkPub(cmd *cobra.Command, args []string) error {
 			refs[idx] = updated
 		}
 		if err := storage.WriteAll(refsPath, refs); err != nil {
-			return outputLinkPubError(ExitAstaAPIError, "saving refs", err)
+			return outputLinkPubError(ExitS2APIError, "saving refs", err)
 		}
 	}
 
@@ -188,9 +188,9 @@ func isPreprint(ref reference.Reference) bool {
 		strings.Contains(venue, "arxiv")
 }
 
-func findPublishedVersion(ctx context.Context, client *asta.Client, preprint reference.Reference) (*asta.S2Paper, error) {
+func findPublishedVersion(ctx context.Context, client *s2.Client, preprint reference.Reference) (*s2.S2Paper, error) {
 	// Search by title
-	searchResp, err := client.SearchByTitle(ctx, preprint.Title, AstaSearchLimit)
+	searchResp, err := client.SearchByTitle(ctx, preprint.Title, S2SearchLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +226,7 @@ func findPublishedVersion(ctx context.Context, client *asta.Client, preprint ref
 	return nil, nil
 }
 
-func outputLinkPubResult(result AstaLinkPubResult) error {
+func outputLinkPubResult(result S2LinkPubResult) error {
 	if humanOutput {
 		fmt.Printf("Summary: %d linked, %d no published version, %d already linked\n",
 			len(result.Linked), len(result.NoPublishedFound), len(result.AlreadyLinked))

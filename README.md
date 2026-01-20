@@ -58,6 +58,20 @@ bp open Smith2026-ab
 | `bp check` | Validate repository integrity |
 | `bp groom` | Detect orphaned edges; use `--fix` to remove |
 
+### Semantic Scholar (S2) Commands
+
+| Command | Description |
+|---------|-------------|
+| `bp s2 add <paper-id>` | Add paper by DOI, arXiv ID, or S2 ID |
+| `bp s2 add-pdf <file>` | Add paper by extracting DOI from PDF |
+| `bp s2 lookup <paper-id>` | Look up paper info without adding |
+| `bp s2 citations <paper-id>` | Find papers that cite this paper |
+| `bp s2 references <paper-id>` | Find papers referenced by this paper |
+| `bp s2 gaps` | Discover highly-cited papers you're missing |
+| `bp s2 link-published` | Link preprints to published versions |
+
+Paper IDs support: `DOI:10.xxx`, `ARXIV:xxxx.xxxxx`, `PMID:xxxxxxxx`, or local IDs.
+
 ### Knowledge Graph Commands
 
 | Command | Description |
@@ -78,6 +92,16 @@ All commands output JSON by default. Use `--human` for readable output.
 |-----|-------------|
 | `pdf-root` | Path to PDF folder |
 | `pdf-reader` | PDF viewer: `system`, `skim`, `zathura`, `evince`, `okular` |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `S2_API_KEY` | Semantic Scholar API key for higher rate limits (optional) |
+
+Add to `.env` file (gitignored): `S2_API_KEY=your_key_here`
+
+Get an API key at: https://www.semanticscholar.org/product/api#api-key-form
 
 ## Performance
 
@@ -127,7 +151,7 @@ bp rebuild  # Refresh local index
 - **Phase II** ✓: RAG index for semantic search over abstracts
 - **Phase III-a** ✓: Knowledge graph with directed edges between papers
 - **Phase III-b**: Concept nodes and artifact connections
-- **Phase IV**: Semantic Scholar integration for metadata enrichment
+- **Phase IV** ✓: Semantic Scholar integration for metadata enrichment
 
 See [VISION.md](VISION.md) for details.
 

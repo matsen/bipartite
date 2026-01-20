@@ -1,4 +1,4 @@
-package asta
+package s2
 
 import (
 	"regexp"
@@ -57,13 +57,14 @@ func ParsePaperID(id string) PaperIdentifier {
 	}
 }
 
-// IsExternalID returns true if the identifier is an external ID (not local).
+// IsExternalID returns true if the identifier represents an external
+// paper ID (DOI, ArXiv, PMID, etc.) rather than a local collection ID.
 func (p PaperIdentifier) IsExternalID() bool {
 	return p.Type != "LOCAL"
 }
 
-// NormalizeDOI normalizes a DOI to a consistent format.
-// Removes URL prefix if present, lowercase.
+// NormalizeDOI normalizes a DOI to a consistent format for comparison.
+// It removes common URL prefixes (https://doi.org/, DOI:) and converts to lowercase.
 func NormalizeDOI(doi string) string {
 	doi = strings.TrimSpace(doi)
 	doi = strings.TrimPrefix(doi, "https://doi.org/")

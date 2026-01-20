@@ -1,4 +1,4 @@
-package asta
+package s2
 
 import (
 	"fmt"
@@ -35,7 +35,7 @@ func MapS2ToReference(paper S2Paper) reference.Reference {
 		Venue:    paper.Venue,
 		Authors:  mapAuthors(paper.Authors),
 		Source: reference.ImportSource{
-			Type: "asta",
+			Type: "s2",
 			ID:   paper.PaperID,
 		},
 	}
@@ -60,7 +60,12 @@ func mapAuthors(s2Authors []S2Author) []reference.Author {
 }
 
 // splitAuthorName splits a full name into first and last name.
-// Handles suffixes (Jr, Sr, II, III, IV, PhD, MD).
+// Handles common suffixes (Jr, Sr, II, III, IV, PhD, MD).
+//
+// Known limitations:
+// - Multi-part surnames (von Neumann, van der Waals) split incorrectly
+// - Non-Western name formats may not be handled correctly
+// - Middle names are included in the first name
 func splitAuthorName(name string) (first, last string) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -119,6 +124,8 @@ func parsePublicationDate(year int, dateStr string) reference.PublicationDate {
 
 // generateCiteKey generates a citation key from paper metadata.
 // Format: LastName + Year + suffix (e.g., "Zhang2018-vi")
+// Note: Not guaranteed globally unique - caller should use storage.GenerateUniqueID()
+// to handle collisions before persisting.
 func generateCiteKey(paper S2Paper) string {
 	lastName := "Unknown"
 	if len(paper.Authors) > 0 {

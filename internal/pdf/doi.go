@@ -1,6 +1,9 @@
+// Package pdf provides utilities for extracting information from PDF files,
+// including DOI extraction and title detection for academic papers.
 package pdf
 
 import (
+	"errors"
 	"io"
 	"regexp"
 	"strings"
@@ -8,12 +11,22 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
+// Common errors returned by PDF extraction functions.
+var (
+	// ErrNoDOIFound indicates no DOI pattern was found in the PDF.
+	ErrNoDOIFound = errors.New("no DOI found in PDF")
+
+	// ErrNoTextExtracted indicates text extraction failed for all pages.
+	ErrNoTextExtracted = errors.New("could not extract text from PDF")
+)
+
 // DOI pattern: 10.XXXX/... where XXXX is 4+ digits
 // More specific: 10.\d{4,9}/[-._;()/:A-Z0-9]+
 var doiPattern = regexp.MustCompile(`10\.\d{4,9}/[^\s<>"{}|\\^~\[\]` + "`" + `]+`)
 
-// ExtractDOI extracts a DOI from a PDF file.
-// It searches the first few pages for DOI patterns.
+// ExtractDOI extracts a DOI from a PDF file by searching the first few pages.
+// Returns the first valid DOI found, or ErrNoDOIFound if no DOI is present.
+// Returns other errors for PDF parsing failures.
 func ExtractDOI(filePath string) (string, error) {
 	f, r, err := pdf.Open(filePath)
 	if err != nil {
@@ -27,6 +40,7 @@ func ExtractDOI(filePath string) (string, error) {
 		maxPages = r.NumPage()
 	}
 
+	extractedText := false
 	for i := 1; i <= maxPages; i++ {
 		page := r.Page(i)
 		if page.V.IsNull() {
@@ -37,17 +51,23 @@ func ExtractDOI(filePath string) (string, error) {
 		if err != nil {
 			continue
 		}
+		extractedText = true
 
 		if doi := findDOI(text); doi != "" {
 			return doi, nil
 		}
 	}
 
-	return "", nil // No DOI found (not an error)
+	if !extractedText {
+		return "", ErrNoTextExtracted
+	}
+	return "", ErrNoDOIFound
 }
 
-// ExtractTitle attempts to extract the title from a PDF.
-// This is a best-effort heuristic based on font size and position.
+// ExtractTitle attempts to extract the title from a PDF using heuristics.
+// It returns the first substantial line (>20 chars) from the first page that
+// doesn't appear to be a header/footer. This is best-effort and may return
+// an empty string if no suitable title candidate is found.
 func ExtractTitle(filePath string) (string, error) {
 	f, r, err := pdf.Open(filePath)
 	if err != nil {
@@ -83,7 +103,8 @@ func ExtractTitle(filePath string) (string, error) {
 	return "", nil
 }
 
-// ExtractText extracts all text from the first N pages of a PDF.
+// ExtractText extracts all text from the first N pages of a PDF file.
+// If maxPages is 0 or greater than the document length, extracts all pages.
 func ExtractText(filePath string, maxPages int) (string, error) {
 	f, r, err := pdf.Open(filePath)
 	if err != nil {
@@ -113,7 +134,8 @@ func ExtractText(filePath string, maxPages int) (string, error) {
 	return builder.String(), nil
 }
 
-// ExtractTextReader extracts text from a PDF reader.
+// ExtractTextReader extracts text from a PDF via io.ReaderAt interface.
+// This is useful when the PDF is already in memory or from a non-file source.
 func ExtractTextReader(r io.ReaderAt, size int64, maxPages int) (string, error) {
 	pdfReader, err := pdf.NewReader(r, size)
 	if err != nil {

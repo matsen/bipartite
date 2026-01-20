@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaLookupFields string
-	astaLookupExists bool
+	s2LookupFields string
+	s2LookupExists bool
 )
 
-var astaLookupCmd = &cobra.Command{
+var s2LookupCmd = &cobra.Command{
 	Use:   "lookup <paper-id>",
 	Short: "Query Semantic Scholar for paper information without adding",
 	Long: `Query Semantic Scholar for paper information without adding to collection.
@@ -30,65 +30,65 @@ Supported paper ID formats:
   <local-id>                   Local paper ID from collection
 
 Examples:
-  bp asta lookup DOI:10.1038/nature12373
-  bp asta lookup DOI:10.1038/nature12373 --fields title,citationCount
-  bp asta lookup Zhang2018-vi --exists --human`,
+  bp s2 lookup DOI:10.1038/nature12373
+  bp s2 lookup DOI:10.1038/nature12373 --fields title,citationCount
+  bp s2 lookup Zhang2018-vi --exists --human`,
 	Args: cobra.ExactArgs(1),
-	RunE: runAstaLookup,
+	RunE: runS2Lookup,
 }
 
 func init() {
-	astaCmd.AddCommand(astaLookupCmd)
-	astaLookupCmd.Flags().StringVarP(&astaLookupFields, "fields", "f", "", "Comma-separated fields to return (default: all)")
-	astaLookupCmd.Flags().BoolVarP(&astaLookupExists, "exists", "e", false, "Include whether paper exists in local collection")
+	s2Cmd.AddCommand(s2LookupCmd)
+	s2LookupCmd.Flags().StringVarP(&s2LookupFields, "fields", "f", "", "Comma-separated fields to return (default: all)")
+	s2LookupCmd.Flags().BoolVarP(&s2LookupExists, "exists", "e", false, "Include whether paper exists in local collection")
 }
 
-// AstaLookupResult is the JSON output for the lookup command.
-type AstaLookupResult struct {
-	PaperID        string           `json:"paperId"`
-	DOI            string           `json:"doi,omitempty"`
-	ArXiv          string           `json:"arxiv,omitempty"`
-	Title          string           `json:"title"`
-	Authors        []AstaAuthor     `json:"authors,omitempty"`
-	Abstract       string           `json:"abstract,omitempty"`
-	Year           int              `json:"year,omitempty"`
-	Venue          string           `json:"venue,omitempty"`
-	CitationCount  int              `json:"citationCount,omitempty"`
-	ReferenceCount int              `json:"referenceCount,omitempty"`
-	Fields         []string         `json:"fieldsOfStudy,omitempty"`
-	IsOpenAccess   bool             `json:"isOpenAccess,omitempty"`
-	ExistsLocally  *bool            `json:"existsLocally,omitempty"`
-	LocalID        string           `json:"localId,omitempty"`
-	Error          *AstaErrorResult `json:"error,omitempty"`
+// S2LookupResult is the JSON output for the lookup command.
+type S2LookupResult struct {
+	PaperID        string         `json:"paperId"`
+	DOI            string         `json:"doi,omitempty"`
+	ArXiv          string         `json:"arxiv,omitempty"`
+	Title          string         `json:"title"`
+	Authors        []S2Author     `json:"authors,omitempty"`
+	Abstract       string         `json:"abstract,omitempty"`
+	Year           int            `json:"year,omitempty"`
+	Venue          string         `json:"venue,omitempty"`
+	CitationCount  int            `json:"citationCount,omitempty"`
+	ReferenceCount int            `json:"referenceCount,omitempty"`
+	Fields         []string       `json:"fieldsOfStudy,omitempty"`
+	IsOpenAccess   bool           `json:"isOpenAccess,omitempty"`
+	ExistsLocally  *bool          `json:"existsLocally,omitempty"`
+	LocalID        string         `json:"localId,omitempty"`
+	Error          *S2ErrorResult `json:"error,omitempty"`
 }
 
-// AstaAuthor represents an author in lookup results.
-type AstaAuthor struct {
+// S2Author represents an author in lookup results.
+type S2Author struct {
 	Name     string `json:"name"`
 	AuthorID string `json:"authorId,omitempty"`
 }
 
-func runAstaLookup(cmd *cobra.Command, args []string) error {
+func runS2Lookup(cmd *cobra.Command, args []string) error {
 	paperID := args[0]
 	ctx := context.Background()
 
 	// Create client
-	client := asta.NewClient()
+	client := s2.NewClient()
 
 	// Parse paper ID
-	parsed := asta.ParsePaperID(paperID)
+	parsed := s2.ParsePaperID(paperID)
 	var s2ID string
 
 	// Handle local ID resolution if needed
-	var resolver *asta.LocalResolver
-	if astaLookupExists || !parsed.IsExternalID() {
+	var resolver *s2.LocalResolver
+	if s2LookupExists || !parsed.IsExternalID() {
 		repoRoot := mustFindRepository()
 		refsPath := config.RefsPath(repoRoot)
 		refs, err := storage.ReadAll(refsPath)
 		if err != nil {
-			return outputLookupError(ExitAstaAPIError, "reading refs", err)
+			return outputLookupError(ExitS2APIError, "reading refs", err)
 		}
-		resolver = asta.NewLocalResolverFromRefs(refs)
+		resolver = s2.NewLocalResolverFromRefs(refs)
 	}
 
 	// Resolve the ID
@@ -108,17 +108,17 @@ func runAstaLookup(cmd *cobra.Command, args []string) error {
 	// Fetch paper from S2
 	paper, err := client.GetPaper(ctx, s2ID)
 	if err != nil {
-		if asta.IsNotFound(err) {
+		if s2.IsNotFound(err) {
 			return outputLookupNotFound(paperID)
 		}
-		if asta.IsRateLimited(err) {
-			return outputAstaRateLimited(err)
+		if s2.IsRateLimited(err) {
+			return outputS2RateLimited(err)
 		}
-		return outputLookupError(ExitAstaAPIError, "fetching paper", err)
+		return outputLookupError(ExitS2APIError, "fetching paper", err)
 	}
 
 	// Build result
-	result := AstaLookupResult{
+	result := S2LookupResult{
 		PaperID:        paper.PaperID,
 		DOI:            paper.ExternalIDs.DOI,
 		ArXiv:          paper.ExternalIDs.ArXiv,
@@ -134,14 +134,14 @@ func runAstaLookup(cmd *cobra.Command, args []string) error {
 
 	// Map authors
 	for _, a := range paper.Authors {
-		result.Authors = append(result.Authors, AstaAuthor{
+		result.Authors = append(result.Authors, S2Author{
 			Name:     a.Name,
 			AuthorID: a.AuthorID,
 		})
 	}
 
 	// Check local existence if requested
-	if astaLookupExists && resolver != nil {
+	if s2LookupExists && resolver != nil {
 		localRef, exists := resolver.ExistsLocally(*paper)
 		result.ExistsLocally = &exists
 		if exists && localRef != nil {
@@ -150,8 +150,8 @@ func runAstaLookup(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter fields if requested
-	if astaLookupFields != "" {
-		result = filterLookupFields(result, astaLookupFields)
+	if s2LookupFields != "" {
+		result = filterLookupFields(result, s2LookupFields)
 	}
 
 	// Output result
@@ -163,13 +163,13 @@ func runAstaLookup(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func filterLookupFields(result AstaLookupResult, fieldsStr string) AstaLookupResult {
+func filterLookupFields(result S2LookupResult, fieldsStr string) S2LookupResult {
 	fields := make(map[string]bool)
 	for _, f := range strings.Split(fieldsStr, ",") {
 		fields[strings.TrimSpace(strings.ToLower(f))] = true
 	}
 
-	filtered := AstaLookupResult{
+	filtered := S2LookupResult{
 		PaperID: result.PaperID, // Always include
 	}
 
@@ -214,7 +214,7 @@ func filterLookupFields(result AstaLookupResult, fieldsStr string) AstaLookupRes
 	return filtered
 }
 
-func outputLookupHuman(result AstaLookupResult) {
+func outputLookupHuman(result S2LookupResult) {
 	fmt.Printf("%s\n", result.Title)
 	if len(result.Authors) > 0 {
 		names := make([]string, 0, len(result.Authors))

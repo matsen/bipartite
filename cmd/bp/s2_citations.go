@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaCitationsLocalOnly bool
-	astaCitationsLimit     int
+	s2CitationsLocalOnly bool
+	s2CitationsLimit     int
 )
 
-var astaCitationsCmd = &cobra.Command{
+var s2CitationsCmd = &cobra.Command{
 	Use:   "citations <paper-id>",
 	Short: "Find papers that cite a given paper",
 	Long: `Find papers that cite a given paper (forward citation tracking).
@@ -24,29 +24,29 @@ Queries Semantic Scholar for papers that cite the specified paper.
 Can filter to show only citations that are already in your collection.
 
 Examples:
-  bp asta citations Zhang2018-vi
-  bp asta citations DOI:10.1093/sysbio/syy032 --local-only
-  bp asta citations Zhang2018-vi --limit 20 --human`,
+  bp s2 citations Zhang2018-vi
+  bp s2 citations DOI:10.1093/sysbio/syy032 --local-only
+  bp s2 citations Zhang2018-vi --limit 20 --human`,
 	Args: cobra.ExactArgs(1),
-	RunE: runAstaCitations,
+	RunE: runS2Citations,
 }
 
 func init() {
-	astaCmd.AddCommand(astaCitationsCmd)
-	astaCitationsCmd.Flags().BoolVar(&astaCitationsLocalOnly, "local-only", false, "Only show citations in local collection")
-	astaCitationsCmd.Flags().IntVarP(&astaCitationsLimit, "limit", "n", 50, "Maximum results")
+	s2Cmd.AddCommand(s2CitationsCmd)
+	s2CitationsCmd.Flags().BoolVar(&s2CitationsLocalOnly, "local-only", false, "Only show citations in local collection")
+	s2CitationsCmd.Flags().IntVarP(&s2CitationsLimit, "limit", "n", 50, "Maximum results")
 }
 
-// AstaCitationsResult is the JSON output for the citations command.
-type AstaCitationsResult struct {
-	PaperID   string             `json:"paper_id"`
-	Citations []AstaCitationInfo `json:"citations"`
-	Total     int                `json:"total"`
-	Error     *AstaErrorResult   `json:"error,omitempty"`
+// S2CitationsResult is the JSON output for the citations command.
+type S2CitationsResult struct {
+	PaperID   string           `json:"paper_id"`
+	Citations []S2CitationInfo `json:"citations"`
+	Total     int              `json:"total"`
+	Error     *S2ErrorResult   `json:"error,omitempty"`
 }
 
-// AstaCitationInfo represents a single citation.
-type AstaCitationInfo struct {
+// S2CitationInfo represents a single citation.
+type S2CitationInfo struct {
 	PaperID       string   `json:"paperId"`
 	DOI           string   `json:"doi,omitempty"`
 	Title         string   `json:"title"`
@@ -57,7 +57,7 @@ type AstaCitationInfo struct {
 	LocalID       *string  `json:"localId"`
 }
 
-func runAstaCitations(cmd *cobra.Command, args []string) error {
+func runS2Citations(cmd *cobra.Command, args []string) error {
 	paperID := args[0]
 	ctx := context.Background()
 
@@ -66,15 +66,15 @@ func runAstaCitations(cmd *cobra.Command, args []string) error {
 	refsPath := config.RefsPath(repoRoot)
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputCitationsError(ExitAstaAPIError, "reading refs", err)
+		return outputCitationsError(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create resolver and client
-	resolver := asta.NewLocalResolverFromRefs(refs)
-	client := asta.NewClient()
+	resolver := s2.NewLocalResolverFromRefs(refs)
+	client := s2.NewClient()
 
 	// Resolve paper ID
-	parsed := asta.ParsePaperID(paperID)
+	parsed := s2.ParsePaperID(paperID)
 	var s2ID string
 	if parsed.IsExternalID() {
 		s2ID = parsed.String()
@@ -87,21 +87,21 @@ func runAstaCitations(cmd *cobra.Command, args []string) error {
 	}
 
 	// Fetch citations from S2
-	citationsResp, err := client.GetCitations(ctx, s2ID, astaCitationsLimit)
+	citationsResp, err := client.GetCitations(ctx, s2ID, s2CitationsLimit)
 	if err != nil {
-		if asta.IsNotFound(err) {
+		if s2.IsNotFound(err) {
 			return outputCitationsNotFound(paperID)
 		}
-		if asta.IsRateLimited(err) {
-			return outputAstaRateLimited(err)
+		if s2.IsRateLimited(err) {
+			return outputS2RateLimited(err)
 		}
-		return outputCitationsError(ExitAstaAPIError, "fetching citations", err)
+		return outputCitationsError(ExitS2APIError, "fetching citations", err)
 	}
 
 	// Build result
-	result := AstaCitationsResult{
+	result := S2CitationsResult{
 		PaperID:   paperID,
-		Citations: make([]AstaCitationInfo, 0),
+		Citations: make([]S2CitationInfo, 0),
 	}
 
 	for _, c := range citationsResp.Data {
@@ -114,12 +114,12 @@ func runAstaCitations(cmd *cobra.Command, args []string) error {
 		localRef, exists := resolver.ExistsLocally(*paper)
 
 		// Filter if local-only
-		if astaCitationsLocalOnly && !exists {
+		if s2CitationsLocalOnly && !exists {
 			continue
 		}
 
 		// Build citation info
-		info := AstaCitationInfo{
+		info := S2CitationInfo{
 			PaperID:       paper.PaperID,
 			DOI:           paper.ExternalIDs.DOI,
 			Title:         paper.Title,
@@ -153,7 +153,7 @@ func runAstaCitations(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func outputCitationsHuman(result AstaCitationsResult) {
+func outputCitationsHuman(result S2CitationsResult) {
 	fmt.Printf("Papers citing %s:\n\n", result.PaperID)
 
 	inCollection := 0

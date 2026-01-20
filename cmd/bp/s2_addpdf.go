@@ -2,23 +2,24 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/pdf"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaAddPdfLink bool
+	s2AddPdfLink bool
 )
 
-var astaAddPdfCmd = &cobra.Command{
+var s2AddPdfCmd = &cobra.Command{
 	Use:   "add-pdf <pdf-path>",
 	Short: "Add a paper by extracting DOI from a PDF file",
 	Long: `Add a paper to the collection by extracting its DOI from a PDF file.
@@ -27,39 +28,39 @@ First attempts to extract a DOI from the PDF text. If no DOI is found,
 falls back to extracting the title and searching Semantic Scholar.
 
 Examples:
-  bp asta add-pdf ~/papers/paper.pdf
-  bp asta add-pdf ~/papers/paper.pdf --link
-  bp asta add-pdf ~/papers/paper.pdf --human`,
+  bp s2 add-pdf ~/papers/paper.pdf
+  bp s2 add-pdf ~/papers/paper.pdf --link
+  bp s2 add-pdf ~/papers/paper.pdf --human`,
 	Args: cobra.ExactArgs(1),
-	RunE: runAstaAddPdf,
+	RunE: runS2AddPdf,
 }
 
 func init() {
-	astaCmd.AddCommand(astaAddPdfCmd)
-	astaAddPdfCmd.Flags().BoolVar(&astaAddPdfLink, "link", false, "Set pdf_path to the PDF file")
+	s2Cmd.AddCommand(s2AddPdfCmd)
+	s2AddPdfCmd.Flags().BoolVar(&s2AddPdfLink, "link", false, "Set pdf_path to the PDF file")
 }
 
-// AstaAddPdfResult is the JSON output for the add-pdf command.
-type AstaAddPdfResult struct {
-	Action    string               `json:"action"`               // added, skipped
-	DOISource string               `json:"doi_source,omitempty"` // extracted, title_search
-	Paper     *AstaAddPaperSummary `json:"paper,omitempty"`
-	Error     *AstaErrorResult     `json:"error,omitempty"`
+// S2AddPdfResult is the JSON output for the add-pdf command.
+type S2AddPdfResult struct {
+	Action    string             `json:"action"`               // added, skipped
+	DOISource string             `json:"doi_source,omitempty"` // extracted, title_search
+	Paper     *S2AddPaperSummary `json:"paper,omitempty"`
+	Error     *S2ErrorResult     `json:"error,omitempty"`
 }
 
-func runAstaAddPdf(cmd *cobra.Command, args []string) error {
+func runS2AddPdf(cmd *cobra.Command, args []string) error {
 	pdfPath := args[0]
 	ctx := context.Background()
 
 	// Resolve path
 	absPath, err := filepath.Abs(pdfPath)
 	if err != nil {
-		return outputAddPdfError(ExitAstaAPIError, "resolving path", err)
+		return outputAddPdfError(ExitS2APIError, "resolving path", err)
 	}
 
 	// Check file exists
 	if _, err := os.Stat(absPath); os.IsNotExist(err) {
-		return outputAddPdfError(ExitAstaNotFound, "PDF not found", fmt.Errorf("%s", absPath))
+		return outputAddPdfError(ExitS2NotFound, "PDF not found", fmt.Errorf("%s", absPath))
 	}
 
 	// Find repository
@@ -69,23 +70,29 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 	// Load existing refs
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputAddPdfError(ExitAstaAPIError, "reading refs", err)
+		return outputAddPdfError(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create resolver and client
-	resolver := asta.NewLocalResolverFromRefs(refs)
-	client := asta.NewClient()
+	resolver := s2.NewLocalResolverFromRefs(refs)
+	client := s2.NewClient()
 
 	// Try to extract DOI from PDF
 	doi, err := pdf.ExtractDOI(absPath)
 	if err != nil {
 		// Log but continue - DOI extraction can fail for various reasons
 		if humanOutput {
-			fmt.Fprintf(os.Stderr, "Warning: Could not extract DOI from PDF: %v\n", err)
+			if errors.Is(err, pdf.ErrNoDOIFound) {
+				fmt.Fprintf(os.Stderr, "No DOI found in PDF, will try title search\n")
+			} else if errors.Is(err, pdf.ErrNoTextExtracted) {
+				fmt.Fprintf(os.Stderr, "Warning: Could not extract text from PDF (may be scanned/image-based)\n")
+			} else {
+				fmt.Fprintf(os.Stderr, "Warning: Could not extract DOI from PDF: %v\n", err)
+			}
 		}
 	}
 
-	var paper *asta.S2Paper
+	var paper *s2.S2Paper
 	var doiSource string
 
 	if doi != "" {
@@ -93,13 +100,13 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 		doiSource = "extracted"
 		paper, err = client.GetPaper(ctx, "DOI:"+doi)
 		if err != nil {
-			if asta.IsNotFound(err) {
+			if s2.IsNotFound(err) {
 				// DOI not in S2, try title search as fallback
 				doi = ""
-			} else if asta.IsRateLimited(err) {
-				return outputAstaRateLimited(err)
+			} else if s2.IsRateLimited(err) {
+				return outputS2RateLimited(err)
 			} else {
-				return outputAddPdfError(ExitAstaAPIError, "fetching paper", err)
+				return outputAddPdfError(ExitS2APIError, "fetching paper", err)
 			}
 		}
 	}
@@ -108,7 +115,7 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 		// No DOI found or DOI lookup failed, try title search
 		title, err := pdf.ExtractTitle(absPath)
 		if err != nil || title == "" {
-			return outputAddPdfError(ExitAstaNotFound, "Could not extract DOI or title from PDF", nil)
+			return outputAddPdfError(ExitS2NotFound, "Could not extract DOI or title from PDF", nil)
 		}
 
 		if humanOutput {
@@ -118,14 +125,14 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 		// Search by title
 		searchResp, err := client.SearchByTitle(ctx, title, PDFSearchLimit)
 		if err != nil {
-			if asta.IsRateLimited(err) {
-				return outputAstaRateLimited(err)
+			if s2.IsRateLimited(err) {
+				return outputS2RateLimited(err)
 			}
-			return outputAddPdfError(ExitAstaAPIError, "searching by title", err)
+			return outputAddPdfError(ExitS2APIError, "searching by title", err)
 		}
 
 		if len(searchResp.Data) == 0 {
-			return outputAddPdfError(ExitAstaNotFound, "No matching papers found for title", fmt.Errorf("%s", title))
+			return outputAddPdfError(ExitS2NotFound, "No matching papers found for title", fmt.Errorf("%s", title))
 		}
 
 		if len(searchResp.Data) > 1 {
@@ -138,10 +145,10 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 	}
 
 	// Map to reference
-	ref := asta.MapS2ToReference(*paper)
+	ref := s2.MapS2ToReference(*paper)
 
 	// Set PDF path if requested
-	if astaAddPdfLink {
+	if s2AddPdfLink {
 		ref.PDFPath = absPath
 	}
 
@@ -162,7 +169,7 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 
 	// Append to refs
 	if err := storage.Append(refsPath, ref); err != nil {
-		return outputAddPdfError(ExitAstaAPIError, "saving reference", err)
+		return outputAddPdfError(ExitS2APIError, "saving reference", err)
 	}
 
 	// Output result
@@ -172,10 +179,10 @@ func runAstaAddPdf(cmd *cobra.Command, args []string) error {
 func outputAddPdfResult(action, doiSource string, ref reference.Reference) error {
 	authors := formatAuthors(ref.Authors)
 
-	result := AstaAddPdfResult{
+	result := S2AddPdfResult{
 		Action:    action,
 		DOISource: doiSource,
-		Paper: &AstaAddPaperSummary{
+		Paper: &S2AddPaperSummary{
 			ID:      ref.ID,
 			DOI:     ref.DOI,
 			Title:   ref.Title,
@@ -201,13 +208,13 @@ func outputAddPdfResult(action, doiSource string, ref reference.Reference) error
 }
 
 func outputAddPdfDuplicate(existingID, doi string) error {
-	result := AstaAddPdfResult{
+	result := S2AddPdfResult{
 		Action: "skipped",
-		Error: &AstaErrorResult{
+		Error: &S2ErrorResult{
 			Code:       "duplicate",
 			Message:    "Paper already exists in collection",
 			PaperID:    existingID,
-			Suggestion: "Use 'bp asta add --update' to refresh metadata",
+			Suggestion: "Use 'bp s2 add --update' to refresh metadata",
 		},
 	}
 
@@ -219,11 +226,11 @@ func outputAddPdfDuplicate(existingID, doi string) error {
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitAstaDuplicate)
+	os.Exit(ExitS2Duplicate)
 	return nil
 }
 
-func outputAddPdfMultipleMatches(papers []asta.S2Paper) error {
+func outputAddPdfMultipleMatches(papers []s2.S2Paper) error {
 	// Build list of matches for error output
 	matches := make([]map[string]interface{}, 0, len(papers))
 	for _, p := range papers {
@@ -239,7 +246,7 @@ func outputAddPdfMultipleMatches(papers []asta.S2Paper) error {
 		"error": map[string]interface{}{
 			"code":       "multiple_matches",
 			"message":    "Multiple papers match the extracted title",
-			"suggestion": "Use 'bp asta add DOI:...' with the correct DOI",
+			"suggestion": "Use 'bp s2 add DOI:...' with the correct DOI",
 			"matches":    matches,
 		},
 	}
@@ -253,11 +260,11 @@ func outputAddPdfMultipleMatches(papers []asta.S2Paper) error {
 				fmt.Fprintf(os.Stderr, "     DOI: %s\n", p.ExternalIDs.DOI)
 			}
 		}
-		fmt.Fprintf(os.Stderr, "\nUse 'bp asta add DOI:...' with the correct DOI\n")
+		fmt.Fprintf(os.Stderr, "\nUse 'bp s2 add DOI:...' with the correct DOI\n")
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitAstaDuplicate) // Exit code 2 for multiple matches
+	os.Exit(ExitS2Duplicate) // Exit code 2 for multiple matches
 	return nil
 }
 

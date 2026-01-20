@@ -1,6 +1,6 @@
-# Quickstart: ASTA/Semantic Scholar Integration
+# Quickstart: Semantic Scholar (S2) Integration
 
-**Feature**: 004-asta-integration
+**Feature**: 004-s2-integration
 **Date**: 2026-01-19
 
 ## Prerequisites
@@ -14,13 +14,13 @@
 
 ```bash
 # Add a paper using its DOI
-bp asta add DOI:10.1038/nature12373
+bp s2 add DOI:10.1038/nature12373
 
 # Output (JSON by default):
 # {"action":"added","paper":{"id":"Kucsko2013-th","doi":"10.1038/nature12373","title":"Nanometre-scale thermometry..."}}
 
 # Human-readable output
-bp asta add DOI:10.1093/sysbio/syy032 --human
+bp s2 add DOI:10.1093/sysbio/syy032 --human
 # Output:
 # Added: Zhang2018-vi
 #   Title: A Variational Approach to Bayesian Phylogenetic Inference
@@ -33,23 +33,23 @@ bp asta add DOI:10.1093/sysbio/syy032 --human
 
 ```bash
 # Extract DOI from PDF and add
-bp asta add-pdf ~/Downloads/paper.pdf
+bp s2 add-pdf ~/Downloads/paper.pdf
 
 # Link the PDF to the reference
-bp asta add-pdf ~/Downloads/paper.pdf --link
+bp s2 add-pdf ~/Downloads/paper.pdf --link
 ```
 
 ### Lookup Paper Info (without adding)
 
 ```bash
 # Check a paper's info before adding
-bp asta lookup DOI:10.1038/nature12373
+bp s2 lookup DOI:10.1038/nature12373
 
 # Check specific fields
-bp asta lookup DOI:10.1038/nature12373 --fields title,citationCount,year
+bp s2 lookup DOI:10.1038/nature12373 --fields title,citationCount,year
 
 # Check if you already have it
-bp asta lookup DOI:10.1038/nature12373 --exists
+bp s2 lookup DOI:10.1038/nature12373 --exists
 ```
 
 ## Citation Exploration
@@ -58,26 +58,26 @@ bp asta lookup DOI:10.1038/nature12373 --exists
 
 ```bash
 # See who cited a paper in your collection
-bp asta citations Zhang2018-vi
+bp s2 citations Zhang2018-vi
 
 # Only show citations you already have
-bp asta citations Zhang2018-vi --local-only
+bp s2 citations Zhang2018-vi --local-only
 
 # Limit results
-bp asta citations Zhang2018-vi --limit 10 --human
+bp s2 citations Zhang2018-vi --limit 10 --human
 ```
 
 ### Find Papers Referenced by a Paper
 
 ```bash
 # See what a paper cites
-bp asta references Zhang2018-vi
+bp s2 references Zhang2018-vi
 
 # Show only references you're missing
-bp asta references Zhang2018-vi --missing
+bp s2 references Zhang2018-vi --missing
 
 # Human-readable
-bp asta references Zhang2018-vi --human
+bp s2 references Zhang2018-vi --human
 ```
 
 ## Literature Discovery
@@ -86,13 +86,13 @@ bp asta references Zhang2018-vi --human
 
 ```bash
 # Find papers cited by multiple papers in your collection
-bp asta gaps
+bp s2 gaps
 
 # Only show papers cited by 3+ of your papers
-bp asta gaps --min-citations 3
+bp s2 gaps --min-citations 3
 
 # Human-readable with context
-bp asta gaps --human
+bp s2 gaps --human
 # Output:
 # Literature gaps (cited by 2+ papers in your collection):
 #
@@ -105,10 +105,10 @@ bp asta gaps --human
 
 ```bash
 # Find preprints with published versions
-bp asta link-published --human
+bp s2 link-published --human
 
 # Auto-link without confirmation
-bp asta link-published --auto
+bp s2 link-published --auto
 ```
 
 ## Agent Usage (JSON Output)
@@ -117,33 +117,33 @@ All commands output JSON by default for agent consumption:
 
 ```bash
 # Add and capture result
-result=$(bp asta add DOI:10.1234/example)
+result=$(bp s2 add DOI:10.1234/example)
 paper_id=$(echo "$result" | jq -r '.paper.id')
 
 # Chain operations
-bp asta references "$paper_id" | jq '.references[] | select(.existsLocally == false)'
+bp s2 references "$paper_id" | jq '.references[] | select(.existsLocally == false)'
 ```
 
 ## Example Workflow: Building a Literature Review
 
 ```bash
 # 1. Start with a key paper
-bp asta add DOI:10.1093/sysbio/syy032
+bp s2 add DOI:10.1093/sysbio/syy032
 
 # 2. Find what it cites
-bp asta references Zhang2018-vi --missing --human
+bp s2 references Zhang2018-vi --missing --human
 # Shows 35 references you don't have
 
 # 3. Add important references
-bp asta add DOI:10.1093/molbev/msx149
-bp asta add DOI:10.1093/bioinformatics/btx396
+bp s2 add DOI:10.1093/molbev/msx149
+bp s2 add DOI:10.1093/bioinformatics/btx396
 
 # 4. Find papers that cite your key paper
-bp asta citations Zhang2018-vi --human
+bp s2 citations Zhang2018-vi --human
 # Shows recent work building on this paper
 
 # 5. Discover gaps across your collection
-bp asta gaps --min-citations 2 --human
+bp s2 gaps --min-citations 2 --human
 # Shows foundational papers you might be missing
 ```
 
@@ -164,7 +164,7 @@ The system automatically respects S2 rate limits:
 - Without API key: ~1 request per 3 seconds
 - With API key: ~1 request per second
 
-Long operations (like `bp asta gaps`) show progress.
+Long operations (like `bp s2 gaps`) show progress.
 
 ## Troubleshooting
 
@@ -172,9 +172,9 @@ Long operations (like `bp asta gaps`) show progress.
 
 ```bash
 # Try different identifier formats
-bp asta lookup DOI:10.1234/example      # DOI
-bp asta lookup ARXIV:2106.15928         # arXiv
-bp asta lookup PMID:19872477            # PubMed
+bp s2 lookup DOI:10.1234/example      # DOI
+bp s2 lookup ARXIV:2106.15928         # arXiv
+bp s2 lookup PMID:19872477            # PubMed
 ```
 
 ### "Rate limited"
@@ -185,5 +185,5 @@ Wait a few minutes or add an API key to `.env`.
 
 ```bash
 # Fall back to manual DOI entry
-bp asta add DOI:10.1234/example --link ~/path/to/paper.pdf
+bp s2 add DOI:10.1234/example --link ~/path/to/paper.pdf
 ```

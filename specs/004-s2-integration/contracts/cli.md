@@ -1,21 +1,21 @@
-# CLI Contract: ASTA Commands
+# CLI Contract: S2 Commands
 
-**Feature**: 004-asta-integration
+**Feature**: 004-s2-integration
 **Date**: 2026-01-19
 
 ## Overview
 
-All ASTA commands are subcommands of `bp asta`. Output is JSON by default (agent-first design), with `--human` flag for readable output.
+All S2 commands are subcommands of `bp s2`. Output is JSON by default (agent-first design), with `--human` flag for readable output.
 
 ## Commands
 
-### bp asta add
+### bp s2 add
 
 Add a paper to the collection by fetching metadata from Semantic Scholar.
 
 **Synopsis**:
 ```bash
-bp asta add <paper-id> [--update] [--link <pdf-path>] [--human]
+bp s2 add <paper-id> [--update] [--link <pdf-path>] [--human]
 ```
 
 **Arguments**:
@@ -67,13 +67,13 @@ Added: Smith2025-ab
 
 ---
 
-### bp asta add-pdf
+### bp s2 add-pdf
 
 Add a paper by extracting DOI from a PDF and fetching metadata.
 
 **Synopsis**:
 ```bash
-bp asta add-pdf <pdf-path> [--link] [--human]
+bp s2 add-pdf <pdf-path> [--link] [--human]
 ```
 
 **Arguments**:
@@ -85,7 +85,7 @@ bp asta add-pdf <pdf-path> [--link] [--human]
 
 **Behavior**:
 - Extracts DOI from PDF (text search for DOI pattern)
-- If DOI found, proceeds as `bp asta add DOI:...`
+- If DOI found, proceeds as `bp s2 add DOI:...`
 - If no DOI, attempts title extraction and S2 title search
 - If multiple matches, prompts for selection (or errors in non-interactive)
 
@@ -108,13 +108,13 @@ bp asta add-pdf <pdf-path> [--link] [--human]
 
 ---
 
-### bp asta lookup
+### bp s2 lookup
 
 Query Semantic Scholar for paper information without adding to collection.
 
 **Synopsis**:
 ```bash
-bp asta lookup <paper-id> [--fields <field-list>] [--exists] [--human]
+bp s2 lookup <paper-id> [--fields <field-list>] [--exists] [--human]
 ```
 
 **Arguments**:
@@ -153,13 +153,13 @@ bp asta lookup <paper-id> [--fields <field-list>] [--exists] [--human]
 
 ---
 
-### bp asta citations
+### bp s2 citations
 
 Find papers that cite a given paper.
 
 **Synopsis**:
 ```bash
-bp asta citations <paper-id> [--local-only] [--limit N] [--human]
+bp s2 citations <paper-id> [--local-only] [--limit N] [--human]
 ```
 
 **Arguments**:
@@ -223,13 +223,13 @@ Total: 2 citations (1 in collection)
 
 ---
 
-### bp asta references
+### bp s2 references
 
 Find papers referenced by a given paper.
 
 **Synopsis**:
 ```bash
-bp asta references <paper-id> [--missing] [--limit N] [--human]
+bp s2 references <paper-id> [--missing] [--limit N] [--human]
 ```
 
 **Arguments**:
@@ -269,13 +269,13 @@ bp asta references <paper-id> [--missing] [--limit N] [--human]
 
 ---
 
-### bp asta gaps
+### bp s2 gaps
 
 Discover literature gaps - highly cited papers not in your collection.
 
 **Synopsis**:
 ```bash
-bp asta gaps [--min-citations N] [--limit N] [--human]
+bp s2 gaps [--min-citations N] [--limit N] [--human]
 ```
 
 **Arguments**:
@@ -330,13 +330,13 @@ Found 15 gaps after analyzing 150 papers.
 
 ---
 
-### bp asta link-published
+### bp s2 link-published
 
 Find and link preprints to their published versions.
 
 **Synopsis**:
 ```bash
-bp asta link-published [--auto] [--human]
+bp s2 link-published [--auto] [--human]
 ```
 
 **Arguments**:

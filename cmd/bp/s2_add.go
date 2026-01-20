@@ -5,19 +5,19 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaAddUpdate bool
-	astaAddLink   string
+	s2AddUpdate bool
+	s2AddLink   string
 )
 
-var astaAddCmd = &cobra.Command{
+var s2AddCmd = &cobra.Command{
 	Use:   "add <paper-id>",
 	Short: "Add a paper by fetching metadata from Semantic Scholar",
 	Long: `Add a paper to the collection by fetching its metadata from Semantic Scholar.
@@ -31,28 +31,28 @@ Supported paper ID formats:
   <40-char-hex>                Raw S2 paper ID
 
 Examples:
-  bp asta add DOI:10.1038/nature12373
-  bp asta add ARXIV:2106.15928 --link ~/papers/paper.pdf
-  bp asta add DOI:10.1093/sysbio/syy032 --human`,
+  bp s2 add DOI:10.1038/nature12373
+  bp s2 add ARXIV:2106.15928 --link ~/papers/paper.pdf
+  bp s2 add DOI:10.1093/sysbio/syy032 --human`,
 	Args: cobra.ExactArgs(1),
-	RunE: runAstaAdd,
+	RunE: runS2Add,
 }
 
 func init() {
-	astaCmd.AddCommand(astaAddCmd)
-	astaAddCmd.Flags().BoolVarP(&astaAddUpdate, "update", "u", false, "Update metadata if paper already exists")
-	astaAddCmd.Flags().StringVarP(&astaAddLink, "link", "l", "", "Set pdf_path to the given file path")
+	s2Cmd.AddCommand(s2AddCmd)
+	s2AddCmd.Flags().BoolVarP(&s2AddUpdate, "update", "u", false, "Update metadata if paper already exists")
+	s2AddCmd.Flags().StringVarP(&s2AddLink, "link", "l", "", "Set pdf_path to the given file path")
 }
 
-// AstaAddResult is the JSON output for the add command.
-type AstaAddResult struct {
-	Action string               `json:"action"` // added, updated, skipped
-	Paper  *AstaAddPaperSummary `json:"paper,omitempty"`
-	Error  *AstaErrorResult     `json:"error,omitempty"`
+// S2AddResult is the JSON output for the add command.
+type S2AddResult struct {
+	Action string             `json:"action"` // added, updated, skipped
+	Paper  *S2AddPaperSummary `json:"paper,omitempty"`
+	Error  *S2ErrorResult     `json:"error,omitempty"`
 }
 
-// AstaAddPaperSummary is a summary of the added paper.
-type AstaAddPaperSummary struct {
+// S2AddPaperSummary is a summary of the added paper.
+type S2AddPaperSummary struct {
 	ID      string   `json:"id"`
 	DOI     string   `json:"doi,omitempty"`
 	Title   string   `json:"title"`
@@ -61,8 +61,8 @@ type AstaAddPaperSummary struct {
 	Venue   string   `json:"venue,omitempty"`
 }
 
-// AstaErrorResult is the JSON output for errors.
-type AstaErrorResult struct {
+// S2ErrorResult is the JSON output for errors.
+type S2ErrorResult struct {
 	Code       string `json:"error"`
 	Message    string `json:"message"`
 	Suggestion string `json:"suggestion,omitempty"`
@@ -70,7 +70,7 @@ type AstaErrorResult struct {
 	PaperID    string `json:"paper_id,omitempty"`
 }
 
-func runAstaAdd(cmd *cobra.Command, args []string) error {
+func runS2Add(cmd *cobra.Command, args []string) error {
 	paperID := args[0]
 	ctx := context.Background()
 
@@ -81,15 +81,15 @@ func runAstaAdd(cmd *cobra.Command, args []string) error {
 	// Load existing refs
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputAstaError(ExitAstaAPIError, "reading refs", err)
+		return outputS2Error(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create resolver and client
-	resolver := asta.NewLocalResolverFromRefs(refs)
-	client := asta.NewClient()
+	resolver := s2.NewLocalResolverFromRefs(refs)
+	client := s2.NewClient()
 
 	// Parse and resolve paper ID
-	parsed := asta.ParsePaperID(paperID)
+	parsed := s2.ParsePaperID(paperID)
 	var s2ID string
 	if parsed.IsExternalID() {
 		s2ID = parsed.String()
@@ -97,7 +97,7 @@ func runAstaAdd(cmd *cobra.Command, args []string) error {
 		// Try to resolve local ID
 		resolved, _, err := resolver.ResolveToS2ID(paperID)
 		if err != nil {
-			return outputAstaNotFound(paperID, "Local paper ID not found")
+			return outputS2NotFound(paperID, "Local paper ID not found")
 		}
 		s2ID = resolved
 	}
@@ -105,28 +105,28 @@ func runAstaAdd(cmd *cobra.Command, args []string) error {
 	// Fetch paper from S2
 	paper, err := client.GetPaper(ctx, s2ID)
 	if err != nil {
-		if asta.IsNotFound(err) {
-			return outputAstaNotFound(paperID, "Paper not found in Semantic Scholar")
+		if s2.IsNotFound(err) {
+			return outputS2NotFound(paperID, "Paper not found in Semantic Scholar")
 		}
-		if asta.IsRateLimited(err) {
-			return outputAstaRateLimited(err)
+		if s2.IsRateLimited(err) {
+			return outputS2RateLimited(err)
 		}
-		return outputAstaError(ExitAstaAPIError, "fetching paper", err)
+		return outputS2Error(ExitS2APIError, "fetching paper", err)
 	}
 
 	// Map to reference
-	ref := asta.MapS2ToReference(*paper)
+	ref := s2.MapS2ToReference(*paper)
 
 	// Set PDF path if requested
-	if astaAddLink != "" {
-		ref.PDFPath = astaAddLink
+	if s2AddLink != "" {
+		ref.PDFPath = s2AddLink
 	}
 
 	// Check for duplicates
 	if paper.ExternalIDs.DOI != "" {
 		if existingRef, found := resolver.FindByDOI(paper.ExternalIDs.DOI); found {
-			if !astaAddUpdate {
-				return outputAstaDuplicate(existingRef.ID, paper.ExternalIDs.DOI)
+			if !s2AddUpdate {
+				return outputS2Duplicate(existingRef.ID, paper.ExternalIDs.DOI)
 			}
 			// Update existing
 			return updateExistingPaper(refsPath, refs, existingRef.ID, ref)
@@ -135,8 +135,8 @@ func runAstaAdd(cmd *cobra.Command, args []string) error {
 
 	// Check by S2 ID
 	if existingRef, found := resolver.FindByS2ID(paper.PaperID); found {
-		if !astaAddUpdate {
-			return outputAstaDuplicate(existingRef.ID, "")
+		if !s2AddUpdate {
+			return outputS2Duplicate(existingRef.ID, "")
 		}
 		// Update existing
 		return updateExistingPaper(refsPath, refs, existingRef.ID, ref)
@@ -147,11 +147,11 @@ func runAstaAdd(cmd *cobra.Command, args []string) error {
 
 	// Append to refs
 	if err := storage.Append(refsPath, ref); err != nil {
-		return outputAstaError(ExitAstaAPIError, "saving reference", err)
+		return outputS2Error(ExitS2APIError, "saving reference", err)
 	}
 
 	// Output result
-	return outputAstaAddResult("added", ref)
+	return outputS2AddResult("added", ref)
 }
 
 func updateExistingPaper(refsPath string, refs []reference.Reference, existingID string, newRef reference.Reference) error {
@@ -161,7 +161,7 @@ func updateExistingPaper(refsPath string, refs []reference.Reference, existingID
 			// Preserve the original ID
 			newRef.ID = existingID
 			// Preserve PDF path if not being updated
-			if astaAddLink == "" && ref.PDFPath != "" {
+			if s2AddLink == "" && ref.PDFPath != "" {
 				newRef.PDFPath = ref.PDFPath
 			}
 			refs[i] = newRef
@@ -171,18 +171,18 @@ func updateExistingPaper(refsPath string, refs []reference.Reference, existingID
 
 	// Write all refs
 	if err := storage.WriteAll(refsPath, refs); err != nil {
-		return outputAstaError(ExitAstaAPIError, "saving reference", err)
+		return outputS2Error(ExitS2APIError, "saving reference", err)
 	}
 
-	return outputAstaAddResult("updated", newRef)
+	return outputS2AddResult("updated", newRef)
 }
 
-func outputAstaAddResult(action string, ref reference.Reference) error {
+func outputS2AddResult(action string, ref reference.Reference) error {
 	authors := formatAuthors(ref.Authors)
 
-	result := AstaAddResult{
+	result := S2AddResult{
 		Action: action,
-		Paper: &AstaAddPaperSummary{
+		Paper: &S2AddPaperSummary{
 			ID:      ref.ID,
 			DOI:     ref.DOI,
 			Title:   ref.Title,
@@ -206,14 +206,14 @@ func outputAstaAddResult(action string, ref reference.Reference) error {
 	return nil
 }
 
-func outputAstaNotFound(paperID, message string) error {
+func outputS2NotFound(paperID, message string) error {
 	return outputGenericNotFound(paperID, message)
 }
 
-func outputAstaDuplicate(existingID, doi string) error {
-	result := AstaAddResult{
+func outputS2Duplicate(existingID, doi string) error {
+	result := S2AddResult{
 		Action: "skipped",
-		Error: &AstaErrorResult{
+		Error: &S2ErrorResult{
 			Code:       "duplicate",
 			Message:    "Paper already exists in collection",
 			PaperID:    existingID,
@@ -230,14 +230,14 @@ func outputAstaDuplicate(existingID, doi string) error {
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitAstaDuplicate)
+	os.Exit(ExitS2Duplicate)
 	return nil
 }
 
-func outputAstaRateLimited(err error) error {
+func outputS2RateLimited(err error) error {
 	return outputGenericRateLimited(err)
 }
 
-func outputAstaError(exitCode int, context string, err error) error {
+func outputS2Error(exitCode int, context string, err error) error {
 	return outputGenericError(exitCode, "api_error", context, err)
 }

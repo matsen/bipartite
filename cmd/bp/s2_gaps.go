@@ -6,18 +6,18 @@ import (
 	"os"
 	"sort"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaGapsMinCitations int
-	astaGapsLimit        int
+	s2GapsMinCitations int
+	s2GapsLimit        int
 )
 
-var astaGapsCmd = &cobra.Command{
+var s2GapsCmd = &cobra.Command{
 	Use:   "gaps",
 	Short: "Discover literature gaps - highly cited papers not in your collection",
 	Long: `Discover literature gaps by finding papers that are cited by multiple
@@ -26,29 +26,29 @@ papers in your collection but are not in your collection.
 This helps identify foundational papers or important references you might be missing.
 
 Examples:
-  bp asta gaps
-  bp asta gaps --min-citations 3
-  bp asta gaps --limit 10 --human`,
+  bp s2 gaps
+  bp s2 gaps --min-citations 3
+  bp s2 gaps --limit 10 --human`,
 	Args: cobra.NoArgs,
-	RunE: runAstaGaps,
+	RunE: runS2Gaps,
 }
 
 func init() {
-	astaCmd.AddCommand(astaGapsCmd)
-	astaGapsCmd.Flags().IntVarP(&astaGapsMinCitations, "min-citations", "m", 2, "Minimum citation count within collection")
-	astaGapsCmd.Flags().IntVarP(&astaGapsLimit, "limit", "n", 20, "Maximum results")
+	s2Cmd.AddCommand(s2GapsCmd)
+	s2GapsCmd.Flags().IntVarP(&s2GapsMinCitations, "min-citations", "m", 2, "Minimum citation count within collection")
+	s2GapsCmd.Flags().IntVarP(&s2GapsLimit, "limit", "n", 20, "Maximum results")
 }
 
-// AstaGapsResult is the JSON output for the gaps command.
-type AstaGapsResult struct {
-	Gaps           []AstaGapInfo    `json:"gaps"`
-	Total          int              `json:"total"`
-	AnalyzedPapers int              `json:"analyzed_papers"`
-	Error          *AstaErrorResult `json:"error,omitempty"`
+// S2GapsResult is the JSON output for the gaps command.
+type S2GapsResult struct {
+	Gaps           []S2GapInfo    `json:"gaps"`
+	Total          int            `json:"total"`
+	AnalyzedPapers int            `json:"analyzed_papers"`
+	Error          *S2ErrorResult `json:"error,omitempty"`
 }
 
-// AstaGapInfo represents a single gap (missing paper).
-type AstaGapInfo struct {
+// S2GapInfo represents a single gap (missing paper).
+type S2GapInfo struct {
 	PaperID            string   `json:"paperId"`
 	DOI                string   `json:"doi,omitempty"`
 	Title              string   `json:"title"`
@@ -60,11 +60,11 @@ type AstaGapInfo struct {
 
 // gapCandidate tracks a potential gap during aggregation.
 type gapCandidate struct {
-	paper   *asta.S2Paper
+	paper   *s2.S2Paper
 	citedBy []string
 }
 
-func runAstaGaps(cmd *cobra.Command, args []string) error {
+func runS2Gaps(cmd *cobra.Command, args []string) error {
 	ctx := context.Background()
 
 	// Find repository and load refs
@@ -72,18 +72,18 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 	refsPath := config.RefsPath(repoRoot)
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputGapsError(ExitAstaAPIError, "reading refs", err)
+		return outputGapsError(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create resolver and client
-	resolver := asta.NewLocalResolverFromRefs(refs)
-	client := asta.NewClient()
+	resolver := s2.NewLocalResolverFromRefs(refs)
+	client := s2.NewClient()
 
 	// Get papers with DOIs
 	refsWithDOI := resolver.RefsWithDOI()
 	if len(refsWithDOI) == 0 {
-		return outputGapsResult(AstaGapsResult{
-			Gaps:           []AstaGapInfo{},
+		return outputGapsResult(S2GapsResult{
+			Gaps:           []S2GapInfo{},
 			Total:          0,
 			AnalyzedPapers: 0,
 		})
@@ -109,11 +109,11 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 		// Fetch references for this paper
 		refsResp, err := client.GetReferences(ctx, s2ID, GapsReferencesLimit)
 		if err != nil {
-			if asta.IsNotFound(err) {
+			if s2.IsNotFound(err) {
 				continue // Skip papers not in S2
 			}
-			if asta.IsRateLimited(err) {
-				return outputAstaRateLimited(err)
+			if s2.IsRateLimited(err) {
+				return outputS2RateLimited(err)
 			}
 			// Warn about unexpected errors instead of silently ignoring
 			warnAPIError("Failed to fetch references", ref.ID, err)
@@ -145,13 +145,13 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 	}
 
 	// Filter by min citations and build result
-	var gaps []AstaGapInfo
+	var gaps []S2GapInfo
 	for _, c := range candidates {
-		if len(c.citedBy) < astaGapsMinCitations {
+		if len(c.citedBy) < s2GapsMinCitations {
 			continue
 		}
 
-		gap := AstaGapInfo{
+		gap := S2GapInfo{
 			PaperID:            c.paper.PaperID,
 			DOI:                c.paper.ExternalIDs.DOI,
 			Title:              c.paper.Title,
@@ -170,11 +170,11 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 
 	// Limit results
 	totalGaps := len(gaps)
-	if len(gaps) > astaGapsLimit {
-		gaps = gaps[:astaGapsLimit]
+	if len(gaps) > s2GapsLimit {
+		gaps = gaps[:s2GapsLimit]
 	}
 
-	result := AstaGapsResult{
+	result := S2GapsResult{
 		Gaps:           gaps,
 		Total:          totalGaps,
 		AnalyzedPapers: totalPapers,
@@ -183,7 +183,7 @@ func runAstaGaps(cmd *cobra.Command, args []string) error {
 	return outputGapsResult(result)
 }
 
-func outputGapsResult(result AstaGapsResult) error {
+func outputGapsResult(result S2GapsResult) error {
 	if humanOutput {
 		outputGapsHuman(result)
 	} else {
@@ -192,14 +192,14 @@ func outputGapsResult(result AstaGapsResult) error {
 	return nil
 }
 
-func outputGapsHuman(result AstaGapsResult) {
+func outputGapsHuman(result S2GapsResult) {
 	if len(result.Gaps) == 0 {
 		fmt.Println("No literature gaps found.")
 		fmt.Printf("Analyzed %d papers.\n", result.AnalyzedPapers)
 		return
 	}
 
-	fmt.Printf("Literature gaps (cited by %d+ papers in your collection):\n\n", astaGapsMinCitations)
+	fmt.Printf("Literature gaps (cited by %d+ papers in your collection):\n\n", s2GapsMinCitations)
 
 	for _, g := range result.Gaps {
 		fmt.Printf("  %s (%d)\n", g.Title, g.Year)

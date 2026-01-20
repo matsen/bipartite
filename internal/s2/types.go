@@ -1,5 +1,5 @@
-// Package asta provides a client for the Semantic Scholar Academic Graph API.
-package asta
+// Package s2 provides a client for the Semantic Scholar Academic Graph API.
+package s2
 
 // S2Paper represents a paper from the Semantic Scholar API.
 type S2Paper struct {

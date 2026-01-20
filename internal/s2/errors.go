@@ -1,11 +1,11 @@
-package asta
+package s2
 
 import (
 	"errors"
 	"fmt"
 )
 
-// Common errors returned by the ASTA client.
+// Common errors returned by the S2 client.
 var (
 	// ErrNotFound indicates the paper was not found in Semantic Scholar.
 	ErrNotFound = errors.New("paper not found in Semantic Scholar")
@@ -34,7 +34,9 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("S2 API error (status %d): %s", e.StatusCode, e.Message)
 }
 
-// IsNotFound returns true if the error indicates a paper was not found.
+// IsNotFound returns true if the error indicates a paper was not found
+// in Semantic Scholar. It checks for both ErrNotFound sentinel and
+// APIError with status code 404.
 func IsNotFound(err error) bool {
 	if errors.Is(err, ErrNotFound) {
 		return true
@@ -46,7 +48,9 @@ func IsNotFound(err error) bool {
 	return false
 }
 
-// IsRateLimited returns true if the error indicates rate limiting.
+// IsRateLimited returns true if the error indicates the Semantic Scholar
+// rate limit has been exceeded. It checks for both ErrRateLimited sentinel
+// and APIError with status code 429.
 func IsRateLimited(err error) bool {
 	if errors.Is(err, ErrRateLimited) {
 		return true

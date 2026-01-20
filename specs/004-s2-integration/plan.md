@@ -1,7 +1,7 @@
-# Implementation Plan: ASTA/Semantic Scholar Integration
+# Implementation Plan: Semantic Scholar (S2) Integration
 
-**Branch**: `004-asta-integration` | **Date**: 2026-01-19 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/004-asta-integration/spec.md`
+**Branch**: `004-s2-integration` | **Date**: 2026-01-19 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/004-s2-integration/spec.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
@@ -31,7 +31,7 @@ Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by 
 | II. Git-Versionable Architecture | ✅ PASS | Data stored in JSONL (refs.jsonl), cache in .bipartite/cache/ (gitignored) |
 | III. Fail-Fast Philosophy | ✅ PASS | API errors, rate limits, missing DOIs all produce clear errors |
 | IV. Real Testing (Agentic TDD) | ✅ PASS | Tests with real S2 API fixtures (recorded responses) |
-| V. Clean Architecture | ✅ PASS | New `internal/asta/` package, clear separation from existing code |
+| V. Clean Architecture | ✅ PASS | New `internal/s2/` package, clear separation from existing code |
 | VI. Simplicity | ✅ PASS | Standard library net/http, minimal deps (pdfcpu only for PDF), no MCP server |
 
 **Technology Constraints Check**:
@@ -45,7 +45,7 @@ Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by 
 ### Documentation (this feature)
 
 ```text
-specs/004-asta-integration/
+specs/004-s2-integration/
 ├── plan.md              # This file (/speckit.plan command output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)
@@ -58,7 +58,7 @@ specs/004-asta-integration/
 
 ```text
 cmd/bp/
-├── asta.go              # bp asta subcommand (add, add-pdf, lookup, citations, references, gaps, link-published)
+├── asta.go              # bp s2 subcommand (add, add-pdf, lookup, citations, references, gaps, link-published)
 ├── ...                  # Existing commands unchanged
 
 internal/
@@ -83,7 +83,7 @@ testdata/
 └── ...                  # Existing test fixtures
 ```
 
-**Structure Decision**: Single project with existing Go module structure. New `internal/asta/` package contains all Semantic Scholar client code. PDF DOI extraction added to existing `internal/pdf/` package.
+**Structure Decision**: Single project with existing Go module structure. New `internal/s2/` package contains all Semantic Scholar client code. PDF DOI extraction added to existing `internal/pdf/` package.
 
 ## Complexity Tracking
 

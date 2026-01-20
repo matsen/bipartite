@@ -1,6 +1,6 @@
 # Data Model: ASTA Integration
 
-**Feature**: 004-asta-integration
+**Feature**: 004-s2-integration
 **Date**: 2026-01-19
 
 ## Overview
@@ -25,7 +25,7 @@ Papers fetched from Semantic Scholar map to the existing Reference schema:
 | `year` | `published.year` | Direct mapping |
 | `publicationDate` | `published.*` | Parse YYYY-MM-DD format |
 | `venue` | `venue` | Direct mapping |
-| - | `source.type` | Always `"asta"` |
+| - | `source.type` | Always `"s2"` |
 | - | `pdf_path` | Set via `--link` flag if provided |
 
 ### Author Name Parsing
@@ -131,7 +131,7 @@ CREATE TABLE s2_citations (
 
 ## Gap Discovery Data Model
 
-For `bp asta gaps`, we need to track citation relationships:
+For `bp s2 gaps`, we need to track citation relationships:
 
 ```
 Gap = {
@@ -172,7 +172,7 @@ The `supersedes` field uses DOI as the link:
 
 ## State Transitions
 
-### Paper Addition via ASTA
+### Paper Addition via S2
 
 ```
 [DOI provided] → [Query S2] → [Paper found?]
@@ -189,7 +189,7 @@ The `supersedes` field uses DOI as the link:
   (--update flag)           [Rebuild index]
 ```
 
-### PDF Addition via ASTA
+### PDF Addition via S2
 
 ```
 [PDF provided] → [Extract DOI] → [DOI found?]

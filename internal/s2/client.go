@@ -1,4 +1,4 @@
-package asta
+package s2
 
 import (
 	"context"
@@ -28,7 +28,7 @@ const (
 	// UnauthenticatedRateLimit is the rate limit without an API key (100 req / 5 min).
 	UnauthenticatedRateLimit = 100.0 / 300.0 // ~0.33 req/sec
 
-	// AuthenticatedRateLimit is the rate limit with an API key (1 req/sec).
+	// AuthenticatedRateLimit is the rate limit with an S2 API key (1 req/sec).
 	AuthenticatedRateLimit = 1.0
 )
 

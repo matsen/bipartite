@@ -6,18 +6,34 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 )
 
-// ASTA-specific API limit constants
+// S2-specific API limit and matching constants.
 const (
-	AstaSearchLimit      = 10  // Default search limit for ASTA title searches
-	PDFSearchLimit       = 5   // Limit for PDF-based searches
-	GapsReferencesLimit  = 500 // Limit for references per paper in gaps analysis
-	RateLimitBurstSize   = 1   // Rate limit burst size
-	MinTitlePrefixLength = 30  // Minimum chars for prefix title matching
-	MinAuthorMatchCount  = 2   // Require at least 2 authors to match (or 1 for single-author papers)
+	// S2SearchLimit is the default number of results to request for title searches.
+	// Conservative to focus on the most relevant matches.
+	S2SearchLimit = 10
+
+	// PDFSearchLimit is the limit for PDF-based title searches.
+	// Lower than S2SearchLimit because we want to fail fast on ambiguous matches.
+	PDFSearchLimit = 5
+
+	// GapsReferencesLimit is the maximum references to fetch per paper in gaps analysis.
+	// Higher to ensure comprehensive coverage of the citation graph.
+	GapsReferencesLimit = 500
+
+	// RateLimitBurstSize controls the burst allowance for rate limiting.
+	RateLimitBurstSize = 1
+
+	// MinTitlePrefixLength requires 30+ characters for prefix matching to avoid
+	// false positives from short generic titles like "Introduction" or "Methods".
+	MinTitlePrefixLength = 30
+
+	// MinAuthorMatchCount requires at least 2 matching authors for multi-author papers
+	// to avoid false positives from common surnames. Single-author papers use 1.
+	MinAuthorMatchCount = 2
 )
 
 // formatAuthors converts reference authors to display strings.
@@ -67,7 +83,7 @@ func joinAuthorsDisplay(authors []string) string {
 
 // GenericErrorResult is a generic error result that can be embedded in any result type.
 type GenericErrorResult struct {
-	Error *AstaErrorResult `json:"error,omitempty"`
+	Error *S2ErrorResult `json:"error,omitempty"`
 }
 
 // outputGenericError outputs an error in both human and JSON format and exits.
@@ -78,7 +94,7 @@ func outputGenericError(exitCode int, errCode, context string, err error) error 
 	}
 
 	result := GenericErrorResult{
-		Error: &AstaErrorResult{
+		Error: &S2ErrorResult{
 			Code:    errCode,
 			Message: msg,
 		},
@@ -96,7 +112,7 @@ func outputGenericError(exitCode int, errCode, context string, err error) error 
 // outputGenericNotFound outputs a not-found error in both human and JSON format and exits.
 func outputGenericNotFound(paperID, message string) error {
 	result := GenericErrorResult{
-		Error: &AstaErrorResult{
+		Error: &S2ErrorResult{
 			Code:       "not_found",
 			Message:    message,
 			PaperID:    paperID,
@@ -110,20 +126,20 @@ func outputGenericNotFound(paperID, message string) error {
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitAstaNotFound)
+	os.Exit(ExitS2NotFound)
 	return nil
 }
 
 // outputGenericRateLimited outputs a rate limit error in both human and JSON format and exits.
 func outputGenericRateLimited(err error) error {
-	apiErr, _ := err.(*asta.APIError)
+	apiErr, _ := err.(*s2.APIError)
 	retryAfter := 300
 	if apiErr != nil && apiErr.RetryAfter > 0 {
 		retryAfter = apiErr.RetryAfter
 	}
 
 	result := GenericErrorResult{
-		Error: &AstaErrorResult{
+		Error: &S2ErrorResult{
 			Code:       "rate_limited",
 			Message:    "Semantic Scholar rate limit exceeded",
 			Suggestion: fmt.Sprintf("Wait %d seconds or add S2_API_KEY to .env", retryAfter),
@@ -137,7 +153,7 @@ func outputGenericRateLimited(err error) error {
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitAstaAPIError)
+	os.Exit(ExitS2APIError)
 	return nil
 }
 
@@ -185,7 +201,7 @@ func normalizeTitleStrict(title string) string {
 // authorsOverlapStrict checks if authors from a reference match S2 authors.
 // Returns false if we can't verify (empty lists), to avoid false positives.
 // Requires at least 2 authors to match (or 1 for single-author papers).
-func authorsOverlapStrict(refAuthors []reference.Author, s2Authors []asta.S2Author) bool {
+func authorsOverlapStrict(refAuthors []reference.Author, s2Authors []s2.S2Author) bool {
 	// If either list is empty, we can't verify - be conservative
 	if len(refAuthors) == 0 || len(s2Authors) == 0 {
 		return false

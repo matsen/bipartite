@@ -1,6 +1,6 @@
-# Research: ASTA/Semantic Scholar Integration
+# Research: Semantic Scholar (S2) Integration
 
-**Feature**: 004-asta-integration
+**Feature**: 004-s2-integration
 **Date**: 2026-01-19
 
 ## Research Questions

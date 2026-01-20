@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/matsen/bipartite/internal/asta"
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
 var (
-	astaReferencesMissing bool
-	astaReferencesLimit   int
+	s2ReferencesMissing bool
+	s2ReferencesLimit   int
 )
 
-var astaReferencesCmd = &cobra.Command{
+var s2ReferencesCmd = &cobra.Command{
 	Use:   "references <paper-id>",
 	Short: "Find papers referenced by a given paper",
 	Long: `Find papers referenced by a given paper (backward exploration).
@@ -24,30 +24,30 @@ Queries Semantic Scholar for papers that the specified paper cites.
 Can filter to show only references that are missing from your collection.
 
 Examples:
-  bp asta references Zhang2018-vi
-  bp asta references DOI:10.1093/sysbio/syy032 --missing
-  bp asta references Zhang2018-vi --limit 50 --human`,
+  bp s2 references Zhang2018-vi
+  bp s2 references DOI:10.1093/sysbio/syy032 --missing
+  bp s2 references Zhang2018-vi --limit 50 --human`,
 	Args: cobra.ExactArgs(1),
-	RunE: runAstaReferences,
+	RunE: runS2References,
 }
 
 func init() {
-	astaCmd.AddCommand(astaReferencesCmd)
-	astaReferencesCmd.Flags().BoolVar(&astaReferencesMissing, "missing", false, "Only show references NOT in local collection")
-	astaReferencesCmd.Flags().IntVarP(&astaReferencesLimit, "limit", "n", 100, "Maximum results")
+	s2Cmd.AddCommand(s2ReferencesCmd)
+	s2ReferencesCmd.Flags().BoolVar(&s2ReferencesMissing, "missing", false, "Only show references NOT in local collection")
+	s2ReferencesCmd.Flags().IntVarP(&s2ReferencesLimit, "limit", "n", 100, "Maximum results")
 }
 
-// AstaReferencesResult is the JSON output for the references command.
-type AstaReferencesResult struct {
-	PaperID      string             `json:"paper_id"`
-	References   []AstaCitationInfo `json:"references"`
-	Total        int                `json:"total"`
-	InCollection int                `json:"inCollection"`
-	Missing      int                `json:"missing"`
-	Error        *AstaErrorResult   `json:"error,omitempty"`
+// S2ReferencesResult is the JSON output for the references command.
+type S2ReferencesResult struct {
+	PaperID      string           `json:"paper_id"`
+	References   []S2CitationInfo `json:"references"`
+	Total        int              `json:"total"`
+	InCollection int              `json:"inCollection"`
+	Missing      int              `json:"missing"`
+	Error        *S2ErrorResult   `json:"error,omitempty"`
 }
 
-func runAstaReferences(cmd *cobra.Command, args []string) error {
+func runS2References(cmd *cobra.Command, args []string) error {
 	paperID := args[0]
 	ctx := context.Background()
 
@@ -56,15 +56,15 @@ func runAstaReferences(cmd *cobra.Command, args []string) error {
 	refsPath := config.RefsPath(repoRoot)
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputReferencesError(ExitAstaAPIError, "reading refs", err)
+		return outputReferencesError(ExitS2APIError, "reading refs", err)
 	}
 
 	// Create resolver and client
-	resolver := asta.NewLocalResolverFromRefs(refs)
-	client := asta.NewClient()
+	resolver := s2.NewLocalResolverFromRefs(refs)
+	client := s2.NewClient()
 
 	// Resolve paper ID
-	parsed := asta.ParsePaperID(paperID)
+	parsed := s2.ParsePaperID(paperID)
 	var s2ID string
 	if parsed.IsExternalID() {
 		s2ID = parsed.String()
@@ -77,21 +77,21 @@ func runAstaReferences(cmd *cobra.Command, args []string) error {
 	}
 
 	// Fetch references from S2
-	refsResp, err := client.GetReferences(ctx, s2ID, astaReferencesLimit)
+	refsResp, err := client.GetReferences(ctx, s2ID, s2ReferencesLimit)
 	if err != nil {
-		if asta.IsNotFound(err) {
+		if s2.IsNotFound(err) {
 			return outputReferencesNotFound(paperID)
 		}
-		if asta.IsRateLimited(err) {
-			return outputAstaRateLimited(err)
+		if s2.IsRateLimited(err) {
+			return outputS2RateLimited(err)
 		}
-		return outputReferencesError(ExitAstaAPIError, "fetching references", err)
+		return outputReferencesError(ExitS2APIError, "fetching references", err)
 	}
 
 	// Build result
-	result := AstaReferencesResult{
+	result := S2ReferencesResult{
 		PaperID:    paperID,
-		References: make([]AstaCitationInfo, 0),
+		References: make([]S2CitationInfo, 0),
 	}
 
 	totalRefs := 0
@@ -111,12 +111,12 @@ func runAstaReferences(cmd *cobra.Command, args []string) error {
 		}
 
 		// Filter if missing-only
-		if astaReferencesMissing && exists {
+		if s2ReferencesMissing && exists {
 			continue
 		}
 
 		// Build reference info
-		info := AstaCitationInfo{
+		info := S2CitationInfo{
 			PaperID:       paper.PaperID,
 			DOI:           paper.ExternalIDs.DOI,
 			Title:         paper.Title,
@@ -152,8 +152,8 @@ func runAstaReferences(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func outputReferencesHuman(result AstaReferencesResult) {
-	if astaReferencesMissing {
+func outputReferencesHuman(result S2ReferencesResult) {
+	if s2ReferencesMissing {
 		fmt.Printf("Missing references from %s:\n\n", result.PaperID)
 	} else {
 		fmt.Printf("References from %s:\n\n", result.PaperID)

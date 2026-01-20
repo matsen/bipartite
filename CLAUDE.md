@@ -3,18 +3,15 @@
 ## Active Technologies
 - **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
 - **Ollama** for local embeddings, pure Go vector storage
+- **Semantic Scholar API** for paper metadata (internal/s2 package)
 - **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
-- Go 1.25.5 (existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), standard library net/http (API calls) (004-asta-integration)
-- JSONL (refs.jsonl) + ephemeral SQLite (existing infrastructure) (004-asta-integration)
-- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), net/http (API calls), pdfcpu (PDF parsing) (004-asta-integration)
-- JSONL (refs.jsonl) + ephemeral SQLite + in-memory LRU cache for API responses (004-asta-integration)
 
 ## Project Structure
 
 ```text
 cmd/           # CLI command implementations
-internal/      # Internal packages (store, index, etc.)
+internal/      # Internal packages (s2, store, index, etc.)
 specs/         # Feature specifications
 testdata/      # Test fixtures
 tests/         # Integration tests
@@ -34,6 +31,13 @@ go build -o bp ./cmd/bp && ./bp --help
 ./bp get <id>                                # Get reference by ID
 ./bp list                                    # List all references
 ./bp export                                  # Export to BibTeX
+
+# Semantic Scholar (S2) commands
+./bp s2 add DOI:10.1234/example              # Add paper by DOI
+./bp s2 lookup DOI:10.1234/example           # Look up paper info
+./bp s2 citations <paper-id>                 # Find citing papers
+./bp s2 references <paper-id>                # Find referenced papers
+./bp s2 gaps                                 # Find literature gaps
 
 # Add --human flag for readable output (default is JSON)
 ```
@@ -95,7 +99,3 @@ Before any pull request, ensure the following workflow is completed:
 7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
 
 <!-- MANUAL ADDITIONS END -->
-
-## Recent Changes
-- 004-asta-integration: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), net/http (API calls), pdfcpu (PDF parsing)
-- 004-asta-integration: Added Go 1.25.5 (existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), standard library net/http (API calls)
