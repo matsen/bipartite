@@ -28,34 +28,23 @@ Examples:
 }
 
 func init() {
-	astaCitationsCmd.Flags().IntVar(&astaCitationsLimit, "limit", 100, "Maximum number of results")
+	astaCitationsCmd.Flags().IntVar(&astaCitationsLimit, "limit", asta.DefaultCitationsLimit, "Maximum number of results")
 	astaCitationsCmd.Flags().StringVar(&astaCitationsYear, "year", "", "Filter citing papers by publication date (e.g., 2020:2024)")
 	astaCmd.AddCommand(astaCitationsCmd)
 }
 
 func runAstaCitations(cmd *cobra.Command, args []string) {
-	paperID := args[0]
-	client := asta.NewClient()
-
-	result, err := client.GetCitations(context.Background(), paperID, astaCitationsLimit, astaCitationsYear)
+	paperID, err := validatePaperID(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, paperID))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if len(result.Citations) == 0 {
-			fmt.Printf("No citations found for %s\n", paperID)
-			return
-		}
-		fmt.Printf("Found %d citations for %s\n\n", result.CitationCount, paperID)
-		for i, p := range result.Citations {
-			fmt.Print(formatPaperHuman(p, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.GetCitations(ctx, paperID, astaCitationsLimit, astaCitationsYear)
+		},
+		formatCitationsHuman(paperID),
+		paperID,
+	)
 }

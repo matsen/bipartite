@@ -72,6 +72,24 @@ bp open Smith2026-ab
 
 Paper IDs support: `DOI:10.xxx`, `ARXIV:xxxx.xxxxx`, `PMID:xxxxxxxx`, or local IDs.
 
+### ASTA (Academic Search Tool API) Commands
+
+Read-only exploration of academic papers via Allen AI's ASTA service.
+
+| Command | Description |
+|---------|-------------|
+| `bp asta search <query>` | Search papers by keyword relevance |
+| `bp asta snippet <query>` | Search text snippets within papers |
+| `bp asta paper <paper-id>` | Get paper details |
+| `bp asta citations <paper-id>` | Get papers that cite this paper |
+| `bp asta references <paper-id>` | Get papers referenced by this paper |
+| `bp asta author <name>` | Search for authors by name |
+| `bp asta author-papers <author-id>` | Get papers by an author |
+
+Common flags: `--limit N`, `--year YYYY:YYYY`, `--venue <name>`, `--human`.
+
+Requires `ASTA_API_KEY` environment variable.
+
 ### Knowledge Graph Commands
 
 | Command | Description |
@@ -98,10 +116,15 @@ All commands output JSON by default. Use `--human` for readable output.
 | Variable | Description |
 |----------|-------------|
 | `S2_API_KEY` | Semantic Scholar API key for higher rate limits (optional) |
+| `ASTA_API_KEY` | ASTA API key for academic search (required for `bp asta` commands) |
 
-Add to `.env` file (gitignored): `S2_API_KEY=your_key_here`
+Add to `.env` file (gitignored):
+```
+S2_API_KEY=your_key_here
+ASTA_API_KEY=your_key_here
+```
 
-Get an API key at: https://www.semanticscholar.org/product/api#api-key-form
+Get an S2 API key at: https://www.semanticscholar.org/product/api#api-key-form
 
 ## Performance
 

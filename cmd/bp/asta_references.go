@@ -24,33 +24,22 @@ Examples:
 }
 
 func init() {
-	astaReferencesCmd.Flags().IntVar(&astaReferencesLimit, "limit", 100, "Maximum number of results")
+	astaReferencesCmd.Flags().IntVar(&astaReferencesLimit, "limit", asta.DefaultReferencesLimit, "Maximum number of results")
 	astaCmd.AddCommand(astaReferencesCmd)
 }
 
 func runAstaReferences(cmd *cobra.Command, args []string) {
-	paperID := args[0]
-	client := asta.NewClient()
-
-	result, err := client.GetReferences(context.Background(), paperID, astaReferencesLimit)
+	paperID, err := validatePaperID(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, paperID))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if len(result.References) == 0 {
-			fmt.Printf("No references found for %s\n", paperID)
-			return
-		}
-		fmt.Printf("Found %d references for %s\n\n", result.ReferenceCount, paperID)
-		for i, p := range result.References {
-			fmt.Print(formatPaperHuman(p, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.GetReferences(ctx, paperID, astaReferencesLimit)
+		},
+		formatReferencesHuman(paperID),
+		paperID,
+	)
 }

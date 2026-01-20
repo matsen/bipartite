@@ -32,35 +32,24 @@ Examples:
 }
 
 func init() {
-	astaSnippetCmd.Flags().IntVar(&astaSnippetLimit, "limit", 20, "Maximum number of snippets")
+	astaSnippetCmd.Flags().IntVar(&astaSnippetLimit, "limit", asta.DefaultSnippetLimit, "Maximum number of snippets")
 	astaSnippetCmd.Flags().StringVar(&astaSnippetVenue, "venue", "", "Filter by venue")
 	astaSnippetCmd.Flags().StringVar(&astaSnippetPapers, "papers", "", "Comma-separated paper IDs to search within")
 	astaCmd.AddCommand(astaSnippetCmd)
 }
 
 func runAstaSnippet(cmd *cobra.Command, args []string) {
-	query := args[0]
-	client := asta.NewClient()
-
-	result, err := client.SnippetSearch(context.Background(), query, astaSnippetLimit, astaSnippetVenue, astaSnippetPapers)
+	query, err := validateQuery(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, ""))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if len(result.Snippets) == 0 {
-			fmt.Println("No snippets found")
-			return
-		}
-		fmt.Printf("Found %d snippets\n\n", len(result.Snippets))
-		for i, s := range result.Snippets {
-			fmt.Print(formatSnippetHuman(s, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.SnippetSearch(ctx, query, astaSnippetLimit, astaSnippetVenue, astaSnippetPapers)
+		},
+		formatSnippetResultsHuman,
+		"",
+	)
 }

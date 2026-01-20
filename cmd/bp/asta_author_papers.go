@@ -30,34 +30,23 @@ Examples:
 }
 
 func init() {
-	astaAuthorPapersCmd.Flags().IntVar(&astaAuthorPapersLimit, "limit", 100, "Maximum number of results")
+	astaAuthorPapersCmd.Flags().IntVar(&astaAuthorPapersLimit, "limit", asta.DefaultAuthorPapersLimit, "Maximum number of results")
 	astaAuthorPapersCmd.Flags().StringVar(&astaAuthorPapersYear, "year", "", "Filter by publication date (e.g., 2020:2024)")
 	astaCmd.AddCommand(astaAuthorPapersCmd)
 }
 
 func runAstaAuthorPapers(cmd *cobra.Command, args []string) {
-	authorID := args[0]
-	client := asta.NewClient()
-
-	result, err := client.GetAuthorPapers(context.Background(), authorID, astaAuthorPapersLimit, astaAuthorPapersYear)
+	authorID, err := validateAuthorID(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, ""))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if len(result.Papers) == 0 {
-			fmt.Printf("No papers found for author %s\n", authorID)
-			return
-		}
-		fmt.Printf("Found %d papers by author %s\n\n", len(result.Papers), authorID)
-		for i, p := range result.Papers {
-			fmt.Print(formatPaperHuman(p, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.GetAuthorPapers(ctx, authorID, astaAuthorPapersLimit, astaAuthorPapersYear)
+		},
+		formatAuthorPapersHuman(authorID),
+		"",
+	)
 }

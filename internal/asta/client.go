@@ -6,9 +6,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -29,6 +31,14 @@ const (
 
 	// DefaultAuthorFields are the fields requested by default for author lookups.
 	DefaultAuthorFields = "name,url,affiliations,paperCount,citationCount,hIndex"
+
+	// Default limits for various search operations.
+	DefaultSearchLimit       = 50
+	DefaultSnippetLimit      = 20
+	DefaultCitationsLimit    = 100
+	DefaultReferencesLimit   = 100
+	DefaultAuthorSearchLimit = 10
+	DefaultAuthorPapersLimit = 100
 )
 
 // Client is a rate-limited HTTP client for the ASTA MCP API.
@@ -37,7 +47,7 @@ type Client struct {
 	limiter    *rate.Limiter
 	apiKey     string
 	baseURL    string
-	requestID  int
+	requestID  atomic.Int32
 }
 
 // ClientOption configures a Client.
@@ -87,17 +97,107 @@ func NewClient(opts ...ClientOption) *Client {
 	return c
 }
 
+// parseSSEResponse extracts text content from an SSE/MCP response stream.
+func parseSSEResponse(body io.Reader) ([]string, error) {
+	scanner := bufio.NewScanner(body)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
+	var allTextContent []string
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Skip ping events, empty lines, and event type lines
+		if strings.HasPrefix(line, ": ping") || line == "" || strings.HasPrefix(line, "event:") {
+			continue
+		}
+
+		// Look for data: lines containing JSON
+		if strings.HasPrefix(line, "data: ") {
+			data := strings.TrimPrefix(line, "data: ")
+
+			var mcpResp MCPResponse
+			if err := json.Unmarshal([]byte(data), &mcpResp); err != nil {
+				continue
+			}
+
+			if mcpResp.Error != nil {
+				return nil, &APIError{
+					StatusCode: mcpResp.Error.Code,
+					Code:       "mcp_error",
+					Message:    mcpResp.Error.Message,
+				}
+			}
+
+			if mcpResp.Result != nil {
+				for _, content := range mcpResp.Result.Content {
+					if content.Type == "text" && content.Text != "" {
+						allTextContent = append(allTextContent, content.Text)
+					}
+				}
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading SSE stream: %w", err)
+	}
+
+	return allTextContent, nil
+}
+
+// combineStreamingResults combines multiple streaming responses into a single JSON result.
+func combineStreamingResults(textContent []string) ([]byte, error) {
+	if len(textContent) == 0 {
+		return nil, fmt.Errorf("%w: no content received", ErrInvalidResponse)
+	}
+
+	if len(textContent) == 1 {
+		return []byte(textContent[0]), nil
+	}
+
+	// Multiple responses indicate streaming results - combine into array
+	var combined strings.Builder
+	combined.WriteString(`{"result":[`)
+	for i, text := range textContent {
+		if i > 0 {
+			combined.WriteString(",")
+		}
+		combined.WriteString(text)
+	}
+	combined.WriteString("]}")
+	return []byte(combined.String()), nil
+}
+
+// checkHTTPErrors returns an error if the HTTP response indicates a problem.
+func checkHTTPErrors(resp *http.Response) error {
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return fmt.Errorf("%w: status %d", ErrAuthError, resp.StatusCode)
+	}
+	if resp.StatusCode == 429 {
+		return fmt.Errorf("%w: status %d", ErrRateLimited, resp.StatusCode)
+	}
+	if resp.StatusCode >= 400 {
+		return &APIError{
+			StatusCode: resp.StatusCode,
+			Code:       "api_error",
+			Message:    fmt.Sprintf("HTTP %d", resp.StatusCode),
+		}
+	}
+	return nil
+}
+
 // callTool executes an MCP tool call and returns the raw JSON result.
 func (c *Client) callTool(ctx context.Context, toolName string, args map[string]any) ([]byte, error) {
-	// Wait for rate limiter
 	if err := c.limiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limiter: %w", err)
 	}
 
-	c.requestID++
+	reqID := int(c.requestID.Add(1))
 	req := MCPRequest{
 		JSONRPC: "2.0",
-		ID:      c.requestID,
+		ID:      reqID,
 		Method:  "tools/call",
 		Params: MCPParams{
 			Name:      toolName,
@@ -127,99 +227,16 @@ func (c *Client) callTool(ctx context.Context, toolName string, args map[string]
 	}
 	defer resp.Body.Close()
 
-	// Check HTTP-level errors first
-	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return nil, fmt.Errorf("%w: status %d", ErrAuthError, resp.StatusCode)
-	}
-	if resp.StatusCode == 429 {
-		return nil, fmt.Errorf("%w: status %d", ErrRateLimited, resp.StatusCode)
-	}
-	if resp.StatusCode >= 400 {
-		return nil, &APIError{
-			StatusCode: resp.StatusCode,
-			Code:       "api_error",
-			Message:    fmt.Sprintf("HTTP %d", resp.StatusCode),
-		}
+	if err := checkHTTPErrors(resp); err != nil {
+		return nil, err
 	}
 
-	// Handle SSE (Server-Sent Events) response
-	// The ASTA MCP server streams results as multiple MCP responses, each with one item.
-	// The final message has id matching our request and contains the complete response,
-	// or results are streamed as separate MCP responses with partial content.
-	scanner := bufio.NewScanner(resp.Body)
-	// Increase scanner buffer for large responses
-	buf := make([]byte, 0, 64*1024)
-	scanner.Buffer(buf, 1024*1024)
-
-	var allTextContent []string
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Skip ping events and empty lines
-		if strings.HasPrefix(line, ": ping") || line == "" {
-			continue
-		}
-
-		// Skip event type lines
-		if strings.HasPrefix(line, "event:") {
-			continue
-		}
-
-		// Look for data: lines containing JSON
-		if strings.HasPrefix(line, "data: ") {
-			data := strings.TrimPrefix(line, "data: ")
-
-			// Try to parse as MCP response
-			var mcpResp MCPResponse
-			if err := json.Unmarshal([]byte(data), &mcpResp); err != nil {
-				continue
-			}
-
-			// Check for errors
-			if mcpResp.Error != nil {
-				return nil, &APIError{
-					StatusCode: mcpResp.Error.Code,
-					Code:       "mcp_error",
-					Message:    mcpResp.Error.Message,
-				}
-			}
-
-			// Accumulate text content from results
-			if mcpResp.Result != nil {
-				for _, content := range mcpResp.Result.Content {
-					if content.Type == "text" && content.Text != "" {
-						allTextContent = append(allTextContent, content.Text)
-					}
-				}
-			}
-		}
+	textContent, err := parseSSEResponse(resp.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("reading SSE stream: %w", err)
-	}
-
-	if len(allTextContent) == 0 {
-		return nil, fmt.Errorf("%w: no content received", ErrInvalidResponse)
-	}
-
-	// If we have exactly one response, return it directly
-	if len(allTextContent) == 1 {
-		return []byte(allTextContent[0]), nil
-	}
-
-	// If we have multiple responses, they're streaming results - combine into array
-	var combined strings.Builder
-	combined.WriteString(`{"result":[`)
-	for i, text := range allTextContent {
-		if i > 0 {
-			combined.WriteString(",")
-		}
-		combined.WriteString(text)
-	}
-	combined.WriteString("]}")
-	return []byte(combined.String()), nil
+	return combineStreamingResults(textContent)
 }
 
 // SearchPapers searches for papers by keyword relevance.

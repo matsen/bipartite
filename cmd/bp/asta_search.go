@@ -29,35 +29,24 @@ Examples:
 }
 
 func init() {
-	astaSearchCmd.Flags().IntVar(&astaSearchLimit, "limit", 50, "Maximum number of results")
+	astaSearchCmd.Flags().IntVar(&astaSearchLimit, "limit", asta.DefaultSearchLimit, "Maximum number of results")
 	astaSearchCmd.Flags().StringVar(&astaSearchYear, "year", "", "Publication date range (e.g., 2020:2024)")
 	astaSearchCmd.Flags().StringVar(&astaSearchVenue, "venue", "", "Filter by venue")
 	astaCmd.AddCommand(astaSearchCmd)
 }
 
 func runAstaSearch(cmd *cobra.Command, args []string) {
-	query := args[0]
-	client := asta.NewClient()
-
-	result, err := client.SearchPapers(context.Background(), query, astaSearchLimit, astaSearchYear, astaSearchVenue)
+	query, err := validateQuery(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, ""))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if result.Total == 0 {
-			fmt.Println("No papers found")
-			return
-		}
-		fmt.Printf("Found %d papers\n\n", result.Total)
-		for i, p := range result.Papers {
-			fmt.Print(formatPaperHuman(p, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.SearchPapers(ctx, query, astaSearchLimit, astaSearchYear, astaSearchVenue)
+		},
+		formatSearchResultsHuman,
+		"",
+	)
 }

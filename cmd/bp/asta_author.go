@@ -24,33 +24,22 @@ Examples:
 }
 
 func init() {
-	astaAuthorCmd.Flags().IntVar(&astaAuthorLimit, "limit", 10, "Maximum number of results")
+	astaAuthorCmd.Flags().IntVar(&astaAuthorLimit, "limit", asta.DefaultAuthorSearchLimit, "Maximum number of results")
 	astaCmd.AddCommand(astaAuthorCmd)
 }
 
 func runAstaAuthor(cmd *cobra.Command, args []string) {
-	name := args[0]
-	client := asta.NewClient()
-
-	result, err := client.SearchAuthors(context.Background(), name, astaAuthorLimit)
+	name, err := validateQuery(args[0])
 	if err != nil {
-		os.Exit(astaOutputError(err, ""))
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(ExitError)
 	}
 
-	if astaHuman {
-		if len(result.Authors) == 0 {
-			fmt.Printf("No authors found for \"%s\"\n", name)
-			return
-		}
-		fmt.Printf("Found %d authors matching \"%s\"\n\n", len(result.Authors), name)
-		for i, a := range result.Authors {
-			fmt.Print(formatAuthorHuman(a, i+1))
-			fmt.Println()
-		}
-	} else {
-		if err := astaOutputJSON(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(ExitError)
-		}
-	}
+	astaExecute(
+		func(ctx context.Context, client *asta.Client) (any, error) {
+			return client.SearchAuthors(ctx, name, astaAuthorLimit)
+		},
+		formatAuthorsHuman(name),
+		"",
+	)
 }

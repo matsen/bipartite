@@ -133,7 +133,7 @@
 
 **Purpose**: Final validation, documentation, and cleanup
 
-- [ ] T029 Update README.md with ASTA commands documentation
+- [X] T029 Update README.md with ASTA commands documentation
 - [X] T030 Update CLAUDE.md with ASTA notes under Commands section
 - [X] T031 Run `go build -o bp ./cmd/bp` and verify all commands work
 - [X] T032 Run `go vet ./...` and `go fmt ./...` to ensure code quality
