@@ -9,4 +9,9 @@ const (
 	ExitNoAbstract    = 4 // Paper has no abstract (Phase II)
 	ExitModelNotFound = 5 // Embedding model not found (Phase II)
 	ExitIndexStale    = 6 // Semantic index is stale (Phase II)
+
+	// ASTA exit codes (from contracts/cli.md)
+	ExitASTANotFound  = 1 // Resource not found in ASTA
+	ExitASTAAuthError = 2 // Missing or invalid ASTA_API_KEY
+	ExitASTAAPIError  = 3 // API error (rate limit, network)
 )
