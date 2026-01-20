@@ -78,10 +78,9 @@ When modifying SQLite schema (e.g., adding columns to FTS5 tables):
 
 Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you must delete the database file for schema changes to take effect.
 
-## Bipartite Skills
+## Bipartite Skill
 
-- `/bp-find <query>` - Search for papers and return Google Drive PDF paths. Supports author names, years, topics, and combinations (e.g., "Schmidler 2021", "importance sampling recent").
-- `/bp-update` - Import references from the most recent Paperpile JSON export in ~/Downloads.
+Use `/bipartite` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `.claude/skills/bipartite/` and symlinked to `~/.claude/skills/` for global availability.
 
 ## Ralph Loop
 
