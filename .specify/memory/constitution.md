@@ -17,7 +17,7 @@ Follow-up TODOs: None
 
 Bipartite is designed for AI agents and command-line workflows, not GUI interaction.
 
-- CLI (`bp`) MUST be the primary interface—all functionality accessible via bash commands
+- CLI (`bip`) MUST be the primary interface—all functionality accessible via bash commands
 - Output MUST be structured (JSON) by default for machine parsing
 - Human-readable output MUST be available as an alternative format flag
 - No MCP server required—agents interact directly via bash
@@ -30,7 +30,7 @@ Bipartite is designed for AI agents and command-line workflows, not GUI interact
 All persistent state MUST be stored in formats that support git versioning and collaboration.
 
 - JSONL MUST be the single source of truth for all reference data
-- Query layer (SQLite, DuckDB, or in-memory) MUST be ephemeral—rebuilt from JSONL on demand via `bp rebuild`
+- Query layer (SQLite, DuckDB, or in-memory) MUST be ephemeral—rebuilt from JSONL on demand via `bip rebuild`
 - Database files MUST be gitignored; never committed
 - JSONL format MUST support clean merges (append-only where possible)
 - Each bipartite repository MUST be self-contained and standalone
