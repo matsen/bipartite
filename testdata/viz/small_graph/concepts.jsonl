@@ -1,0 +1,3 @@
+{"id":"mutation-selection-model","name":"Mutation-Selection Model","aliases":["MutSel","mutation-selection balance"],"description":"A model combining mutation rates with selection pressures to predict equilibrium amino acid frequencies."}
+{"id":"phylogenetics","name":"Phylogenetics","aliases":["phylogenetic analysis"],"description":"Study of evolutionary relationships among species or sequences."}
+{"id":"deep-mutational-scanning","name":"Deep Mutational Scanning","aliases":["DMS"],"description":"High-throughput technique to measure fitness effects of mutations."}
