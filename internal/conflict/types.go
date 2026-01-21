@@ -30,10 +30,11 @@ type PaperMatch struct {
 }
 
 // FieldConflict represents a true conflict for a specific field.
+// Values are stored in full; truncation happens only at display time.
 type FieldConflict struct {
 	FieldName   string // e.g., "abstract", "title", "venue"
-	OursValue   string // Value from ours (may be truncated for display)
-	TheirsValue string // Value from theirs (may be truncated for display)
+	OursValue   string // Full value from ours side
+	TheirsValue string // Full value from theirs side
 }
 
 // ResolutionPlan describes how a matched paper pair will be resolved.

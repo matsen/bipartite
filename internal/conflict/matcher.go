@@ -1,5 +1,10 @@
 package conflict
 
+// Paper matching logic for conflict resolution.
+// Matches papers between conflict sides using DOI (primary) or ID (fallback).
+// DOI takes priority because it's a standardized identifier; ID matching is
+// a fallback for papers without DOIs or when DOIs differ but IDs match.
+
 import (
 	"github.com/matsen/bipartite/internal/reference"
 )

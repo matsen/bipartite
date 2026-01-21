@@ -1,12 +1,19 @@
 package conflict
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/reference"
 )
 
-// Field completeness weights (higher = more important)
+// Field completeness weights (higher = more important for determining "better" record).
+// Rationale:
+// - Abstract (5): Substantial content, most valuable for understanding paper
+// - Authors (4): Essential for citation and discovery
+// - Venue (3): Important for identifying publication context and credibility
+// - Published (2): Useful metadata but often approximate
+// - DOI (1): Identifier, often present in minimal records
 const (
 	weightAbstract  = 5
 	weightAuthors   = 4
@@ -155,8 +162,12 @@ func MergeReferences(ours, theirs reference.Reference) (reference.Reference, []F
 		conflicts = append(conflicts, *authorsConflict)
 	}
 
-	// Published - take most specific
-	merged.Published = mergePublicationDate(ours.Published, theirs.Published)
+	// Published - take most specific, detect conflicts
+	published, publishedConflict := mergePublicationDate(ours.Published, theirs.Published)
+	merged.Published = published
+	if publishedConflict != nil {
+		conflicts = append(conflicts, *publishedConflict)
+	}
 
 	// SupplementPaths - union
 	merged.SupplementPaths = unionStrings(ours.SupplementPaths, theirs.SupplementPaths)
@@ -168,6 +179,7 @@ func MergeReferences(ours, theirs reference.Reference) (reference.Reference, []F
 }
 
 // mergeString merges two string values, returning the merged value and any conflict.
+// Full values are stored in conflicts; truncation happens at display time.
 func mergeString(fieldName, ours, theirs string) (string, *FieldConflict) {
 	if ours == "" {
 		return theirs, nil
@@ -178,16 +190,18 @@ func mergeString(fieldName, ours, theirs string) (string, *FieldConflict) {
 	if ours == theirs {
 		return ours, nil
 	}
-	// True conflict
+	// True conflict - store full values
 	return "", &FieldConflict{
 		FieldName:   fieldName,
-		OursValue:   truncate(ours, 50),
-		TheirsValue: truncate(theirs, 50),
+		OursValue:   ours,
+		TheirsValue: theirs,
 	}
 }
 
 // mergeAuthors merges two author lists.
 // Returns the longer list, or a conflict if same length with different content.
+// Rationale: More authors typically means more complete metadata (e.g., one source
+// truncated the list). If same length with different names, it's a true conflict.
 func mergeAuthors(ours, theirs []reference.Author) ([]reference.Author, *FieldConflict) {
 	if len(ours) == 0 {
 		return theirs, nil
@@ -196,7 +210,7 @@ func mergeAuthors(ours, theirs []reference.Author) ([]reference.Author, *FieldCo
 		return ours, nil
 	}
 
-	// Longer list wins
+	// Longer list wins (more complete)
 	if len(ours) > len(theirs) {
 		return ours, nil
 	}
@@ -212,10 +226,11 @@ func mergeAuthors(ours, theirs []reference.Author) ([]reference.Author, *FieldCo
 	}
 
 	// Same length, different content = true conflict
+	// Store full author names; truncation happens at display time
 	return nil, &FieldConflict{
 		FieldName:   "authors",
-		OursValue:   formatAuthorsShort(ours),
-		TheirsValue: formatAuthorsShort(theirs),
+		OursValue:   formatAuthorsFull(ours),
+		TheirsValue: formatAuthorsFull(theirs),
 	}
 }
 
@@ -245,31 +260,81 @@ func mergeAuthorORCIDs(ours, theirs []reference.Author) []reference.Author {
 	return merged
 }
 
-// formatAuthorsShort formats an author list for display.
-func formatAuthorsShort(authors []reference.Author) string {
+// formatAuthorsFull formats an author list with full names.
+func formatAuthorsFull(authors []reference.Author) string {
 	if len(authors) == 0 {
 		return ""
 	}
 	var names []string
 	for _, a := range authors {
-		names = append(names, a.Last)
+		if a.First != "" {
+			names = append(names, a.First+" "+a.Last)
+		} else {
+			names = append(names, a.Last)
+		}
 	}
-	result := strings.Join(names, ", ")
-	if len(result) > 50 {
-		return result[:47] + "..."
-	}
-	return result
+	return strings.Join(names, ", ")
 }
 
-// mergePublicationDate returns the more specific publication date.
-func mergePublicationDate(ours, theirs reference.PublicationDate) reference.PublicationDate {
+// FormatAuthorsShort formats an author list for display, truncating if needed.
+func FormatAuthorsShort(authors string, maxLen int) string {
+	if len(authors) <= maxLen {
+		return authors
+	}
+	return authors[:maxLen-3] + "..."
+}
+
+// mergePublicationDate merges two publication dates.
+// Returns the more specific date, or detects a conflict if both are equally
+// specific but have different values.
+func mergePublicationDate(ours, theirs reference.PublicationDate) (reference.PublicationDate, *FieldConflict) {
 	oursScore := dateSpecificity(ours)
 	theirsScore := dateSpecificity(theirs)
 
+	// If one is more specific, use it
 	if theirsScore > oursScore {
-		return theirs
+		return theirs, nil
 	}
-	return ours
+	if oursScore > theirsScore {
+		return ours, nil
+	}
+
+	// Same specificity - check if values match
+	if oursScore == 0 {
+		// Both empty
+		return ours, nil
+	}
+
+	// Check if dates are actually the same
+	if datesEqual(ours, theirs) {
+		return ours, nil
+	}
+
+	// Same specificity, different values = true conflict
+	return reference.PublicationDate{}, &FieldConflict{
+		FieldName:   "published",
+		OursValue:   formatDate(ours),
+		TheirsValue: formatDate(theirs),
+	}
+}
+
+// datesEqual checks if two publication dates have the same values.
+func datesEqual(a, b reference.PublicationDate) bool {
+	return a.Year == b.Year && a.Month == b.Month && a.Day == b.Day
+}
+
+// formatDate formats a publication date for display.
+func formatDate(d reference.PublicationDate) string {
+	if d.Year == 0 {
+		return ""
+	}
+	if d.Month == 0 {
+		return fmt.Sprintf("%d", d.Year)
+	}
+	if d.Day == 0 {
+		return fmt.Sprintf("%d-%02d", d.Year, d.Month)
+	}
+	return fmt.Sprintf("%d-%02d-%02d", d.Year, d.Month, d.Day)
 }
 
 // dateSpecificity returns a score for how specific a date is.

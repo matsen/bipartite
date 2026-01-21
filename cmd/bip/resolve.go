@@ -80,7 +80,7 @@ func runResolve(cmd *cobra.Command, args []string) error {
 	// Check if there are any conflicts
 	if !parseResult.HasConflicts() {
 		result := ResolveResult{
-			Resolved: countCleanRefs(parseResult.CleanLines),
+			TotalPapers: countCleanRefs(parseResult.CleanLines),
 		}
 		if humanOutput {
 			fmt.Println("No conflicts detected in refs.jsonl.")
@@ -91,7 +91,7 @@ func runResolve(cmd *cobra.Command, args []string) error {
 	}
 
 	// Process conflicts
-	result, resolvedRefs, hasUnresolved := resolveConflicts(parseResult, refsPath)
+	result, refsByRegion, hasUnresolved := resolveConflicts(parseResult, refsPath)
 
 	if resolveDryRun {
 		// Dry run - just show what would happen
@@ -115,7 +115,7 @@ func runResolve(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write resolved file
-	if err := writeResolvedFile(refsPath, parseResult, resolvedRefs); err != nil {
+	if err := writeResolvedFile(refsPath, parseResult, refsByRegion); err != nil {
 		exitWithError(ExitError, "writing resolved file: %v", err)
 	}
 
@@ -130,13 +130,15 @@ func runResolve(cmd *cobra.Command, args []string) error {
 }
 
 // resolveConflicts processes all conflict regions and returns the result.
-func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (ResolveResult, []reference.Reference, bool) {
+// Returns refs grouped by region index to ensure correct file reconstruction.
+func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (ResolveResult, [][]reference.Reference, bool) {
 	var result ResolveResult
-	var resolvedRefs []reference.Reference
+	refsByRegion := make([][]reference.Reference, len(parseResult.Conflicts))
 	hasUnresolved := false
 
-	for _, region := range parseResult.Conflicts {
+	for regionIdx, region := range parseResult.Conflicts {
 		matchResult := conflict.MatchPapers(region)
+		var regionRefs []reference.Reference
 
 		// Process matched papers
 		for _, match := range matchResult.Matches {
@@ -154,7 +156,7 @@ func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (Resol
 				if resolveInteractive {
 					// Prompt for each conflict
 					resolved := promptForConflict(match, plan)
-					resolvedRefs = append(resolvedRefs, resolved)
+					regionRefs = append(regionRefs, resolved)
 					result.Merged++
 				} else {
 					hasUnresolved = true
@@ -170,7 +172,7 @@ func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (Resol
 				}
 			} else {
 				resolved := conflict.ApplyResolution(match, plan)
-				resolvedRefs = append(resolvedRefs, resolved)
+				regionRefs = append(regionRefs, resolved)
 				if plan.Action == conflict.ActionMerge {
 					result.Merged++
 				}
@@ -179,7 +181,7 @@ func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (Resol
 
 		// Add papers only on ours side
 		for _, ref := range matchResult.OursOnly {
-			resolvedRefs = append(resolvedRefs, ref)
+			regionRefs = append(regionRefs, ref)
 			result.OursPapers++
 			result.Operations = append(result.Operations, ResolveOp{
 				PaperID: ref.ID,
@@ -191,7 +193,7 @@ func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (Resol
 
 		// Add papers only on theirs side
 		for _, ref := range matchResult.TheirsOnly {
-			resolvedRefs = append(resolvedRefs, ref)
+			regionRefs = append(regionRefs, ref)
 			result.TheirsPapers++
 			result.Operations = append(result.Operations, ResolveOp{
 				PaperID: ref.ID,
@@ -200,12 +202,18 @@ func resolveConflicts(parseResult *conflict.ParseResult, refsPath string) (Resol
 				Reason:  "paper only in theirs",
 			})
 		}
+
+		refsByRegion[regionIdx] = regionRefs
 	}
 
-	// Count clean refs
-	result.Resolved = countCleanRefs(parseResult.CleanLines) + len(resolvedRefs)
+	// Count total papers in output
+	totalResolved := 0
+	for _, refs := range refsByRegion {
+		totalResolved += len(refs)
+	}
+	result.TotalPapers = countCleanRefs(parseResult.CleanLines) + totalResolved
 
-	return result, resolvedRefs, hasUnresolved
+	return result, refsByRegion, hasUnresolved
 }
 
 // countCleanRefs counts the number of valid reference lines in clean lines.
@@ -233,8 +241,9 @@ func promptForConflict(match conflict.PaperMatch, plan conflict.ResolutionPlan) 
 	for i, fc := range plan.Conflicts {
 		fmt.Printf("\nResolving conflict %d of %d for paper %s...\n", i+1, totalConflicts, plan.PaperID)
 		fmt.Printf("Conflict in field '%s':\n", fc.FieldName)
-		fmt.Printf("  [%s] ours:   %q\n", choiceOurs, fc.OursValue)
-		fmt.Printf("  [%s] theirs: %q\n", choiceTheirs, fc.TheirsValue)
+		// Truncate values for display (full values stored in conflict)
+		fmt.Printf("  [%s] ours:   %q\n", choiceOurs, truncateForDisplay(fc.OursValue, 60))
+		fmt.Printf("  [%s] theirs: %q\n", choiceTheirs, truncateForDisplay(fc.TheirsValue, 60))
 
 		for {
 			fmt.Printf("Enter choice [%s/%s]: ", choiceOurs, choiceTheirs)
@@ -257,6 +266,14 @@ func promptForConflict(match conflict.PaperMatch, plan conflict.ResolutionPlan) 
 	return resolved
 }
 
+// truncateForDisplay truncates a string to maxLen for display, adding "..." if truncated.
+func truncateForDisplay(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen-3] + "..."
+}
+
 // applyFieldChoice applies the chosen field value from source to target.
 func applyFieldChoice(target *reference.Reference, fieldName string, source reference.Reference) {
 	switch fieldName {
@@ -272,47 +289,45 @@ func applyFieldChoice(target *reference.Reference, fieldName string, source refe
 		target.Supersedes = source.Supersedes
 	case "authors":
 		target.Authors = source.Authors
+	case "published":
+		target.Published = source.Published
 	}
 }
 
 // writeResolvedFile writes the resolved refs.jsonl file.
-func writeResolvedFile(path string, parseResult *conflict.ParseResult, resolvedRefs []reference.Reference) error {
-	// Build the final list of all references
-	var allRefs []reference.Reference
+// refsByRegion contains resolved refs indexed by conflict region index.
+func writeResolvedFile(path string, parseResult *conflict.ParseResult, refsByRegion [][]reference.Reference) error {
+	// Validate input: must have refs for each region
+	if len(refsByRegion) != len(parseResult.Conflicts) {
+		return fmt.Errorf("internal error: expected %d regions, got %d ref slices",
+			len(parseResult.Conflicts), len(refsByRegion))
+	}
 
-	// Track which conflict regions we've output
-	resolvedIdx := 0
+	var allRefs []reference.Reference
 
 	// Process line by line, inserting resolved refs at conflict positions
 	prevConflictEnd := 0
-	for _, region := range parseResult.Conflicts {
+	for regionIdx, region := range parseResult.Conflicts {
 		// Output clean lines before this conflict
-		for _, cl := range parseResult.CleanLines {
-			if cl.LineNum > prevConflictEnd && cl.LineNum < region.StartLine {
-				content := strings.TrimSpace(cl.Content)
-				if content != "" {
-					var ref reference.Reference
-					if err := json.Unmarshal([]byte(content), &ref); err == nil {
-						allRefs = append(allRefs, ref)
-					}
-				}
-			}
-		}
+		allRefs = appendCleanRefsInRange(allRefs, parseResult.CleanLines, prevConflictEnd, region.StartLine)
 
-		// Output resolved refs for this conflict region
-		matchResult := conflict.MatchPapers(region)
-		numRefsInRegion := len(matchResult.Matches) + len(matchResult.OursOnly) + len(matchResult.TheirsOnly)
-		for i := 0; i < numRefsInRegion && resolvedIdx < len(resolvedRefs); i++ {
-			allRefs = append(allRefs, resolvedRefs[resolvedIdx])
-			resolvedIdx++
-		}
+		// Output resolved refs for this conflict region (no re-parsing needed)
+		allRefs = append(allRefs, refsByRegion[regionIdx]...)
 
 		prevConflictEnd = region.EndLine
 	}
 
 	// Output remaining clean lines after last conflict
-	for _, cl := range parseResult.CleanLines {
-		if cl.LineNum > prevConflictEnd {
+	allRefs = appendCleanRefsInRange(allRefs, parseResult.CleanLines, prevConflictEnd, int(^uint(0)>>1))
+
+	return storage.WriteAll(path, allRefs)
+}
+
+// appendCleanRefsInRange parses and appends refs from clean lines in the given line range.
+// Returns the updated slice. Lines must be > startLine and < endLine.
+func appendCleanRefsInRange(allRefs []reference.Reference, cleanLines []conflict.CleanLine, startLine, endLine int) []reference.Reference {
+	for _, cl := range cleanLines {
+		if cl.LineNum > startLine && cl.LineNum < endLine {
 			content := strings.TrimSpace(cl.Content)
 			if content != "" {
 				var ref reference.Reference
@@ -322,8 +337,7 @@ func writeResolvedFile(path string, parseResult *conflict.ParseResult, resolvedR
 			}
 		}
 	}
-
-	return storage.WriteAll(path, allRefs)
+	return allRefs
 }
 
 // printResolveResultHuman prints the resolve result in human-readable format.
@@ -334,7 +348,7 @@ func printResolveResultHuman(result ResolveResult, isDryRun bool) {
 	}
 
 	fmt.Printf("Resolution summary:\n")
-	fmt.Printf("  Total papers resolved: %d\n", result.Resolved)
+	fmt.Printf("  Total papers: %d\n", result.TotalPapers)
 	if result.Merged > 0 {
 		fmt.Printf("  Merged (complementary): %d\n", result.Merged)
 	}

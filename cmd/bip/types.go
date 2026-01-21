@@ -59,7 +59,7 @@ type ExportResult struct {
 // ResolveResult is the JSON output of the bip resolve command.
 type ResolveResult struct {
 	// Summary counts
-	Resolved     int `json:"resolved"`      // Total papers in resolved output
+	TotalPapers  int `json:"total_papers"`  // Total papers in final resolved output
 	OursPapers   int `json:"ours_papers"`   // Papers unique to ours side
 	TheirsPapers int `json:"theirs_papers"` // Papers unique to theirs side
 	Merged       int `json:"merged"`        // Papers with metadata merged
