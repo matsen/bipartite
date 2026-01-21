@@ -31,8 +31,7 @@ func Resolve(match PaperMatch) ResolutionPlan {
 	}
 
 	// Try to merge and check for conflicts
-	merged, conflicts := MergeReferences(match.Ours, match.Theirs)
-	_ = merged // Used when action is merge
+	_, conflicts := MergeReferences(match.Ours, match.Theirs)
 
 	if len(conflicts) > 0 {
 		plan.Action = ActionConflict
