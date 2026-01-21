@@ -69,18 +69,9 @@ func runPaperConcepts(cmd *cobra.Command, args []string) error {
 		if len(concepts) == 0 {
 			fmt.Println("\n(no concepts)")
 		} else {
-			// Group by relationship type
-			byType := make(map[string][]storage.PaperConceptEdge)
-			for _, c := range concepts {
-				byType[c.RelationshipType] = append(byType[c.RelationshipType], c)
-			}
-
-			for relType, typeConcepts := range byType {
-				fmt.Printf("\n[%s]\n", relType)
-				for _, c := range typeConcepts {
-					fmt.Printf("  %s: %s\n", c.ConceptID, c.Summary)
-				}
-			}
+			fmt.Print(formatEdgesGroupedByType(concepts, func(e storage.PaperConceptEdge) string {
+				return e.ConceptID
+			}))
 		}
 		fmt.Printf("\nTotal: %d concepts\n", len(concepts))
 	} else {

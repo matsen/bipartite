@@ -264,7 +264,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	// Check file exists
 	f, err := os.Open(importPath)
 	if err != nil {
-		exitWithError(ExitEdgeInvalidArgs, "file not found: %s", importPath)
+		exitWithError(ExitEdgeInvalidArgs, "file not found: %q", importPath)
 	}
 	defer f.Close()
 
@@ -325,9 +325,8 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 // Returns the updated edges slice and any file reading error.
 func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
 	scanner := bufio.NewScanner(f)
-	const maxCapacity = 1024 * 1024
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
+	buf := make([]byte, storage.MaxJSONLLineCapacity)
+	scanner.Buffer(buf, storage.MaxJSONLLineCapacity)
 
 	lineNum := 0
 	for scanner.Scan() {

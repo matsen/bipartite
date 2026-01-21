@@ -128,14 +128,7 @@ func runConceptAdd(cmd *cobra.Command, args []string) error {
 
 	// Output
 	if humanOutput {
-		fmt.Printf("Created concept: %s\n", conceptID)
-		fmt.Printf("  Name: %s\n", name)
-		if len(aliases) > 0 {
-			fmt.Printf("  Aliases: %s\n", strings.Join(aliases, ", "))
-		}
-		if description != "" {
-			fmt.Printf("  Description: %s\n", description)
-		}
+		fmt.Print(formatConceptHuman(conceptID, name, aliases, description, "Created concept: "))
 	} else {
 		outputJSON(ConceptAddResult{
 			Status:  "created",
@@ -170,14 +163,7 @@ func runConceptGet(cmd *cobra.Command, args []string) error {
 	}
 
 	if humanOutput {
-		fmt.Println(c.ID)
-		fmt.Printf("  Name: %s\n", c.Name)
-		if len(c.Aliases) > 0 {
-			fmt.Printf("  Aliases: %s\n", strings.Join(c.Aliases, ", "))
-		}
-		if c.Description != "" {
-			fmt.Printf("  Description: %s\n", c.Description)
-		}
+		fmt.Print(formatConceptHuman(c.ID, c.Name, c.Aliases, c.Description, ""))
 	} else {
 		outputJSON(c)
 	}
@@ -218,13 +204,10 @@ func runConceptList(cmd *cobra.Command, args []string) error {
 			if i > 0 {
 				fmt.Println()
 			}
-			fmt.Println(c.ID)
-			fmt.Printf("  Name: %s\n", c.Name)
-			if len(c.Aliases) > 0 {
-				fmt.Printf("  Aliases: %s\n", strings.Join(c.Aliases, ", "))
-			}
+			// Use formatConceptHuman but skip description for list view
+			fmt.Print(formatConceptHuman(c.ID, c.Name, c.Aliases, "", ""))
 		}
-		fmt.Printf("\nTotal: %d concepts\n", len(concepts))
+		fmt.Printf("Total: %d concepts\n", len(concepts))
 	} else {
 		if concepts == nil {
 			concepts = []concept.Concept{}
@@ -319,14 +302,7 @@ func runConceptUpdate(cmd *cobra.Command, args []string) error {
 
 	// Output
 	if humanOutput {
-		fmt.Printf("Updated concept: %s\n", conceptID)
-		fmt.Printf("  Name: %s\n", c.Name)
-		if len(c.Aliases) > 0 {
-			fmt.Printf("  Aliases: %s\n", strings.Join(c.Aliases, ", "))
-		}
-		if c.Description != "" {
-			fmt.Printf("  Description: %s\n", c.Description)
-		}
+		fmt.Print(formatConceptHuman(conceptID, c.Name, c.Aliases, c.Description, "Updated concept: "))
 	} else {
 		outputJSON(ConceptUpdateResult{
 			Status:  "updated",
@@ -358,33 +334,9 @@ var conceptDeleteCmd = &cobra.Command{
 	RunE:  runConceptDelete,
 }
 
-func runConceptDelete(cmd *cobra.Command, args []string) error {
-	repoRoot := mustFindRepository()
-	conceptID := args[0]
-	force, _ := cmd.Flags().GetBool("force")
-
-	// Load existing concepts
-	conceptsPath := config.ConceptsPath(repoRoot)
-	concepts, err := storage.ReadAllConcepts(conceptsPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading concepts: %v", err)
-	}
-
-	// Find concept
-	_, found := storage.FindConceptByID(concepts, conceptID)
-	if !found {
-		exitWithError(ExitConceptNotFound, "concept %q not found", conceptID)
-	}
-
-	// Check for linked edges
-	db := mustOpenDatabase(repoRoot)
-	defer db.Close()
-
-	edgeCount, err := db.CountEdgesByTarget(conceptID)
-	if err != nil {
-		exitWithError(ExitDataError, "counting edges: %v", err)
-	}
-
+// checkConceptDeleteBlocked handles the case when delete is blocked by linked edges.
+// It outputs an error message and exits if blocked (force=false and edges exist).
+func checkConceptDeleteBlocked(conceptID string, edgeCount int, force bool) {
 	if edgeCount > 0 && !force {
 		if humanOutput {
 			fmt.Fprintf(os.Stderr, "error: concept %q has %d linked edges; use --force to delete anyway\n", conceptID, edgeCount)
@@ -396,47 +348,41 @@ func runConceptDelete(cmd *cobra.Command, args []string) error {
 		}
 		os.Exit(ExitConceptValidation)
 	}
+}
 
-	// Delete concept
-	concepts, _ = storage.DeleteConceptFromSlice(concepts, conceptID)
-	if err := storage.WriteAllConcepts(conceptsPath, concepts); err != nil {
-		exitWithError(ExitDataError, "writing concepts: %v", err)
+// deleteLinkedEdges removes all edges pointing to the given concept.
+// Returns the number of edges removed.
+func deleteLinkedEdges(repoRoot string, conceptID string, db *storage.DB) int {
+	edgesPath := config.EdgesPath(repoRoot)
+	edges, err := storage.ReadAllEdges(edgesPath)
+	if err != nil {
+		exitWithError(ExitDataError, "reading edges: %v", err)
 	}
 
-	// Delete linked edges if force
+	var remaining []edge.Edge
 	edgesRemoved := 0
-	if force && edgeCount > 0 {
-		edgesPath := config.EdgesPath(repoRoot)
-		edges, err := storage.ReadAllEdges(edgesPath)
-		if err != nil {
-			exitWithError(ExitDataError, "reading edges: %v", err)
-		}
-
-		var remaining []edge.Edge
-		for _, e := range edges {
-			if e.TargetID != conceptID {
-				remaining = append(remaining, e)
-			} else {
-				edgesRemoved++
-			}
-		}
-
-		if err := storage.WriteAllEdges(edgesPath, remaining); err != nil {
-			exitWithError(ExitDataError, "writing edges: %v", err)
-		}
-
-		// Rebuild edges index
-		if _, err := db.RebuildEdgesFromJSONL(edgesPath); err != nil {
-			exitWithError(ExitDataError, "rebuilding edges index: %v", err)
+	for _, e := range edges {
+		if e.TargetID != conceptID {
+			remaining = append(remaining, e)
+		} else {
+			edgesRemoved++
 		}
 	}
 
-	// Rebuild concepts index
-	if _, err := db.RebuildConceptsFromJSONL(conceptsPath); err != nil {
-		exitWithError(ExitDataError, "updating index: %v", err)
+	if err := storage.WriteAllEdges(edgesPath, remaining); err != nil {
+		exitWithError(ExitDataError, "writing edges: %v", err)
 	}
 
-	// Output
+	// Rebuild edges index
+	if _, err := db.RebuildEdgesFromJSONL(edgesPath); err != nil {
+		exitWithError(ExitDataError, "rebuilding edges index: %v", err)
+	}
+
+	return edgesRemoved
+}
+
+// outputConceptDeleteResult outputs the result of a concept delete operation.
+func outputConceptDeleteResult(conceptID string, edgesRemoved int) {
 	if humanOutput {
 		if edgesRemoved > 0 {
 			fmt.Printf("Deleted concept %q and %d linked edges\n", conceptID, edgesRemoved)
@@ -450,7 +396,53 @@ func runConceptDelete(cmd *cobra.Command, args []string) error {
 			EdgesRemoved: edgesRemoved,
 		})
 	}
+}
 
+func runConceptDelete(cmd *cobra.Command, args []string) error {
+	repoRoot := mustFindRepository()
+	conceptID := args[0]
+	force, _ := cmd.Flags().GetBool("force")
+
+	// Load and validate concept exists
+	conceptsPath := config.ConceptsPath(repoRoot)
+	concepts, err := storage.ReadAllConcepts(conceptsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "reading concepts: %v", err)
+	}
+	if _, found := storage.FindConceptByID(concepts, conceptID); !found {
+		exitWithError(ExitConceptNotFound, "concept %q not found", conceptID)
+	}
+
+	// Check for linked edges
+	db := mustOpenDatabase(repoRoot)
+	defer db.Close()
+
+	edgeCount, err := db.CountEdgesByTarget(conceptID)
+	if err != nil {
+		exitWithError(ExitDataError, "counting edges: %v", err)
+	}
+
+	// Exit if blocked by edges
+	checkConceptDeleteBlocked(conceptID, edgeCount, force)
+
+	// Delete concept from JSONL
+	concepts, _ = storage.DeleteConceptFromSlice(concepts, conceptID)
+	if err := storage.WriteAllConcepts(conceptsPath, concepts); err != nil {
+		exitWithError(ExitDataError, "writing concepts: %v", err)
+	}
+
+	// Delete linked edges if force mode
+	edgesRemoved := 0
+	if force && edgeCount > 0 {
+		edgesRemoved = deleteLinkedEdges(repoRoot, conceptID, db)
+	}
+
+	// Rebuild concepts index
+	if _, err := db.RebuildConceptsFromJSONL(conceptsPath); err != nil {
+		exitWithError(ExitDataError, "updating index: %v", err)
+	}
+
+	outputConceptDeleteResult(conceptID, edgesRemoved)
 	return nil
 }
 
@@ -497,18 +489,9 @@ func runConceptPapers(cmd *cobra.Command, args []string) error {
 		if len(papers) == 0 {
 			fmt.Println("\n(no papers)")
 		} else {
-			// Group by relationship type
-			byType := make(map[string][]storage.PaperConceptEdge)
-			for _, p := range papers {
-				byType[p.RelationshipType] = append(byType[p.RelationshipType], p)
-			}
-
-			for relType, typePapers := range byType {
-				fmt.Printf("\n[%s]\n", relType)
-				for _, p := range typePapers {
-					fmt.Printf("  %s: %s\n", p.PaperID, p.Summary)
-				}
-			}
+			fmt.Print(formatEdgesGroupedByType(papers, func(e storage.PaperConceptEdge) string {
+				return e.PaperID
+			}))
 		}
 		fmt.Printf("\nTotal: %d papers\n", len(papers))
 	} else {

@@ -26,9 +26,8 @@ func ReadAllConcepts(path string) ([]concept.Concept, error) {
 	scanner := bufio.NewScanner(f)
 
 	// Increase buffer size for long lines
-	const maxCapacity = 1024 * 1024 // 1MB per line max
-	buf := make([]byte, maxCapacity)
-	scanner.Buffer(buf, maxCapacity)
+	buf := make([]byte, MaxJSONLLineCapacity)
+	scanner.Buffer(buf, MaxJSONLLineCapacity)
 
 	lineNum := 0
 	for scanner.Scan() {

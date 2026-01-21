@@ -292,6 +292,12 @@ func (d *DB) CountEdgesByTarget(targetID string) (int, error) {
 }
 
 // PaperConceptEdge represents an edge between a paper and concept in query results.
+//
+// Field population depends on the query direction:
+//   - GetPapersByConcept: PaperID is populated (the paper linking to the concept)
+//   - GetConceptsByPaper: ConceptID is populated (the concept linked from the paper)
+//
+// The omitempty tags ensure only the relevant ID field appears in JSON output.
 type PaperConceptEdge struct {
 	PaperID          string `json:"paper_id,omitempty"`
 	ConceptID        string `json:"concept_id,omitempty"`
