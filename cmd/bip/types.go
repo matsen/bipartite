@@ -55,3 +55,33 @@ type ExportResult struct {
 	SkippedIDs []string `json:"skipped_ids,omitempty"` // IDs that were duplicates
 	OutputPath string   `json:"output_path,omitempty"` // When --append used
 }
+
+// ResolveResult is the JSON output of the bip resolve command.
+type ResolveResult struct {
+	// Summary counts
+	TotalPapers  int `json:"total_papers"`  // Total papers in final resolved output
+	OursPapers   int `json:"ours_papers"`   // Papers unique to ours side
+	TheirsPapers int `json:"theirs_papers"` // Papers unique to theirs side
+	Merged       int `json:"merged"`        // Papers with metadata merged
+
+	// Unresolved conflicts (only present if --interactive not used)
+	Unresolved []UnresolvedInfo `json:"unresolved,omitempty"`
+
+	// Detailed operations (for debugging/audit)
+	Operations []ResolveOp `json:"operations,omitempty"`
+}
+
+// UnresolvedInfo describes a paper with true conflicts.
+type UnresolvedInfo struct {
+	PaperID string   `json:"paper_id"`
+	DOI     string   `json:"doi,omitempty"`
+	Fields  []string `json:"fields"` // Field names with conflicts
+}
+
+// ResolveOp describes a single resolution operation.
+type ResolveOp struct {
+	PaperID string `json:"paper_id"`
+	DOI     string `json:"doi,omitempty"`
+	Action  string `json:"action"` // keep_ours, keep_theirs, merge, add_ours, add_theirs
+	Reason  string `json:"reason"` // Human-readable explanation
+}

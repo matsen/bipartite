@@ -1,0 +1,7 @@
+{"id":"paper1","doi":"10.1234/a","title":"Paper One","authors":[{"first":"Maria","last":"Garcia"}]}
+<<<<<<< HEAD
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","abstract":"Our abstract from ours side.","authors":[{"first":"Elena","last":"Rodriguez"}]}
+=======
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","venue":"Science","published":{"year":2024,"month":6}}
+>>>>>>> feature-branch
+{"id":"paper3","doi":"10.1234/c","title":"Paper Three","authors":[]}

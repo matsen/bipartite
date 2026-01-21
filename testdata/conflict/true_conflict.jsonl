@@ -1,0 +1,7 @@
+{"id":"paper1","doi":"10.1234/a","title":"Paper One","authors":[{"first":"Maria","last":"Garcia"}]}
+<<<<<<< HEAD
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","abstract":"Version A of the abstract - written by first author."}
+=======
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","abstract":"Version B of the abstract - edited by collaborator."}
+>>>>>>> feature-branch
+{"id":"paper3","doi":"10.1234/c","title":"Paper Three","authors":[]}

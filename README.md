@@ -123,6 +123,9 @@ bip open Smith2026-ab
 | `bip new --days N` | List papers added in last N days |
 | `bip check` | Validate repository integrity |
 | `bip groom` | Detect orphaned edges; use `--fix` to remove |
+| `bip resolve` | Domain-aware merge conflict resolution for refs.jsonl |
+| `bip resolve --dry-run` | Preview conflict resolution without modifying files |
+| `bip resolve --interactive` | Interactively resolve true conflicts |
 
 ### Semantic Scholar (S2) Commands
 
@@ -262,6 +265,25 @@ git push
 git pull
 bip rebuild  # Refresh local index
 ```
+
+### Resolving Merge Conflicts
+
+When two researchers add the same paper independently (common with popular papers), git sees a conflict in refs.jsonl. But bip understands paper metadata:
+
+```bash
+# After git merge with conflicts in refs.jsonl
+bip resolve --dry-run    # Preview what would happen
+bip resolve              # Auto-resolve: keep more complete version, merge complementary metadata
+
+# For true conflicts (same field, different values)
+bip resolve --interactive  # Prompts for each unresolvable field
+```
+
+Resolution logic:
+- **Same paper, different completeness**: Keeps the version with more metadata (abstract, authors, venue)
+- **Complementary metadata**: Merges both (e.g., one has abstract, other has venue)
+- **Different papers**: Includes both
+- **True conflicts**: Requires `--interactive` (both have different abstracts, for example)
 
 ## Roadmap
 
