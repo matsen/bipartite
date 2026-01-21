@@ -1,6 +1,12 @@
 // Package viz provides knowledge graph visualization functionality.
 package viz
 
+// Node type constants for type-safe node classification.
+const (
+	NodeTypePaper   = "paper"
+	NodeTypeConcept = "concept"
+)
+
 // GraphData contains all data needed to render the visualization.
 type GraphData struct {
 	Nodes []Node `json:"nodes"`
@@ -9,10 +15,8 @@ type GraphData struct {
 
 // Node represents a paper or concept in the graph.
 type Node struct {
-	ID   string `json:"id"`
-	Type string `json:"type"` // "paper" or "concept"
-
-	// Display
+	ID    string `json:"id"`
+	Type  string `json:"type"` // NodeTypePaper or NodeTypeConcept
 	Label string `json:"label"`
 
 	// Paper-specific fields (for tooltips)

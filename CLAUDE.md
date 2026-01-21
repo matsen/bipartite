@@ -118,6 +118,9 @@ Before any pull request, ensure the following workflow is completed:
 ### Final Static Analysis
 7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
 
+### Documentation Sync
+8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
+
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes

@@ -179,6 +179,17 @@ Concepts are named ideas, methods, or phenomena that papers relate to. They enab
 
 Paper-concept relationship types: `introduces`, `applies`, `models`, `evaluates-with`, `critiques`, `extends`.
 
+### Visualization Commands
+
+| Command | Description |
+|---------|-------------|
+| `bip viz` | Generate interactive HTML knowledge graph to stdout |
+| `bip viz --output <file>` | Generate to file |
+| `bip viz --layout <type>` | Layout: `force` (default), `circle`, `grid` |
+| `bip viz --offline` | Bundle Cytoscape.js inline for offline use |
+
+The visualization shows papers (blue circles) and concepts (orange diamonds) with edges colored by relationship type. Hover for details, click to highlight connections.
+
 All commands output JSON by default. Use `--human` for readable output.
 
 ## Configuration

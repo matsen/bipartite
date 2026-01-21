@@ -1,6 +1,9 @@
 package viz
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 // CytoscapeElements represents the Cytoscape.js data format.
 type CytoscapeElements struct {
@@ -10,27 +13,7 @@ type CytoscapeElements struct {
 
 // CytoscapeNode represents a node in Cytoscape.js format.
 type CytoscapeNode struct {
-	Data CytoscapeNodeData `json:"data"`
-}
-
-// CytoscapeNodeData contains the node data fields.
-type CytoscapeNodeData struct {
-	ID    string `json:"id"`
-	Type  string `json:"type"`
-	Label string `json:"label"`
-
-	// Paper fields
-	Title   string `json:"title,omitempty"`
-	Authors string `json:"authors,omitempty"`
-	Year    int    `json:"year,omitempty"`
-
-	// Concept fields
-	Name        string   `json:"name,omitempty"`
-	Aliases     []string `json:"aliases,omitempty"`
-	Description string   `json:"description,omitempty"`
-
-	// Sizing
-	ConnectionCount int `json:"connectionCount"`
+	Data Node `json:"data"`
 }
 
 // CytoscapeEdge represents an edge in Cytoscape.js format.
@@ -55,21 +38,7 @@ func (g *GraphData) ToCytoscapeJSON() (string, error) {
 	}
 
 	for _, n := range g.Nodes {
-		cyNode := CytoscapeNode{
-			Data: CytoscapeNodeData{
-				ID:              n.ID,
-				Type:            n.Type,
-				Label:           n.Label,
-				Title:           n.Title,
-				Authors:         n.Authors,
-				Year:            n.Year,
-				Name:            n.Name,
-				Aliases:         n.Aliases,
-				Description:     n.Description,
-				ConnectionCount: n.ConnectionCount,
-			},
-		}
-		elements.Nodes = append(elements.Nodes, cyNode)
+		elements.Nodes = append(elements.Nodes, CytoscapeNode{Data: n})
 	}
 
 	for i, e := range g.Edges {
@@ -87,12 +56,13 @@ func (g *GraphData) ToCytoscapeJSON() (string, error) {
 
 	jsonBytes, err := json.Marshal(elements)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("marshaling Cytoscape elements to JSON: %w", err)
 	}
 	return string(jsonBytes), nil
 }
 
-// edgeID generates a unique edge ID.
+// edgeID generates a unique edge ID for the current visualization session.
+// IDs are based on slice position and are not stable across different graph builds.
 func edgeID(source, target, relType string, index int) string {
-	return source + "-" + target + "-" + relType
+	return fmt.Sprintf("%s-%s-%s-%d", source, target, relType, index)
 }

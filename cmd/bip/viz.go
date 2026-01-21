@@ -47,23 +47,18 @@ Examples:
 }
 
 func runViz(cmd *cobra.Command, args []string) error {
-	// Validate layout
-	if err := validateLayout(vizLayout); err != nil {
-		return err
-	}
-
 	// Find repository and open database
 	repoRoot := mustFindRepository()
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
-	// Extract graph data
-	graph, err := viz.ExtractGraphData(db)
+	// Build graph data from database
+	graph, err := viz.BuildGraphFromDatabase(db)
 	if err != nil {
-		return fmt.Errorf("extracting graph data: %w", err)
+		return fmt.Errorf("building graph data: %w", err)
 	}
 
-	// Generate HTML
+	// Generate HTML (validates options internally)
 	opts := viz.HTMLOptions{
 		Layout:  vizLayout,
 		Offline: vizOffline,
@@ -88,13 +83,4 @@ func runViz(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-func validateLayout(layout string) error {
-	switch layout {
-	case "force", "circle", "grid":
-		return nil
-	default:
-		return fmt.Errorf("invalid layout %q: must be force, circle, or grid", layout)
-	}
 }

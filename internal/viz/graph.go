@@ -1,52 +1,61 @@
 package viz
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/matsen/bipartite/internal/concept"
+	"github.com/matsen/bipartite/internal/edge"
 	"github.com/matsen/bipartite/internal/reference"
 	"github.com/matsen/bipartite/internal/storage"
 )
 
-// ExtractGraphData queries the database and builds GraphData for visualization.
-// It includes:
-// - Paper nodes: only papers that have edges to concepts
-// - Concept nodes: all concepts, with connection counts
-// - Edges: all paper-to-concept edges
-func ExtractGraphData(db *storage.DB) (*GraphData, error) {
-	graph := &GraphData{
-		Nodes: []Node{},
-		Edges: []Edge{},
-	}
-
-	// Get all concepts
+// BuildGraphFromDatabase queries the database and constructs a complete GraphData
+// structure for visualization, including filtered edges, connection counts, and
+// type-specific nodes.
+func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
 	concepts, err := db.GetAllConcepts()
 	if err != nil {
 		return nil, err
 	}
 
-	// Build a set of concept IDs for edge filtering
-	conceptIDs := make(map[string]bool)
-	for _, c := range concepts {
-		conceptIDs[c.ID] = true
-	}
-
-	// Get all edges
 	allEdges, err := db.GetAllEdges()
 	if err != nil {
 		return nil, err
 	}
 
-	// Filter to paper->concept edges and track which papers are involved
+	filteredEdges, paperIDs, connectionCounts := filterEdgesToConcepts(allEdges, concepts)
+
+	paperNodes, err := buildPaperNodes(db, paperIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	conceptNodes := buildConceptNodes(concepts, connectionCounts)
+
+	return &GraphData{
+		Nodes: append(paperNodes, conceptNodes...),
+		Edges: filteredEdges,
+	}, nil
+}
+
+// filterEdgesToConcepts filters edges to only paper->concept relationships and
+// tracks which papers are involved and how many connections each concept has.
+func filterEdgesToConcepts(allEdges []edge.Edge, concepts []concept.Concept) ([]Edge, map[string]bool, map[string]int) {
+	conceptIDs := make(map[string]bool, len(concepts))
+	for _, c := range concepts {
+		conceptIDs[c.ID] = true
+	}
+
 	paperIDs := make(map[string]bool)
 	connectionCounts := make(map[string]int)
-	var vizEdges []Edge
+	var filteredEdges []Edge
 
 	for _, e := range allEdges {
-		// Only include edges where target is a concept
 		if conceptIDs[e.TargetID] {
 			paperIDs[e.SourceID] = true
 			connectionCounts[e.TargetID]++
-			vizEdges = append(vizEdges, Edge{
+			filteredEdges = append(filteredEdges, Edge{
 				Source:           e.SourceID,
 				Target:           e.TargetID,
 				RelationshipType: e.RelationshipType,
@@ -54,54 +63,71 @@ func ExtractGraphData(db *storage.DB) (*GraphData, error) {
 			})
 		}
 	}
-	graph.Edges = vizEdges
 
-	// Get paper details for papers with concept edges
+	return filteredEdges, paperIDs, connectionCounts
+}
+
+// buildPaperNodes fetches paper details and constructs nodes for papers with concept edges.
+func buildPaperNodes(db *storage.DB, paperIDs map[string]bool) ([]Node, error) {
+	nodes := make([]Node, 0, len(paperIDs))
+
 	for paperID := range paperIDs {
 		ref, err := db.GetByID(paperID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("retrieving paper %s: %w", paperID, err)
 		}
 		if ref == nil {
-			// Paper referenced in edge but not found in database - skip
-			continue
+			return nil, fmt.Errorf("data integrity error: edge references non-existent paper %s", paperID)
 		}
-
-		node := Node{
-			ID:      ref.ID,
-			Type:    "paper",
-			Label:   ref.ID,
-			Title:   ref.Title,
-			Authors: formatAuthors(ref.Authors),
-			Year:    ref.Published.Year,
-		}
-		graph.Nodes = append(graph.Nodes, node)
+		nodes = append(nodes, newPaperNode(ref))
 	}
 
-	// Add concept nodes with connection counts
-	for _, c := range concepts {
-		node := Node{
-			ID:              c.ID,
-			Type:            "concept",
-			Label:           c.Name,
-			Name:            c.Name,
-			Aliases:         c.Aliases,
-			Description:     c.Description,
-			ConnectionCount: connectionCounts[c.ID],
-		}
-		graph.Nodes = append(graph.Nodes, node)
-	}
-
-	return graph, nil
+	return nodes, nil
 }
 
-// formatAuthors converts a slice of Author to "First Last, First Last" format.
-func formatAuthors(authors []reference.Author) string {
+// buildConceptNodes constructs nodes for all concepts with their connection counts.
+func buildConceptNodes(concepts []concept.Concept, connectionCounts map[string]int) []Node {
+	nodes := make([]Node, 0, len(concepts))
+
+	for _, c := range concepts {
+		nodes = append(nodes, newConceptNode(c, connectionCounts[c.ID]))
+	}
+
+	return nodes
+}
+
+// newPaperNode creates a visualization node from a paper reference.
+func newPaperNode(ref *reference.Reference) Node {
+	return Node{
+		ID:      ref.ID,
+		Type:    NodeTypePaper,
+		Label:   ref.ID,
+		Title:   ref.Title,
+		Authors: authorsToString(ref.Authors),
+		Year:    ref.Published.Year,
+	}
+}
+
+// newConceptNode creates a visualization node from a concept with its connection count.
+func newConceptNode(c concept.Concept, connectionCount int) Node {
+	return Node{
+		ID:              c.ID,
+		Type:            NodeTypeConcept,
+		Label:           c.Name,
+		Name:            c.Name,
+		Aliases:         c.Aliases,
+		Description:     c.Description,
+		ConnectionCount: connectionCount,
+	}
+}
+
+// authorsToString converts a slice of Author to a comma-separated "First Last" format string.
+func authorsToString(authors []reference.Author) string {
 	if len(authors) == 0 {
 		return ""
 	}
 
-	var names []string
+	names := make([]string, 0, len(authors))
 	for _, a := range authors {
 		if a.First != "" {
 			names = append(names, a.First+" "+a.Last)

@@ -2,8 +2,16 @@ package viz
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 )
+
+// compiledTemplate is parsed at init time to fail fast on template errors.
+var compiledTemplate *template.Template
+
+func init() {
+	compiledTemplate = template.Must(template.New("viz").Parse(htmlTemplate))
+}
 
 // HTMLOptions configures HTML generation.
 type HTMLOptions struct {
@@ -19,8 +27,20 @@ func DefaultOptions() HTMLOptions {
 	}
 }
 
+// ValidLayouts lists the supported layout algorithm names.
+var ValidLayouts = []string{"force", "circle", "grid"}
+
 // GenerateHTML generates a self-contained HTML file for the graph visualization.
 func GenerateHTML(graph *GraphData, opts HTMLOptions) (string, error) {
+	if graph == nil {
+		return "", fmt.Errorf("graph cannot be nil")
+	}
+
+	// Validate layout option
+	if err := validateLayout(opts.Layout); err != nil {
+		return "", err
+	}
+
 	if graph.IsEmpty() {
 		return generateEmptyHTML(), nil
 	}
@@ -30,8 +50,8 @@ func GenerateHTML(graph *GraphData, opts HTMLOptions) (string, error) {
 		return "", err
 	}
 
-	layout := mapLayoutName(opts.Layout)
-	scriptTag := getScriptTag(opts.Offline)
+	layout := layoutToCytoscape(opts.Layout)
+	scriptTag := buildScriptTag(opts.Offline)
 
 	data := templateData{
 		ScriptTag: template.HTML(scriptTag),
@@ -40,12 +60,21 @@ func GenerateHTML(graph *GraphData, opts HTMLOptions) (string, error) {
 	}
 
 	var buf bytes.Buffer
-	tmpl := template.Must(template.New("viz").Parse(htmlTemplate))
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := compiledTemplate.Execute(&buf, data); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
+}
+
+// validateLayout checks if the layout option is valid.
+func validateLayout(layout string) error {
+	switch layout {
+	case "", "force", "circle", "grid":
+		return nil
+	default:
+		return fmt.Errorf("invalid layout %q: must be force, circle, or grid", layout)
+	}
 }
 
 // templateData holds data for the HTML template.
@@ -55,22 +84,22 @@ type templateData struct {
 	Layout    string
 }
 
-// mapLayoutName maps user-friendly layout names to Cytoscape.js layout names.
-func mapLayoutName(layout string) string {
+// layoutToCytoscape converts user-friendly layout names to Cytoscape.js layout algorithm names.
+func layoutToCytoscape(layout string) string {
 	switch layout {
 	case "circle":
 		return "circle"
 	case "grid":
 		return "grid"
-	case "force":
-		fallthrough
+	case "", "force":
+		return "cose"
 	default:
 		return "cose"
 	}
 }
 
-// getScriptTag returns either inline script or CDN reference.
-func getScriptTag(offline bool) string {
+// buildScriptTag returns either inline script or CDN reference.
+func buildScriptTag(offline bool) string {
 	if offline {
 		return "<script>" + cytoscapeJS + "</script>"
 	}
