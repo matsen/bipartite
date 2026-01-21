@@ -305,6 +305,18 @@ type PaperConceptEdge struct {
 	Summary          string `json:"summary"`
 }
 
+// populateConceptFields deserializes aliasesJSON and description into a concept.
+// This is the single source of truth for converting database fields to Concept struct fields.
+func populateConceptFields(c *concept.Concept, aliasesJSON, description sql.NullString) error {
+	if aliasesJSON.Valid && aliasesJSON.String != "" {
+		if err := json.Unmarshal([]byte(aliasesJSON.String), &c.Aliases); err != nil {
+			return fmt.Errorf("parsing aliases JSON for %s: %w", c.ID, err)
+		}
+	}
+	c.Description = description.String
+	return nil
+}
+
 // scanConcept scans a single concept from a row.
 func scanConcept(row *sql.Row) (*concept.Concept, error) {
 	var c concept.Concept
@@ -318,14 +330,9 @@ func scanConcept(row *sql.Row) (*concept.Concept, error) {
 		return nil, err
 	}
 
-	if aliasesJSON.Valid && aliasesJSON.String != "" {
-		if err := json.Unmarshal([]byte(aliasesJSON.String), &c.Aliases); err != nil {
-			return nil, fmt.Errorf("parsing aliases JSON for %s: %w", c.ID, err)
-		}
+	if err := populateConceptFields(&c, aliasesJSON, description); err != nil {
+		return nil, err
 	}
-
-	c.Description = description.String
-
 	return &c, nil
 }
 
@@ -336,18 +343,12 @@ func scanConcepts(rows *sql.Rows) ([]concept.Concept, error) {
 		var c concept.Concept
 		var aliasesJSON, description sql.NullString
 
-		err := rows.Scan(&c.ID, &c.Name, &aliasesJSON, &description)
-		if err != nil {
+		if err := rows.Scan(&c.ID, &c.Name, &aliasesJSON, &description); err != nil {
 			return nil, err
 		}
-
-		if aliasesJSON.Valid && aliasesJSON.String != "" {
-			if err := json.Unmarshal([]byte(aliasesJSON.String), &c.Aliases); err != nil {
-				return nil, fmt.Errorf("parsing aliases JSON for %s: %w", c.ID, err)
-			}
+		if err := populateConceptFields(&c, aliasesJSON, description); err != nil {
+			return nil, err
 		}
-
-		c.Description = description.String
 		concepts = append(concepts, c)
 	}
 	return concepts, rows.Err()

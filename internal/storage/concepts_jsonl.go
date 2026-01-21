@@ -124,12 +124,14 @@ func UpsertConceptInSlice(concepts []concept.Concept, newConcept concept.Concept
 
 // DeleteConceptFromSlice removes a concept from an in-memory slice.
 // Returns the updated slice and true if the concept was found and removed, false otherwise.
+// Note: This operation does not preserve slice order; it swaps the deleted element with
+// the last element for O(1) performance. If ordering matters, callers should sort after deletion.
 func DeleteConceptFromSlice(concepts []concept.Concept, id string) ([]concept.Concept, bool) {
 	idx, found := FindConceptByID(concepts, id)
 	if !found {
 		return concepts, false
 	}
-	// Remove by replacing with last element and truncating
+	// Remove by replacing with last element and truncating (O(1) but changes order)
 	concepts[idx] = concepts[len(concepts)-1]
 	return concepts[:len(concepts)-1], true
 }

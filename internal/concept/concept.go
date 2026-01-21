@@ -55,7 +55,11 @@ func ValidateID(id string) error {
 }
 
 // MergeAliases adds aliases from another concept, avoiding duplicates.
+// Returns the list of aliases that were added. If other is nil, returns nil.
 func (c *Concept) MergeAliases(other *Concept) []string {
+	if other == nil {
+		return nil
+	}
 	existingAliases := make(map[string]bool)
 	for _, a := range c.Aliases {
 		existingAliases[a] = true
