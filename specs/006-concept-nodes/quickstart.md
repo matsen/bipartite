@@ -40,16 +40,16 @@ Create edges from papers to concepts:
 
 ```bash
 # Paper introduces a concept
-./bip edge add Halpern1998-yc somatic-hypermutation introduces \
-  --summary "Foundational paper describing somatic hypermutation mechanism"
+./bip edge add -s Halpern1998-yc -t somatic-hypermutation -r introduces \
+  -m "Foundational paper describing somatic hypermutation mechanism"
 
 # Paper applies a concept/method
-./bip edge add Matsen2025-oj variational-inference applies \
-  --summary "Uses VI for posterior approximation in phylogenetic models"
+./bip edge add -s Matsen2025-oj -t variational-inference -r applies \
+  -m "Uses VI for posterior approximation in phylogenetic models"
 
 # Paper models a phenomenon
-./bip edge add McCoy2022-bd somatic-hypermutation models \
-  --summary "Creates computational model of SHM targeting patterns"
+./bip edge add -s McCoy2022-bd -t somatic-hypermutation -r models \
+  -m "Creates computational model of SHM targeting patterns"
 ```
 
 ### 4. Query Papers by Concept
@@ -146,11 +146,11 @@ Building a knowledge graph for antibody research:
 ./bip concept add affinity-maturation --name "Affinity Maturation"
 
 # 2. Link papers as you read them
-./bip edge add Georgiou2014-xz bcr-sequencing introduces \
-  --summary "Reviews high-throughput BCR sequencing methods"
+./bip edge add -s Georgiou2014-xz -t bcr-sequencing -r introduces \
+  -m "Reviews high-throughput BCR sequencing methods"
 
-./bip edge add Matsen2025-oj bcr-sequencing applies \
-  --summary "Uses BCR-seq data for phylogenetic inference"
+./bip edge add -s Matsen2025-oj -t bcr-sequencing -r applies \
+  -m "Uses BCR-seq data for phylogenetic inference"
 
 # 3. Query to find related work
 ./bip concept papers bcr-sequencing --human

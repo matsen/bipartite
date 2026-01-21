@@ -44,6 +44,26 @@ S2 answers "give me this paper's citations" (structured). ASTA answers "find pap
 
 No database server. No heavyweight frameworks. No configuration complexity. Bipartite is a single Go binary with fast startup. Install it, run `bip init`, and you're working. The ephemeral SQLite cache means you never manage database state—if something goes wrong, delete the cache and rebuild. Local semantic search over your abstracts via Ollama embeddings means you can find conceptually related papers without external API calls. This simplicity matters when agents need to operate autonomously.
 
+## A Workflow in Practice
+
+To make this concrete, here's how a research group might use bipartite:
+
+- **Alice**, a graduate student, learns of two new papers—X and Y—through her research notifications feed. She downloads the PDFs to her Paperpile folder.
+
+- Her **coding agent reads both papers**. It determines that X is directly relevant to their current project, but Y is only tangentially related. However, Y cites an earlier paper Z that turns out to be central to the group's research program.
+
+- The agent **fetches paper Z** via Semantic Scholar, then adds both X and Z to Alice's local bipartite database with `bip s2 add`. It creates edges linking X and Z to the group's concepts.
+
+- `bip open` **opens both PDFs** so Alice can verify they're indeed relevant. She reads them, confirms the agent's judgment, and approves.
+
+- The agent **commits and pushes** to the group's shared paper repository with a message explaining that X is directly relevant to their current project and Z is a foundational paper cited by Y.
+
+- **Bernadetta**, the P.I., pulls these new papers to her machine and runs `bip rebuild`. Her agents scan the additions against her in-progress manuscripts.
+
+- An agent determines that **Paper X should be cited** in one of her drafts and adds it to the references at an appropriate location, updating the manuscript's `.bib` file.
+
+- Reading the commit message, Bernadetta realizes they should **compare their method to Paper Z's approach**. She spins up coding agents to develop such a comparison, with Z's citation already in hand.
+
 ## Design Principles
 
 **Agent-first**: CLI is the primary interface. JSON output by default. No MCP server needed—agents use bash directly.
