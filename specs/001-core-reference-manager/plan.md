@@ -41,7 +41,7 @@ Build the foundational `bp` CLI tool in Go that enables researchers and AI agent
 
 ### II. Git-Versionable Architecture
 - [x] **JSONL source of truth**: `refs.jsonl` stores all references
-- [x] **Ephemeral query layer**: SQLite rebuilt via `bp rebuild`
+- [x] **Ephemeral query layer**: SQLite rebuilt via `bip rebuild`
 - [x] **Database gitignored**: `cache/refs.db` in `.gitignore`
 - [x] **Clean merges**: JSONL format supports append-style merges
 - [x] **Self-contained repos**: Each bipartite repo is standalone
@@ -132,7 +132,7 @@ go.mod
 go.sum
 ```
 
-**Structure Decision**: Single CLI application with `internal/` packages organized by domain responsibility. The `cmd/bp/` pattern follows Go conventions for CLI tools.
+**Structure Decision**: Single CLI application with `internal/` packages organized by domain responsibility. The `cmd/bip/` pattern follows Go conventions for CLI tools.
 
 ## Complexity Tracking
 

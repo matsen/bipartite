@@ -18,10 +18,10 @@ var configCmd = &cobra.Command{
 	Long: `Get or set configuration values.
 
 Usage:
-  bp config                          # Show all config
-  bp config pdf-root                 # Get specific value
-  bp config pdf-root /path/to/pdfs   # Set value
-  bp config pdf-reader skim          # Set PDF reader
+  bip config                          # Show all config
+  bip config pdf-root                 # Get specific value
+  bip config pdf-root /path/to/pdfs   # Set value
+  bip config pdf-reader skim          # Set PDF reader
 
 Keys:
   pdf-root    Path to PDF folder (e.g., ~/Google Drive/Paperpile)

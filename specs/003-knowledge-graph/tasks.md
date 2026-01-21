@@ -16,7 +16,7 @@
 ## Path Conventions
 
 Based on plan.md project structure:
-- **CLI commands**: `cmd/bp/`
+- **CLI commands**: `cmd/bip/`
 - **Domain types**: `internal/edge/`
 - **Storage**: `internal/storage/`
 - **Integration tests**: `tests/integration/`
@@ -45,9 +45,9 @@ Based on plan.md project structure:
 - [X] T005 Add unit tests for edges JSONL operations in internal/storage/edges_jsonl_test.go
 - [X] T006 [P] Implement SQLite edge index schema in internal/storage/edges_sqlite.go
 - [X] T007 [P] Add unit tests for edges SQLite operations in internal/storage/edges_sqlite_test.go
-- [X] T008 Create bp edge parent command with --json flag support in cmd/bp/edge.go
-- [X] T009 Register edge command in cmd/bp/main.go
-- [X] T010 Extend bp rebuild to rebuild edge index from edges.jsonl in cmd/bp/rebuild.go
+- [X] T008 Create bp edge parent command with --json flag support in cmd/bip/edge.go
+- [X] T009 Register edge command in cmd/bip/main.go
+- [X] T010 Extend bp rebuild to rebuild edge index from edges.jsonl in cmd/bip/rebuild.go
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -55,22 +55,22 @@ Based on plan.md project structure:
 
 ## Phase 3: User Story 1 - Add Edges from External Tool (Priority: P1) 🎯 MVP
 
-**Goal**: Enable external tools to add edges via `bp edge add` and `bp edge import` commands
+**Goal**: Enable external tools to add edges via `bip edge add` and `bip edge import` commands
 
-**Independent Test**: Can be tested by running `bp edge add` with edge data and verifying the edge is stored and retrievable via JSONL inspection
+**Independent Test**: Can be tested by running `bip edge add` with edge data and verifying the edge is stored and retrievable via JSONL inspection
 
 ### Implementation for User Story 1
 
 - [X] T011 [US1] Implement paper ID existence validation helper in internal/storage/edges_jsonl.go
-- [X] T012 [US1] Implement bp edge add subcommand with --source, --target, --type, --summary flags in cmd/bp/edge.go
+- [X] T012 [US1] Implement bp edge add subcommand with --source, --target, --type, --summary flags in cmd/bip/edge.go
 - [X] T013 [US1] Add edge upsert logic (update existing edge if same source/target/type) in internal/storage/edges_jsonl.go
-- [X] T014 [US1] Implement human-readable output for edge add in cmd/bp/edge.go
-- [X] T015 [US1] Implement JSON output for edge add when --json flag provided in cmd/bp/edge.go
-- [X] T016 [US1] Add unit tests for edge add command in cmd/bp/edge_test.go
-- [X] T017 [P] [US1] Implement bp edge import subcommand for JSONL bulk import in cmd/bp/edge.go
-- [X] T018 [US1] Add import progress reporting (added/updated/skipped counts) in cmd/bp/edge.go
-- [X] T019 [US1] Add error handling for missing source/target papers during import in cmd/bp/edge.go
-- [X] T020 [US1] Add unit tests for edge import command in cmd/bp/edge_test.go
+- [X] T014 [US1] Implement human-readable output for edge add in cmd/bip/edge.go
+- [X] T015 [US1] Implement JSON output for edge add when --json flag provided in cmd/bip/edge.go
+- [X] T016 [US1] Add unit tests for edge add command in cmd/bip/edge_test.go
+- [X] T017 [P] [US1] Implement bp edge import subcommand for JSONL bulk import in cmd/bip/edge.go
+- [X] T018 [US1] Add import progress reporting (added/updated/skipped counts) in cmd/bip/edge.go
+- [X] T019 [US1] Add error handling for missing source/target papers during import in cmd/bip/edge.go
+- [X] T020 [US1] Add unit tests for edge import command in cmd/bip/edge_test.go
 - [X] T021 [US1] Create integration test for edge add/import workflow in tests/integration/edge_test.go
 
 **Checkpoint**: At this point, external tools can add edges to the knowledge graph. User Story 1 should be fully functional and testable independently.
@@ -81,19 +81,19 @@ Based on plan.md project structure:
 
 **Goal**: Enable researchers to list all edges connected to a specific paper with direction filtering
 
-**Independent Test**: Can be tested by adding edges, then querying with `bp edge list <paper-id>` and verifying correct results
+**Independent Test**: Can be tested by adding edges, then querying with `bip edge list <paper-id>` and verifying correct results
 
 ### Implementation for User Story 2
 
 - [X] T022 [US2] Implement SQLite query for outgoing edges (by source_id) in internal/storage/edges_sqlite.go
 - [X] T023 [US2] Implement SQLite query for incoming edges (by target_id) in internal/storage/edges_sqlite.go
-- [X] T024 [US2] Implement bp edge list subcommand with paper-id argument in cmd/bp/edge.go
-- [X] T025 [US2] Add --incoming flag to filter for edges where paper is target in cmd/bp/edge.go
-- [X] T026 [US2] Add --all flag to show both incoming and outgoing edges in cmd/bp/edge.go
-- [X] T027 [US2] Implement human-readable output with direction indicators in cmd/bp/edge.go
-- [X] T028 [US2] Implement JSON output for edge list when --json flag provided in cmd/bp/edge.go
-- [X] T029 [US2] Handle case where paper has no edges (empty result with message) in cmd/bp/edge.go
-- [X] T030 [US2] Add unit tests for edge list command in cmd/bp/edge_test.go
+- [X] T024 [US2] Implement bp edge list subcommand with paper-id argument in cmd/bip/edge.go
+- [X] T025 [US2] Add --incoming flag to filter for edges where paper is target in cmd/bip/edge.go
+- [X] T026 [US2] Add --all flag to show both incoming and outgoing edges in cmd/bip/edge.go
+- [X] T027 [US2] Implement human-readable output with direction indicators in cmd/bip/edge.go
+- [X] T028 [US2] Implement JSON output for edge list when --json flag provided in cmd/bip/edge.go
+- [X] T029 [US2] Handle case where paper has no edges (empty result with message) in cmd/bip/edge.go
+- [X] T030 [US2] Add unit tests for edge list command in cmd/bip/edge_test.go
 - [X] T031 [US2] Add integration test for edge list workflow in tests/integration/edge_test.go
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Researchers can add and query edges.
@@ -104,16 +104,16 @@ Based on plan.md project structure:
 
 **Goal**: Enable filtering edges by relationship type to explore specific kinds of relationships
 
-**Independent Test**: Can be tested by adding edges with different types, then filtering with `bp edge search --type <type>` and verifying correct filtering
+**Independent Test**: Can be tested by adding edges with different types, then filtering with `bip edge search --type <type>` and verifying correct filtering
 
 ### Implementation for User Story 3
 
 - [X] T032 [US3] Implement SQLite query for edges by relationship_type in internal/storage/edges_sqlite.go
-- [X] T033 [US3] Implement bp edge search subcommand with --type flag in cmd/bp/edge.go
-- [X] T034 [US3] Implement human-readable output for search results in cmd/bp/edge.go
-- [X] T035 [US3] Implement JSON output for edge search when --json flag provided in cmd/bp/edge.go
-- [X] T036 [US3] Handle empty search results gracefully in cmd/bp/edge.go
-- [X] T037 [US3] Add unit tests for edge search command in cmd/bp/edge_test.go
+- [X] T033 [US3] Implement bp edge search subcommand with --type flag in cmd/bip/edge.go
+- [X] T034 [US3] Implement human-readable output for search results in cmd/bip/edge.go
+- [X] T035 [US3] Implement JSON output for edge search when --json flag provided in cmd/bip/edge.go
+- [X] T036 [US3] Handle empty search results gracefully in cmd/bip/edge.go
+- [X] T037 [US3] Add unit tests for edge search command in cmd/bip/edge_test.go
 - [X] T038 [US3] Add integration test for edge search workflow in tests/integration/edge_test.go
 
 **Checkpoint**: At this point, User Stories 1, 2, AND 3 should all work independently.
@@ -124,16 +124,16 @@ Based on plan.md project structure:
 
 **Goal**: Enable exporting edges to JSONL format for backup and sharing
 
-**Independent Test**: Can be tested by adding edges, exporting with `bp edge export`, and verifying the export contains all edges with correct data
+**Independent Test**: Can be tested by adding edges, exporting with `bip edge export`, and verifying the export contains all edges with correct data
 
 ### Implementation for User Story 4
 
 - [X] T039 [US4] Implement SQLite query for all edges in internal/storage/edges_sqlite.go
 - [X] T040 [US4] Implement SQLite query for edges involving a specific paper in internal/storage/edges_sqlite.go
-- [X] T041 [US4] Implement bp edge export subcommand writing to stdout in cmd/bp/edge.go
-- [X] T042 [US4] Add --paper flag to filter export by paper ID in cmd/bp/edge.go
-- [X] T043 [US4] Ensure export format matches import format (round-trip compatibility) in cmd/bp/edge.go
-- [X] T044 [US4] Add unit tests for edge export command in cmd/bp/edge_test.go
+- [X] T041 [US4] Implement bp edge export subcommand writing to stdout in cmd/bip/edge.go
+- [X] T042 [US4] Add --paper flag to filter export by paper ID in cmd/bip/edge.go
+- [X] T043 [US4] Ensure export format matches import format (round-trip compatibility) in cmd/bip/edge.go
+- [X] T044 [US4] Add unit tests for edge export command in cmd/bip/edge_test.go
 - [X] T045 [US4] Add integration test for export/import round-trip in tests/integration/edge_test.go
 
 **Checkpoint**: All user stories should now be independently functional.
@@ -144,11 +144,11 @@ Based on plan.md project structure:
 
 **Purpose**: Maintenance commands and final integration
 
-- [X] T046 Extend bp groom to detect and report orphaned edges in cmd/bp/groom.go
-- [X] T047 Add --fix flag to bp groom for orphaned edge removal in cmd/bp/groom.go
-- [X] T048 Extend bp check to verify edge integrity in cmd/bp/check.go
-- [X] T049 Add unit tests for groom edge functionality in cmd/bp/groom_test.go
-- [X] T050 Add unit tests for check edge functionality in cmd/bp/check_test.go
+- [X] T046 Extend bp groom to detect and report orphaned edges in cmd/bip/groom.go
+- [X] T047 Add --fix flag to bp groom for orphaned edge removal in cmd/bip/groom.go
+- [X] T048 Extend bp check to verify edge integrity in cmd/bip/check.go
+- [X] T049 Add unit tests for groom edge functionality in cmd/bip/groom_test.go
+- [X] T050 Add unit tests for check edge functionality in cmd/bip/check_test.go
 - [X] T051 Run go fmt ./... and go vet ./... for code quality
 - [X] T052 Validate quickstart.md examples work end-to-end
 - [X] T053 Final integration test covering full workflow in tests/integration/edge_test.go
@@ -199,11 +199,11 @@ Based on plan.md project structure:
 
 ```bash
 # Sequential: Add command first
-Task: "Implement bp edge add subcommand in cmd/bp/edge.go"
+Task: "Implement bp edge add subcommand in cmd/bip/edge.go"
 Task: "Add unit tests for edge add command"
 
 # Then parallel: Import can start
-Task: "Implement bp edge import subcommand in cmd/bp/edge.go"
+Task: "Implement bp edge import subcommand in cmd/bip/edge.go"
 Task: "Add unit tests for edge import command"
 ```
 

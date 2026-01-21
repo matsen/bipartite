@@ -182,7 +182,7 @@ Paper ID → Load SemanticIndex from semantic.gob (lazy, cached)
 └─────────────┘
 ```
 
-**Note**: "Stale" state is not automatically detected in Phase II. Users run `bp index check` to verify, or `bp index build` to ensure freshness.
+**Note**: "Stale" state is not automatically detected in Phase II. Users run `bip index check` to verify, or `bip index build` to ensure freshness.
 
 ## Relationship to Phase I
 

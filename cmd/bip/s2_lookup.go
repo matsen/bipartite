@@ -30,9 +30,9 @@ Supported paper ID formats:
   <local-id>                   Local paper ID from collection
 
 Examples:
-  bp s2 lookup DOI:10.1038/nature12373
-  bp s2 lookup DOI:10.1038/nature12373 --fields title,citationCount
-  bp s2 lookup Zhang2018-vi --exists --human`,
+  bip s2 lookup DOI:10.1038/nature12373
+  bip s2 lookup DOI:10.1038/nature12373 --fields title,citationCount
+  bip s2 lookup Zhang2018-vi --exists --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2Lookup,
 }

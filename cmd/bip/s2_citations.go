@@ -24,9 +24,9 @@ Queries Semantic Scholar for papers that cite the specified paper.
 Can filter to show only citations that are already in your collection.
 
 Examples:
-  bp s2 citations Zhang2018-vi
-  bp s2 citations DOI:10.1093/sysbio/syy032 --local-only
-  bp s2 citations Zhang2018-vi --limit 20 --human`,
+  bip s2 citations Zhang2018-vi
+  bip s2 citations DOI:10.1093/sysbio/syy032 --local-only
+  bip s2 citations Zhang2018-vi --limit 20 --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2Citations,
 }

@@ -26,9 +26,9 @@ var exportCmd = &cobra.Command{
 	Long: `Export references to BibTeX format.
 
 Examples:
-  bp export --bibtex
-  bp export --bibtex --keys Ahn2026-rs,Gao2026-gi
-  bp export --bibtex > refs.bib`,
+  bip export --bibtex
+  bip export --bibtex --keys Ahn2026-rs,Gao2026-gi
+  bip export --bibtex > refs.bib`,
 	RunE: runExport,
 }
 

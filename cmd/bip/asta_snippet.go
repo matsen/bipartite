@@ -24,9 +24,9 @@ This finds exact text passages matching your query, returning the snippet
 with context about the paper it came from.
 
 Examples:
-  bp asta snippet "variational inference phylogenetics"
-  bp asta snippet "mutation rate" --papers "DOI:10.1093/sysbio/syy032,ARXIV:2106.15928"
-  bp asta snippet "deep learning" --venue "Nature" --human`,
+  bip asta snippet "variational inference phylogenetics"
+  bip asta snippet "mutation rate" --papers "DOI:10.1093/sysbio/syy032,ARXIV:2106.15928"
+  bip asta snippet "deep learning" --venue "Nature" --human`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaSnippet,
 }

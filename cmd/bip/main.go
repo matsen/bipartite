@@ -1,4 +1,4 @@
-// Package main provides the bp CLI entry point.
+// Package main provides the bip CLI entry point.
 package main
 
 import (
@@ -25,9 +25,9 @@ func main() {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "bp",
+	Use:   "bip",
 	Short: "Agent-first academic reference manager",
-	Long: `bp is an agent-first CLI for managing academic references.
+	Long: `bip is an agent-first CLI for managing academic references.
 
 It stores references in git-versionable JSONL format with an ephemeral
 SQLite database for fast queries. All commands output JSON by default
@@ -42,15 +42,15 @@ func init() {
 }
 
 // getStartingDirectory returns the directory to start searching for a repository.
-// It checks the BP_ROOT environment variable first, then falls back to the current working directory.
+// It checks the BIP_ROOT environment variable first, then falls back to the current working directory.
 func getStartingDirectory() (string, int) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", outputError(ExitError, "getting current directory: %v", err)
 	}
 
-	// Check BP_ROOT environment variable first
-	if root := os.Getenv("BP_ROOT"); root != "" {
+	// Check BIP_ROOT environment variable first
+	if root := os.Getenv("BIP_ROOT"); root != "" {
 		return root, 0
 	}
 
@@ -97,7 +97,7 @@ func mustLoadSemanticIndex(repoRoot string) *semantic.SemanticIndex {
 	idx, err := semantic.Load(repoRoot)
 	if err != nil {
 		if err == semantic.ErrIndexNotFound {
-			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bp index build' to create the index.")
+			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bip index build' to create the index.")
 		}
 		exitWithError(ExitError, "loading index: %v", err)
 	}

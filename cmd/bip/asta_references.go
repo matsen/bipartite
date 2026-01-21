@@ -17,8 +17,8 @@ var astaReferencesCmd = &cobra.Command{
 	Long: `Get papers referenced by the given paper (its bibliography).
 
 Examples:
-  bp asta references DOI:10.1093/sysbio/syy032
-  bp asta references ARXIV:2106.15928 --limit 50 --human`,
+  bip asta references DOI:10.1093/sysbio/syy032
+  bip asta references ARXIV:2106.15928 --limit 50 --human`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaReferences,
 }

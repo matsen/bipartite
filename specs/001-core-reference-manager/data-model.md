@@ -164,7 +164,7 @@ One reference per line, complete JSON object:
 
 ### SQLite Schema (refs.db)
 
-Ephemeral database rebuilt from JSONL via `bp rebuild`.
+Ephemeral database rebuilt from JSONL via `bip rebuild`.
 
 ```sql
 -- Main references table

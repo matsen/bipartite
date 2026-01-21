@@ -11,7 +11,7 @@ Add knowledge graph capabilities to bipartite: directed edges between papers wit
 
 **Language/Version**: Go 1.25.5 (continuing Phase I/II)
 **Primary Dependencies**: spf13/cobra (CLI), modernc.org/sqlite (storage) - no new dependencies
-**Storage**: JSONL (edges.jsonl) + ephemeral SQLite (edge index rebuilt on `bp rebuild`)
+**Storage**: JSONL (edges.jsonl) + ephemeral SQLite (edge index rebuilt on `bip rebuild`)
 **Testing**: go test with real fixture data
 **Target Platform**: macOS and Linux (CLI)
 **Project Type**: single (CLI tool extending existing `bp` binary)
@@ -24,7 +24,7 @@ Add knowledge graph capabilities to bipartite: directed edges between papers wit
 
 | Principle | Status | Evidence |
 |-----------|--------|----------|
-| I. Agent-First Design | ✅ Pass | All `bp edge` commands support `--json` flag for structured output |
+| I. Agent-First Design | ✅ Pass | All `bip edge` commands support `--json` flag for structured output |
 | II. Git-Versionable Architecture | ✅ Pass | edges.jsonl as source of truth, SQLite index ephemeral and gitignored |
 | III. Fail-Fast Philosophy | ✅ Pass | Validate paper IDs exist before adding edges; explicit errors for missing papers |
 | IV. Real Testing (Agentic TDD) | ✅ Pass | Will use real edge fixtures, integration tests with actual file I/O |
@@ -51,7 +51,7 @@ specs/003-knowledge-graph/
 ### Source Code (repository root)
 
 ```text
-cmd/bp/
+cmd/bip/
 ├── edge.go              # bp edge subcommand (add, import, list, search, export)
 └── ... (existing commands)
 

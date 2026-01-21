@@ -38,7 +38,7 @@ var semanticCmd = &cobra.Command{
 Unlike keyword search, semantic search understands the meaning of your query
 and finds papers with related concepts, even without exact word matches.
 
-Requires the semantic index to be built first with 'bp index build'.`,
+Requires the semantic index to be built first with 'bip index build'.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSemantic,
 }

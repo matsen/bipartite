@@ -53,7 +53,7 @@ specs/002-rag-index/
 ### Source Code (repository root)
 
 ```text
-cmd/bp/
+cmd/bip/
 ├── main.go              # Existing - add new subcommands
 ├── semantic.go          # NEW: bp semantic <query>
 ├── similar.go           # NEW: bp similar <id>

@@ -229,7 +229,7 @@ func runIndexCheck(cmd *cobra.Command, args []string) error {
 
 	if len(missingIDs) > 0 {
 		status = "stale"
-		recommendation = "Run 'bp index build' to update the index"
+		recommendation = "Run 'bip index build' to update the index"
 		exitCode = ExitIndexStale
 	}
 

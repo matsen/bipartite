@@ -19,12 +19,12 @@ var astaAuthorPapersCmd = &cobra.Command{
 	Short: "Get papers by an author",
 	Long: `Get papers by an author using their Semantic Scholar author ID.
 
-Use "bp asta author <name>" to find an author's ID first.
+Use "bip asta author <name>" to find an author's ID first.
 
 Examples:
-  bp asta author-papers 1234567
-  bp asta author-papers 1234567 --limit 50 --human
-  bp asta author-papers 1234567 --year 2020:2024`,
+  bip asta author-papers 1234567
+  bip asta author-papers 1234567 --limit 50 --human
+  bip asta author-papers 1234567 --year 2020:2024`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaAuthorPapers,
 }

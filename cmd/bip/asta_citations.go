@@ -20,9 +20,9 @@ var astaCitationsCmd = &cobra.Command{
 	Long: `Get papers that cite the given paper.
 
 Examples:
-  bp asta citations DOI:10.1093/sysbio/syy032
-  bp asta citations DOI:10.1038/nature12373 --limit 20 --human
-  bp asta citations DOI:10.1038/nature12373 --year 2020:`,
+  bip asta citations DOI:10.1093/sysbio/syy032
+  bip asta citations DOI:10.1038/nature12373 --limit 20 --human
+  bip asta citations DOI:10.1038/nature12373 --year 2020:`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaCitations,
 }

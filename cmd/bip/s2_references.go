@@ -24,9 +24,9 @@ Queries Semantic Scholar for papers that the specified paper cites.
 Can filter to show only references that are missing from your collection.
 
 Examples:
-  bp s2 references Zhang2018-vi
-  bp s2 references DOI:10.1093/sysbio/syy032 --missing
-  bp s2 references Zhang2018-vi --limit 50 --human`,
+  bip s2 references Zhang2018-vi
+  bip s2 references DOI:10.1093/sysbio/syy032 --missing
+  bip s2 references Zhang2018-vi --limit 50 --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2References,
 }

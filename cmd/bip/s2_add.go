@@ -31,9 +31,9 @@ Supported paper ID formats:
   <40-char-hex>                Raw S2 paper ID
 
 Examples:
-  bp s2 add DOI:10.1038/nature12373
-  bp s2 add ARXIV:2106.15928 --link ~/papers/paper.pdf
-  bp s2 add DOI:10.1093/sysbio/syy032 --human`,
+  bip s2 add DOI:10.1038/nature12373
+  bip s2 add ARXIV:2106.15928 --link ~/papers/paper.pdf
+  bip s2 add DOI:10.1093/sysbio/syy032 --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2Add,
 }

@@ -25,9 +25,9 @@ Supported ID formats:
   <S2 paper ID>
 
 Examples:
-  bp asta paper DOI:10.1093/sysbio/syy032
-  bp asta paper ARXIV:2106.15928 --human
-  bp asta paper DOI:10.1038/nature12373 --fields title,authors,citationCount`,
+  bip asta paper DOI:10.1093/sysbio/syy032
+  bip asta paper ARXIV:2106.15928 --human
+  bip asta paper DOI:10.1038/nature12373 --fields title,authors,citationCount`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaPaper,
 }

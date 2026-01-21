@@ -26,9 +26,9 @@ Query Syntax:
   title:text     - Search title only
 
 Examples:
-  bp search "phylogenetics"
-  bp search "author:Matsen"
-  bp search "title:influenza"`,
+  bip search "phylogenetics"
+  bip search "author:Matsen"
+  bip search "title:influenza"`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSearch,
 }

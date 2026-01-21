@@ -132,8 +132,8 @@ After pulling changes from git (e.g., collaborator added papers), the researcher
 
 **Initialization & Configuration**
 
-- **FR-001**: System MUST initialize a repository structure in the current directory via `bp init`
-- **FR-002**: System MUST store configuration (PDF folder path, PDF reader preference) via `bp config`
+- **FR-001**: System MUST initialize a repository structure in the current directory via `bip init`
+- **FR-002**: System MUST store configuration (PDF folder path, PDF reader preference) via `bip config`
 - **FR-003**: System MUST fail immediately if initializing an already-initialized directory
 - **FR-004**: System MUST fail immediately if configured PDF path does not exist
 
@@ -149,30 +149,30 @@ After pulling changes from git (e.g., collaborator added papers), the researcher
 
 **Query**
 
-- **FR-012**: System MUST support keyword search across title, authors, and abstract via `bp search`
-- **FR-013**: System MUST retrieve a single paper by ID via `bp get <id>`
-- **FR-014**: System MUST list all papers via `bp list`
+- **FR-012**: System MUST support keyword search across title, authors, and abstract via `bip search`
+- **FR-013**: System MUST retrieve a single paper by ID via `bip get <id>`
+- **FR-014**: System MUST list all papers via `bip list`
 - **FR-015**: System MUST output JSON by default for all query commands
 - **FR-016**: System MUST support human-readable output format via flag
 
 **PDF Access**
 
-- **FR-017**: System MUST open a paper's main PDF via `bp open <id>`
+- **FR-017**: System MUST open a paper's main PDF via `bip open <id>`
 - **FR-018**: System MUST resolve PDF paths relative to the configured PDF folder
 - **FR-019**: System MUST support opening supplementary PDFs
 - **FR-020**: System MUST fail with clear error if PDF file not found
 
 **Export**
 
-- **FR-021**: System MUST export all papers to BibTeX via `bp export --bibtex`
-- **FR-022**: System MUST export specific papers by ID via `bp export --bibtex --keys id1,id2`
+- **FR-021**: System MUST export all papers to BibTeX via `bip export --bibtex`
+- **FR-022**: System MUST export specific papers by ID via `bip export --bibtex --keys id1,id2`
 - **FR-023**: System MUST produce valid classic BibTeX format (not BibLaTeX)
 
 **Data Integrity**
 
 - **FR-024**: System MUST store all reference data in a human-readable, git-mergeable format
-- **FR-025**: System MUST rebuild query layer from source data via `bp rebuild`
-- **FR-026**: System MUST validate source data integrity via `bp check`
+- **FR-025**: System MUST rebuild query layer from source data via `bip rebuild`
+- **FR-026**: System MUST validate source data integrity via `bip check`
 
 ### Key Entities
 

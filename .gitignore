@@ -4,7 +4,7 @@ _ignore/
 .env
 
 # Go build artifacts
-/bp
+/bip
 *.exe
 *.test
 *.out

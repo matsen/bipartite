@@ -177,13 +177,13 @@ Sources:
 
 ### 4. Index Rebuild Strategy
 
-**Decision**: Full rebuild on `bp index build`, no incremental updates
+**Decision**: Full rebuild on `bip index build`, no incremental updates
 
 **Rationale**:
 - **Simplicity**: No tracking of which papers changed
 - **Correctness**: Guarantees index matches current JSONL state
 - **Acceptable time**: <5 minutes for 6000 papers (per spec SC-003)
-- **Matches Phase I pattern**: `bp rebuild` does full SQLite rebuild
+- **Matches Phase I pattern**: `bip rebuild` does full SQLite rebuild
 
 **Workflow**:
 1. Drop existing semantic.db (if exists)
@@ -201,12 +201,12 @@ Sources:
 
 ### 5. CLI Command Structure
 
-**Decision**: Use subcommand pattern: `bp index build`, `bp index check`
+**Decision**: Use subcommand pattern: `bip index build`, `bip index check`
 
 **Rationale**:
 - Groups index management under single parent command
 - Consistent with standard CLI patterns (git, docker)
-- Leaves room for future index operations (`bp index stats`, `bp index prune`)
+- Leaves room for future index operations (`bip index stats`, `bip index prune`)
 
 **Commands**:
 ```bash
@@ -223,7 +223,7 @@ bp similar <paper-id> --limit 10
 ```
 
 **Alternative Considered**:
-- Flat commands: `bp build-index`, `bp check-index` - less organized, clutters help output
+- Flat commands: `bip build-index`, `bip check-index` - less organized, clutters help output
 
 ---
 
@@ -271,7 +271,7 @@ Build complete:
 **Exit Codes**:
 - 0: Success
 - 1: General error
-- 2: Index not found (hint: run `bp index build`)
+- 2: Index not found (hint: run `bip index build`)
 - 3: Ollama not available
 
 ---

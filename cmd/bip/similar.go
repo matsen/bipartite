@@ -39,7 +39,7 @@ var similarCmd = &cobra.Command{
 This uses the paper's abstract to find other papers with related content.
 The source paper is excluded from results.
 
-Requires the semantic index to be built first with 'bp index build'.`,
+Requires the semantic index to be built first with 'bip index build'.`,
 	Args: cobra.ExactArgs(1),
 	RunE: runSimilar,
 }
@@ -63,7 +63,7 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 			exitWithError(ExitError, "Paper '%s' not found in database", paperID)
 		}
 		// Paper exists but not indexed - likely no/short abstract
-		exitWithError(ExitNoAbstract, "Paper '%s' is not in the semantic index\n\nThis paper may have no abstract or an abstract shorter than %d characters.\nRebuild the index with 'bp index build' if you recently added an abstract.", paperID, semantic.MinAbstractLength)
+		exitWithError(ExitNoAbstract, "Paper '%s' is not in the semantic index\n\nThis paper may have no abstract or an abstract shorter than %d characters.\nRebuild the index with 'bip index build' if you recently added an abstract.", paperID, semantic.MinAbstractLength)
 	}
 
 	// Get source paper info for display

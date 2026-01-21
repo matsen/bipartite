@@ -5,8 +5,8 @@
 
 ## Prerequisites
 
-- Bipartite repo initialized (`bp init`)
-- Papers imported (`bp import`)
+- Bipartite repo initialized (`bip init`)
+- Papers imported (`bip import`)
 
 ## Basic Usage
 

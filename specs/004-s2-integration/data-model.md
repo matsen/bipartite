@@ -131,7 +131,7 @@ CREATE TABLE s2_citations (
 
 ## Gap Discovery Data Model
 
-For `bp s2 gaps`, we need to track citation relationships:
+For `bip s2 gaps`, we need to track citation relationships:
 
 ```
 Gap = {

@@ -432,5 +432,5 @@ Available on all commands:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `BP_ROOT` | Override repository location | Current directory |
+| `BIP_ROOT` | Override repository location | Current directory |
 | `NO_COLOR` | Disable colored output | (unset) |

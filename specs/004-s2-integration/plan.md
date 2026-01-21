@@ -16,7 +16,7 @@ Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by 
 **Storage**: JSONL (refs.jsonl) + ephemeral SQLite + in-memory LRU cache for API responses
 **Testing**: go test (existing pattern)
 **Target Platform**: macOS, Linux (CLI binary)
-**Project Type**: Single project (existing cmd/bp structure)
+**Project Type**: Single project (existing cmd/bip structure)
 **Performance Goals**: Add paper <3s, citation queries <5s, gap discovery <60s for 1000 papers
 **Constraints**: Respect S2 rate limits (100 req/5 min unauthenticated), cache aggressively
 **Scale/Scope**: Personal reference collections (100-5000 papers typical)
@@ -57,7 +57,7 @@ specs/004-s2-integration/
 ### Source Code (repository root)
 
 ```text
-cmd/bp/
+cmd/bip/
 ├── asta.go              # bp s2 subcommand (add, add-pdf, lookup, citations, references, gaps, link-published)
 ├── ...                  # Existing commands unchanged
 

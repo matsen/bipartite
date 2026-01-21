@@ -18,7 +18,7 @@ var getCmd = &cobra.Command{
 	Long: `Get a single reference by its ID.
 
 Example:
-  bp get Ahn2026-rs`,
+  bip get Ahn2026-rs`,
 	Args: cobra.ExactArgs(1),
 	RunE: runGet,
 }

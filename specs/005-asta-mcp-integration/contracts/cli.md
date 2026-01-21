@@ -4,7 +4,7 @@
 
 ## Parent Command
 
-### `bp asta`
+### `bip asta`
 
 Parent command for ASTA MCP operations.
 
@@ -19,7 +19,7 @@ bp asta [command]
 
 ## Search Commands (P1)
 
-### `bp asta search <query>`
+### `bip asta search <query>`
 
 Search papers by keyword relevance.
 
@@ -69,7 +69,7 @@ Found 42 papers
 
 ---
 
-### `bp asta snippet <query>`
+### `bip asta snippet <query>`
 
 Search text snippets within papers.
 
@@ -116,7 +116,7 @@ Found 20 snippets
 
 ## Paper Commands (P2)
 
-### `bp asta paper <paper-id>`
+### `bip asta paper <paper-id>`
 
 Get paper details by ID.
 
@@ -147,7 +147,7 @@ Get paper details by ID.
 
 ---
 
-### `bp asta citations <paper-id>`
+### `bip asta citations <paper-id>`
 
 Get papers that cite this paper.
 
@@ -178,7 +178,7 @@ Get papers that cite this paper.
 
 ---
 
-### `bp asta references <paper-id>`
+### `bip asta references <paper-id>`
 
 Get papers referenced by this paper.
 
@@ -210,7 +210,7 @@ Get papers referenced by this paper.
 
 ## Author Commands (P3)
 
-### `bp asta author <name>`
+### `bip asta author <name>`
 
 Search for authors by name.
 
@@ -240,7 +240,7 @@ Search for authors by name.
 
 ---
 
-### `bp asta author-papers <author-id>`
+### `bip asta author-papers <author-id>`
 
 Get papers by an author.
 

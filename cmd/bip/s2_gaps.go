@@ -26,9 +26,9 @@ papers in your collection but are not in your collection.
 This helps identify foundational papers or important references you might be missing.
 
 Examples:
-  bp s2 gaps
-  bp s2 gaps --min-citations 3
-  bp s2 gaps --limit 10 --human`,
+  bip s2 gaps
+  bip s2 gaps --min-citations 3
+  bip s2 gaps --limit 10 --human`,
 	Args: cobra.NoArgs,
 	RunE: runS2Gaps,
 }

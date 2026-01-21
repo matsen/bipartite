@@ -28,9 +28,9 @@ First attempts to extract a DOI from the PDF text. If no DOI is found,
 falls back to extracting the title and searching Semantic Scholar.
 
 Examples:
-  bp s2 add-pdf ~/papers/paper.pdf
-  bp s2 add-pdf ~/papers/paper.pdf --link
-  bp s2 add-pdf ~/papers/paper.pdf --human`,
+  bip s2 add-pdf ~/papers/paper.pdf
+  bip s2 add-pdf ~/papers/paper.pdf --link
+  bip s2 add-pdf ~/papers/paper.pdf --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2AddPdf,
 }
@@ -214,7 +214,7 @@ func outputAddPdfDuplicate(existingID, doi string) error {
 			Code:       "duplicate",
 			Message:    "Paper already exists in collection",
 			PaperID:    existingID,
-			Suggestion: "Use 'bp s2 add --update' to refresh metadata",
+			Suggestion: "Use 'bip s2 add --update' to refresh metadata",
 		},
 	}
 
@@ -246,7 +246,7 @@ func outputAddPdfMultipleMatches(papers []s2.S2Paper) error {
 		"error": map[string]interface{}{
 			"code":       "multiple_matches",
 			"message":    "Multiple papers match the extracted title",
-			"suggestion": "Use 'bp s2 add DOI:...' with the correct DOI",
+			"suggestion": "Use 'bip s2 add DOI:...' with the correct DOI",
 			"matches":    matches,
 		},
 	}
@@ -260,7 +260,7 @@ func outputAddPdfMultipleMatches(papers []s2.S2Paper) error {
 				fmt.Fprintf(os.Stderr, "     DOI: %s\n", p.ExternalIDs.DOI)
 			}
 		}
-		fmt.Fprintf(os.Stderr, "\nUse 'bp s2 add DOI:...' with the correct DOI\n")
+		fmt.Fprintf(os.Stderr, "\nUse 'bip s2 add DOI:...' with the correct DOI\n")
 	} else {
 		outputJSON(result)
 	}

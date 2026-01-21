@@ -5,7 +5,7 @@
 
 ## Overview
 
-All S2 commands are subcommands of `bp s2`. Output is JSON by default (agent-first design), with `--human` flag for readable output.
+All S2 commands are subcommands of `bip s2`. Output is JSON by default (agent-first design), with `--human` flag for readable output.
 
 ## Commands
 
@@ -85,7 +85,7 @@ bp s2 add-pdf <pdf-path> [--link] [--human]
 
 **Behavior**:
 - Extracts DOI from PDF (text search for DOI pattern)
-- If DOI found, proceeds as `bp s2 add DOI:...`
+- If DOI found, proceeds as `bip s2 add DOI:...`
 - If no DOI, attempts title extraction and S2 title search
 - If multiple matches, prompts for selection (or errors in non-interactive)
 

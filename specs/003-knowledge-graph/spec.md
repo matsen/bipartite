@@ -10,7 +10,7 @@
 
 ### Session 2026-01-13
 
-- Q: What happens to edges when their referenced paper is deleted? → A: Preserve edges (mark endpoint as missing); `bp groom` can flag orphans
+- Q: What happens to edges when their referenced paper is deleted? → A: Preserve edges (mark endpoint as missing); `bip groom` can flag orphans
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -20,12 +20,12 @@ An external tool (such as a Claude Code skill analyzing a manuscript) generates 
 
 **Why this priority**: This is the primary data ingestion path. Without the ability to add edges, no other functionality is useful. The tex-to-edges skill is the first planned edge generator.
 
-**Independent Test**: Can be fully tested by running `bp edge add` with edge data and verifying the edge is stored and retrievable.
+**Independent Test**: Can be fully tested by running `bip edge add` with edge data and verifying the edge is stored and retrievable.
 
 **Acceptance Scenarios**:
 
-1. **Given** a bipartite repo with papers imported, **When** an external tool calls `bp edge add` with source paper ID, target paper ID, relationship type, and summary, **Then** the edge is stored in the knowledge graph
-2. **Given** edge data in JSONL format, **When** the user runs `bp edge import edges.jsonl`, **Then** all edges are added to the knowledge graph
+1. **Given** a bipartite repo with papers imported, **When** an external tool calls `bip edge add` with source paper ID, target paper ID, relationship type, and summary, **Then** the edge is stored in the knowledge graph
+2. **Given** edge data in JSONL format, **When** the user runs `bip edge import edges.jsonl`, **Then** all edges are added to the knowledge graph
 3. **Given** an edge referencing a paper ID that doesn't exist, **When** attempting to add the edge, **Then** the system reports an error identifying the missing paper
 
 ---
@@ -40,9 +40,9 @@ A researcher or agent wants to understand how a specific paper relates to other 
 
 **Acceptance Scenarios**:
 
-1. **Given** a paper with edges to other papers, **When** the user runs `bp edge list <paper-id>`, **Then** all edges where the paper is the source are displayed with relationship types and summaries
-2. **Given** a paper with edges from other papers pointing to it, **When** the user runs `bp edge list <paper-id> --incoming`, **Then** all edges where the paper is the target are displayed
-3. **Given** a paper with both outgoing and incoming edges, **When** the user runs `bp edge list <paper-id> --all`, **Then** both directions are displayed with clear indication of direction
+1. **Given** a paper with edges to other papers, **When** the user runs `bip edge list <paper-id>`, **Then** all edges where the paper is the source are displayed with relationship types and summaries
+2. **Given** a paper with edges from other papers pointing to it, **When** the user runs `bip edge list <paper-id> --incoming`, **Then** all edges where the paper is the target are displayed
+3. **Given** a paper with both outgoing and incoming edges, **When** the user runs `bip edge list <paper-id> --all`, **Then** both directions are displayed with clear indication of direction
 
 ---
 
@@ -56,8 +56,8 @@ A researcher wants to find all papers that extend or contradict a particular lin
 
 **Acceptance Scenarios**:
 
-1. **Given** edges with various relationship types (cites, extends, contradicts), **When** the user runs `bp edge search --type extends`, **Then** only edges with relationship type "extends" are returned
-2. **Given** edges with various relationship types, **When** the user runs `bp edge search --type contradicts --json`, **Then** results are returned in JSON format suitable for agent consumption
+1. **Given** edges with various relationship types (cites, extends, contradicts), **When** the user runs `bip edge search --type extends`, **Then** only edges with relationship type "extends" are returned
+2. **Given** edges with various relationship types, **When** the user runs `bip edge search --type contradicts --json`, **Then** results are returned in JSON format suitable for agent consumption
 
 ---
 
@@ -71,15 +71,15 @@ A researcher wants to share their knowledge graph annotations or back them up. T
 
 **Acceptance Scenarios**:
 
-1. **Given** a knowledge graph with edges, **When** the user runs `bp edge export`, **Then** all edges are written to stdout in JSONL format
-2. **Given** edges for specific papers, **When** the user runs `bp edge export --paper <id>`, **Then** only edges involving that paper are exported
+1. **Given** a knowledge graph with edges, **When** the user runs `bip edge export`, **Then** all edges are written to stdout in JSONL format
+2. **Given** edges for specific papers, **When** the user runs `bip edge export --paper <id>`, **Then** only edges involving that paper are exported
 
 ---
 
 ### Edge Cases
 
 - What happens when adding a duplicate edge (same source, target, and type)? System should update the summary rather than create a duplicate.
-- What happens when deleting a paper that has edges? Edges are preserved with the endpoint marked as missing; `bp groom` flags orphaned edges for review.
+- What happens when deleting a paper that has edges? Edges are preserved with the endpoint marked as missing; `bip groom` flags orphaned edges for review.
 - How does the system handle edges with very long summaries? Summaries should be stored in full with no truncation.
 - What happens when querying a paper with no edges? Return empty result set with appropriate message.
 
@@ -90,19 +90,19 @@ A researcher wants to share their knowledge graph annotations or back them up. T
 - **FR-001**: System MUST store directed edges with: source node ID, target node ID, relationship type, and relational summary
 - **FR-002**: System MUST support relationship types: "cites", "extends", "contradicts", "implements", "applies-to", "builds-on"
 - **FR-003**: System MUST allow custom relationship types beyond the predefined set
-- **FR-004**: System MUST provide `bp edge add` command to add individual edges
-- **FR-005**: System MUST provide `bp edge import` command to bulk import edges from JSONL
-- **FR-006**: System MUST provide `bp edge list <paper-id>` command to list edges for a paper
-- **FR-007**: System MUST provide `bp edge search` command to filter edges by relationship type
-- **FR-008**: System MUST provide `bp edge export` command to export edges to JSONL
+- **FR-004**: System MUST provide `bip edge add` command to add individual edges
+- **FR-005**: System MUST provide `bip edge import` command to bulk import edges from JSONL
+- **FR-006**: System MUST provide `bip edge list <paper-id>` command to list edges for a paper
+- **FR-007**: System MUST provide `bip edge search` command to filter edges by relationship type
+- **FR-008**: System MUST provide `bip edge export` command to export edges to JSONL
 - **FR-009**: System MUST validate that source and target node IDs exist before adding an edge (fail-fast)
 - **FR-010**: System MUST store edges in JSONL format (following bipartite's git-mergeable philosophy)
-- **FR-011**: System MUST rebuild edge index from JSONL on `bp rebuild`
+- **FR-011**: System MUST rebuild edge index from JSONL on `bip rebuild`
 - **FR-012**: System MUST output JSON format when `--json` flag is provided (agent-first design)
 - **FR-013**: System MUST support edges between papers (paper → paper relationships)
 - **FR-014**: System MUST handle edge updates (same source, target, type) by replacing the existing summary
 - **FR-015**: System MUST preserve edges when referenced papers are deleted, marking the endpoint as missing
-- **FR-016**: System MUST detect orphaned edges (with missing endpoints) during `bp groom` operations
+- **FR-016**: System MUST detect orphaned edges (with missing endpoints) during `bip groom` operations
 
 ### Key Entities
 
@@ -118,13 +118,13 @@ A researcher wants to share their knowledge graph annotations or back them up. T
 - **SC-002**: Edge queries return results in under 500ms for collections with up to 10,000 edges
 - **SC-003**: The knowledge graph data remains git-mergeable (JSONL format, no binary blobs)
 - **SC-004**: Agents can programmatically add and query edges using JSON input/output
-- **SC-005**: Edge data survives `bp rebuild` without loss (ephemeral index, persistent JSONL)
+- **SC-005**: Edge data survives `bip rebuild` without loss (ephemeral index, persistent JSONL)
 - **SC-006**: A tex-to-edges workflow can generate and import 100 edges in under 30 seconds
 
 ## Assumptions
 
 - Node types are limited to papers in this phase. Concepts and artifacts (mentioned in VISION.md) are deferred to a future iteration.
-- The tex-to-edges Claude skill is developed separately and uses `bp edge add` or `bp edge import` to store results.
+- The tex-to-edges Claude skill is developed separately and uses `bip edge add` or `bip edge import` to store results.
 - Edge direction follows the convention: source "relates-to" target (e.g., Paper A "extends" Paper B means A extends B).
 - Summaries are free-form prose with no length limit.
 - The predefined relationship types are suggestions; the system is permissive and allows any string as a type.

@@ -14,7 +14,7 @@
 ## Path Conventions
 
 - **Package**: `internal/asta/` for ASTA client code
-- **Commands**: `cmd/bp/` for CLI commands
+- **Commands**: `cmd/bip/` for CLI commands
 
 ---
 
@@ -36,11 +36,11 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [X] T006 Add ASTA exit codes (ExitASTANotFound=1, ExitASTAAuthError=2, ExitASTAAPIError=3) to cmd/bp/exitcodes.go
-- [X] T007 Create parent `bp asta` command with --human flag and godotenv loading in cmd/bp/asta.go
-- [X] T008 Create ASTA helper functions (output formatting, error handling) in cmd/bp/asta_helpers.go
+- [X] T006 Add ASTA exit codes (ExitASTANotFound=1, ExitASTAAuthError=2, ExitASTAAPIError=3) to cmd/bip/exitcodes.go
+- [X] T007 Create parent `bip asta` command with --human flag and godotenv loading in cmd/bip/asta.go
+- [X] T008 Create ASTA helper functions (output formatting, error handling) in cmd/bip/asta_helpers.go
 
-**Checkpoint**: Foundation ready - `bp asta --help` should work
+**Checkpoint**: Foundation ready - `bip asta --help` should work
 
 ---
 
@@ -48,15 +48,15 @@
 
 **Goal**: Enable researchers to find papers on a topic using keyword search
 
-**Independent Test**: Run `bp asta search "phylogenetic inference"`, verify papers are returned with title, authors, year, venue
+**Independent Test**: Run `bip asta search "phylogenetic inference"`, verify papers are returned with title, authors, year, venue
 
 ### Implementation for User Story 1
 
 - [X] T009 [US1] Add SearchPapers method to client calling search_papers_by_relevance MCP tool in internal/asta/client.go
-- [X] T010 [US1] Create `bp asta search` command with --limit, --year, --venue flags in cmd/bp/asta_search.go
-- [X] T011 [US1] Implement JSON and human output formatting for search results in cmd/bp/asta_search.go
+- [X] T010 [US1] Create `bip asta search` command with --limit, --year, --venue flags in cmd/bip/asta_search.go
+- [X] T011 [US1] Implement JSON and human output formatting for search results in cmd/bip/asta_search.go
 
-**Checkpoint**: `bp asta search "machine learning" --human` returns papers
+**Checkpoint**: `bip asta search "machine learning" --human` returns papers
 
 ---
 
@@ -64,15 +64,15 @@
 
 **Goal**: Enable researchers to find specific text passages within papers (ASTA's unique feature)
 
-**Independent Test**: Run `bp asta snippet "variational inference phylogenetics"`, verify text snippets are returned with paper context
+**Independent Test**: Run `bip asta snippet "variational inference phylogenetics"`, verify text snippets are returned with paper context
 
 ### Implementation for User Story 2
 
 - [X] T012 [US2] Add SnippetSearch method to client calling snippet_search MCP tool in internal/asta/client.go
-- [X] T013 [US2] Create `bp asta snippet` command with --limit, --venue, --papers flags in cmd/bp/asta_snippet.go
-- [X] T014 [US2] Implement JSON and human output formatting for snippet results in cmd/bp/asta_snippet.go
+- [X] T013 [US2] Create `bip asta snippet` command with --limit, --venue, --papers flags in cmd/bip/asta_snippet.go
+- [X] T014 [US2] Implement JSON and human output formatting for snippet results in cmd/bip/asta_snippet.go
 
-**Checkpoint**: `bp asta snippet "mutation rate" --human` returns snippets with paper context
+**Checkpoint**: `bip asta snippet "mutation rate" --human` returns snippets with paper context
 
 ---
 
@@ -80,15 +80,15 @@
 
 **Goal**: Enable researchers to look up detailed information about a specific paper
 
-**Independent Test**: Run `bp asta paper DOI:10.1093/sysbio/syy032`, verify paper metadata is returned
+**Independent Test**: Run `bip asta paper DOI:10.1093/sysbio/syy032`, verify paper metadata is returned
 
 ### Implementation for User Story 3
 
 - [X] T015 [US3] Add GetPaper method to client calling get_paper MCP tool in internal/asta/client.go
-- [X] T016 [US3] Create `bp asta paper` command with --fields flag in cmd/bp/asta_paper.go
-- [X] T017 [US3] Implement JSON and human output formatting for paper details in cmd/bp/asta_paper.go
+- [X] T016 [US3] Create `bip asta paper` command with --fields flag in cmd/bip/asta_paper.go
+- [X] T017 [US3] Implement JSON and human output formatting for paper details in cmd/bip/asta_paper.go
 
-**Checkpoint**: `bp asta paper DOI:10.1038/nature12373 --human` returns paper details
+**Checkpoint**: `bip asta paper DOI:10.1038/nature12373 --human` returns paper details
 
 ---
 
@@ -96,17 +96,17 @@
 
 **Goal**: Enable researchers to explore a paper's citation network
 
-**Independent Test**: Run `bp asta citations DOI:10.1093/sysbio/syy032`, verify citing papers are returned
+**Independent Test**: Run `bip asta citations DOI:10.1093/sysbio/syy032`, verify citing papers are returned
 
 ### Implementation for User Story 4
 
 - [X] T018 [US4] Add GetCitations method to client calling get_citations MCP tool in internal/asta/client.go
-- [X] T019 [US4] Create `bp asta citations` command with --limit, --year flags in cmd/bp/asta_citations.go
-- [X] T020 [US4] Implement JSON and human output formatting for citations in cmd/bp/asta_citations.go
-- [X] T021 [US4] Create `bp asta references` command with --limit flag in cmd/bp/asta_references.go
-- [X] T022 [US4] Implement JSON and human output formatting for references in cmd/bp/asta_references.go
+- [X] T019 [US4] Create `bip asta citations` command with --limit, --year flags in cmd/bip/asta_citations.go
+- [X] T020 [US4] Implement JSON and human output formatting for citations in cmd/bip/asta_citations.go
+- [X] T021 [US4] Create `bip asta references` command with --limit flag in cmd/bip/asta_references.go
+- [X] T022 [US4] Implement JSON and human output formatting for references in cmd/bip/asta_references.go
 
-**Checkpoint**: `bp asta citations DOI:10.1038/nature12373 --human` and `bp asta references DOI:10.1038/nature12373 --human` both work
+**Checkpoint**: `bip asta citations DOI:10.1038/nature12373 --human` and `bip asta references DOI:10.1038/nature12373 --human` both work
 
 ---
 
@@ -114,18 +114,18 @@
 
 **Goal**: Enable researchers to find an author and their publications
 
-**Independent Test**: Run `bp asta author "Frederick Matsen"`, verify author info is returned
+**Independent Test**: Run `bip asta author "Frederick Matsen"`, verify author info is returned
 
 ### Implementation for User Story 5
 
 - [X] T023 [US5] Add SearchAuthors method to client calling search_authors_by_name MCP tool in internal/asta/client.go
 - [X] T024 [US5] Add GetAuthorPapers method to client calling get_author_papers MCP tool in internal/asta/client.go
-- [X] T025 [US5] Create `bp asta author` command with --limit flag in cmd/bp/asta_author.go
-- [X] T026 [US5] Implement JSON and human output formatting for author results in cmd/bp/asta_author.go
-- [X] T027 [US5] Create `bp asta author-papers` command with --limit, --year flags in cmd/bp/asta_author_papers.go
-- [X] T028 [US5] Implement JSON and human output formatting for author papers in cmd/bp/asta_author_papers.go
+- [X] T025 [US5] Create `bip asta author` command with --limit flag in cmd/bip/asta_author.go
+- [X] T026 [US5] Implement JSON and human output formatting for author results in cmd/bip/asta_author.go
+- [X] T027 [US5] Create `bip asta author-papers` command with --limit, --year flags in cmd/bip/asta_author_papers.go
+- [X] T028 [US5] Implement JSON and human output formatting for author papers in cmd/bip/asta_author_papers.go
 
-**Checkpoint**: `bp asta author "Frederick Matsen" --human` and `bp asta author-papers <id> --human` both work
+**Checkpoint**: `bip asta author "Frederick Matsen" --human` and `bip asta author-papers <id> --human` both work
 
 ---
 
@@ -135,7 +135,7 @@
 
 - [X] T029 Update README.md with ASTA commands documentation
 - [X] T030 Update CLAUDE.md with ASTA notes under Commands section
-- [X] T031 Run `go build -o bp ./cmd/bp` and verify all commands work
+- [X] T031 Run `go build -o bip ./cmd/bip` and verify all commands work
 - [X] T032 Run `go vet ./...` and `go fmt ./...` to ensure code quality
 - [X] T033 Manual test: Run quickstart.md examples to validate all workflows
 
@@ -207,7 +207,7 @@ Task: "T014 Implement snippet output formatting"
 1. Complete Phase 1: Setup (types, errors, client)
 2. Complete Phase 2: Foundational (parent command, helpers)
 3. Complete Phase 3: User Story 1 (search papers)
-4. **STOP and VALIDATE**: Test `bp asta search "phylogenetics" --human`
+4. **STOP and VALIDATE**: Test `bip asta search "phylogenetics" --human`
 5. Deploy/demo if ready
 
 ### Incremental Delivery

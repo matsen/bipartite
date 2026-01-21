@@ -27,8 +27,8 @@ Identifies papers from bioRxiv, medRxiv, or arXiv and searches
 Semantic Scholar for published versions with matching titles.
 
 Examples:
-  bp s2 link-published --human
-  bp s2 link-published --auto`,
+  bip s2 link-published --human
+  bip s2 link-published --auto`,
 	Args: cobra.NoArgs,
 	RunE: runS2LinkPub,
 }

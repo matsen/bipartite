@@ -4,7 +4,7 @@
 - **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
 - **Ollama** for local embeddings, pure Go vector storage
 - **Semantic Scholar API** for paper metadata (internal/s2 package)
-- **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bp rebuild`)
+- **Data storage**: JSONL (refs.jsonl, edges.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
 - Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), golang.org/x/time/rate (rate limiting), joho/godotenv (env loading) (005-asta-mcp-integration)
 - N/A (ASTA is read-only external API, no local persistence) (005-asta-mcp-integration)
@@ -23,32 +23,32 @@ tests/         # Integration tests
 
 ```bash
 # Build and run
-go build -o bp ./cmd/bp && ./bp --help
+go build -o bip ./cmd/bip && ./bip --help
 
 # Common operations
-./bp import --format paperpile export.json   # Import references
-./bp rebuild                                  # Rebuild SQLite index after import
-./bp search <query>                          # Search by keyword
-./bp semantic <query>                        # Semantic similarity search
-./bp get <id>                                # Get reference by ID
-./bp list                                    # List all references
-./bp export                                  # Export to BibTeX
+./bip import --format paperpile export.json   # Import references
+./bip rebuild                                  # Rebuild SQLite index after import
+./bip search <query>                          # Search by keyword
+./bip semantic <query>                        # Semantic similarity search
+./bip get <id>                                # Get reference by ID
+./bip list                                    # List all references
+./bip export                                  # Export to BibTeX
 
 # Semantic Scholar (S2) commands
-./bp s2 add DOI:10.1234/example              # Add paper by DOI
-./bp s2 lookup DOI:10.1234/example           # Look up paper info
-./bp s2 citations <paper-id>                 # Find citing papers
-./bp s2 references <paper-id>                # Find referenced papers
-./bp s2 gaps                                 # Find literature gaps
+./bip s2 add DOI:10.1234/example              # Add paper by DOI
+./bip s2 lookup DOI:10.1234/example           # Look up paper info
+./bip s2 citations <paper-id>                 # Find citing papers
+./bip s2 references <paper-id>                # Find referenced papers
+./bip s2 gaps                                 # Find literature gaps
 
 # ASTA (Academic Search Tool API) commands - read-only exploration
-./bp asta search "phylogenetics"             # Search papers by keyword
-./bp asta snippet "variational inference"    # Search text snippets in papers
-./bp asta paper DOI:10.1093/sysbio/syy032    # Get paper details
-./bp asta citations DOI:10.1093/sysbio/syy032 # Get citing papers
-./bp asta references DOI:10.1093/sysbio/syy032 # Get referenced papers
-./bp asta author "Frederick Matsen"          # Search for authors
-./bp asta author-papers 145666442            # Get papers by author ID
+./bip asta search "phylogenetics"             # Search papers by keyword
+./bip asta snippet "variational inference"    # Search text snippets in papers
+./bip asta paper DOI:10.1093/sysbio/syy032    # Get paper details
+./bip asta citations DOI:10.1093/sysbio/syy032 # Get citing papers
+./bip asta references DOI:10.1093/sysbio/syy032 # Get referenced papers
+./bip asta author "Frederick Matsen"          # Search for authors
+./bip asta author-papers 145666442            # Get papers by author ID
 
 # Add --human flag for readable output (default is JSON)
 ```
@@ -72,15 +72,15 @@ Follow standard Go conventions (`go fmt`, `go vet`)
 
 When modifying SQLite schema (e.g., adding columns to FTS5 tables):
 
-1. **Rebuild the binary**: `go build -o bp ./cmd/bp`
+1. **Rebuild the binary**: `go build -o bip ./cmd/bip`
 2. **Delete the old database**: `rm .bipartite/cache/refs.db`
-3. **Rebuild the index**: `./bp rebuild`
+3. **Rebuild the index**: `./bip rebuild`
 
 Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you must delete the database file for schema changes to take effect.
 
-## Bipartite Skill
+## Bip Skill
 
-Use `/bipartite` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `.claude/skills/bipartite/` and symlinked to `~/.claude/skills/` for global availability.
+Use `/bip` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `.claude/skills/bip/` and symlinked to `~/.claude/skills/` for global availability.
 
 ## Ralph Loop
 
@@ -111,4 +111,4 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
-- 005-asta-mcp-integration: Added ASTA MCP commands (bp asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API
+- 005-asta-mcp-integration: Added ASTA MCP commands (bip asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API

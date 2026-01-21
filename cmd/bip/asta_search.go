@@ -21,9 +21,9 @@ var astaSearchCmd = &cobra.Command{
 	Long: `Search for papers by keyword relevance using ASTA.
 
 Examples:
-  bp asta search "phylogenetic inference"
-  bp asta search "SARS-CoV-2" --limit 10 --year 2020:2024
-  bp asta search "machine learning" --venue "Nature" --human`,
+  bip asta search "phylogenetic inference"
+  bip asta search "SARS-CoV-2" --limit 10 --year 2020:2024
+  bip asta search "machine learning" --venue "Nature" --human`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaSearch,
 }

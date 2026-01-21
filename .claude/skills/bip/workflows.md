@@ -1,8 +1,8 @@
-# Bipartite Workflows
+# Bip Workflows
 
-Detailed instructions for common bipartite workflows.
+Detailed instructions for common bip workflows.
 
-## Find Papers (bp-find)
+## Find Papers (bip-find)
 
 Search for papers in the local library and return Google Drive PDF paths.
 
@@ -19,12 +19,12 @@ Parse user queries to identify:
 1. **Search the local library**:
    ```bash
    cd /Users/matsen/re/bipartite
-   ./bp search "<constructed query>"
+   ./bip search "<constructed query>"
    ```
 
 2. **For topic-heavy queries**, also try semantic search:
    ```bash
-   ./bp semantic "<topic>"
+   ./bip semantic "<topic>"
    ```
 
 3. **Filter results** by author/year criteria from the query.
@@ -46,7 +46,7 @@ Display results numbered, showing:
 
 Combine:
 - Root: `/Users/matsen/Google Drive/My Drive/Paperpile`
-- Plus `pdf_path` from `./bp get <id>`
+- Plus `pdf_path` from `./bip get <id>`
 
 ### Example Interactions
 
@@ -58,12 +58,12 @@ Combine:
 
 ## If Paper NOT in Local Library
 
-Use ASTA MCP tools (or `bp asta` commands) to search broader literature:
+Use ASTA MCP tools (or `bip asta` commands) to search broader literature:
 
 ### Search by Title/Keyword
 
 ```bash
-./bp asta search "phylogenetic inference" --human
+./bip asta search "phylogenetic inference" --human
 ```
 
 Or via MCP tools:
@@ -75,7 +75,7 @@ mcp__asta__search_paper_by_title
 ### Get Verbatim Quotes (for provenance)
 
 ```bash
-./bp asta snippet "exact phrase to find"
+./bip asta snippet "exact phrase to find"
 ```
 
 Or via MCP:
@@ -86,8 +86,8 @@ mcp__asta__snippet_search with query like "exact phrase to find"
 ### Trace Citations
 
 ```bash
-./bp asta citations DOI:10.1093/sysbio/syy032
-./bp asta references DOI:10.1093/sysbio/syy032
+./bip asta citations DOI:10.1093/sysbio/syy032
+./bip asta references DOI:10.1093/sysbio/syy032
 ```
 
 Or via MCP:
@@ -99,7 +99,7 @@ mcp__asta__get_paper (with references field)
 ### Get Paper Details
 
 ```bash
-./bp asta paper DOI:10.1093/sysbio/syy032 --human
+./bip asta paper DOI:10.1093/sysbio/syy032 --human
 ```
 
 Or via MCP:
@@ -114,7 +114,7 @@ This is useful for:
 
 ---
 
-## Update Library (bp-update)
+## Update Library (bip-update)
 
 Import references from a Paperpile export.
 
@@ -130,7 +130,7 @@ Import references from a Paperpile export.
 3. **Run the import**:
    ```bash
    cd /Users/matsen/re/bipartite
-   ./bp import --format paperpile "<path>"
+   ./bip import --format paperpile "<path>"
    ```
 
 4. **Report results**: Show new/updated/unchanged counts.
@@ -147,37 +147,37 @@ For open-ended literature exploration without adding to your collection.
 
 ```bash
 # Search by keyword relevance
-./bp asta search "variational inference" --limit 30 --human
+./bip asta search "variational inference" --limit 30 --human
 
 # Filter by year
-./bp asta search "deep learning phylogenetics" --year 2023:2025 --human
+./bip asta search "deep learning phylogenetics" --year 2023:2025 --human
 ```
 
 ### Citation Network Exploration
 
 ```bash
 # Find papers citing a foundational paper
-./bp asta citations DOI:10.1093/sysbio/syy032 --limit 50 --human
+./bip asta citations DOI:10.1093/sysbio/syy032 --limit 50 --human
 
 # Find what a paper builds on
-./bp asta references DOI:10.1093/sysbio/syy032 --human
+./bip asta references DOI:10.1093/sysbio/syy032 --human
 ```
 
 ### Author Exploration
 
 ```bash
 # Find an author
-./bp asta author "Frederick Matsen" --human
+./bip asta author "Frederick Matsen" --human
 
 # Get their papers (use author ID from previous result)
-./bp asta author-papers 145666442 --human
+./bip asta author-papers 145666442 --human
 ```
 
 ### Add Papers to Collection
 
 When you find papers worth keeping:
 ```bash
-./bp s2 add DOI:10.1093/sysbio/syy032
+./bip s2 add DOI:10.1093/sysbio/syy032
 ```
 
 ---
@@ -187,10 +187,10 @@ When you find papers worth keeping:
 Identify papers cited by your collection but not in it.
 
 ```bash
-./bp s2 gaps --human
+./bip s2 gaps --human
 ```
 
 Review the gaps and add interesting papers:
 ```bash
-./bp s2 add DOI:10.xxxx/yyyy
+./bip s2 add DOI:10.xxxx/yyyy
 ```

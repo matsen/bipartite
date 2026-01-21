@@ -20,8 +20,8 @@ var openCmd = &cobra.Command{
 	Long: `Open a paper's PDF in the configured viewer.
 
 Examples:
-  bp open Ahn2026-rs
-  bp open Ahn2026-rs --supplement 1`,
+  bip open Ahn2026-rs
+  bip open Ahn2026-rs --supplement 1`,
 	Args: cobra.ExactArgs(1),
 	RunE: runOpen,
 }
@@ -38,7 +38,7 @@ func runOpen(cmd *cobra.Command, args []string) error {
 
 	// Check PDF root is configured
 	if cfg.PDFRoot == "" {
-		exitWithError(ExitConfigError, "pdf_root not configured (use 'bp config pdf-root /path/to/pdfs')")
+		exitWithError(ExitConfigError, "pdf_root not configured (use 'bip config pdf-root /path/to/pdfs')")
 	}
 
 	db := mustOpenDatabase(repoRoot)

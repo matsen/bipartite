@@ -15,7 +15,7 @@ The name comes from a bipartite graph connecting two worlds: the researcher's ar
 ## Installation
 
 ```bash
-go build -o bp ./cmd/bp
+go build -o bip ./cmd/bip
 ```
 
 Requires Go 1.21+.
@@ -24,51 +24,51 @@ Requires Go 1.21+.
 
 ```bash
 # Initialize repository
-bp init
+bip init
 
 # Configure PDF location (e.g., Paperpile's Google Drive folder)
-bp config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
+bip config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
 
 # Import references
-bp import --format paperpile ~/Downloads/paperpile-export.json
+bip import --format paperpile ~/Downloads/paperpile-export.json
 
 # Rebuild search index
-bp rebuild
+bip rebuild
 
 # Search
-bp search "phylogenetics"
+bip search "phylogenetics"
 
 # Open a paper
-bp open Smith2026-ab
+bip open Smith2026-ab
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `bp init` | Initialize a new repository |
-| `bp config [key] [value]` | Get/set configuration |
-| `bp import --format paperpile <file>` | Import from Paperpile JSON |
-| `bp rebuild` | Rebuild search index from source data |
-| `bp search <query>` | Full-text search across titles, abstracts, authors, years |
-| `bp list` | List all references |
-| `bp get <id>` | Get a specific reference by ID |
-| `bp open <id>` | Open PDF in configured viewer |
-| `bp export --bibtex` | Export to BibTeX format |
-| `bp check` | Validate repository integrity |
-| `bp groom` | Detect orphaned edges; use `--fix` to remove |
+| `bip init` | Initialize a new repository |
+| `bip config [key] [value]` | Get/set configuration |
+| `bip import --format paperpile <file>` | Import from Paperpile JSON |
+| `bip rebuild` | Rebuild search index from source data |
+| `bip search <query>` | Full-text search across titles, abstracts, authors, years |
+| `bip list` | List all references |
+| `bip get <id>` | Get a specific reference by ID |
+| `bip open <id>` | Open PDF in configured viewer |
+| `bip export --bibtex` | Export to BibTeX format |
+| `bip check` | Validate repository integrity |
+| `bip groom` | Detect orphaned edges; use `--fix` to remove |
 
 ### Semantic Scholar (S2) Commands
 
 | Command | Description |
 |---------|-------------|
-| `bp s2 add <paper-id>` | Add paper by DOI, arXiv ID, or S2 ID |
-| `bp s2 add-pdf <file>` | Add paper by extracting DOI from PDF |
-| `bp s2 lookup <paper-id>` | Look up paper info without adding |
-| `bp s2 citations <paper-id>` | Find papers that cite this paper |
-| `bp s2 references <paper-id>` | Find papers referenced by this paper |
-| `bp s2 gaps` | Discover highly-cited papers you're missing |
-| `bp s2 link-published` | Link preprints to published versions |
+| `bip s2 add <paper-id>` | Add paper by DOI, arXiv ID, or S2 ID |
+| `bip s2 add-pdf <file>` | Add paper by extracting DOI from PDF |
+| `bip s2 lookup <paper-id>` | Look up paper info without adding |
+| `bip s2 citations <paper-id>` | Find papers that cite this paper |
+| `bip s2 references <paper-id>` | Find papers referenced by this paper |
+| `bip s2 gaps` | Discover highly-cited papers you're missing |
+| `bip s2 link-published` | Link preprints to published versions |
 
 Paper IDs support: `DOI:10.xxx`, `ARXIV:xxxx.xxxxx`, `PMID:xxxxxxxx`, or local IDs.
 
@@ -78,13 +78,13 @@ Read-only exploration of academic papers via Allen AI's ASTA service.
 
 | Command | Description |
 |---------|-------------|
-| `bp asta search <query>` | Search papers by keyword relevance |
-| `bp asta snippet <query>` | Search text snippets within papers |
-| `bp asta paper <paper-id>` | Get paper details |
-| `bp asta citations <paper-id>` | Get papers that cite this paper |
-| `bp asta references <paper-id>` | Get papers referenced by this paper |
-| `bp asta author <name>` | Search for authors by name |
-| `bp asta author-papers <author-id>` | Get papers by an author |
+| `bip asta search <query>` | Search papers by keyword relevance |
+| `bip asta snippet <query>` | Search text snippets within papers |
+| `bip asta paper <paper-id>` | Get paper details |
+| `bip asta citations <paper-id>` | Get papers that cite this paper |
+| `bip asta references <paper-id>` | Get papers referenced by this paper |
+| `bip asta author <name>` | Search for authors by name |
+| `bip asta author-papers <author-id>` | Get papers by an author |
 
 Common flags: `--limit N`, `--year YYYY:YYYY`, `--venue <name>`, `--human`.
 
@@ -94,11 +94,11 @@ Requires `ASTA_API_KEY` environment variable.
 
 | Command | Description |
 |---------|-------------|
-| `bp edge add -s <source> -t <target> -r <type> -m <summary>` | Add a directed edge between papers |
-| `bp edge import <file>` | Bulk import edges from JSONL |
-| `bp edge list <paper-id>` | List edges for a paper (`--incoming`, `--all`) |
-| `bp edge search --type <type>` | Find edges by relationship type |
-| `bp edge export` | Export edges to JSONL (`--paper` to filter) |
+| `bip edge add -s <source> -t <target> -r <type> -m <summary>` | Add a directed edge between papers |
+| `bip edge import <file>` | Bulk import edges from JSONL |
+| `bip edge list <paper-id>` | List edges for a paper (`--incoming`, `--all`) |
+| `bip edge search --type <type>` | Find edges by relationship type |
+| `bip edge export` | Export edges to JSONL (`--paper` to filter) |
 
 Relationship types: `cites`, `extends`, `contradicts`, `implements`, `applies-to`, `builds-on` (custom types also allowed).
 
@@ -116,7 +116,7 @@ All commands output JSON by default. Use `--human` for readable output.
 | Variable | Description |
 |----------|-------------|
 | `S2_API_KEY` | Semantic Scholar API key for higher rate limits (optional) |
-| `ASTA_API_KEY` | ASTA API key for academic search (required for `bp asta` commands) |
+| `ASTA_API_KEY` | ASTA API key for academic search (required for `bip asta` commands) |
 
 Add to `.env` file (gitignored):
 ```
@@ -147,25 +147,25 @@ Tested on a 6,400 paper library (32MB Paperpile export):
     └── refs.db     # SQLite with FTS5 - ephemeral, gitignored
 ```
 
-JSONL files are the source of truth and can be version-controlled. The SQLite cache is rebuilt with `bp rebuild` after pulling changes.
+JSONL files are the source of truth and can be version-controlled. The SQLite cache is rebuilt with `bip rebuild` after pulling changes.
 
 ## Collaboration Workflow
 
 ```bash
 # Researcher A adds papers
-bp import --format paperpile export-a.json
+bip import --format paperpile export-a.json
 git add .bipartite/refs.jsonl
 git commit -m "Add phylogenetics papers"
 git push
 
 # Researcher B does the same
-bp import --format paperpile export-b.json
+bip import --format paperpile export-b.json
 git commit -m "Add ML papers"
 git push
 
 # After pull/merge
 git pull
-bp rebuild  # Refresh local index
+bip rebuild  # Refresh local index
 ```
 
 ## Roadmap

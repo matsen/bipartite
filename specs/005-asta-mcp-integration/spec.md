@@ -15,14 +15,14 @@ ASTA is Allen AI's academic research database, accessed via the Model Context Pr
 - Looking up paper details, citations, and references
 - Finding authors and their publications
 
-This complements the existing `bp s2` commands (Semantic Scholar REST API) by providing access to ASTA's specialized features like snippet search.
+This complements the existing `bip s2` commands (Semantic Scholar REST API) by providing access to ASTA's specialized features like snippet search.
 
 ## Clarifications
 
 ### Session 2026-01-20
 
 - Q: How does ASTA differ from S2? → A: ASTA uses MCP protocol, has snippet search, 10 req/sec rate limit
-- Q: Should ASTA commands add papers to collection? → A: No, ASTA is read-only exploration. Use `bp s2 add` to add papers.
+- Q: Should ASTA commands add papers to collection? → A: No, ASTA is read-only exploration. Use `bip s2 add` to add papers.
 - Q: How to authenticate? → A: ASTA_API_KEY in .env, passed via x-api-key header
 
 ## ASTA MCP Endpoint
@@ -38,11 +38,11 @@ This complements the existing `bp s2` commands (Semantic Scholar REST API) by pr
 
 A researcher wants to find papers on a topic using keyword search.
 
-**Independent Test**: Run `bp asta search "phylogenetic inference"`, verify papers are returned.
+**Independent Test**: Run `bip asta search "phylogenetic inference"`, verify papers are returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a keyword query, **When** user runs `bp asta search <query>`, **Then** relevant papers are returned with title, authors, year, venue
+1. **Given** a keyword query, **When** user runs `bip asta search <query>`, **Then** relevant papers are returned with title, authors, year, venue
 2. **Given** search results, **When** `--limit N` flag is used, **Then** at most N papers are returned
 3. **Given** search results, **When** `--year 2020:2024` flag is used, **Then** only papers from that date range are returned
 
@@ -52,11 +52,11 @@ A researcher wants to find papers on a topic using keyword search.
 
 A researcher wants to find specific text passages within papers - ASTA's unique feature.
 
-**Independent Test**: Run `bp asta snippet "variational inference phylogenetics"`, verify text snippets are returned.
+**Independent Test**: Run `bip asta snippet "variational inference phylogenetics"`, verify text snippets are returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a query, **When** user runs `bp asta snippet <query>`, **Then** matching text snippets are returned with paper context
+1. **Given** a query, **When** user runs `bip asta snippet <query>`, **Then** matching text snippets are returned with paper context
 2. **Given** snippet results, **Then** each snippet shows the paper it came from (title, authors, year)
 3. **Given** `--limit N` flag, **Then** at most N snippets are returned
 
@@ -66,11 +66,11 @@ A researcher wants to find specific text passages within papers - ASTA's unique 
 
 A researcher wants to look up detailed information about a specific paper.
 
-**Independent Test**: Run `bp asta paper DOI:10.1093/sysbio/syy032`, verify paper details are returned.
+**Independent Test**: Run `bip asta paper DOI:10.1093/sysbio/syy032`, verify paper details are returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a paper identifier, **When** user runs `bp asta paper <id>`, **Then** paper metadata is returned
+1. **Given** a paper identifier, **When** user runs `bip asta paper <id>`, **Then** paper metadata is returned
 2. **Given** `--fields` flag, **Then** only specified fields are returned
 
 ---
@@ -79,12 +79,12 @@ A researcher wants to look up detailed information about a specific paper.
 
 A researcher wants to explore a paper's citation network.
 
-**Independent Test**: Run `bp asta citations DOI:10.1093/sysbio/syy032`, verify citing papers are returned.
+**Independent Test**: Run `bip asta citations DOI:10.1093/sysbio/syy032`, verify citing papers are returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a paper ID, **When** user runs `bp asta citations <id>`, **Then** papers citing it are returned
-2. **Given** a paper ID, **When** user runs `bp asta references <id>`, **Then** papers it cites are returned
+1. **Given** a paper ID, **When** user runs `bip asta citations <id>`, **Then** papers citing it are returned
+2. **Given** a paper ID, **When** user runs `bip asta references <id>`, **Then** papers it cites are returned
 3. **Given** `--limit N` flag, **Then** at most N results are returned
 
 ---
@@ -93,12 +93,12 @@ A researcher wants to explore a paper's citation network.
 
 A researcher wants to find an author and their publications.
 
-**Independent Test**: Run `bp asta author "Frederick Matsen"`, verify author info and papers are returned.
+**Independent Test**: Run `bip asta author "Frederick Matsen"`, verify author info and papers are returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** an author name, **When** user runs `bp asta author <name>`, **Then** matching authors are returned
-2. **Given** an author ID, **When** user runs `bp asta author-papers <id>`, **Then** their papers are returned
+1. **Given** an author name, **When** user runs `bip asta author <name>`, **Then** matching authors are returned
+2. **Given** an author ID, **When** user runs `bip asta author-papers <id>`, **Then** their papers are returned
 
 ---
 
@@ -108,23 +108,23 @@ A researcher wants to find an author and their publications.
 
 **Search**
 
-- **FR-001**: System MUST search papers via `bp asta search <query>`
-- **FR-002**: System MUST search snippets via `bp asta snippet <query>`
+- **FR-001**: System MUST search papers via `bip asta search <query>`
+- **FR-002**: System MUST search snippets via `bip asta snippet <query>`
 - **FR-003**: System MUST support `--limit N` for pagination
 - **FR-004**: System MUST support `--year YYYY:YYYY` date range filter
 - **FR-005**: System MUST support `--venue` filter
 
 **Paper Lookup**
 
-- **FR-006**: System MUST get paper details via `bp asta paper <id>`
-- **FR-007**: System MUST get citations via `bp asta citations <id>`
-- **FR-008**: System MUST get references via `bp asta references <id>`
+- **FR-006**: System MUST get paper details via `bip asta paper <id>`
+- **FR-007**: System MUST get citations via `bip asta citations <id>`
+- **FR-008**: System MUST get references via `bip asta references <id>`
 - **FR-009**: Paper IDs MUST support DOI:, ARXIV:, PMID:, CorpusId: formats
 
 **Author Search**
 
-- **FR-010**: System MUST search authors via `bp asta author <name>`
-- **FR-011**: System MUST get author's papers via `bp asta author-papers <id>`
+- **FR-010**: System MUST search authors via `bip asta author <name>`
+- **FR-011**: System MUST get author's papers via `bip asta author-papers <id>`
 
 **Output**
 
@@ -153,17 +153,17 @@ A researcher wants to find an author and their publications.
 
 | Command | Description |
 |---------|-------------|
-| `bp asta search <query>` | Search papers by keyword relevance |
-| `bp asta snippet <query>` | Search text snippets within papers |
-| `bp asta paper <id>` | Get paper details |
-| `bp asta citations <id>` | Get papers citing this paper |
-| `bp asta references <id>` | Get papers this paper cites |
-| `bp asta author <name>` | Search for authors |
-| `bp asta author-papers <id>` | Get papers by author ID |
+| `bip asta search <query>` | Search papers by keyword relevance |
+| `bip asta snippet <query>` | Search text snippets within papers |
+| `bip asta paper <id>` | Get paper details |
+| `bip asta citations <id>` | Get papers citing this paper |
+| `bip asta references <id>` | Get papers this paper cites |
+| `bip asta author <name>` | Search for authors |
+| `bip asta author-papers <id>` | Get papers by author ID |
 
 ## Differences from S2 Commands
 
-| Feature | `bp s2` | `bp asta` |
+| Feature | `bip s2` | `bip asta` |
 |---------|---------|-----------|
 | API | Semantic Scholar REST | ASTA MCP |
 | Rate limit | 1 req/sec | 10 req/sec |
@@ -173,11 +173,11 @@ A researcher wants to find an author and their publications.
 
 ## Out of Scope
 
-- Adding papers to collection (use `bp s2 add` for that)
+- Adding papers to collection (use `bip s2 add` for that)
 - Caching (ASTA is fast enough, rate limit is generous)
 - Batch operations beyond what ASTA provides
 
 ## Future Considerations
 
-- Could pipe ASTA search results to `bp s2 add` for bulk import
+- Could pipe ASTA search results to `bip s2 add` for bulk import
 - Could use snippet search for semantic matching within collection

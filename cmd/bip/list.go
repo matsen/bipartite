@@ -20,8 +20,8 @@ var listCmd = &cobra.Command{
 	Long: `List all references in the repository.
 
 Examples:
-  bp list
-  bp list --limit 100`,
+  bip list
+  bip list --limit 100`,
 	RunE: runList,
 }
 

@@ -38,7 +38,7 @@ func getBPBinary(t *testing.T) string {
 		}
 		bpBinary = filepath.Join(tmpDir, "bp")
 
-		cmd := exec.Command("go", "build", "-o", bpBinary, "./cmd/bp")
+		cmd := exec.Command("go", "build", "-o", bpBinary, "./cmd/bip")
 		cmd.Dir = moduleRoot
 		if output, err := cmd.CombinedOutput(); err != nil {
 			bpBinaryErr = &buildError{output: string(output), err: err}
@@ -95,7 +95,7 @@ func runBP(t *testing.T, repoDir string, args ...string) (string, error) {
 	bp := getBPBinary(t)
 	cmd := exec.Command(bp, args...)
 	cmd.Dir = repoDir
-	cmd.Env = append(os.Environ(), "BP_ROOT="+repoDir)
+	cmd.Env = append(os.Environ(), "BIP_ROOT="+repoDir)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }

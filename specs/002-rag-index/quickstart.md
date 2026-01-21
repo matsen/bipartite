@@ -176,7 +176,7 @@ Semantic search finds conceptually similar papers, not keyword matches. If resul
 
 1. Try rephrasing your query
 2. Use a higher threshold: `--threshold 0.7`
-3. Use keyword search for exact terms: `bp search "exact phrase"`
+3. Use keyword search for exact terms: `bip search "exact phrase"`
 
 ## Performance Notes
 

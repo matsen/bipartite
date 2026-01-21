@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implement CLI wrappers for Allen AI's ASTA (Academic Search Tool API) MCP service, providing read-only paper search, snippet search, and citation exploration capabilities that complement the existing `bp s2` commands.
+Implement CLI wrappers for Allen AI's ASTA (Academic Search Tool API) MCP service, providing read-only paper search, snippet search, and citation exploration capabilities that complement the existing `bip s2` commands.
 
 ## Technical Context
 
@@ -17,7 +17,7 @@ Implement CLI wrappers for Allen AI's ASTA (Academic Search Tool API) MCP servic
 **Project Type**: Single project (CLI extension)
 **Performance Goals**: 10 req/sec (ASTA rate limit)
 **Constraints**: Must not exceed ASTA rate limits; clear auth errors for missing API key
-**Scale/Scope**: 7 new CLI commands under `bp asta` parent
+**Scale/Scope**: 7 new CLI commands under `bip asta` parent
 
 ## Constitution Check
 
@@ -57,7 +57,7 @@ internal/
 │   ├── types.go         # Request/response types
 │   └── errors.go        # Error types
 
-cmd/bp/
+cmd/bip/
 ├── asta.go              # Parent command with --human flag
 ├── asta_search.go       # bp asta search <query>
 ├── asta_snippet.go      # bp asta snippet <query>
@@ -68,7 +68,7 @@ cmd/bp/
 └── asta_author_papers.go # bp asta author-papers <id>
 ```
 
-**Structure Decision**: Follows existing `internal/s2/` and `cmd/bp/s2*.go` patterns for consistency. No new test directories needed—tests will be in standard `*_test.go` files.
+**Structure Decision**: Follows existing `internal/s2/` and `cmd/bip/s2*.go` patterns for consistency. No new test directories needed—tests will be in standard `*_test.go` files.
 
 ## Complexity Tracking
 

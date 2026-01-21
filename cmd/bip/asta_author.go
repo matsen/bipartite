@@ -17,8 +17,8 @@ var astaAuthorCmd = &cobra.Command{
 	Long: `Search for authors by name and get their publication metrics.
 
 Examples:
-  bp asta author "Frederick Matsen"
-  bp asta author "Smith" --limit 20 --human`,
+  bip asta author "Frederick Matsen"
+  bip asta author "Smith" --limit 20 --human`,
 	Args: cobra.ExactArgs(1),
 	Run:  runAstaAuthor,
 }

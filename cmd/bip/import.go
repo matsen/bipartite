@@ -29,8 +29,8 @@ var importCmd = &cobra.Command{
 	Long: `Import references from an external format.
 
 Usage:
-  bp import --format paperpile export.json
-  bp import --format paperpile export.json --dry-run
+  bip import --format paperpile export.json
+  bip import --format paperpile export.json --dry-run
 
 Supported formats:
   paperpile  - Paperpile JSON export`,
