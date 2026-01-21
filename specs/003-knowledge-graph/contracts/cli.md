@@ -5,7 +5,7 @@
 
 ## Overview
 
-All edge commands are subcommands of `bp edge`. Each supports `--json` flag for structured output (agent-first design).
+All edge commands are subcommands of `bip edge`. Each supports `--json` flag for structured output (agent-first design).
 
 ## Commands
 

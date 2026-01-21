@@ -7,7 +7,7 @@
 
 ## Summary
 
-Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by DOI/PDF, exploring citation graphs, discovering literature gaps, and linking preprints to published versions. Uses direct HTTP client with Go standard library (no MCP dependency).
+Integrate Semantic Scholar API (ASTA) into bip artite to enable adding papers by DOI/PDF, exploring citation graphs, discovering literature gaps, and linking preprints to published versions. Uses direct HTTP client with Go standard library (no MCP dependency).
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by 
 **Storage**: JSONL (refs.jsonl) + ephemeral SQLite + in-memory LRU cache for API responses
 **Testing**: go test (existing pattern)
 **Target Platform**: macOS, Linux (CLI binary)
-**Project Type**: Single project (existing cmd/bp structure)
+**Project Type**: Single project (existing cmd/bip structure)
 **Performance Goals**: Add paper <3s, citation queries <5s, gap discovery <60s for 1000 papers
 **Constraints**: Respect S2 rate limits (100 req/5 min unauthenticated), cache aggressively
 **Scale/Scope**: Personal reference collections (100-5000 papers typical)
@@ -28,7 +28,7 @@ Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by 
 | Principle | Status | Notes |
 |-----------|--------|-------|
 | I. Agent-First Design | ✅ PASS | All commands via CLI, JSON output by default, `--human` flag for readable output |
-| II. Git-Versionable Architecture | ✅ PASS | Data stored in JSONL (refs.jsonl), cache in .bipartite/cache/ (gitignored) |
+| II. Git-Versionable Architecture | ✅ PASS | Data stored in JSONL (refs.jsonl), cache in .bip artite/cache/ (gitignored) |
 | III. Fail-Fast Philosophy | ✅ PASS | API errors, rate limits, missing DOIs all produce clear errors |
 | IV. Real Testing (Agentic TDD) | ✅ PASS | Tests with real S2 API fixtures (recorded responses) |
 | V. Clean Architecture | ✅ PASS | New `internal/s2/` package, clear separation from existing code |
@@ -57,7 +57,7 @@ specs/004-s2-integration/
 ### Source Code (repository root)
 
 ```text
-cmd/bp/
+cmd/bip/
 ├── asta.go              # bp s2 subcommand (add, add-pdf, lookup, citations, references, gaps, link-published)
 ├── ...                  # Existing commands unchanged
 

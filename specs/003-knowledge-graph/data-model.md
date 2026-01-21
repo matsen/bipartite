@@ -35,7 +35,7 @@ These are suggestions, not enforced constraints. Any string is valid.
 
 ## JSONL Schema
 
-**File**: `.bipartite/edges.jsonl`
+**File**: `.bip artite/edges.jsonl`
 
 Each line is a JSON object representing one edge:
 
@@ -55,12 +55,12 @@ Each line is a JSON object representing one edge:
 
 When a paper is deleted from refs.jsonl:
 - Edges referencing that paper remain in edges.jsonl
-- `bp groom` detects and reports orphaned edges
+- `bip groom` detects and reports orphaned edges
 - User decides whether to remove orphaned edges
 
 ## SQLite Index Schema
 
-**File**: `.bipartite/cache/edges.db` (ephemeral, gitignored)
+**File**: `.bip artite/cache/edges.db` (ephemeral, gitignored)
 
 ```sql
 CREATE TABLE edges (
@@ -77,7 +77,7 @@ CREATE INDEX idx_edges_target ON edges(target_id);
 CREATE INDEX idx_edges_type ON edges(relationship_type);
 ```
 
-Rebuilt from edges.jsonl on `bp rebuild`.
+Rebuilt from edges.jsonl on `bip rebuild`.
 
 ## State Transitions
 
@@ -92,9 +92,9 @@ Rebuilt from edges.jsonl on `bp rebuild`.
 
 | State | Description | Trigger |
 |-------|-------------|---------|
-| Created | New edge added | `bp edge add` or `bp edge import` |
+| Created | New edge added | `bip edge add` or `bip edge import` |
 | Active | Edge references valid papers | Normal state |
-| Updated | Summary changed | `bp edge add` with existing (source, target, type) |
+| Updated | Summary changed | `bip edge add` with existing (source, target, type) |
 | Orphaned | Source or target paper deleted | Paper removal from refs.jsonl |
 
 ## Relationships

@@ -14,14 +14,14 @@
 ### 1. Initialize Go Module
 
 ```bash
-cd /Users/matsen/re/bipartite
-go mod init github.com/matsen/bipartite
+cd /Users/matsen/re/bip artite
+go mod init github.com/matsen/bip artite
 ```
 
 ### 2. Create Directory Structure
 
 ```bash
-mkdir -p cmd/bp
+mkdir -p cmd/bip
 mkdir -p internal/{config,importer,reference,storage,query,export,pdf}
 mkdir -p testdata
 ```
@@ -65,23 +65,23 @@ go test -race ./...
 
 ```bash
 # Development build
-go build -o bp ./cmd/bp
+go build -o bip ./cmd/bip
 
 # Release build (smaller binary)
-go build -ldflags="-s -w" -o bp ./cmd/bp
+go build -ldflags="-s -w" -o bp ./cmd/bip
 
 # Cross-compile for Linux
-GOOS=linux GOARCH=amd64 go build -o bp-linux ./cmd/bp
+GOOS=linux GOARCH=amd64 go build -o bip-linux ./cmd/bip
 ```
 
 ### Running
 
 ```bash
 # From project root
-./bp init
-./bp config pdf-root ~/Google\ Drive/Paperpile
-./bp import --format paperpile _ignore/paperpile-export-jan-12.json
-./bp search "phylogenetics"
+./bip init
+./bip config pdf-root ~/Google\ Drive/Paperpile
+./bip import --format paperpile _ignore/paperpile-export-jan-12.json
+./bip search "phylogenetics"
 ```
 
 ## Test Fixtures
@@ -160,7 +160,7 @@ When extracting fixtures:
 
 ### Phase 4: CLI & Export (Week 4)
 
-8. **CLI framework** (`cmd/bp/`)
+8. **CLI framework** (`cmd/bip/`)
    - Command dispatcher
    - Flag parsing per command
    - JSON/human output formatting
@@ -261,7 +261,7 @@ Ensure you're using `modernc.org/sqlite` (pure Go), not `mattn/go-sqlite3` (CGO)
 
 ```bash
 # Should not require CGO
-CGO_ENABLED=0 go build ./cmd/bp
+CGO_ENABLED=0 go build ./cmd/bip
 ```
 
 ### FTS5 not working

@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add semantic search capabilities to bipartite by indexing paper abstracts as vector embeddings. Users can search by concept ("methods for inferring evolutionary trees") and find similar papers, even without exact keyword matches. The index is ephemeral and rebuildable from JSONL source data.
+Add semantic search capabilities to bip artite by indexing paper abstracts as vector embeddings. Users can search by concept ("methods for inferring evolutionary trees") and find similar papers, even without exact keyword matches. The index is ephemeral and rebuildable from JSONL source data.
 
 ## Technical Context
 
@@ -53,7 +53,7 @@ specs/002-rag-index/
 ### Source Code (repository root)
 
 ```text
-cmd/bp/
+cmd/bip/
 ├── main.go              # Existing - add new subcommands
 ├── semantic.go          # NEW: bp semantic <query>
 ├── similar.go           # NEW: bp similar <id>

@@ -53,13 +53,13 @@ Based on the MCP tools available from ASTA, the following tools map to our CLI c
 
 | CLI Command | MCP Tool | Key Parameters |
 |-------------|----------|----------------|
-| `bp asta search` | `search_papers_by_relevance` | `keyword`, `fields`, `limit`, `publication_date_range`, `venues` |
-| `bp asta snippet` | `snippet_search` | `query`, `limit`, `venues`, `paper_ids`, `inserted_before` |
-| `bp asta paper` | `get_paper` | `paper_id`, `fields` |
-| `bp asta citations` | `get_citations` | `paper_id`, `fields`, `limit`, `publication_date_range` |
-| `bp asta references` | N/A (use get_paper with references field) | - |
-| `bp asta author` | `search_authors_by_name` | `name`, `fields`, `limit` |
-| `bp asta author-papers` | `get_author_papers` | `author_id`, `paper_fields`, `limit`, `publication_date_range` |
+| `bip asta search` | `search_papers_by_relevance` | `keyword`, `fields`, `limit`, `publication_date_range`, `venues` |
+| `bip asta snippet` | `snippet_search` | `query`, `limit`, `venues`, `paper_ids`, `inserted_before` |
+| `bip asta paper` | `get_paper` | `paper_id`, `fields` |
+| `bip asta citations` | `get_citations` | `paper_id`, `fields`, `limit`, `publication_date_range` |
+| `bip asta references` | N/A (use get_paper with references field) | - |
+| `bip asta author` | `search_authors_by_name` | `name`, `fields`, `limit` |
+| `bip asta author-papers` | `get_author_papers` | `author_id`, `paper_fields`, `limit`, `publication_date_range` |
 
 ### Additional Tools Available
 

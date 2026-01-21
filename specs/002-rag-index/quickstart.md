@@ -3,11 +3,11 @@
 **Feature**: 002-rag-index
 **Date**: 2026-01-12
 
-This guide walks through setting up and using semantic search in bipartite.
+This guide walks through setting up and using semantic search in bip artite.
 
 ## Prerequisites
 
-1. **bipartite Phase I complete**: You have an initialized repository with imported papers
+1. **bip artite Phase I complete**: You have an initialized repository with imported papers
 2. **Ollama installed**: Install from [ollama.ai](https://ollama.ai)
 3. **Embedding model pulled**: Run `ollama pull nomic-embed-text`
 
@@ -176,7 +176,7 @@ Semantic search finds conceptually similar papers, not keyword matches. If resul
 
 1. Try rephrasing your query
 2. Use a higher threshold: `--threshold 0.7`
-3. Use keyword search for exact terms: `bp search "exact phrase"`
+3. Use keyword search for exact terms: `bip search "exact phrase"`
 
 ## Performance Notes
 

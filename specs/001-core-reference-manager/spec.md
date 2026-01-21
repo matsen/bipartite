@@ -9,7 +9,7 @@
 
 ### User Story 1 - Import References from Paperpile (Priority: P1)
 
-A researcher exports their library from Paperpile as JSON and imports it into bipartite to create a searchable, agent-accessible reference collection. This is the foundation—without import, nothing else works.
+A researcher exports their library from Paperpile as JSON and imports it into bip artite to create a searchable, agent-accessible reference collection. This is the foundation—without import, nothing else works.
 
 **Why this priority**: Import is the entry point for all data. No other feature is useful without references in the system.
 
@@ -17,7 +17,7 @@ A researcher exports their library from Paperpile as JSON and imports it into bi
 
 **Acceptance Scenarios**:
 
-1. **Given** a new bipartite repository, **When** user runs import with a Paperpile JSON export, **Then** all references are stored with their metadata (title, authors, DOI, abstract, venue, dates, PDF paths).
+1. **Given** a new bip artite repository, **When** user runs import with a Paperpile JSON export, **Then** all references are stored with their metadata (title, authors, DOI, abstract, venue, dates, PDF paths).
 
 2. **Given** an existing repository with references, **When** user imports an updated Paperpile export containing the same papers with updated metadata, **Then** existing entries are updated (matched by DOI) and new entries are added.
 
@@ -69,7 +69,7 @@ A researcher or agent wants to open a paper's main PDF in the system viewer. Thi
 
 A researcher writing a paper exports references to BibTeX format for use with LaTeX. They can export their entire collection or specific papers by ID.
 
-**Why this priority**: BibTeX export completes the academic writing workflow—import from reference manager, work with bipartite, export for LaTeX.
+**Why this priority**: BibTeX export completes the academic writing workflow—import from reference manager, work with bip artite, export for LaTeX.
 
 **Independent Test**: Import references, export to BibTeX, verify output is valid BibTeX that LaTeX can process.
 
@@ -85,7 +85,7 @@ A researcher writing a paper exports references to BibTeX format for use with La
 
 ### User Story 5 - Initialize and Configure Repository (Priority: P5)
 
-A researcher sets up a new bipartite repository, configuring the path to their PDF folder (e.g., Paperpile's Google Drive sync folder).
+A researcher sets up a new bip artite repository, configuring the path to their PDF folder (e.g., Paperpile's Google Drive sync folder).
 
 **Why this priority**: Initialization is required once per repository. Other features depend on configuration but init is a one-time operation.
 
@@ -93,11 +93,11 @@ A researcher sets up a new bipartite repository, configuring the path to their P
 
 **Acceptance Scenarios**:
 
-1. **Given** an empty directory, **When** user runs init command, **Then** a bipartite repository structure is created with necessary files and folders.
+1. **Given** an empty directory, **When** user runs init command, **Then** a bip artite repository structure is created with necessary files and folders.
 
 2. **Given** an initialized repository, **When** user configures PDF folder path, **Then** the path is stored and used for resolving paper PDF locations.
 
-3. **Given** a directory that is already a bipartite repository, **When** user runs init, **Then** the system refuses with a clear error (no silent overwrite).
+3. **Given** a directory that is already a bip artite repository, **When** user runs init, **Then** the system refuses with a clear error (no silent overwrite).
 
 ---
 
@@ -132,8 +132,8 @@ After pulling changes from git (e.g., collaborator added papers), the researcher
 
 **Initialization & Configuration**
 
-- **FR-001**: System MUST initialize a repository structure in the current directory via `bp init`
-- **FR-002**: System MUST store configuration (PDF folder path, PDF reader preference) via `bp config`
+- **FR-001**: System MUST initialize a repository structure in the current directory via `bip init`
+- **FR-002**: System MUST store configuration (PDF folder path, PDF reader preference) via `bip config`
 - **FR-003**: System MUST fail immediately if initializing an already-initialized directory
 - **FR-004**: System MUST fail immediately if configured PDF path does not exist
 
@@ -149,30 +149,30 @@ After pulling changes from git (e.g., collaborator added papers), the researcher
 
 **Query**
 
-- **FR-012**: System MUST support keyword search across title, authors, and abstract via `bp search`
-- **FR-013**: System MUST retrieve a single paper by ID via `bp get <id>`
-- **FR-014**: System MUST list all papers via `bp list`
+- **FR-012**: System MUST support keyword search across title, authors, and abstract via `bip search`
+- **FR-013**: System MUST retrieve a single paper by ID via `bip get <id>`
+- **FR-014**: System MUST list all papers via `bip list`
 - **FR-015**: System MUST output JSON by default for all query commands
 - **FR-016**: System MUST support human-readable output format via flag
 
 **PDF Access**
 
-- **FR-017**: System MUST open a paper's main PDF via `bp open <id>`
+- **FR-017**: System MUST open a paper's main PDF via `bip open <id>`
 - **FR-018**: System MUST resolve PDF paths relative to the configured PDF folder
 - **FR-019**: System MUST support opening supplementary PDFs
 - **FR-020**: System MUST fail with clear error if PDF file not found
 
 **Export**
 
-- **FR-021**: System MUST export all papers to BibTeX via `bp export --bibtex`
-- **FR-022**: System MUST export specific papers by ID via `bp export --bibtex --keys id1,id2`
+- **FR-021**: System MUST export all papers to BibTeX via `bip export --bibtex`
+- **FR-022**: System MUST export specific papers by ID via `bip export --bibtex --keys id1,id2`
 - **FR-023**: System MUST produce valid classic BibTeX format (not BibLaTeX)
 
 **Data Integrity**
 
 - **FR-024**: System MUST store all reference data in a human-readable, git-mergeable format
-- **FR-025**: System MUST rebuild query layer from source data via `bp rebuild`
-- **FR-026**: System MUST validate source data integrity via `bp check`
+- **FR-025**: System MUST rebuild query layer from source data via `bip rebuild`
+- **FR-026**: System MUST validate source data integrity via `bip check`
 
 ### Key Entities
 

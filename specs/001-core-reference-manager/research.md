@@ -50,7 +50,7 @@ Sources:
 
 **Implementation Pattern**:
 ```go
-// cmd/bp/main.go
+// cmd/bip/main.go
 func main() {
     rootCmd := &cobra.Command{
         Use:   "bp",
@@ -67,7 +67,7 @@ func main() {
     rootCmd.Execute()
 }
 
-// cmd/bp/import.go
+// cmd/bip/import.go
 func newImportCmd() *cobra.Command {
     var format string
     var dryRun bool

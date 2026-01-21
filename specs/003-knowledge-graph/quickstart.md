@@ -5,8 +5,8 @@
 
 ## Prerequisites
 
-- Bipartite repo initialized (`bp init`)
-- Papers imported (`bp import`)
+- Bipartite repo initialized (`bip init`)
+- Papers imported (`bip import`)
 
 ## Basic Usage
 
@@ -91,7 +91,7 @@ bp check
 
 1. External tool analyzes manuscript and bibliography
 2. Generates edges.jsonl with relationships
-3. Import into bipartite:
+3. Import into bip artite:
 
 ```bash
 # Tool output

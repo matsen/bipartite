@@ -94,7 +94,7 @@ A researcher wants to verify the semantic index is complete and healthy—that a
 
 **Semantic Search**
 
-- **FR-001**: System MUST support semantic search via `bp semantic <query>` command
+- **FR-001**: System MUST support semantic search via `bip semantic <query>` command
 - **FR-002**: System MUST return papers ranked by semantic similarity to the query
 - **FR-003**: System MUST include similarity scores in search results
 - **FR-004**: System MUST support `--limit N` flag to control number of results (default: 10)
@@ -103,18 +103,18 @@ A researcher wants to verify the semantic index is complete and healthy—that a
 
 **Similar Papers**
 
-- **FR-007**: System MUST find similar papers via `bp similar <id>` command
+- **FR-007**: System MUST find similar papers via `bip similar <id>` command
 - **FR-008**: System MUST return papers ranked by similarity to the specified paper's abstract
 - **FR-009**: System MUST support `--limit N` flag for similar papers (default: 10)
 - **FR-010**: System MUST error clearly if the source paper has no abstract
 
 **Index Management**
 
-- **FR-011**: System MUST build/rebuild semantic index via `bp index build` command
+- **FR-011**: System MUST build/rebuild semantic index via `bip index build` command
 - **FR-012**: System MUST report progress during index building (papers processed)
 - **FR-013**: System MUST report statistics on completion (total indexed, skipped)
 - **FR-014**: System MUST skip papers without abstracts during indexing (with count reported)
-- **FR-015**: System MUST check index health via `bp index check` command
+- **FR-015**: System MUST check index health via `bip index check` command
 - **FR-016**: System MUST store semantic index in a location that can be gitignored (ephemeral, rebuildable)
 
 **Architecture Constraints**

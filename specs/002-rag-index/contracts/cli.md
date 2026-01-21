@@ -336,7 +336,7 @@ bp index check
 bp index check --human
 
 # Use in scripts
-bp index check || bp index build
+bp index check || bip index build
 ```
 
 ---

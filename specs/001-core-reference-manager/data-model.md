@@ -126,7 +126,7 @@ type ImportSource struct {
 
 ### Config
 
-Repository configuration stored in `.bipartite/config.json`.
+Repository configuration stored in `.bip artite/config.json`.
 
 ```go
 type Config struct {
@@ -164,7 +164,7 @@ One reference per line, complete JSON object:
 
 ### SQLite Schema (refs.db)
 
-Ephemeral database rebuilt from JSONL via `bp rebuild`.
+Ephemeral database rebuilt from JSONL via `bip rebuild`.
 
 ```sql
 -- Main references table

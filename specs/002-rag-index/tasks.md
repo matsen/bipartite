@@ -15,7 +15,7 @@
 
 ## Path Conventions (from plan.md)
 
-- CLI commands: `cmd/bp/`
+- CLI commands: `cmd/bip/`
 - Embedding package: `internal/embedding/`
 - Semantic package: `internal/semantic/`
 - Test fixtures: `testdata/abstracts/`
@@ -65,7 +65,7 @@
 
 ## Phase 3: User Story 1 - Semantic Search by Concept (Priority: P1) 🎯 MVP
 
-**Goal**: Enable semantic search via `bp semantic <query>` command with similarity scoring
+**Goal**: Enable semantic search via `bip semantic <query>` command with similarity scoring
 
 **Independent Test**: Import references with abstracts, build the semantic index, run a conceptual query, verify that results include semantically related papers that wouldn't match keyword search.
 
@@ -75,13 +75,13 @@
 - [X] T017 [US1] Implement progress reporting for index build (to stderr) in internal/semantic/builder.go
 - [X] T018 [US1] Implement semantic search function (query embedding + cosine similarity ranking) in internal/semantic/search.go
 - [X] T019 [US1] Implement threshold filtering and limit in internal/semantic/search.go
-- [X] T020 [US1] Create bp index build command with --no-progress and --human flags in cmd/bp/index.go
-- [X] T021 [US1] Create bp semantic command with --limit, --threshold, --human flags in cmd/bp/semantic.go
+- [X] T020 [US1] Create bp index build command with --no-progress and --human flags in cmd/bip/index.go
+- [X] T021 [US1] Create bp semantic command with --limit, --threshold, --human flags in cmd/bip/semantic.go
 - [X] T022 [US1] Implement JSON output format for bp semantic per contracts/cli.md
 - [X] T023 [US1] Implement human-readable output format for bp semantic per contracts/cli.md
-- [X] T024 [US1] Add error handling: empty query, index not found, Ollama not available in cmd/bp/semantic.go
-- [X] T025 [US1] Wire index build command to main.go and register subcommand in cmd/bp/index.go
-- [X] T026 [US1] Wire semantic command to main.go and register subcommand in cmd/bp/semantic.go
+- [X] T024 [US1] Add error handling: empty query, index not found, Ollama not available in cmd/bip/semantic.go
+- [X] T025 [US1] Wire index build command to main.go and register subcommand in cmd/bip/index.go
+- [X] T026 [US1] Wire semantic command to main.go and register subcommand in cmd/bip/semantic.go
 
 **Checkpoint**: User Story 1 complete - semantic search works with index build
 
@@ -89,18 +89,18 @@
 
 ## Phase 4: User Story 2 - Find Similar Papers (Priority: P2)
 
-**Goal**: Enable finding similar papers via `bp similar <id>` command
+**Goal**: Enable finding similar papers via `bip similar <id>` command
 
 **Independent Test**: Import references, build index, select a paper, run similar-papers command, verify results are topically related to the source paper.
 
 ### Implementation for User Story 2
 
 - [X] T027 [US2] Implement find-similar function (lookup paper embedding, compute similarities) in internal/semantic/search.go
-- [X] T028 [US2] Create bp similar command with --limit and --human flags in cmd/bp/similar.go
+- [X] T028 [US2] Create bp similar command with --limit and --human flags in cmd/bip/similar.go
 - [X] T029 [US2] Implement JSON output format for bp similar per contracts/cli.md
 - [X] T030 [US2] Implement human-readable output format for bp similar per contracts/cli.md
-- [X] T031 [US2] Add error handling: paper not found, paper has no abstract, index not found in cmd/bp/similar.go
-- [X] T032 [US2] Wire similar command to main.go and register subcommand in cmd/bp/similar.go
+- [X] T031 [US2] Add error handling: paper not found, paper has no abstract, index not found in cmd/bip/similar.go
+- [X] T032 [US2] Wire similar command to main.go and register subcommand in cmd/bip/similar.go
 
 **Checkpoint**: User Stories 1 AND 2 work independently
 
@@ -108,7 +108,7 @@
 
 ## Phase 5: User Story 3 - Rebuild Semantic Index (Priority: P3)
 
-**Goal**: Enable full index rebuild with statistics reporting via `bp index build`
+**Goal**: Enable full index rebuild with statistics reporting via `bip index build`
 
 **Independent Test**: Import new papers, run index rebuild, verify new papers appear in semantic search results.
 
@@ -127,15 +127,15 @@
 
 ## Phase 6: User Story 4 - Check Index Health (Priority: P4)
 
-**Goal**: Enable index health verification via `bp index check` command
+**Goal**: Enable index health verification via `bip index check` command
 
 **Independent Test**: Build index, run check command, verify it reports index status and any gaps.
 
 ### Implementation for User Story 4
 
-- [X] T039 [US4] Implement index health check logic (compare indexed vs papers with abstracts) in cmd/bp/index.go
-- [X] T040 [US4] Implement missing papers detection in cmd/bp/index.go
-- [X] T041 [US4] Create bp index check command with --human flag in cmd/bp/index.go
+- [X] T039 [US4] Implement index health check logic (compare indexed vs papers with abstracts) in cmd/bip/index.go
+- [X] T040 [US4] Implement missing papers detection in cmd/bip/index.go
+- [X] T041 [US4] Create bp index check command with --human flag in cmd/bip/index.go
 - [X] T042 [US4] Implement JSON output for bp index check per contracts/cli.md
 - [X] T043 [US4] Implement human-readable output for bp index check per contracts/cli.md
 - [X] T044 [US4] Add exit codes per contracts/cli.md (0=healthy, 2=not found, 6=stale)
@@ -151,7 +151,7 @@
 - [X] T045 [P] Verify all exit codes match contracts/cli.md specification across all commands
 - [X] T046 [P] Verify all error messages match contracts/cli.md standard errors
 - [X] T047 Implement lazy loading for SemanticIndex (load only when needed) in internal/semantic/index.go
-- [X] T048 Verify index file is in .bipartite/cache/semantic.gob (gitignored location)
+- [X] T048 Verify index file is in .bip artite/cache/semantic.gob (gitignored location)
 - [X] T049 Run quickstart.md validation workflow manually
 
 ---
@@ -214,15 +214,15 @@ T016 → T017 (index build) → T018 → T019 (search) → T020 → T021 (CLI) �
 2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
 3. Complete Phase 3: User Story 1
 4. **STOP and VALIDATE**: Test semantic search end-to-end
-5. Demo: `bp index build` → `bp semantic "phylogenetics"`
+5. Demo: `bip index build` → `bip semantic "phylogenetics"`
 
 ### Incremental Delivery
 
 1. **Setup + Foundational** → Foundation ready
-2. **Add User Story 1** → `bp semantic` works → Demo (MVP!)
-3. **Add User Story 2** → `bp similar` works → Demo
-4. **Add User Story 3** → `bp index build` with statistics → Demo
-5. **Add User Story 4** → `bp index check` works → Demo
+2. **Add User Story 1** → `bip semantic` works → Demo (MVP!)
+3. **Add User Story 2** → `bip similar` works → Demo
+4. **Add User Story 3** → `bip index build` with statistics → Demo
+5. **Add User Story 4** → `bip index check` works → Demo
 6. Each story adds value without breaking previous stories
 
 ---
@@ -230,7 +230,7 @@ T016 → T017 (index build) → T018 → T019 (search) → T020 → T021 (CLI) �
 ## Notes
 
 - All commands output JSON by default, `--human` for readable format (Phase I pattern)
-- Index stored in `.bipartite/cache/semantic.gob` (gitignored, ephemeral)
+- Index stored in `.bip artite/cache/semantic.gob` (gitignored, ephemeral)
 - Embedding model: `nomic-embed-text` via Ollama (768 dimensions, 8K context)
 - Ollama must be running for index build and semantic search
 - Papers without abstracts are skipped during indexing (tracked in statistics)

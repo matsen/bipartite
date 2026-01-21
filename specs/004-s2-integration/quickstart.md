@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-- Bipartite repo initialized (`bp init`)
+- Bipartite repo initialized (`bip init`)
 - Optional: S2 API key in `.env` as `S2_API_KEY` (higher rate limits)
 
 ## Basic Usage
@@ -164,7 +164,7 @@ The system automatically respects S2 rate limits:
 - Without API key: ~1 request per 3 seconds
 - With API key: ~1 request per second
 
-Long operations (like `bp s2 gaps`) show progress.
+Long operations (like `bip s2 gaps`) show progress.
 
 ## Troubleshooting
 

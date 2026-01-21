@@ -2,7 +2,7 @@
 
 ## Concept
 
-Bipartite is a reference management system designed for AI agents and command-line workflows. The name comes from the conceptual framework of a bipartite graph:
+Bipartite is a reference management system designed for AI agents and command-line workflows. The name comes from the conceptual framework of a bip artite graph:
 
 - **One side**: The researcher's world (notes, code, artifacts, concepts)
 - **Other side**: The academic literature (papers, citations, authors)
@@ -27,7 +27,7 @@ Inspired by [beads](https://github.com/steveyegge/beads), the system uses:
 - **JSONL as single source of truth** - human-readable, git-mergeable
 - **Ephemeral database** - SQLite rebuilt from JSONL on demand
 - **Merge-friendly** - multiple researchers can add papers, conflicts resolved intelligently
-- **Standalone repos** - each bipartite repo is self-contained, suitable for private GitHub
+- **Standalone repos** - each bip artite repo is self-contained, suitable for private GitHub
 
 This means:
 - No database lock-in
@@ -45,45 +45,45 @@ A small, beautiful thing that doesn't depend on too many big things:
 
 ## CLI Design
 
-Short command: `bp`
+Short command: `bip`
 
 ```bash
 # Initialization
-bp init                          # Initialize a bipartite repo
-bp config pdf-path <path>        # Set PDF folder location (e.g., Paperpile sync)
+bip init                          # Initialize a bip artite repo
+bip config pdf-path <path>        # Set PDF folder location (e.g., Paperpile sync)
 
 # Adding references
-bp import --format paperpile export.json  # Import from Paperpile JSON
-bp import --format zotero library.json    # Import from Zotero (future)
-bp import --format bibtex refs.bib        # Import from BibTeX (future)
-# bp add paper.pdf                        # Future: extract metadata from PDF (Phase IV)
+bip import --format paperpile export.json  # Import from Paperpile JSON
+bip import --format zotero library.json    # Import from Zotero (future)
+bip import --format bibtex refs.bib        # Import from BibTeX (future)
+# bip add paper.pdf                        # Future: extract metadata from PDF (Phase IV)
 
 # Querying
-bp search "keyword"              # Search papers
-bp get <id> --json               # Get paper metadata
-bp list --json                   # List all papers
+bip search "keyword"              # Search papers
+bip get <id> --json               # Get paper metadata
+bip list --json                   # List all papers
 
 # PDF access
-bp open <id>                     # Open PDF from linked folder
+bip open <id>                     # Open PDF from linked folder
 
 # Export
-bp export --bibtex               # Export to BibTeX
-bp export --bibtex --keys a,b,c  # Export specific papers
+bip export --bibtex               # Export to BibTeX
+bip export --bibtex --keys a,b,c  # Export specific papers
 
 # Metadata editing
-bp supersedes <id> <doi>         # Mark paper as superseding another (e.g., published replaces preprint)
+bip supersedes <id> <doi>         # Mark paper as superseding another (e.g., published replaces preprint)
 
 # Maintenance
-bp rebuild                       # Rebuild ephemeral DB from JSONL
-bp check                         # Verify integrity
-bp groom                         # Find duplicates, problems; suggest/apply fixes
+bip rebuild                       # Rebuild ephemeral DB from JSONL
+bip check                         # Verify integrity
+bip groom                         # Find duplicates, problems; suggest/apply fixes
 ```
 
 ## Architecture
 
 ```
-bipartite-repo/
-├── .bipartite/
+bip artite-repo/
+├── .bip artite/
 │   ├── refs.jsonl           # Source of truth - all references
 │   ├── config.json          # Repository configuration
 │   └── cache/
@@ -94,7 +94,7 @@ bipartite-repo/
 
 ### Internal Schema (JSONL)
 
-Reference-manager-agnostic format. The schema is bipartite's own - importers transform from various sources:
+Reference-manager-agnostic format. The schema is bip artite's own - importers transform from various sources:
 
 ```jsonl
 {"id":"Ahn2026-rs","doi":"10.64898/2026.01.05.697808","title":"Influenza hemagglutinin subtypes...","authors":[{"first":"Jenny J","last":"Ahn","orcid":"0009-0000-3912-7162"}],"abstract":"Abstract Hemagglutinins...","published":{"year":2026,"month":1,"day":6},"venue":"bioRxiv","pdf_path":"All Papers/A/Ahn et al. 2026 - Influenza hemagglutinin....pdf","source":{"type":"paperpile","id":"2773420d-4009-0be9-920f-d674f7f86794"}}
@@ -114,7 +114,7 @@ This means `id` is stable once assigned. Re-imports update metadata but don't ch
 
 ### Grooming
 
-`bp groom` performs deeper analysis that would slow down regular imports:
+`bip groom` performs deeper analysis that would slow down regular imports:
 
 - **Duplicate detection**: Papers with same title/authors but different IDs (no DOI to match on)
 - **Missing PDFs**: Entries where `pdf_path` doesn't resolve to a file
@@ -160,9 +160,9 @@ The importer maps:
 
 ### Data Flow
 
-1. **Write path**: `bp import` → append to JSONL → rebuild DB index
+1. **Write path**: `bip import` → append to JSONL → rebuild DB index
 2. **Read path**: Query DB (fast) → return structured JSON
-3. **Sync path**: `git pull` → `bp rebuild` → fresh DB from merged JSONL
+3. **Sync path**: `git pull` → `bip rebuild` → fresh DB from merged JSONL
 4. **Import merge**: Match by `doi` (primary) → replace existing entry with new data
 5. **Conflict resolution**: Agents merge JSONL conflicts intelligently
 
@@ -172,9 +172,9 @@ The importer maps:
 
 PDFs are not stored in the repo. Instead:
 - Configure a path to your PDF folder (each reference manager has its own sync location)
-- `bp open <id>` finds and opens the PDF in the system viewer
+- `bip open <id>` finds and opens the PDF in the system viewer
 - PDF paths stored per-paper (imported from reference manager metadata)
-- Goal: `bp open Ahn2026-rs` just works
+- Goal: `bip open Ahn2026-rs` just works
 
 Examples of PDF folder locations:
 - **Paperpile**: Google Drive sync folder (e.g., `~/Google Drive/Paperpile`)
@@ -186,7 +186,7 @@ The importer extracts relative PDF paths from the reference manager export, and 
 
 ### PDF Reader Support
 
-`bp open` should open PDFs to the correct page when possible. Cross-platform reader support:
+`bip open` should open PDFs to the correct page when possible. Cross-platform reader support:
 
 **macOS:**
 - **Skim** (recommended): `skim://path/to/file.pdf#page=N` - precise page navigation
@@ -197,7 +197,7 @@ The importer extracts relative PDF paths from the reference manager export, and 
 - **Evince**: `evince --page-index=N file.pdf`
 - **Okular**: `okular --page N file.pdf`
 
-Configuration via `bp config pdf-reader <reader>`.
+Configuration via `bip config pdf-reader <reader>`.
 
 ## LaTeX/BibTeX Integration
 
@@ -216,7 +216,7 @@ Academic writing workflow is first-class:
 
 The foundation that must work perfectly:
 
-- `bp` CLI with all core commands
+- `bip` CLI with all core commands
 - JSONL source of truth
 - Ephemeral SQLite for queries
 - Importer architecture (Paperpile JSON first, extensible to other formats)
@@ -235,7 +235,7 @@ Semantic search over your literature:
 
 ### Phase III: Knowledge Graph
 
-The full bipartite vision:
+The full bip artite vision:
 
 - **Nodes**: papers, concepts, code features, artifacts
 - **Edges**: directed relationships with semantic summaries
@@ -245,9 +245,9 @@ The full bipartite vision:
 Foundation for the knowledge graph - directed edges between papers:
 
 - Store edges in JSONL (git-mergeable, like refs.jsonl)
-- CLI commands: `bp edge add`, `bp edge import`, `bp edge list`, `bp edge search`, `bp edge export`
+- CLI commands: `bip edge add`, `bip edge import`, `bip edge list`, `bip edge search`, `bip edge export`
 - Relationship types: "cites", "extends", "contradicts", "implements", "applies-to", "builds-on"
-- External tools (tex-to-edges skill) generate edges; bp provides storage and query
+- External tools (tex-to-edges skill) generate edges; bipprovides storage and query
 
 #### Phase III-b: Concept Nodes
 
@@ -277,7 +277,7 @@ Edges carry:
 
 #### Edge Generation
 
-Edges are generated by external tools, not bp itself. bp provides storage and query capabilities for the knowledge graph.
+Edges are generated by external tools, not bip itself. bipprovides storage and query capabilities for the knowledge graph.
 
 **tex-to-edges Claude skill**: A Claude Code skill that analyzes a manuscript and its references:
 
@@ -285,9 +285,9 @@ Edges are generated by external tools, not bp itself. bp provides storage and qu
 2. Read the bib file to map citekeys to papers
 3. For each citation, use the LLM to understand *why* the paper is being cited based on context
 4. Generate edges: `manuscript → cited_paper` with relationship type ("cites", "extends", "builds-on", etc.) and a relational summary
-5. Output JSONL that bp can ingest via `bp edge add` (or similar)
+5. Output JSONL that bip can ingest via `bip edge add` (or similar)
 
-This separation keeps bp focused on data management while allowing flexible edge generation strategies. The skill approach means edge generation happens in the natural flow of writing—an agent helping with a paper can populate the knowledge graph as a side effect.
+This separation keeps bipfocused on data management while allowing flexible edge generation strategies. The skill approach means edge generation happens in the natural flow of writing—an agent helping with a paper can populate the knowledge graph as a side effect.
 
 ### Phase IV: Academic Graph Integration
 
@@ -295,23 +295,23 @@ Connect to the broader academic graph via two complementary services from Allen 
 
 #### Phase IV-a: Semantic Scholar (S2) - Structured Database
 
-**`bp s2` commands** - Classical database operations via the [Semantic Scholar API](https://www.semanticscholar.org/product/api):
+**`bip s2` commands** - Classical database operations via the [Semantic Scholar API](https://www.semanticscholar.org/product/api):
 
-- `bp s2 add DOI:...` - Add papers by identifier, fetch metadata
-- `bp s2 add-pdf paper.pdf` - Extract DOI from PDF, fetch metadata
-- `bp s2 citations <id>` / `bp s2 references <id>` - Citation tracking
-- `bp s2 gaps` - Find highly-cited papers missing from your collection
-- `bp s2 link-published` - Auto-detect preprint→published relationships
+- `bip s2 add DOI:...` - Add papers by identifier, fetch metadata
+- `bip s2 add-pdf paper.pdf` - Extract DOI from PDF, fetch metadata
+- `bip s2 citations <id>` / `bip s2 references <id>` - Citation tracking
+- `bip s2 gaps` - Find highly-cited papers missing from your collection
+- `bip s2 link-published` - Auto-detect preprint→published relationships
 
 S2 provides structured access to 200M+ papers. Good for: adding papers, metadata lookup, citation graphs.
 
 #### Phase IV-b: ASTA - LLM-Powered Discovery
 
-**`bp asta` commands** - Next-generation search via [ASTA](https://allenai.org/blog/asta) (Allen AI's Scientific Tool for Agents):
+**`bip asta` commands** - Next-generation search via [ASTA](https://allenai.org/blog/asta) (Allen AI's Scientific Tool for Agents):
 
-- `bp asta search <query>` - LLM-powered relevance search ("like Google Scholar on steroids")
-- `bp asta snippet <query>` - Search text passages within papers (unique to ASTA)
-- `bp asta paper <id>` / `bp asta citations <id>` - Paper lookup with relevancy ratings
+- `bip asta search <query>` - LLM-powered relevance search ("like Google Scholar on steroids")
+- `bip asta snippet <query>` - Search text passages within papers (unique to ASTA)
+- `bip asta paper <id>` / `bip asta citations <id>` - Paper lookup with relevancy ratings
 
 ASTA is built on top of Semantic Scholar's database but adds LLM reasoning:
 - Multi-step search mimicking expert researchers
@@ -418,14 +418,14 @@ All code must pass:
 
 ```bash
 # Found an interesting paper - add it in Paperpile, then re-import
-bp import --format paperpile latest-export.json
+bip import --format paperpile latest-export.json
 
 # Writing a paper, need citations
-bp search "MCMC phylogenetics" --json | jq '.[] | .key'
-bp export --bibtex --keys paper1,paper2 >> mybib.bib
+bip search "MCMC phylogenetics" --json | jq '.[] | .key'
+bip export --bibtex --keys paper1,paper2 >> mybib.bib
 
 # Open a paper to read
-bp open paper1
+bip open paper1
 ```
 
 ### Bulk Import
@@ -433,30 +433,30 @@ bp open paper1
 Using beads for orchestration:
 ```bash
 # Export full library from your reference manager
-bp import --format paperpile --dry-run export.json  # Shows what would be imported/updated/skipped
-bp import --format paperpile export.json            # Orchestrated via beads for large imports
+bip import --format paperpile --dry-run export.json  # Shows what would be imported/updated/skipped
+bip import --format paperpile export.json            # Orchestrated via beads for large imports
 
 # Re-import after adding papers
 # (idempotent - matches by doi, replaces existing entries, adds new)
-bp import --format paperpile export-updated.json
+bip import --format paperpile export-updated.json
 ```
 
 ### Collaborative Research Group
 
 ```bash
 # Researcher A adds papers via their reference manager, then imports
-bp import --format paperpile researcher-a-export.json
+bip import --format paperpile researcher-a-export.json
 git commit -m "Add papers on phylogenetics"
 git push
 
 # Researcher B does the same
-bp import --format paperpile researcher-b-export.json
+bip import --format paperpile researcher-b-export.json
 git commit -m "Add papers on ML"
 git push
 
 # Merge
 git pull  # JSONL merges cleanly (append-only)
-bp rebuild  # Refresh local DB
+bip rebuild  # Refresh local DB
 ```
 
 ## Development Approach
@@ -465,7 +465,7 @@ Bipartite will be built using the tools it's designed for:
 
 - **Beads orchestration**: Use beads to manage the agentic development loop
 - **Agent-written code**: Agents write the implementation, humans review and guide
-- **Dogfooding**: As soon as basic import works, use bipartite to manage literature for the project itself
+- **Dogfooding**: As soon as basic import works, use bip artite to manage literature for the project itself
 
 This is both practical (agents are good at this) and validating (if the CLI is awkward for agents to use during development, fix it).
 
@@ -477,7 +477,7 @@ Specific tools to be determined during implementation. The constraints that matt
 - **Constraint**: Ephemeral, rebuildable from JSONL
 - **Constraint**: No separate server process
 - **Constraint**: Fast startup for CLI responsiveness
-- **Constraint**: Embeddable in the `bp` binary
+- **Constraint**: Embeddable in the `bip` binary
 - **Options**: SQLite, DuckDB, or even in-memory structures for small collections
 
 ### Phase II: Vector Store (RAG)

@@ -8,7 +8,7 @@
 
 ## Overview
 
-ASTA (Semantic Scholar API) provides access to the broader academic graph. This phase connects bipartite to that graph, enabling:
+ASTA (Semantic Scholar API) provides access to the broader academic graph. This phase connects bip artite to that graph, enabling:
 
 - Adding papers by DOI or from PDF (metadata fetch)
 - Finding papers that cite or are cited by papers in your collection
@@ -25,23 +25,23 @@ Note: Direct DOI fetching from publishers returns 403s. Semantic Scholar provide
 - Q: How should duplicates be detected for papers without DOIs? → A: Use S2 paper ID as secondary dedup key
 - Q: Should ASTA use existing MCP server or direct HTTP client? → A: Direct HTTP client using standard library net/http (simpler, no MCP dependency)
 - Q: Which approach for PDF DOI extraction in pure Go? → A: Use pdfcpu library for text extraction, regex for DOI pattern matching
-- Q: Where should API response cache be stored? → A: In-memory LRU cache with optional persistence to .bipartite/cache/s2-cache.json
+- Q: Where should API response cache be stored? → A: In-memory LRU cache with optional persistence to .bip artite/cache/s2-cache.json
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Add Paper by DOI (Priority: P1)
 
-A researcher finds a paper they want to add to their collection. They have the DOI (from a citation, webpage, or the paper itself). They want to add it to bipartite with full metadata without manually entering anything.
+A researcher finds a paper they want to add to their collection. They have the DOI (from a citation, webpage, or the paper itself). They want to add it to bip artite with full metadata without manually entering anything.
 
 **Why this priority**: This is the most common use case - quickly adding a paper when you have its identifier. It's the foundation for other features (PDF add uses this after DOI extraction).
 
-**Independent Test**: Run `bp s2 add DOI:10.1234/example`, verify paper is added to refs.jsonl with metadata from Semantic Scholar.
+**Independent Test**: Run `bip s2 add DOI:10.1234/example`, verify paper is added to refs.jsonl with metadata from Semantic Scholar.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid DOI, **When** user runs `bp s2 add DOI:10.1234/example`, **Then** the paper is added to refs.jsonl with title, authors, abstract, year, and venue from Semantic Scholar
-2. **Given** a DOI for a paper already in the collection (matched by DOI), **When** user runs `bp s2 add`, **Then** the system reports the paper already exists and optionally updates metadata with `--update` flag
-3. **Given** a DOI not found in Semantic Scholar, **When** user runs `bp s2 add`, **Then** the system reports a clear error that the DOI was not found
+1. **Given** a valid DOI, **When** user runs `bip s2 add DOI:10.1234/example`, **Then** the paper is added to refs.jsonl with title, authors, abstract, year, and venue from Semantic Scholar
+2. **Given** a DOI for a paper already in the collection (matched by DOI), **When** user runs `bip s2 add`, **Then** the system reports the paper already exists and optionally updates metadata with `--update` flag
+3. **Given** a DOI not found in Semantic Scholar, **When** user runs `bip s2 add`, **Then** the system reports a clear error that the DOI was not found
 4. **Given** a paper added via S2, **Then** the `source.type` field is set to `"s2"` and `source.id` contains the Semantic Scholar paper ID
 
 ---
@@ -52,13 +52,13 @@ A researcher has a PDF and wants to add it to their collection. The system extra
 
 **Why this priority**: PDFs are how researchers often encounter papers. Automating the DOI extraction → metadata fetch flow is high value.
 
-**Independent Test**: Run `bp s2 add-pdf paper.pdf`, verify DOI is extracted and paper is added with S2 metadata.
+**Independent Test**: Run `bip s2 add-pdf paper.pdf`, verify DOI is extracted and paper is added with S2 metadata.
 
 **Acceptance Scenarios**:
 
-1. **Given** a PDF with an embedded DOI, **When** user runs `bp s2 add-pdf paper.pdf`, **Then** the DOI is extracted and metadata is fetched from Semantic Scholar
-2. **Given** a PDF without an embedded DOI, **When** user runs `bp s2 add-pdf`, **Then** the system attempts title-based search and prompts for confirmation if a match is found
-3. **Given** a PDF where no match can be found, **When** user runs `bp s2 add-pdf`, **Then** the system reports failure with suggestions (manual DOI entry, check the PDF)
+1. **Given** a PDF with an embedded DOI, **When** user runs `bip s2 add-pdf paper.pdf`, **Then** the DOI is extracted and metadata is fetched from Semantic Scholar
+2. **Given** a PDF without an embedded DOI, **When** user runs `bip s2 add-pdf`, **Then** the system attempts title-based search and prompts for confirmation if a match is found
+3. **Given** a PDF where no match can be found, **When** user runs `bip s2 add-pdf`, **Then** the system reports failure with suggestions (manual DOI entry, check the PDF)
 4. **Given** a successful add, **When** `--link` flag is provided, **Then** the `pdf_path` field is populated with the path to the PDF
 
 ---
@@ -69,13 +69,13 @@ An agent or researcher wants to query Semantic Scholar for paper information wit
 
 **Why this priority**: Agents need to inspect papers before deciding whether to add them. This supports the agent-first design.
 
-**Independent Test**: Run `bp s2 lookup DOI:10.1234/example`, verify JSON output with paper metadata.
+**Independent Test**: Run `bip s2 lookup DOI:10.1234/example`, verify JSON output with paper metadata.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid paper identifier, **When** user runs `bp s2 lookup <id>`, **Then** paper metadata is returned as JSON (title, authors, abstract, year, venue, citation count, references count)
-2. **Given** a paper ID, **When** user runs `bp s2 lookup <id> --fields abstract,citations`, **Then** only requested fields are returned
-3. **Given** the `--exists` flag, **When** user runs `bp s2 lookup <id> --exists`, **Then** output includes whether the paper exists in the local collection
+1. **Given** a valid paper identifier, **When** user runs `bip s2 lookup <id>`, **Then** paper metadata is returned as JSON (title, authors, abstract, year, venue, citation count, references count)
+2. **Given** a paper ID, **When** user runs `bip s2 lookup <id> --fields abstract,citations`, **Then** only requested fields are returned
+3. **Given** the `--exists` flag, **When** user runs `bip s2 lookup <id> --exists`, **Then** output includes whether the paper exists in the local collection
 
 ---
 
@@ -85,14 +85,14 @@ A researcher wants to see what papers cite a paper in their collection. This hel
 
 **Why this priority**: Citation tracking is core to literature exploration. Finding citing papers helps researchers stay current.
 
-**Independent Test**: Run `bp s2 citations <paper-id>`, verify list of citing papers is returned.
+**Independent Test**: Run `bip s2 citations <paper-id>`, verify list of citing papers is returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a paper in the collection, **When** user runs `bp s2 citations <paper-id>`, **Then** papers citing it are returned from Semantic Scholar
+1. **Given** a paper in the collection, **When** user runs `bip s2 citations <paper-id>`, **Then** papers citing it are returned from Semantic Scholar
 2. **Given** citations results, **When** `--local-only` flag is used, **Then** only citations that are also in the local collection are shown
 3. **Given** citations results, **Then** each result indicates whether it exists in the local collection
-4. **Given** a limit flag, **When** user runs `bp s2 citations <id> --limit 20`, **Then** at most 20 citations are returned
+4. **Given** a limit flag, **When** user runs `bip s2 citations <id> --limit 20`, **Then** at most 20 citations are returned
 
 ---
 
@@ -102,13 +102,13 @@ A researcher wants to see what papers a given paper cites. This helps with backw
 
 **Why this priority**: Understanding a paper's foundation is essential for literature review. References show intellectual lineage.
 
-**Independent Test**: Run `bp s2 references <paper-id>`, verify list of referenced papers is returned.
+**Independent Test**: Run `bip s2 references <paper-id>`, verify list of referenced papers is returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a paper in the collection, **When** user runs `bp s2 references <paper-id>`, **Then** papers it references are returned from Semantic Scholar
+1. **Given** a paper in the collection, **When** user runs `bip s2 references <paper-id>`, **Then** papers it references are returned from Semantic Scholar
 2. **Given** references results, **Then** each result indicates whether it exists in the local collection
-3. **Given** the `--missing` flag, **When** user runs `bp s2 references <id> --missing`, **Then** only references NOT in the local collection are shown
+3. **Given** the `--missing` flag, **When** user runs `bip s2 references <id> --missing`, **Then** only references NOT in the local collection are shown
 
 ---
 
@@ -118,13 +118,13 @@ A researcher wants to find important papers they might be missing. The system an
 
 **Why this priority**: Proactive gap discovery is powerful but depends on other features working first.
 
-**Independent Test**: Run `bp s2 gaps`, verify list of highly-cited-but-missing papers is returned.
+**Independent Test**: Run `bip s2 gaps`, verify list of highly-cited-but-missing papers is returned.
 
 **Acceptance Scenarios**:
 
-1. **Given** a collection with papers, **When** user runs `bp s2 gaps`, **Then** papers cited by multiple papers in the collection (but not in the collection) are listed
+1. **Given** a collection with papers, **When** user runs `bip s2 gaps`, **Then** papers cited by multiple papers in the collection (but not in the collection) are listed
 2. **Given** gap results, **Then** results are ranked by citation count within the collection (how many of your papers cite it)
-3. **Given** a threshold flag, **When** user runs `bp s2 gaps --min-citations 3`, **Then** only papers cited by at least 3 papers in the collection are shown
+3. **Given** a threshold flag, **When** user runs `bip s2 gaps --min-citations 3`, **Then** only papers cited by at least 3 papers in the collection are shown
 4. **Given** gap results, **Then** each result shows which papers in your collection cite it
 
 ---
@@ -135,11 +135,11 @@ A researcher has a preprint in their collection and the published version now ex
 
 **Why this priority**: Keeps the collection clean and shows paper evolution. Less urgent than core add/query.
 
-**Independent Test**: Run `bp s2 link-published`, verify preprints with published versions are detected and `supersedes` is populated.
+**Independent Test**: Run `bip s2 link-published`, verify preprints with published versions are detected and `supersedes` is populated.
 
 **Acceptance Scenarios**:
 
-1. **Given** a preprint in the collection, **When** user runs `bp s2 link-published`, **Then** Semantic Scholar is queried for the published version
+1. **Given** a preprint in the collection, **When** user runs `bip s2 link-published`, **Then** Semantic Scholar is queried for the published version
 2. **Given** a published version is found, **When** detected, **Then** the system reports the match and offers to set `supersedes` on the preprint
 3. **Given** `--auto` flag, **When** matches are found, **Then** `supersedes` is automatically set without confirmation
 4. **Given** a paper already has `supersedes` set, **Then** it is skipped
@@ -161,8 +161,8 @@ A researcher has a preprint in their collection and the published version now ex
 
 **Paper Addition**
 
-- **FR-001**: System MUST add papers via `bp s2 add <paper-id>` where paper-id supports DOI, arXiv ID, PMID, and S2 ID formats
-- **FR-002**: System MUST extract DOI from PDF via `bp s2 add-pdf <path>`
+- **FR-001**: System MUST add papers via `bip s2 add <paper-id>` where paper-id supports DOI, arXiv ID, PMID, and S2 ID formats
+- **FR-002**: System MUST extract DOI from PDF via `bip s2 add-pdf <path>`
 - **FR-003**: System MUST fetch metadata from Semantic Scholar including: title, authors, abstract, year, venue, DOI
 - **FR-004**: System MUST detect duplicate papers by DOI before adding; for papers without DOI, use S2 paper ID as secondary dedup key
 - **FR-005**: System MUST support `--update` flag to refresh metadata for existing papers
@@ -171,14 +171,14 @@ A researcher has a preprint in their collection and the published version now ex
 
 **Paper Lookup**
 
-- **FR-008**: System MUST lookup paper info via `bp s2 lookup <paper-id>` without adding
+- **FR-008**: System MUST lookup paper info via `bip s2 lookup <paper-id>` without adding
 - **FR-009**: System MUST support `--fields` flag to select which fields to return
 - **FR-010**: System MUST support `--exists` flag to check if paper is in local collection
 
 **Citation Exploration**
 
-- **FR-011**: System MUST find citing papers via `bp s2 citations <paper-id>`
-- **FR-012**: System MUST find referenced papers via `bp s2 references <paper-id>`
+- **FR-011**: System MUST find citing papers via `bip s2 citations <paper-id>`
+- **FR-012**: System MUST find referenced papers via `bip s2 references <paper-id>`
 - **FR-013**: System MUST indicate whether each result exists in the local collection
 - **FR-014**: System MUST support `--local-only` flag to filter to papers in collection
 - **FR-015**: System MUST support `--missing` flag to filter to papers NOT in collection
@@ -186,14 +186,14 @@ A researcher has a preprint in their collection and the published version now ex
 
 **Gap Discovery**
 
-- **FR-017**: System MUST find literature gaps via `bp s2 gaps`
+- **FR-017**: System MUST find literature gaps via `bip s2 gaps`
 - **FR-018**: System MUST rank gaps by citation count within the collection
 - **FR-019**: System MUST support `--min-citations N` threshold filter
 - **FR-020**: System MUST show which local papers cite each gap
 
 **Preprint Linking**
 
-- **FR-021**: System MUST detect preprint→published relationships via `bp s2 link-published`
+- **FR-021**: System MUST detect preprint→published relationships via `bip s2 link-published`
 - **FR-022**: System MUST populate `supersedes` field when linking
 - **FR-023**: System MUST support `--auto` flag for automatic linking without confirmation
 
@@ -201,12 +201,12 @@ A researcher has a preprint in their collection and the published version now ex
 
 - **FR-024**: System MUST output JSON by default (agent-first design)
 - **FR-025**: System MUST support `--human` flag for human-readable output
-- **FR-026**: System MUST integrate with `bp rebuild` (no additional rebuild needed for S2 data)
+- **FR-026**: System MUST integrate with `bip rebuild` (no additional rebuild needed for S2 data)
 
 ### Non-Functional Requirements
 
 - **NFR-001**: API calls MUST respect Semantic Scholar rate limits (100 requests/5 minutes for unauthenticated)
-- **NFR-002**: System MUST cache API responses using in-memory LRU cache with optional persistence to `.bipartite/cache/s2-cache.json`
+- **NFR-002**: System MUST cache API responses using in-memory LRU cache with optional persistence to `.bip artite/cache/s2-cache.json`
 - **NFR-003**: System MUST provide clear progress indication for batch operations
 - **NFR-004**: System MUST handle network failures gracefully with actionable error messages
 

@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document captures research decisions for the Knowledge Graph feature. Since the feature extends existing bipartite patterns with no new dependencies, research focuses on design decisions rather than technology evaluation.
+This document captures research decisions for the Knowledge Graph feature. Since the feature extends existing bip artite patterns with no new dependencies, research focuses on design decisions rather than technology evaluation.
 
 ## Decision 1: Edge Storage Format
 
@@ -42,7 +42,7 @@ This document captures research decisions for the Knowledge Graph feature. Since
 
 **Rationale**:
 - Supports all query patterns: list by paper, search by type
-- Ephemeral index rebuilt from JSONL on `bp rebuild`
+- Ephemeral index rebuilt from JSONL on `bip rebuild`
 - Consistent with existing refs SQLite pattern
 
 **Schema**:
@@ -63,12 +63,12 @@ CREATE INDEX idx_edges_type ON edges(relationship_type);
 
 ## Decision 4: Orphaned Edge Handling
 
-**Decision**: Preserve edges when referenced papers are deleted; `bp groom` flags orphans
+**Decision**: Preserve edges when referenced papers are deleted; `bip groom` flags orphans
 
 **Rationale**:
 - Edges represent valuable relationship information
 - Cascade deletion could lose data that's hard to recreate
-- `bp groom` already exists for maintenance tasks
+- `bip groom` already exists for maintenance tasks
 - Consistent with git-mergeable philosophy (don't auto-delete)
 
 **Alternatives Considered**:
@@ -78,7 +78,7 @@ CREATE INDEX idx_edges_type ON edges(relationship_type);
 
 ## Decision 5: CLI Command Structure
 
-**Decision**: `bp edge <subcommand>` pattern with add, import, list, search, export
+**Decision**: `bip edge <subcommand>` pattern with add, import, list, search, export
 
 **Rationale**:
 - Groups related functionality under single parent command
@@ -87,7 +87,7 @@ CREATE INDEX idx_edges_type ON edges(relationship_type);
 - Allows future expansion (delete, update, etc.)
 
 **Alternatives Considered**:
-- Top-level commands (`bp edge-add`): Rejected - clutters help, poor discoverability
+- Top-level commands (`bip edge-add`): Rejected - clutters help, poor discoverability
 - Combined with paper commands: Rejected - edges are distinct entity type
 
 ## Decision 6: No New Dependencies

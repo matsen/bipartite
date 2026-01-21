@@ -11,7 +11,7 @@
 
 ## Path Conventions
 
-- **CLI entry**: `cmd/bp/`
+- **CLI entry**: `cmd/bip/`
 - **Internal packages**: `internal/{config,importer,reference,storage,query,export,pdf}/`
 - **Test fixtures**: `testdata/`
 
@@ -21,8 +21,8 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [X] T001 Create directory structure per plan.md: cmd/bp/, internal/{config,importer,reference,storage,query,export,pdf}/, testdata/
-- [X] T002 Initialize Go module with `go mod init github.com/matsen/bipartite`
+- [X] T001 Create directory structure per plan.md: cmd/bip/, internal/{config,importer,reference,storage,query,export,pdf}/, testdata/
+- [X] T002 Initialize Go module with `go mod init github.com/matsen/bip artite`
 - [X] T003 [P] Add spf13/cobra dependency via `go get github.com/spf13/cobra`
 - [X] T004 [P] Add modernc.org/sqlite dependency via `go get modernc.org/sqlite`
 - [X] T005 [P] Extract test fixtures from _ignore/paperpile-export-jan-12.json to testdata/
@@ -43,9 +43,9 @@
 - [X] T011 Implement config Load/Save methods in internal/config/config.go
 - [X] T012 Implement JSONL ReadAll function in internal/storage/jsonl.go
 - [X] T013 Implement JSONL Append function in internal/storage/jsonl.go
-- [X] T014 Create CLI root command with --human and --version flags in cmd/bp/main.go
-- [X] T015 [P] Create JSON/human output helper functions in cmd/bp/output.go
-- [X] T016 [P] Define exit codes as constants in cmd/bp/exitcodes.go
+- [X] T014 Create CLI root command with --human and --version flags in cmd/bip/main.go
+- [X] T015 [P] Create JSON/human output helper functions in cmd/bip/output.go
+- [X] T016 [P] Define exit codes as constants in cmd/bip/exitcodes.go
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -53,7 +53,7 @@
 
 ## Phase 3: User Story 5 - Initialize and Configure Repository (Priority: P5)
 
-**Goal**: Researcher sets up a new bipartite repository, configuring the PDF folder path
+**Goal**: Researcher sets up a new bip artite repository, configuring the PDF folder path
 
 **Independent Test**: Run init in empty directory, configure PDF path, verify configuration persists
 
@@ -61,9 +61,9 @@
 
 ### Implementation for User Story 5
 
-- [X] T017 [US5] Implement bp init command creating .bipartite/ structure in cmd/bp/init.go
-- [X] T018 [US5] Add repository detection (check for existing .bipartite/) in internal/config/config.go
-- [X] T019 [US5] Implement bp config get/set command in cmd/bp/config.go
+- [X] T017 [US5] Implement bp init command creating .bip artite/ structure in cmd/bip/init.go
+- [X] T018 [US5] Add repository detection (check for existing .bip artite/) in internal/config/config.go
+- [X] T019 [US5] Implement bp config get/set command in cmd/bip/config.go
 - [X] T020 [US5] Add path validation (verify directory exists) in internal/config/config.go
 - [X] T021 [US5] Add error for init in already-initialized directory (exit code 1)
 
@@ -85,9 +85,9 @@
 - [X] T025 [US1] Implement DOI-based deduplication in internal/storage/jsonl.go
 - [X] T026 [US1] Implement ID collision handling with suffix (e.g., Ahn2026-rs-2) in internal/storage/jsonl.go
 - [X] T027 [US1] Handle papers without DOI (use citekey as ID) in internal/importer/paperpile.go
-- [X] T028 [US1] Implement bp import --format paperpile command in cmd/bp/import.go
-- [X] T029 [US1] Add --dry-run flag showing what would be imported in cmd/bp/import.go
-- [X] T030 [US1] Add import statistics output (imported/updated/skipped counts) in cmd/bp/import.go
+- [X] T028 [US1] Implement bp import --format paperpile command in cmd/bip/import.go
+- [X] T029 [US1] Add --dry-run flag showing what would be imported in cmd/bip/import.go
+- [X] T030 [US1] Add import statistics output (imported/updated/skipped counts) in cmd/bip/import.go
 
 **Checkpoint**: At this point, User Story 1 is fully functional - researchers can import papers
 
@@ -107,8 +107,8 @@
 - [X] T032 [US6] Implement FTS5 virtual table for full-text search in internal/storage/sqlite.go
 - [X] T033 [US6] Create FTS5 triggers to keep search index in sync in internal/storage/sqlite.go
 - [X] T034 [US6] Implement RebuildFromJSONL function in internal/storage/sqlite.go
-- [X] T035 [US6] Implement bp rebuild command in cmd/bp/rebuild.go
-- [X] T036 [US6] Add rebuild statistics output (reference count) in cmd/bp/rebuild.go
+- [X] T035 [US6] Implement bp rebuild command in cmd/bip/rebuild.go
+- [X] T036 [US6] Add rebuild statistics output (reference count) in cmd/bip/rebuild.go
 
 **Checkpoint**: At this point, User Story 6 is functional - query layer can be rebuilt
 
@@ -124,12 +124,12 @@
 
 - [X] T037 [P] [US2] Implement keyword search using FTS5 in internal/storage/sqlite.go
 - [X] T038 [P] [US2] Implement field-specific search (author:, title:) in internal/storage/sqlite.go
-- [X] T039 [US2] Implement bp search command with --limit flag in cmd/bp/search.go
+- [X] T039 [US2] Implement bp search command with --limit flag in cmd/bip/search.go
 - [X] T040 [P] [US2] Implement GetByID function in internal/storage/sqlite.go
-- [X] T041 [US2] Implement bp get command in cmd/bp/get.go
+- [X] T041 [US2] Implement bp get command in cmd/bip/get.go
 - [X] T042 [P] [US2] Implement ListAll function in internal/storage/sqlite.go
-- [X] T043 [US2] Implement bp list command with --limit flag in cmd/bp/list.go
-- [X] T044 [US2] Ensure empty search results return empty array (not error) in cmd/bp/search.go
+- [X] T043 [US2] Implement bp list command with --limit flag in cmd/bip/list.go
+- [X] T044 [US2] Ensure empty search results return empty array (not error) in cmd/bip/search.go
 
 **Checkpoint**: At this point, User Stories 1, 2, 5, and 6 are all functional
 
@@ -146,9 +146,9 @@
 - [X] T045 [P] [US3] Implement PDF path resolution (join pdf_root + relative path) in internal/pdf/opener.go
 - [X] T046 [US3] Implement platform-specific open command (open on macOS, xdg-open on Linux) in internal/pdf/opener.go
 - [X] T047 [US3] Add configurable PDF reader support (skim, zathura, evince, okular) in internal/pdf/opener.go
-- [X] T048 [US3] Implement bp open command in cmd/bp/open.go
-- [X] T049 [US3] Add --supplement N flag for opening supplementary PDFs in cmd/bp/open.go
-- [X] T050 [US3] Add clear error messages for missing PDF files in cmd/bp/open.go
+- [X] T048 [US3] Implement bp open command in cmd/bip/open.go
+- [X] T049 [US3] Add --supplement N flag for opening supplementary PDFs in cmd/bip/open.go
+- [X] T050 [US3] Add clear error messages for missing PDF files in cmd/bip/open.go
 
 **Checkpoint**: At this point, User Story 3 is functional - PDFs can be opened
 
@@ -165,8 +165,8 @@
 - [X] T051 [P] [US4] Implement BibTeX entry type mapping (article, inproceedings, book) in internal/export/bibtex.go
 - [X] T052 [US4] Implement BibTeX field formatting (author format: "Last, First and Last, First") in internal/export/bibtex.go
 - [X] T053 [US4] Implement LaTeX special character escaping (& % $ # _ { } ~ ^) in internal/export/bibtex.go
-- [X] T054 [US4] Implement bp export --bibtex command in cmd/bp/export.go
-- [X] T055 [US4] Add --keys filter for exporting specific references in cmd/bp/export.go
+- [X] T054 [US4] Implement bp export --bibtex command in cmd/bip/export.go
+- [X] T055 [US4] Add --keys filter for exporting specific references in cmd/bip/export.go
 - [X] T056 [US4] Handle papers with minimal metadata gracefully in internal/export/bibtex.go
 
 **Checkpoint**: At this point, all 6 user stories are functional
@@ -177,9 +177,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [X] T057 [P] Implement bp check command for repository integrity in cmd/bp/check.go
-- [X] T058 [P] Add duplicate DOI detection to check command in cmd/bp/check.go
-- [X] T059 [P] Add missing PDF detection to check command in cmd/bp/check.go
+- [X] T057 [P] Implement bp check command for repository integrity in cmd/bip/check.go
+- [X] T058 [P] Add duplicate DOI detection to check command in cmd/bip/check.go
+- [X] T059 [P] Add missing PDF detection to check command in cmd/bip/check.go
 - [X] T060 Improve human-readable output formatting across all commands
 - [X] T061 [P] Add shell completion generation (bash, zsh, fish) via cobra
 - [X] T062 Run full integration test with _ignore/paperpile-export-jan-12.json
@@ -245,8 +245,8 @@ Task: "Create Author struct in internal/reference/author.go"
 Task: "Create Config struct in internal/config/config.go"
 
 # Launch output helpers together:
-Task: "Create JSON/human output helper functions in cmd/bp/output.go"
-Task: "Define exit codes as constants in cmd/bp/exitcodes.go"
+Task: "Create JSON/human output helper functions in cmd/bip/output.go"
+Task: "Define exit codes as constants in cmd/bip/exitcodes.go"
 ```
 
 ---
@@ -278,12 +278,12 @@ Task: "Define exit codes as constants in cmd/bp/exitcodes.go"
 
 After completing MVP (through Phase 6):
 ```bash
-./bp init
-./bp config pdf-root ~/Google\ Drive/Paperpile
-./bp import --format paperpile _ignore/paperpile-export-jan-12.json
-./bp rebuild
-./bp search "phylogenetics"
-./bp get Ahn2026-rs
+./bip init
+./bip config pdf-root ~/Google\ Drive/Paperpile
+./bip import --format paperpile _ignore/paperpile-export-jan-12.json
+./bip rebuild
+./bip search "phylogenetics"
+./bip get Ahn2026-rs
 ```
 
 ---

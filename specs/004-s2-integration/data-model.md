@@ -98,7 +98,7 @@ type Reference struct {
 To reduce API calls and respect rate limits:
 
 ```
-.bipartite/cache/
+.bip artite/cache/
 ├── refs.db           # Existing SQLite index
 ├── vectors.gob       # Existing vector index
 └── s2_cache.db       # NEW: S2 API response cache (SQLite)
@@ -131,7 +131,7 @@ CREATE TABLE s2_citations (
 
 ## Gap Discovery Data Model
 
-For `bp s2 gaps`, we need to track citation relationships:
+For `bip s2 gaps`, we need to track citation relationships:
 
 ```
 Gap = {
