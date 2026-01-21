@@ -14,6 +14,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Interactive prompt choices
+const (
+	choiceOurs   = "1"
+	choiceTheirs = "2"
+)
+
 var (
 	resolveDryRun      bool
 	resolveInteractive bool
@@ -227,23 +233,24 @@ func promptForConflict(match conflict.PaperMatch, plan conflict.ResolutionPlan) 
 	for i, fc := range plan.Conflicts {
 		fmt.Printf("\nResolving conflict %d of %d for paper %s...\n", i+1, totalConflicts, plan.PaperID)
 		fmt.Printf("Conflict in field '%s':\n", fc.FieldName)
-		fmt.Printf("  [1] ours:   %q\n", fc.OursValue)
-		fmt.Printf("  [2] theirs: %q\n", fc.TheirsValue)
+		fmt.Printf("  [%s] ours:   %q\n", choiceOurs, fc.OursValue)
+		fmt.Printf("  [%s] theirs: %q\n", choiceTheirs, fc.TheirsValue)
 
 		for {
-			fmt.Print("Enter choice [1/2]: ")
+			fmt.Printf("Enter choice [%s/%s]: ", choiceOurs, choiceTheirs)
 			input, _ := reader.ReadString('\n')
 			input = strings.TrimSpace(input)
 
-			if input == "1" {
+			switch input {
+			case choiceOurs:
 				applyFieldChoice(&resolved, fc.FieldName, match.Ours)
-				break
-			} else if input == "2" {
+			case choiceTheirs:
 				applyFieldChoice(&resolved, fc.FieldName, match.Theirs)
-				break
-			} else {
-				fmt.Println("Invalid choice. Please enter 1 or 2.")
+			default:
+				fmt.Printf("Invalid choice. Please enter %s or %s.\n", choiceOurs, choiceTheirs)
+				continue
 			}
+			break
 		}
 	}
 

@@ -133,40 +133,20 @@ func MergeReferences(ours, theirs reference.Reference) (reference.Reference, []F
 	}
 	var conflicts []FieldConflict
 
-	// Title
-	title, titleConflict := mergeString("title", ours.Title, theirs.Title)
-	merged.Title = title
-	if titleConflict != nil {
-		conflicts = append(conflicts, *titleConflict)
+	// Merge string fields using helper to reduce duplication
+	mergeField := func(fieldName, oursVal, theirsVal string, target *string) {
+		val, conflict := mergeString(fieldName, oursVal, theirsVal)
+		*target = val
+		if conflict != nil {
+			conflicts = append(conflicts, *conflict)
+		}
 	}
 
-	// Abstract
-	abstract, abstractConflict := mergeString("abstract", ours.Abstract, theirs.Abstract)
-	merged.Abstract = abstract
-	if abstractConflict != nil {
-		conflicts = append(conflicts, *abstractConflict)
-	}
-
-	// Venue
-	venue, venueConflict := mergeString("venue", ours.Venue, theirs.Venue)
-	merged.Venue = venue
-	if venueConflict != nil {
-		conflicts = append(conflicts, *venueConflict)
-	}
-
-	// PDFPath
-	pdfPath, pdfConflict := mergeString("pdf_path", ours.PDFPath, theirs.PDFPath)
-	merged.PDFPath = pdfPath
-	if pdfConflict != nil {
-		conflicts = append(conflicts, *pdfConflict)
-	}
-
-	// Supersedes
-	supersedes, supersedesConflict := mergeString("supersedes", ours.Supersedes, theirs.Supersedes)
-	merged.Supersedes = supersedes
-	if supersedesConflict != nil {
-		conflicts = append(conflicts, *supersedesConflict)
-	}
+	mergeField("title", ours.Title, theirs.Title, &merged.Title)
+	mergeField("abstract", ours.Abstract, theirs.Abstract, &merged.Abstract)
+	mergeField("venue", ours.Venue, theirs.Venue, &merged.Venue)
+	mergeField("pdf_path", ours.PDFPath, theirs.PDFPath, &merged.PDFPath)
+	mergeField("supersedes", ours.Supersedes, theirs.Supersedes, &merged.Supersedes)
 
 	// Authors - special handling
 	authors, authorsConflict := mergeAuthors(ours.Authors, theirs.Authors)
@@ -201,8 +181,8 @@ func mergeString(fieldName, ours, theirs string) (string, *FieldConflict) {
 	// True conflict
 	return "", &FieldConflict{
 		FieldName:   fieldName,
-		OursValue:   truncateForDisplay(ours, 50),
-		TheirsValue: truncateForDisplay(theirs, 50),
+		OursValue:   truncate(ours, 50),
+		TheirsValue: truncate(theirs, 50),
 	}
 }
 
@@ -334,14 +314,6 @@ func nonEmpty(a, b string) string {
 		return a
 	}
 	return b
-}
-
-// truncateForDisplay truncates a string for display purposes.
-func truncateForDisplay(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
 }
 
 // conflictFieldNames returns a comma-separated list of field names with conflicts.
