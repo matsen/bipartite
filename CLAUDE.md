@@ -12,6 +12,8 @@
 - JSONL (concepts.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`) (006-concept-nodes)
 - Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), html/template (HTML generation) (007-knowledge-graph-viz)
 - SQLite (read from existing refs, concepts, edges tables rebuilt from JSONL) (007-knowledge-graph-viz)
+- Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), os/exec (git integration) (008-shared-repo-workflow)
+- JSONL (refs.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`) - no schema changes needed (008-shared-repo-workflow)
 
 ## Project Structure
 
@@ -36,7 +38,21 @@ go build -o bip ./cmd/bip && ./bip --help
 ./bip semantic <query>                        # Semantic similarity search
 ./bip get <id>                                # Get reference by ID
 ./bip list                                    # List all references
-./bip export                                  # Export to BibTeX
+./bip export --bibtex                          # Export all to BibTeX
+./bip export --bibtex <id>...                  # Export specific papers
+./bip export --bibtex --append refs.bib <id>   # Append with deduplication
+
+# Open commands (with git integration)
+./bip open <id>                               # Open single paper PDF
+./bip open <id> <id> ...                      # Open multiple papers
+./bip open --recent 5                         # Open 5 most recently added
+./bip open --since HEAD~3                     # Open papers added since commit
+
+# Diff and tracking commands (git integration)
+./bip diff                                    # Show uncommitted changes to library
+./bip diff --human                            # Human-readable diff output
+./bip new --since <commit>                    # Papers added since commit
+./bip new --days 7                            # Papers added in last N days
 
 # Semantic Scholar (S2) commands
 ./bip s2 add DOI:10.1234/example              # Add paper by DOI
@@ -124,6 +140,6 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 008-shared-repo-workflow: Added Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), os/exec (git integration)
 - 007-knowledge-graph-viz: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), html/template (HTML generation)
 - 006-concept-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
-- 005-asta-mcp-integration: Added ASTA MCP commands (bip asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API

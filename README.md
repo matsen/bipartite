@@ -113,8 +113,14 @@ bip open Smith2026-ab
 | `bip search <query>` | Full-text search across titles, abstracts, authors, years |
 | `bip list` | List all references |
 | `bip get <id>` | Get a specific reference by ID |
-| `bip open <id>` | Open PDF in configured viewer |
-| `bip export --bibtex` | Export to BibTeX format |
+| `bip open <id>...` | Open PDFs by ID (supports multiple) |
+| `bip open --recent N` | Open N most recently added papers |
+| `bip open --since <commit>` | Open papers added since commit |
+| `bip export --bibtex [<id>...]` | Export to BibTeX (all or specific papers) |
+| `bip export --bibtex --append <file> <id>...` | Append to .bib with deduplication |
+| `bip diff` | Show papers added/removed since last commit |
+| `bip new --since <commit>` | List papers added since commit |
+| `bip new --days N` | List papers added in last N days |
 | `bip check` | Validate repository integrity |
 | `bip groom` | Detect orphaned edges; use `--fix` to remove |
 
