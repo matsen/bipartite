@@ -21,6 +21,10 @@ A CLI tool for managing academic references with local storage and external pape
 | Find literature gaps | `./bip s2 gaps` |
 | Fast paper search (external) | `./bip asta search "query"` |
 | Find text snippets | `./bip asta snippet "query"` |
+| Create concept | `./bip concept add <id> --name "Name"` |
+| Link paper to concept | `./bip edge add -s <paper> -t <concept> -r <type> -m "summary"` |
+| Papers for concept | `./bip concept papers <concept-id>` |
+| Concepts for paper | `./bip paper concepts <paper-id>` |
 
 ## S2 vs ASTA: When to Use Which
 
@@ -116,3 +120,74 @@ Both S2 and ASTA accept these identifier formats:
 - `PMID:19872477`
 - `CorpusId:215416146`
 - Raw Semantic Scholar ID (40-char hex)
+
+## Concept Nodes (Knowledge Graph)
+
+Build a knowledge graph by creating concepts and linking papers to them.
+
+### Create Concepts
+
+```bash
+# Add a concept with name, aliases, and description
+./bip concept add somatic-hypermutation \
+  --name "Somatic Hypermutation" \
+  --aliases "SHM,shm" \
+  --description "Process by which B cells diversify antibody genes"
+
+# List all concepts
+./bip concept list --human
+
+# Get a specific concept
+./bip concept get somatic-hypermutation --human
+```
+
+### Link Papers to Concepts
+
+```bash
+# Use flags: -s (source paper), -t (target concept), -r (relationship type), -m (summary)
+./bip edge add -s Halpern1998-yc -t mutation-selection-model -r introduces \
+  -m "Foundational paper defining the mutation-selection model"
+
+./bip edge add -s Yaari2013-dg -t somatic-hypermutation -r models \
+  -m "Introduces S5F model for SHM targeting"
+```
+
+### Standard Relationship Types
+
+| Type | When to Use |
+|------|-------------|
+| `introduces` | Paper first presents or defines this concept |
+| `applies` | Paper uses concept as a tool or method |
+| `models` | Paper creates computational/mathematical model |
+| `evaluates-with` | Paper uses concept for evaluation/benchmarking |
+| `critiques` | Paper identifies limitations or problems |
+| `extends` | Paper builds upon or extends the concept |
+
+### Query the Knowledge Graph
+
+```bash
+# Find all papers linked to a concept
+./bip concept papers somatic-hypermutation --human
+
+# Filter by relationship type
+./bip concept papers somatic-hypermutation --type introduces
+
+# Find what concepts a paper relates to
+./bip paper concepts Halpern1998-yc --human
+```
+
+### Manage Concepts
+
+```bash
+# Update a concept
+./bip concept update somatic-hypermutation --description "Updated description"
+
+# Delete a concept (warns if papers linked)
+./bip concept delete unused-concept
+
+# Force delete (removes linked edges too)
+./bip concept delete old-concept --force
+
+# Merge duplicate concepts
+./bip concept merge shm somatic-hypermutation --human
+```

@@ -19,6 +19,7 @@ const (
 	ConfigFile   = "config.json"
 	RefsFile     = "refs.jsonl"
 	EdgesFile    = "edges.jsonl"
+	ConceptsFile = "concepts.jsonl"
 	CacheDir     = "cache"
 	DBFile       = "refs.db"
 )
@@ -44,6 +45,11 @@ func RefsPath(root string) string {
 // EdgesPath returns the path to edges.jsonl from a root path.
 func EdgesPath(root string) string {
 	return filepath.Join(root, BipartiteDir, EdgesFile)
+}
+
+// ConceptsPath returns the path to concepts.jsonl from a root path.
+func ConceptsPath(root string) string {
+	return filepath.Join(root, BipartiteDir, ConceptsFile)
 }
 
 // CachePath returns the path to the cache directory from a root path.

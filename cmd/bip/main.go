@@ -117,7 +117,7 @@ func mustValidateOllama(ctx context.Context, provider *embedding.OllamaProvider,
 			exitWithError(ExitError, "checking model availability: %v", err)
 		}
 		if !hasModel {
-			exitWithError(ExitModelNotFound, "Embedding model '%s' not found\n\nRun 'ollama pull %s' to download it.", provider.ModelName(), provider.ModelName())
+			exitWithError(ExitModelNotFound, "embedding model %q not found\n\nRun 'ollama pull %s' to download it.", provider.ModelName(), provider.ModelName())
 		}
 	}
 }

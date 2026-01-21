@@ -60,10 +60,10 @@ func runSimilar(cmd *cobra.Command, args []string) error {
 		// Paper not in index - check if it exists at all to provide helpful error
 		sourcePaper, _ := db.GetByID(paperID)
 		if sourcePaper == nil {
-			exitWithError(ExitError, "Paper '%s' not found in database", paperID)
+			exitWithError(ExitError, "paper %q not found in database", paperID)
 		}
 		// Paper exists but not indexed - likely no/short abstract
-		exitWithError(ExitNoAbstract, "Paper '%s' is not in the semantic index\n\nThis paper may have no abstract or an abstract shorter than %d characters.\nRebuild the index with 'bip index build' if you recently added an abstract.", paperID, semantic.MinAbstractLength)
+		exitWithError(ExitNoAbstract, "paper %q is not in the semantic index\n\nThis paper may have no abstract or an abstract shorter than %d characters.\nRebuild the index with 'bip index build' if you recently added an abstract.", paperID, semantic.MinAbstractLength)
 	}
 
 	// Get source paper info for display

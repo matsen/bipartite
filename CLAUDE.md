@@ -8,6 +8,8 @@
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
 - Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), golang.org/x/time/rate (rate limiting), joho/godotenv (env loading) (005-asta-mcp-integration)
 - N/A (ASTA is read-only external API, no local persistence) (005-asta-mcp-integration)
+- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (006-concept-nodes)
+- JSONL (concepts.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`) (006-concept-nodes)
 
 ## Project Structure
 
@@ -111,4 +113,5 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 006-concept-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
 - 005-asta-mcp-integration: Added ASTA MCP commands (bip asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API

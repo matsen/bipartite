@@ -1,0 +1,19 @@
+{
+  "description": "Standard relationship types for bipartite knowledge graph edges. Bip accepts any string, but tools should use these standard types by default. Extensions to this vocabulary are allowed and encouraged when justified — but should be agreed upon before use (e.g., added to this file with a clear description).",
+  "paper-paper": [
+    {"type": "cites", "description": "Source references target in bibliography"},
+    {"type": "extends", "description": "Source builds upon or extends work in target"},
+    {"type": "contradicts", "description": "Source presents findings that contradict target"},
+    {"type": "implements", "description": "Source implements methods/algorithms from target"},
+    {"type": "applies-to", "description": "Source applies methods from target to new domain"},
+    {"type": "builds-on", "description": "Source uses target as foundational work"}
+  ],
+  "paper-concept": [
+    {"type": "introduces", "description": "Paper first presents this concept"},
+    {"type": "applies", "description": "Paper uses concept as a tool/method"},
+    {"type": "models", "description": "Paper creates computational/mathematical model of this phenomenon"},
+    {"type": "evaluates-with", "description": "Paper uses this for evaluation/benchmarking"},
+    {"type": "critiques", "description": "Paper identifies limitations of concept"},
+    {"type": "extends", "description": "Paper builds upon concept"}
+  ]
+}

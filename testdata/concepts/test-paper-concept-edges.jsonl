@@ -1,0 +1,4 @@
+{"source_id": "Halpern1998-yc", "target_id": "somatic-hypermutation", "relationship_type": "introduces", "summary": "Foundational paper describing somatic hypermutation mechanism", "created_at": "2026-01-21T10:00:00Z"}
+{"source_id": "Matsen2025-oj", "target_id": "variational-inference", "relationship_type": "applies", "summary": "Uses VI for posterior approximation in phylogenetic models", "created_at": "2026-01-21T10:05:00Z"}
+{"source_id": "McCoy2022-bd", "target_id": "somatic-hypermutation", "relationship_type": "models", "summary": "Creates computational model of SHM targeting patterns", "created_at": "2026-01-21T10:10:00Z"}
+{"source_id": "Georgiou2014-xz", "target_id": "bcr-sequencing", "relationship_type": "introduces", "summary": "Reviews high-throughput BCR sequencing methods", "created_at": "2026-01-21T10:15:00Z"}

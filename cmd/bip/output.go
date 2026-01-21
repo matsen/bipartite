@@ -242,3 +242,44 @@ func formatBytes(bytes int64) string {
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
+
+// formatConceptHuman formats a concept for human-readable output.
+// The prefix parameter is prepended to each line (e.g., "Created concept: ", "").
+func formatConceptHuman(id, name string, aliases []string, description, prefix string) string {
+	var sb strings.Builder
+	sb.WriteString(prefix)
+	sb.WriteString(id)
+	sb.WriteString("\n")
+	sb.WriteString(fmt.Sprintf("  Name: %s\n", name))
+	if len(aliases) > 0 {
+		sb.WriteString(fmt.Sprintf("  Aliases: %s\n", strings.Join(aliases, ", ")))
+	}
+	if description != "" {
+		sb.WriteString(fmt.Sprintf("  Description: %s\n", description))
+	}
+	return sb.String()
+}
+
+// formatEdgesGroupedByType formats paper-concept edges grouped by relationship type.
+// Used by both concept papers and paper concepts commands.
+// The idGetter function extracts the relevant ID from each edge (paper_id or concept_id).
+func formatEdgesGroupedByType(edges []storage.PaperConceptEdge, idGetter func(storage.PaperConceptEdge) string) string {
+	if len(edges) == 0 {
+		return ""
+	}
+
+	// Group by relationship type
+	byType := make(map[string][]storage.PaperConceptEdge)
+	for _, e := range edges {
+		byType[e.RelationshipType] = append(byType[e.RelationshipType], e)
+	}
+
+	var sb strings.Builder
+	for relType, typeEdges := range byType {
+		sb.WriteString(fmt.Sprintf("\n[%s]\n", relType))
+		for _, e := range typeEdges {
+			sb.WriteString(fmt.Sprintf("  %s: %s\n", idGetter(e), e.Summary))
+		}
+	}
+	return sb.String()
+}
