@@ -8,7 +8,7 @@
 
 ## Overview
 
-ASTA (Semantic Scholar API) provides access to the broader academic graph. This phase connects bip artite to that graph, enabling:
+ASTA (Semantic Scholar API) provides access to the broader academic graph. This phase connects bipartite to that graph, enabling:
 
 - Adding papers by DOI or from PDF (metadata fetch)
 - Finding papers that cite or are cited by papers in your collection
@@ -25,13 +25,13 @@ Note: Direct DOI fetching from publishers returns 403s. Semantic Scholar provide
 - Q: How should duplicates be detected for papers without DOIs? → A: Use S2 paper ID as secondary dedup key
 - Q: Should ASTA use existing MCP server or direct HTTP client? → A: Direct HTTP client using standard library net/http (simpler, no MCP dependency)
 - Q: Which approach for PDF DOI extraction in pure Go? → A: Use pdfcpu library for text extraction, regex for DOI pattern matching
-- Q: Where should API response cache be stored? → A: In-memory LRU cache with optional persistence to .bip artite/cache/s2-cache.json
+- Q: Where should API response cache be stored? → A: In-memory LRU cache with optional persistence to .bipartite/cache/s2-cache.json
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Add Paper by DOI (Priority: P1)
 
-A researcher finds a paper they want to add to their collection. They have the DOI (from a citation, webpage, or the paper itself). They want to add it to bip artite with full metadata without manually entering anything.
+A researcher finds a paper they want to add to their collection. They have the DOI (from a citation, webpage, or the paper itself). They want to add it to bipartite with full metadata without manually entering anything.
 
 **Why this priority**: This is the most common use case - quickly adding a paper when you have its identifier. It's the foundation for other features (PDF add uses this after DOI extraction).
 
@@ -206,7 +206,7 @@ A researcher has a preprint in their collection and the published version now ex
 ### Non-Functional Requirements
 
 - **NFR-001**: API calls MUST respect Semantic Scholar rate limits (100 requests/5 minutes for unauthenticated)
-- **NFR-002**: System MUST cache API responses using in-memory LRU cache with optional persistence to `.bip artite/cache/s2-cache.json`
+- **NFR-002**: System MUST cache API responses using in-memory LRU cache with optional persistence to `.bipartite/cache/s2-cache.json`
 - **NFR-003**: System MUST provide clear progress indication for batch operations
 - **NFR-004**: System MUST handle network failures gracefully with actionable error messages
 

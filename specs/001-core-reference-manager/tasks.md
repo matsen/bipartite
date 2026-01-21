@@ -22,7 +22,7 @@
 **Purpose**: Project initialization and basic structure
 
 - [X] T001 Create directory structure per plan.md: cmd/bip/, internal/{config,importer,reference,storage,query,export,pdf}/, testdata/
-- [X] T002 Initialize Go module with `go mod init github.com/matsen/bip artite`
+- [X] T002 Initialize Go module with `go mod init github.com/matsen/bipartite`
 - [X] T003 [P] Add spf13/cobra dependency via `go get github.com/spf13/cobra`
 - [X] T004 [P] Add modernc.org/sqlite dependency via `go get modernc.org/sqlite`
 - [X] T005 [P] Extract test fixtures from _ignore/paperpile-export-jan-12.json to testdata/
@@ -53,7 +53,7 @@
 
 ## Phase 3: User Story 5 - Initialize and Configure Repository (Priority: P5)
 
-**Goal**: Researcher sets up a new bip artite repository, configuring the PDF folder path
+**Goal**: Researcher sets up a new bipartite repository, configuring the PDF folder path
 
 **Independent Test**: Run init in empty directory, configure PDF path, verify configuration persists
 
@@ -61,8 +61,8 @@
 
 ### Implementation for User Story 5
 
-- [X] T017 [US5] Implement bp init command creating .bip artite/ structure in cmd/bip/init.go
-- [X] T018 [US5] Add repository detection (check for existing .bip artite/) in internal/config/config.go
+- [X] T017 [US5] Implement bp init command creating .bipartite/ structure in cmd/bip/init.go
+- [X] T018 [US5] Add repository detection (check for existing .bipartite/) in internal/config/config.go
 - [X] T019 [US5] Implement bp config get/set command in cmd/bip/config.go
 - [X] T020 [US5] Add path validation (verify directory exists) in internal/config/config.go
 - [X] T021 [US5] Add error for init in already-initialized directory (exit code 1)

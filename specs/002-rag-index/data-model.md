@@ -51,7 +51,7 @@ Metadata about the semantic index as a whole.
 The vector index is stored as a GOB-encoded Go struct:
 
 ```go
-// SemanticIndex is persisted to .bip artite/cache/semantic.gob
+// SemanticIndex is persisted to .bipartite/cache/semantic.gob
 type SemanticIndex struct {
     ModelName      string               `json:"model_name"`      // e.g., "all-minilm:l6-v2"
     Dimensions     int                  `json:"dimensions"`      // 384
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS embedding_metadata (
 ### File Structure
 
 ```
-.bip artite/
+.bipartite/
 ├── refs.jsonl           # Source of truth (Phase I, unchanged)
 ├── config.json          # Configuration (Phase I, unchanged)
 └── cache/

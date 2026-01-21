@@ -14,8 +14,8 @@
 ### 1. Initialize Go Module
 
 ```bash
-cd /Users/matsen/re/bip artite
-go mod init github.com/matsen/bip artite
+cd /Users/matsen/re/bipartite
+go mod init github.com/matsen/bipartite
 ```
 
 ### 2. Create Directory Structure

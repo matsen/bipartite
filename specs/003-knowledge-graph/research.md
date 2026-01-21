@@ -5,7 +5,7 @@
 
 ## Overview
 
-This document captures research decisions for the Knowledge Graph feature. Since the feature extends existing bip artite patterns with no new dependencies, research focuses on design decisions rather than technology evaluation.
+This document captures research decisions for the Knowledge Graph feature. Since the feature extends existing bipartite patterns with no new dependencies, research focuses on design decisions rather than technology evaluation.
 
 ## Decision 1: Edge Storage Format
 

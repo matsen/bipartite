@@ -98,7 +98,7 @@ type Reference struct {
 To reduce API calls and respect rate limits:
 
 ```
-.bip artite/cache/
+.bipartite/cache/
 ├── refs.db           # Existing SQLite index
 ├── vectors.gob       # Existing vector index
 └── s2_cache.db       # NEW: S2 API response cache (SQLite)

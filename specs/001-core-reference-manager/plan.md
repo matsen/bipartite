@@ -44,7 +44,7 @@ Build the foundational `bp` CLI tool in Go that enables researchers and AI agent
 - [x] **Ephemeral query layer**: SQLite rebuilt via `bip rebuild`
 - [x] **Database gitignored**: `cache/refs.db` in `.gitignore`
 - [x] **Clean merges**: JSONL format supports append-style merges
-- [x] **Self-contained repos**: Each bip artite repo is standalone
+- [x] **Self-contained repos**: Each bipartite repo is standalone
 
 ### III. Fail-Fast Philosophy
 - [x] **No silent defaults**: Missing config errors immediately

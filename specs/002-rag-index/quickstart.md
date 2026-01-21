@@ -3,11 +3,11 @@
 **Feature**: 002-rag-index
 **Date**: 2026-01-12
 
-This guide walks through setting up and using semantic search in bip artite.
+This guide walks through setting up and using semantic search in bipartite.
 
 ## Prerequisites
 
-1. **bip artite Phase I complete**: You have an initialized repository with imported papers
+1. **bipartite Phase I complete**: You have an initialized repository with imported papers
 2. **Ollama installed**: Install from [ollama.ai](https://ollama.ai)
 3. **Embedding model pulled**: Run `ollama pull nomic-embed-text`
 

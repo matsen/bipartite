@@ -5,7 +5,7 @@
 
 ## Overview
 
-The `bp` command is the primary interface for bip artite. All commands output JSON by default (agent-first design) with human-readable format available via `--human` flag.
+The `bp` command is the primary interface for bipartite. All commands output JSON by default (agent-first design) with human-readable format available via `--human` flag.
 
 ## Exit Codes
 
@@ -22,7 +22,7 @@ The `bp` command is the primary interface for bip artite. All commands output JS
 
 ### bp init
 
-Initialize a new bip artite repository in the current directory.
+Initialize a new bipartite repository in the current directory.
 
 ```
 bp init
@@ -30,7 +30,7 @@ bp init
 
 **Creates**:
 ```
-.bip artite/
+.bipartite/
 ├── refs.jsonl      # Empty file
 ├── config.json     # Default config
 └── cache/          # Empty directory (gitignored)
@@ -43,11 +43,11 @@ bp init
 
 **Output** (--human):
 ```
-Initialized bip artite repository in /path/to/repo
+Initialized bipartite repository in /path/to/repo
 ```
 
 **Errors**:
-- Exit 1: Directory already contains `.bip artite/`
+- Exit 1: Directory already contains `.bipartite/`
 - Exit 1: Cannot create directory structure
 
 ---
@@ -83,7 +83,7 @@ bp config pdf-reader skim          # Set PDF reader
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 2: `pdf-root` path does not exist (on set)
 - Exit 1: Unknown configuration key
 
@@ -138,7 +138,7 @@ Errors:
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 1: Unknown format
 - Exit 1: File not found
 - Exit 3: Malformed JSON in input file
@@ -192,7 +192,7 @@ Found 3 references:
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 0: No results (empty array, not an error)
 
 ---
@@ -245,7 +245,7 @@ PDF:      All Papers/A/Ahn et al. 2026 - Influenza....pdf
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 1: Reference ID not found
 
 ---
@@ -344,7 +344,7 @@ bp export --bibtex > refs.bib
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 1: Unknown key in --keys list
 
 ---
@@ -368,7 +368,7 @@ Rebuilt query database with 178 references
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 - Exit 3: Malformed refs.jsonl
 
 ---
@@ -412,7 +412,7 @@ Repository check: 2 issues found
 ```
 
 **Errors**:
-- Exit 2: Not in a bip artite repository
+- Exit 2: Not in a bipartite repository
 
 ---
 

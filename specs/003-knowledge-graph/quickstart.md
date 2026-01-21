@@ -91,7 +91,7 @@ bp check
 
 1. External tool analyzes manuscript and bibliography
 2. Generates edges.jsonl with relationships
-3. Import into bip artite:
+3. Import into bipartite:
 
 ```bash
 # Tool output

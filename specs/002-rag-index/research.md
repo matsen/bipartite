@@ -74,7 +74,7 @@ type SemanticIndex struct {
     Embeddings  map[string][]float32 // paper_id -> vector
 }
 
-// Persisted as GOB to .bip artite/cache/semantic.gob
+// Persisted as GOB to .bipartite/cache/semantic.gob
 ```
 
 **Metadata Table** (in existing refs.db):
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS embedding_metadata (
 );
 ```
 
-**Storage Location**: `.bip artite/cache/semantic.gob` (gitignored, ephemeral)
+**Storage Location**: `.bipartite/cache/semantic.gob` (gitignored, ephemeral)
 
 **Why Not sqlite-vec**:
 - Requires CGO (mattn/go-sqlite3) or driver switch (ncruces/go-sqlite3)

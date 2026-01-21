@@ -35,7 +35,7 @@ These are suggestions, not enforced constraints. Any string is valid.
 
 ## JSONL Schema
 
-**File**: `.bip artite/edges.jsonl`
+**File**: `.bipartite/edges.jsonl`
 
 Each line is a JSON object representing one edge:
 
@@ -60,7 +60,7 @@ When a paper is deleted from refs.jsonl:
 
 ## SQLite Index Schema
 
-**File**: `.bip artite/cache/edges.db` (ephemeral, gitignored)
+**File**: `.bipartite/cache/edges.db` (ephemeral, gitignored)
 
 ```sql
 CREATE TABLE edges (

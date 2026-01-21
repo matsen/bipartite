@@ -16,7 +16,7 @@
 
 ### User Story 1 - Add Edges from External Tool (Priority: P1)
 
-An external tool (such as a Claude Code skill analyzing a manuscript) generates edges describing relationships between papers. The researcher imports these edges into bip artite for persistent storage and later querying.
+An external tool (such as a Claude Code skill analyzing a manuscript) generates edges describing relationships between papers. The researcher imports these edges into bipartite for persistent storage and later querying.
 
 **Why this priority**: This is the primary data ingestion path. Without the ability to add edges, no other functionality is useful. The tex-to-edges skill is the first planned edge generator.
 
@@ -24,7 +24,7 @@ An external tool (such as a Claude Code skill analyzing a manuscript) generates 
 
 **Acceptance Scenarios**:
 
-1. **Given** a bip artite repo with papers imported, **When** an external tool calls `bip edge add` with source paper ID, target paper ID, relationship type, and summary, **Then** the edge is stored in the knowledge graph
+1. **Given** a bipartite repo with papers imported, **When** an external tool calls `bip edge add` with source paper ID, target paper ID, relationship type, and summary, **Then** the edge is stored in the knowledge graph
 2. **Given** edge data in JSONL format, **When** the user runs `bip edge import edges.jsonl`, **Then** all edges are added to the knowledge graph
 3. **Given** an edge referencing a paper ID that doesn't exist, **When** attempting to add the edge, **Then** the system reports an error identifying the missing paper
 
@@ -96,7 +96,7 @@ A researcher wants to share their knowledge graph annotations or back them up. T
 - **FR-007**: System MUST provide `bip edge search` command to filter edges by relationship type
 - **FR-008**: System MUST provide `bip edge export` command to export edges to JSONL
 - **FR-009**: System MUST validate that source and target node IDs exist before adding an edge (fail-fast)
-- **FR-010**: System MUST store edges in JSONL format (following bip artite's git-mergeable philosophy)
+- **FR-010**: System MUST store edges in JSONL format (following bipartite's git-mergeable philosophy)
 - **FR-011**: System MUST rebuild edge index from JSONL on `bip rebuild`
 - **FR-012**: System MUST output JSON format when `--json` flag is provided (agent-first design)
 - **FR-013**: System MUST support edges between papers (paper → paper relationships)
@@ -153,7 +153,7 @@ The test edges cover all relationship types:
 ### Usage
 
 - **Unit tests**: Use `testdata/edges/refs-subset.jsonl` + `testdata/edges/test-edges.jsonl` for self-contained tests
-- **Integration tests**: Can use full `.bip artite/refs.jsonl` with `testdata/edges/test-edges.jsonl`
+- **Integration tests**: Can use full `.bipartite/refs.jsonl` with `testdata/edges/test-edges.jsonl`
 
 ## Out of Scope
 

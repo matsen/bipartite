@@ -9,7 +9,7 @@
 
 ### User Story 1 - Import References from Paperpile (Priority: P1)
 
-A researcher exports their library from Paperpile as JSON and imports it into bip artite to create a searchable, agent-accessible reference collection. This is the foundation—without import, nothing else works.
+A researcher exports their library from Paperpile as JSON and imports it into bipartite to create a searchable, agent-accessible reference collection. This is the foundation—without import, nothing else works.
 
 **Why this priority**: Import is the entry point for all data. No other feature is useful without references in the system.
 
@@ -17,7 +17,7 @@ A researcher exports their library from Paperpile as JSON and imports it into bi
 
 **Acceptance Scenarios**:
 
-1. **Given** a new bip artite repository, **When** user runs import with a Paperpile JSON export, **Then** all references are stored with their metadata (title, authors, DOI, abstract, venue, dates, PDF paths).
+1. **Given** a new bipartite repository, **When** user runs import with a Paperpile JSON export, **Then** all references are stored with their metadata (title, authors, DOI, abstract, venue, dates, PDF paths).
 
 2. **Given** an existing repository with references, **When** user imports an updated Paperpile export containing the same papers with updated metadata, **Then** existing entries are updated (matched by DOI) and new entries are added.
 
@@ -69,7 +69,7 @@ A researcher or agent wants to open a paper's main PDF in the system viewer. Thi
 
 A researcher writing a paper exports references to BibTeX format for use with LaTeX. They can export their entire collection or specific papers by ID.
 
-**Why this priority**: BibTeX export completes the academic writing workflow—import from reference manager, work with bip artite, export for LaTeX.
+**Why this priority**: BibTeX export completes the academic writing workflow—import from reference manager, work with bipartite, export for LaTeX.
 
 **Independent Test**: Import references, export to BibTeX, verify output is valid BibTeX that LaTeX can process.
 
@@ -85,7 +85,7 @@ A researcher writing a paper exports references to BibTeX format for use with La
 
 ### User Story 5 - Initialize and Configure Repository (Priority: P5)
 
-A researcher sets up a new bip artite repository, configuring the path to their PDF folder (e.g., Paperpile's Google Drive sync folder).
+A researcher sets up a new bipartite repository, configuring the path to their PDF folder (e.g., Paperpile's Google Drive sync folder).
 
 **Why this priority**: Initialization is required once per repository. Other features depend on configuration but init is a one-time operation.
 
@@ -93,11 +93,11 @@ A researcher sets up a new bip artite repository, configuring the path to their 
 
 **Acceptance Scenarios**:
 
-1. **Given** an empty directory, **When** user runs init command, **Then** a bip artite repository structure is created with necessary files and folders.
+1. **Given** an empty directory, **When** user runs init command, **Then** a bipartite repository structure is created with necessary files and folders.
 
 2. **Given** an initialized repository, **When** user configures PDF folder path, **Then** the path is stored and used for resolving paper PDF locations.
 
-3. **Given** a directory that is already a bip artite repository, **When** user runs init, **Then** the system refuses with a clear error (no silent overwrite).
+3. **Given** a directory that is already a bipartite repository, **When** user runs init, **Then** the system refuses with a clear error (no silent overwrite).
 
 ---
 

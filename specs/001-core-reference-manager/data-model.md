@@ -126,7 +126,7 @@ type ImportSource struct {
 
 ### Config
 
-Repository configuration stored in `.bip artite/config.json`.
+Repository configuration stored in `.bipartite/config.json`.
 
 ```go
 type Config struct {

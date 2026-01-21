@@ -1,8 +1,8 @@
-# bip artite
+# bipartite
 
 A command-line reference manager designed for AI agents and researchers. Import from Paperpile, search with full-text, open PDFs, export to BibTeX.
 
-The name comes from a bip artite graph connecting two worlds: the researcher's artifacts (notes, code, concepts) and the academic literature (papers, citations, authors).
+The name comes from a bipartite graph connecting two worlds: the researcher's artifacts (notes, code, concepts) and the academic literature (papers, citations, authors).
 
 ## Design Principles
 
@@ -139,7 +139,7 @@ Tested on a 6,400 paper library (32MB Paperpile export):
 ## Data Storage
 
 ```
-.bip artite/
+.bipartite/
 ├── refs.jsonl      # Papers - human-readable, git-mergeable
 ├── edges.jsonl     # Knowledge graph edges - git-mergeable
 ├── config.json     # Local configuration
@@ -154,7 +154,7 @@ JSONL files are the source of truth and can be version-controlled. The SQLite ca
 ```bash
 # Researcher A adds papers
 bip import --format paperpile export-a.json
-git add .bip artite/refs.jsonl
+git add .bipartite/refs.jsonl
 git commit -m "Add phylogenetics papers"
 git push
 

@@ -7,7 +7,7 @@
 
 ## Summary
 
-Integrate Semantic Scholar API (ASTA) into bip artite to enable adding papers by DOI/PDF, exploring citation graphs, discovering literature gaps, and linking preprints to published versions. Uses direct HTTP client with Go standard library (no MCP dependency).
+Integrate Semantic Scholar API (ASTA) into bipartite to enable adding papers by DOI/PDF, exploring citation graphs, discovering literature gaps, and linking preprints to published versions. Uses direct HTTP client with Go standard library (no MCP dependency).
 
 ## Technical Context
 
@@ -28,7 +28,7 @@ Integrate Semantic Scholar API (ASTA) into bip artite to enable adding papers by
 | Principle | Status | Notes |
 |-----------|--------|-------|
 | I. Agent-First Design | ✅ PASS | All commands via CLI, JSON output by default, `--human` flag for readable output |
-| II. Git-Versionable Architecture | ✅ PASS | Data stored in JSONL (refs.jsonl), cache in .bip artite/cache/ (gitignored) |
+| II. Git-Versionable Architecture | ✅ PASS | Data stored in JSONL (refs.jsonl), cache in .bipartite/cache/ (gitignored) |
 | III. Fail-Fast Philosophy | ✅ PASS | API errors, rate limits, missing DOIs all produce clear errors |
 | IV. Real Testing (Agentic TDD) | ✅ PASS | Tests with real S2 API fixtures (recorded responses) |
 | V. Clean Architecture | ✅ PASS | New `internal/s2/` package, clear separation from existing code |

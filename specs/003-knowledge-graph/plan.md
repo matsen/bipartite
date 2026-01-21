@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add knowledge graph capabilities to bip artite: directed edges between papers with relationship types and relational summaries. External tools (like tex-to-edges Claude skill) generate edges; bp provides storage, query, and export. Follows existing JSONL + ephemeral SQLite architecture.
+Add knowledge graph capabilities to bipartite: directed edges between papers with relationship types and relational summaries. External tools (like tex-to-edges Claude skill) generate edges; bp provides storage, query, and export. Follows existing JSONL + ephemeral SQLite architecture.
 
 ## Technical Context
 

@@ -2,7 +2,7 @@
 
 ## Concept
 
-Bipartite is a reference management system designed for AI agents and command-line workflows. The name comes from the conceptual framework of a bip artite graph:
+Bipartite is a reference management system designed for AI agents and command-line workflows. The name comes from the conceptual framework of a bipartite graph:
 
 - **One side**: The researcher's world (notes, code, artifacts, concepts)
 - **Other side**: The academic literature (papers, citations, authors)
@@ -27,7 +27,7 @@ Inspired by [beads](https://github.com/steveyegge/beads), the system uses:
 - **JSONL as single source of truth** - human-readable, git-mergeable
 - **Ephemeral database** - SQLite rebuilt from JSONL on demand
 - **Merge-friendly** - multiple researchers can add papers, conflicts resolved intelligently
-- **Standalone repos** - each bip artite repo is self-contained, suitable for private GitHub
+- **Standalone repos** - each bipartite repo is self-contained, suitable for private GitHub
 
 This means:
 - No database lock-in
@@ -49,7 +49,7 @@ Short command: `bip`
 
 ```bash
 # Initialization
-bip init                          # Initialize a bip artite repo
+bip init                          # Initialize a bipartite repo
 bip config pdf-path <path>        # Set PDF folder location (e.g., Paperpile sync)
 
 # Adding references
@@ -82,8 +82,8 @@ bip groom                         # Find duplicates, problems; suggest/apply fix
 ## Architecture
 
 ```
-bip artite-repo/
-├── .bip artite/
+bipartite-repo/
+├── .bipartite/
 │   ├── refs.jsonl           # Source of truth - all references
 │   ├── config.json          # Repository configuration
 │   └── cache/
@@ -94,7 +94,7 @@ bip artite-repo/
 
 ### Internal Schema (JSONL)
 
-Reference-manager-agnostic format. The schema is bip artite's own - importers transform from various sources:
+Reference-manager-agnostic format. The schema is bipartite's own - importers transform from various sources:
 
 ```jsonl
 {"id":"Ahn2026-rs","doi":"10.64898/2026.01.05.697808","title":"Influenza hemagglutinin subtypes...","authors":[{"first":"Jenny J","last":"Ahn","orcid":"0009-0000-3912-7162"}],"abstract":"Abstract Hemagglutinins...","published":{"year":2026,"month":1,"day":6},"venue":"bioRxiv","pdf_path":"All Papers/A/Ahn et al. 2026 - Influenza hemagglutinin....pdf","source":{"type":"paperpile","id":"2773420d-4009-0be9-920f-d674f7f86794"}}
@@ -235,7 +235,7 @@ Semantic search over your literature:
 
 ### Phase III: Knowledge Graph
 
-The full bip artite vision:
+The full bipartite vision:
 
 - **Nodes**: papers, concepts, code features, artifacts
 - **Edges**: directed relationships with semantic summaries
@@ -465,7 +465,7 @@ Bipartite will be built using the tools it's designed for:
 
 - **Beads orchestration**: Use beads to manage the agentic development loop
 - **Agent-written code**: Agents write the implementation, humans review and guide
-- **Dogfooding**: As soon as basic import works, use bip artite to manage literature for the project itself
+- **Dogfooding**: As soon as basic import works, use bipartite to manage literature for the project itself
 
 This is both practical (agents are good at this) and validating (if the CLI is awkward for agents to use during development, fix it).
 
