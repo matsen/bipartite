@@ -14,6 +14,8 @@
 - SQLite (read from existing refs, concepts, edges tables rebuilt from JSONL) (007-knowledge-graph-viz)
 - Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), os/exec (git integration) (008-shared-repo-workflow)
 - JSONL (refs.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`) - no schema changes needed (008-shared-repo-workflow)
+- Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), os/exec (git integration), bufio (user prompts) (009-refs-conflict-resolve)
+- JSONL (refs.jsonl) - reads conflicted file, writes resolved version (009-refs-conflict-resolve)
 
 ## Project Structure
 
@@ -140,6 +142,6 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 009-refs-conflict-resolve: Added Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), os/exec (git integration), bufio (user prompts)
 - 008-shared-repo-workflow: Added Go 1.25.5 (matches existing codebase) + spf13/cobra (CLI), modernc.org/sqlite (storage), os/exec (git integration)
 - 007-knowledge-graph-viz: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), html/template (HTML generation)
-- 006-concept-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
