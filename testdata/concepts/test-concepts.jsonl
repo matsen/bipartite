@@ -1,0 +1,4 @@
+{"id": "somatic-hypermutation", "name": "Somatic Hypermutation", "aliases": ["SHM"], "description": "Process by which B cells diversify antibody genes through point mutations"}
+{"id": "variational-inference", "name": "Variational Inference", "aliases": ["VI"], "description": "Approximation method for Bayesian inference"}
+{"id": "phylogenetics", "name": "Phylogenetics", "aliases": [], "description": "Study of evolutionary relationships among biological entities"}
+{"id": "bcr-sequencing", "name": "BCR Sequencing", "aliases": ["B cell receptor sequencing", "BCR-seq"], "description": "High-throughput sequencing of B cell receptor repertoires"}

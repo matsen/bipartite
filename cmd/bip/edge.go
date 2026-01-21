@@ -73,7 +73,36 @@ func loadPaperIDSet(repoRoot string) map[string]bool {
 	return idSet
 }
 
-// validateEdgePapers checks that source and target papers exist.
+// loadConceptIDSet loads all concept IDs and returns them as a set for O(1) lookup.
+func loadConceptIDSet(repoRoot string) map[string]bool {
+	conceptsPath := config.ConceptsPath(repoRoot)
+	idSet, err := storage.LoadConceptIDSet(conceptsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "reading concepts: %v", err)
+	}
+	if idSet == nil {
+		idSet = make(map[string]bool)
+	}
+	return idSet
+}
+
+// validateEdgeEndpoints checks that source paper exists and target exists in either refs or concepts.
+// Returns the target type ("paper" or "concept") and any validation error.
+func validateEdgeEndpoints(e edge.Edge, paperIDs, conceptIDs map[string]bool) (targetType string, err error) {
+	if !paperIDs[e.SourceID] {
+		return "", fmt.Errorf("source paper %q not found", e.SourceID)
+	}
+
+	if paperIDs[e.TargetID] {
+		return "paper", nil
+	}
+	if conceptIDs[e.TargetID] {
+		return "concept", nil
+	}
+	return "", fmt.Errorf("target %q not found (not a paper or concept)", e.TargetID)
+}
+
+// validateEdgePapers checks that source and target papers exist (legacy, for paper-paper edges only).
 // Returns an error if validation fails, nil otherwise.
 func validateEdgePapers(e edge.Edge, paperIDs map[string]bool) error {
 	if !paperIDs[e.SourceID] {
@@ -83,6 +112,23 @@ func validateEdgePapers(e edge.Edge, paperIDs map[string]bool) error {
 		return fmt.Errorf("target paper %q not found", e.TargetID)
 	}
 	return nil
+}
+
+// Standard paper-concept relationship types (from relationship-types.json)
+var paperConceptRelTypes = map[string]bool{
+	"introduces":     true,
+	"applies":        true,
+	"models":         true,
+	"evaluates-with": true,
+	"critiques":      true,
+	"extends":        true,
+}
+
+// warnNonStandardRelationType prints a warning if the relationship type is non-standard for paper-concept edges.
+func warnNonStandardRelationType(relType string) {
+	if !paperConceptRelTypes[relType] {
+		fmt.Fprintf(os.Stderr, "warning: relationship type %q is not a standard paper-concept type (introduces, applies, models, evaluates-with, critiques, extends)\n", relType)
+	}
 }
 
 // EdgeAddResult is the response for the edge add command.
@@ -119,14 +165,23 @@ func runEdgeAdd(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitEdgeInvalidArgs, "invalid edge: %v", err)
 	}
 
-	// Load paper IDs and validate endpoints using shared helper
+	// Load paper and concept IDs for validation
 	paperIDs := loadPaperIDSet(repoRoot)
-	if err := validateEdgePapers(e, paperIDs); err != nil {
+	conceptIDs := loadConceptIDSet(repoRoot)
+
+	// Validate endpoints (source must be paper, target can be paper or concept)
+	targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs)
+	if err != nil {
 		if strings.Contains(err.Error(), "source paper") {
 			exitWithError(ExitEdgeSourceNotFound, "%v", err)
 		} else {
 			exitWithError(ExitEdgeTargetNotFound, "%v", err)
 		}
+	}
+
+	// Warn if using non-standard relationship type for paper-concept edges
+	if targetType == "concept" {
+		warnNonStandardRelationType(relType)
 	}
 
 	// Load existing edges
@@ -213,8 +268,9 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	}
 	defer f.Close()
 
-	// Load paper IDs for validation
+	// Load paper and concept IDs for validation
 	paperIDs := loadPaperIDSet(repoRoot)
+	conceptIDs := loadConceptIDSet(repoRoot)
 
 	// Load existing edges
 	edgesPath := config.EdgesPath(repoRoot)
@@ -225,7 +281,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 	// Process import file
 	result := EdgeImportResult{Errors: []EdgeImportError{}}
-	edges, err = processImportFile(f, edges, paperIDs, &result)
+	edges, err = processImportFile(f, edges, paperIDs, conceptIDs, &result)
 	if err != nil {
 		exitWithError(ExitDataError, "%v", err)
 	}
@@ -267,7 +323,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 // processImportFile reads edges from a file and validates/upserts them.
 // Returns the updated edges slice and any file reading error.
-func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
+func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
 	scanner := bufio.NewScanner(f)
 	const maxCapacity = 1024 * 1024
 	buf := make([]byte, maxCapacity)
@@ -301,14 +357,20 @@ func processImportFile(f *os.File, edges []edge.Edge, paperIDs map[string]bool, 
 			continue
 		}
 
-		// Validate paper endpoints using shared helper
-		if err := validateEdgePapers(e, paperIDs); err != nil {
+		// Validate endpoints (source must be paper, target can be paper or concept)
+		targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs)
+		if err != nil {
 			result.Errors = append(result.Errors, EdgeImportError{
 				Line:  lineNum,
 				Error: err.Error(),
 			})
 			result.Skipped++
 			continue
+		}
+
+		// Warn if using non-standard relationship type for paper-concept edges
+		if targetType == "concept" {
+			warnNonStandardRelationType(e.RelationshipType)
 		}
 
 		// Upsert edge

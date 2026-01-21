@@ -25,10 +25,10 @@
 
 **Purpose**: Project initialization and configuration updates
 
-- [ ] T001 Add ConceptsFile constant (`concepts.jsonl`) in internal/config/config.go
-- [ ] T002 [P] Create test fixture directory testdata/concepts/
-- [ ] T003 [P] Create test fixture testdata/concepts/test-concepts.jsonl with sample concepts
-- [ ] T004 [P] Create test fixture testdata/concepts/test-paper-concept-edges.jsonl with sample edges
+- [X] T001 Add ConceptsFile constant (`concepts.jsonl`) in internal/config/config.go
+- [X] T002 [P] Create test fixture directory testdata/concepts/
+- [X] T003 [P] Create test fixture testdata/concepts/test-concepts.jsonl with sample concepts
+- [X] T004 [P] Create test fixture testdata/concepts/test-paper-concept-edges.jsonl with sample edges
 
 ---
 
@@ -38,15 +38,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Create Concept domain type with ID, Name, Aliases, Description fields in internal/concept/concept.go
-- [ ] T006 Implement ValidateForCreate() method with ID regex `^[a-z0-9][a-z0-9_-]*$` in internal/concept/concept.go
-- [ ] T007 [P] Implement concepts JSONL read (ReadAllConcepts) in internal/storage/concepts_jsonl.go
-- [ ] T008 [P] Implement concepts JSONL write (AppendConcept, WriteAllConcepts) in internal/storage/concepts_jsonl.go
-- [ ] T009 [P] Implement concepts JSONL find by ID (FindConceptByID) in internal/storage/concepts_jsonl.go
-- [ ] T010 Create SQLite schema for concepts table in internal/storage/concepts_sqlite.go
-- [ ] T011 Create SQLite schema for concepts_fts virtual table in internal/storage/concepts_sqlite.go
-- [ ] T012 Implement RebuildConceptsFromJSONL function in internal/storage/concepts_sqlite.go
-- [ ] T013 Update bip rebuild command to include concepts in cmd/bip/rebuild.go
+- [X] T005 Create Concept domain type with ID, Name, Aliases, Description fields in internal/concept/concept.go
+- [X] T006 Implement ValidateForCreate() method with ID regex `^[a-z0-9][a-z0-9_-]*$` in internal/concept/concept.go
+- [X] T007 [P] Implement concepts JSONL read (ReadAllConcepts) in internal/storage/concepts_jsonl.go
+- [X] T008 [P] Implement concepts JSONL write (AppendConcept, WriteAllConcepts) in internal/storage/concepts_jsonl.go
+- [X] T009 [P] Implement concepts JSONL find by ID (FindConceptByID) in internal/storage/concepts_jsonl.go
+- [X] T010 Create SQLite schema for concepts table in internal/storage/concepts_sqlite.go
+- [X] T011 Create SQLite schema for concepts_fts virtual table in internal/storage/concepts_sqlite.go
+- [X] T012 Implement RebuildConceptsFromJSONL function in internal/storage/concepts_sqlite.go
+- [X] T013 Update bip rebuild command to include concepts in cmd/bip/rebuild.go
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -60,14 +60,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Create concept subcommand root in cmd/bip/concept.go
-- [ ] T015 [US1] Register concept command in cmd/bip/main.go
-- [ ] T016 [US1] Implement `bip concept add` command with --name, --aliases, --description, --human flags in cmd/bip/concept.go
-- [ ] T017 [US1] Implement `bip concept get` command with --human flag in cmd/bip/concept.go
-- [ ] T018 [US1] Implement `bip concept list` command with --human flag in cmd/bip/concept.go
-- [ ] T019 [US1] Implement `bip concept update` command with --name, --aliases, --description, --human flags in cmd/bip/concept.go
-- [ ] T020 [US1] Implement `bip concept delete` command with --force, --human flags in cmd/bip/concept.go
-- [ ] T021 [US1] Add delete safeguard: count edges before delete, require --force if edges exist; when --force is used, delete all edges pointing to concept in cmd/bip/concept.go
+- [X] T014 [US1] Create concept subcommand root in cmd/bip/concept.go
+- [X] T015 [US1] Register concept command in cmd/bip/main.go
+- [X] T016 [US1] Implement `bip concept add` command with --name, --aliases, --description, --human flags in cmd/bip/concept.go
+- [X] T017 [US1] Implement `bip concept get` command with --human flag in cmd/bip/concept.go
+- [X] T018 [US1] Implement `bip concept list` command with --human flag in cmd/bip/concept.go
+- [X] T019 [US1] Implement `bip concept update` command with --name, --aliases, --description, --human flags in cmd/bip/concept.go
+- [X] T020 [US1] Implement `bip concept delete` command with --force, --human flags in cmd/bip/concept.go
+- [X] T021 [US1] Add delete safeguard: count edges before delete, require --force if edges exist; when --force is used, delete all edges pointing to concept in cmd/bip/concept.go
 
 **Checkpoint**: User Story 1 complete - concept CRUD operations fully functional
 
@@ -81,9 +81,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Add concept ID loading function (loadConceptIDs) in cmd/bip/edge.go
-- [ ] T023 [US2] Extend edge add validation to check target against both refs AND concepts in cmd/bip/edge.go
-- [ ] T024 [US2] Add warning for non-standard paper-concept relationship types (check against relationship-types.json) in cmd/bip/edge.go
+- [X] T022 [US2] Add concept ID loading function (loadConceptIDs) in cmd/bip/edge.go
+- [X] T023 [US2] Extend edge add validation to check target against both refs AND concepts in cmd/bip/edge.go
+- [X] T024 [US2] Add warning for non-standard paper-concept relationship types (check against relationship-types.json) in cmd/bip/edge.go
 
 **Checkpoint**: User Story 2 complete - paper-concept edges can be created with validation
 
@@ -97,8 +97,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] Add SQLite query for papers by concept ID in internal/storage/concepts_sqlite.go
-- [ ] T026 [US3] Implement `bip concept papers` command with --type, --human flags in cmd/bip/concept.go
+- [X] T025 [US3] Add SQLite query for papers by concept ID in internal/storage/concepts_sqlite.go
+- [X] T026 [US3] Implement `bip concept papers` command with --type, --human flags in cmd/bip/concept.go
 
 **Checkpoint**: User Story 3 complete - can query papers by concept
 
@@ -112,8 +112,8 @@
 
 ### Implementation for User Story 4
 
-- [ ] T027 [US4] Add SQLite query for concepts by paper ID in internal/storage/concepts_sqlite.go
-- [ ] T028 [US4] Add paper subcommand if not exists, then implement `bip paper concepts` command with --type, --human flags in cmd/bip/paper.go
+- [X] T027 [US4] Add SQLite query for concepts by paper ID in internal/storage/concepts_sqlite.go
+- [X] T028 [US4] Add paper subcommand if not exists, then implement `bip paper concepts` command with --type, --human flags in cmd/bip/paper.go
 
 **Checkpoint**: User Story 4 complete - can query concepts by paper
 
@@ -127,12 +127,12 @@
 
 ### Implementation for User Story 5
 
-- [ ] T029 [US5] Implement edge update function to change target_id in internal/storage/edges_jsonl.go
-- [ ] T030 [US5] Implement merge logic in cmd/bip/concept.go:
+- [X] T029 [US5] Implement edge update function to change target_id in internal/storage/edges_jsonl.go
+- [X] T030 [US5] Implement merge logic in cmd/bip/concept.go:
   - Update all edges where target_id = source_concept to point to target_concept
   - Detect duplicate edges (same source_id + target_id + relationship_type) and keep only the one with earlier created_at
   - Add source concept's aliases to target concept's aliases list
-- [ ] T031 [US5] Implement `bip concept merge` command with --human flag in cmd/bip/concept.go
+- [X] T031 [US5] Implement `bip concept merge` command with --human flag in cmd/bip/concept.go
 
 **Checkpoint**: User Story 5 complete - concept merge fully functional
 
@@ -142,9 +142,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T032 [P] Add concept search by text (FTS) function in internal/storage/concepts_sqlite.go
-- [ ] T033 Run quickstart.md validation - verify all documented commands work as specified
-- [ ] T034 Verify exit codes match CLI contract (0 success, 1 general error, 2 data error, 3 validation error)
+- [X] T032 [P] Add concept search by text (FTS) function in internal/storage/concepts_sqlite.go
+- [X] T033 Run quickstart.md validation - verify all documented commands work as specified
+- [X] T034 Verify exit codes match CLI contract (0 success, 1 general error, 2 data error, 3 validation error)
 
 ---
 
