@@ -102,6 +102,23 @@ Requires `ASTA_API_KEY` environment variable.
 
 Relationship types: `cites`, `extends`, `contradicts`, `implements`, `applies-to`, `builds-on` (custom types also allowed).
 
+### Concept Commands
+
+Concepts are named ideas, methods, or phenomena that papers relate to. They enable organizing your library by topic.
+
+| Command | Description |
+|---------|-------------|
+| `bip concept add <id> --name <name>` | Create a concept with optional `--aliases`, `--description` |
+| `bip concept get <id>` | Get a concept by ID |
+| `bip concept list` | List all concepts |
+| `bip concept update <id>` | Update concept `--name`, `--aliases`, or `--description` |
+| `bip concept delete <id>` | Delete concept (use `--force` if edges exist) |
+| `bip concept papers <id>` | Find papers linked to a concept (`--type` to filter) |
+| `bip concept merge <source> <target>` | Merge one concept into another |
+| `bip paper concepts <id>` | Find concepts linked to a paper (`--type` to filter) |
+
+Paper-concept relationship types: `introduces`, `applies`, `models`, `evaluates-with`, `critiques`, `extends`.
+
 All commands output JSON by default. Use `--human` for readable output.
 
 ## Configuration
@@ -142,6 +159,7 @@ Tested on a 6,400 paper library (32MB Paperpile export):
 .bipartite/
 ├── refs.jsonl      # Papers - human-readable, git-mergeable
 ├── edges.jsonl     # Knowledge graph edges - git-mergeable
+├── concepts.jsonl  # Concept nodes - git-mergeable
 ├── config.json     # Local configuration
 └── cache/
     └── refs.db     # SQLite with FTS5 - ephemeral, gitignored
@@ -173,7 +191,7 @@ bip rebuild  # Refresh local index
 - **Phase I** ✓: Core reference manager with Paperpile import
 - **Phase II** ✓: RAG index for semantic search over abstracts
 - **Phase III-a** ✓: Knowledge graph with directed edges between papers
-- **Phase III-b**: Concept nodes and artifact connections
+- **Phase III-b** ✓: Concept nodes and artifact connections
 - **Phase IV** ✓: Semantic Scholar integration for metadata enrichment
 
 See [VISION.md](VISION.md) for details.
