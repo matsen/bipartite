@@ -1,0 +1,9 @@
+{"id":"paper1","doi":"10.1234/a","title":"Paper One","authors":[{"first":"Maria","last":"Garcia"}]}
+<<<<<<< HEAD
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","abstract":"Version A abstract - written by first author.","venue":"Nature"}
+{"id":"paper3","doi":"10.1234/c","title":"Paper Three - Different Title A","abstract":"Paper three abstract A"}
+=======
+{"id":"paper2","doi":"10.1234/b","title":"Paper Two","abstract":"Version B abstract - edited by collaborator.","venue":"Science"}
+{"id":"paper3","doi":"10.1234/c","title":"Paper Three - Different Title B","abstract":"Paper three abstract B"}
+>>>>>>> feature-branch
+{"id":"paper4","doi":"10.1234/d","title":"Paper Four","authors":[{"first":"Aisha","last":"Mohammed"}]}

@@ -25,9 +25,9 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create internal/conflict package directory structure
-- [ ] T002 [P] Create internal/conflict/types.go with ConflictRegion, PaperMatch, FieldConflict, ResolutionPlan, ParseError types
-- [ ] T003 [P] Add ResolveResult, UnresolvedInfo, ResolveOp types to cmd/bip/types.go
+- [x] T001 Create internal/conflict package directory structure
+- [x] T002 [P] Create internal/conflict/types.go with ConflictRegion, PaperMatch, FieldConflict, ResolutionPlan, ParseError types
+- [x] T003 [P] Add ResolveResult, UnresolvedInfo, ResolveOp types to cmd/bip/types.go
 
 ---
 
@@ -37,18 +37,18 @@
 
 **Critical**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create testdata/conflict/ directory for test fixtures
-- [ ] T005 [P] Create test fixture testdata/conflict/simple_ours_better.jsonl (ours has more fields)
-- [ ] T006 [P] Create test fixture testdata/conflict/simple_theirs_better.jsonl (theirs has more fields)
-- [ ] T007 [P] Create test fixture testdata/conflict/complementary_merge.jsonl (non-overlapping fields)
-- [ ] T008 [P] Create test fixture testdata/conflict/true_conflict.jsonl (same field, different values)
-- [ ] T009 [P] Create test fixture testdata/conflict/multiple_papers.jsonl (multiple conflict regions)
-- [ ] T010 [P] Create test fixture testdata/conflict/malformed_markers.jsonl (invalid conflict markers)
-- [ ] T011 [P] Create test fixture testdata/conflict/no_conflicts.jsonl (clean file without markers)
-- [ ] T012 Implement conflict marker parser in internal/conflict/parser.go (state machine: NORMAL, IN_OURS, IN_THEIRS)
-- [ ] T013 Write parser tests in internal/conflict/parser_test.go (table-driven, use fixtures)
-- [ ] T014 Implement paper matching by DOI/ID in internal/conflict/matcher.go
-- [ ] T015 Write matcher tests in internal/conflict/matcher_test.go
+- [x] T004 Create testdata/conflict/ directory for test fixtures
+- [x] T005 [P] Create test fixture testdata/conflict/simple_ours_better.jsonl (ours has more fields)
+- [x] T006 [P] Create test fixture testdata/conflict/simple_theirs_better.jsonl (theirs has more fields)
+- [x] T007 [P] Create test fixture testdata/conflict/complementary_merge.jsonl (non-overlapping fields)
+- [x] T008 [P] Create test fixture testdata/conflict/true_conflict.jsonl (same field, different values)
+- [x] T009 [P] Create test fixture testdata/conflict/multiple_papers.jsonl (multiple conflict regions)
+- [x] T010 [P] Create test fixture testdata/conflict/malformed_markers.jsonl (invalid conflict markers)
+- [x] T011 [P] Create test fixture testdata/conflict/no_conflicts.jsonl (clean file without markers)
+- [x] T012 Implement conflict marker parser in internal/conflict/parser.go (state machine: NORMAL, IN_OURS, IN_THEIRS)
+- [x] T013 Write parser tests in internal/conflict/parser_test.go (table-driven, use fixtures)
+- [x] T014 Implement paper matching by DOI/ID in internal/conflict/matcher.go
+- [x] T015 Write matcher tests in internal/conflict/matcher_test.go
 
 **Checkpoint**: Foundation ready - parser and matcher functional with tests passing
 
@@ -62,20 +62,20 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Write resolver tests for completeness comparison in internal/conflict/resolver_test.go
-- [ ] T017 [P] [US1] Write resolver tests for complementary metadata merging in internal/conflict/resolver_test.go
-- [ ] T018 [P] [US1] Write resolver tests for different-paper preservation in internal/conflict/resolver_test.go
+- [x] T016 [P] [US1] Write resolver tests for completeness comparison in internal/conflict/resolver_test.go
+- [x] T017 [P] [US1] Write resolver tests for complementary metadata merging in internal/conflict/resolver_test.go
+- [x] T018 [P] [US1] Write resolver tests for different-paper preservation in internal/conflict/resolver_test.go
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Implement completeness scoring (priority field comparison: Abstract > Authors > Venue > Published > DOI) in internal/conflict/resolver.go
-- [ ] T020 [US1] Implement metadata merging logic (field-by-field, union for slices, most-specific for dates) in internal/conflict/resolver.go
-- [ ] T021 [US1] Implement paper-only-on-one-side handling (ActionAddOurs, ActionAddTheirs) in internal/conflict/resolver.go
-- [ ] T022 [US1] Implement author list comparison (longer wins, same length different = conflict) in internal/conflict/resolver.go
-- [ ] T023 [US1] Create resolve command scaffolding in cmd/bip/resolve.go with cobra command definition
-- [ ] T024 [US1] Implement resolve command main logic (read file, parse conflicts, resolve, write output) in cmd/bip/resolve.go
-- [ ] T025 [US1] Implement JSON and --human output formatting in cmd/bip/resolve.go
-- [ ] T026 [US1] Write integration tests for bip resolve in cmd/bip/resolve_test.go
+- [x] T019 [US1] Implement completeness scoring (priority field comparison: Abstract > Authors > Venue > Published > DOI) in internal/conflict/resolver.go
+- [x] T020 [US1] Implement metadata merging logic (field-by-field, union for slices, most-specific for dates) in internal/conflict/resolver.go
+- [x] T021 [US1] Implement paper-only-on-one-side handling (ActionAddOurs, ActionAddTheirs) in internal/conflict/resolver.go
+- [x] T022 [US1] Implement author list comparison (longer wins, same length different = conflict) in internal/conflict/resolver.go
+- [x] T023 [US1] Create resolve command scaffolding in cmd/bip/resolve.go with cobra command definition
+- [x] T024 [US1] Implement resolve command main logic (read file, parse conflicts, resolve, write output) in cmd/bip/resolve.go
+- [x] T025 [US1] Implement JSON and --human output formatting in cmd/bip/resolve.go
+- [x] T026 [US1] Write integration tests for bip resolve in cmd/bip/resolve_test.go
 
 **Checkpoint**: User Story 1 complete - basic `bip resolve` auto-resolves completeness conflicts
 
@@ -89,15 +89,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T027 [P] [US2] Write dry-run test cases (file unchanged, output shows plan) in cmd/bip/resolve_test.go
-- [ ] T028 [P] [US2] Write no-conflicts detection test in cmd/bip/resolve_test.go
+- [x] T027 [P] [US2] Write dry-run test cases (file unchanged, output shows plan) in cmd/bip/resolve_test.go
+- [x] T028 [P] [US2] Write no-conflicts detection test in cmd/bip/resolve_test.go
 
 ### Implementation for User Story 2
 
-- [ ] T029 [US2] Add --dry-run flag to resolve command in cmd/bip/resolve.go
-- [ ] T030 [US2] Implement dry-run output formatting (list conflicts with proposed resolutions) in cmd/bip/resolve.go
-- [ ] T031 [US2] Implement no-conflicts-detected message in cmd/bip/resolve.go
-- [ ] T032 [US2] Implement unresolvable conflicts preview (shows which need interactive) in cmd/bip/resolve.go
+- [x] T029 [US2] Add --dry-run flag to resolve command in cmd/bip/resolve.go
+- [x] T030 [US2] Implement dry-run output formatting (list conflicts with proposed resolutions) in cmd/bip/resolve.go
+- [x] T031 [US2] Implement no-conflicts-detected message in cmd/bip/resolve.go
+- [x] T032 [US2] Implement unresolvable conflicts preview (shows which need interactive) in cmd/bip/resolve.go
 
 **Checkpoint**: User Story 2 complete - `bip resolve --dry-run` previews all operations
 
@@ -111,17 +111,17 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Write test fixture testdata/conflict/interactive_needed.jsonl (multiple true conflicts)
-- [ ] T034 [P] [US3] Write interactive prompt unit tests (mock stdin) in internal/conflict/interactive_test.go
+- [x] T033 [P] [US3] Write test fixture testdata/conflict/interactive_needed.jsonl (multiple true conflicts)
+- [x] T034 [P] [US3] Write interactive prompt unit tests (mock stdin) in internal/conflict/interactive_test.go
 
 ### Implementation for User Story 3
 
-- [ ] T035 [US3] Implement interactive prompt handler in internal/conflict/interactive.go (numbered options [1/2], input validation)
-- [ ] T036 [US3] Add --interactive flag to resolve command in cmd/bip/resolve.go
-- [ ] T037 [US3] Implement interactive resolution workflow (auto-resolve what possible, prompt for rest) in cmd/bip/resolve.go
-- [ ] T038 [US3] Implement progress indication ("Resolving conflict 2 of 5...") in cmd/bip/resolve.go
-- [ ] T039 [US3] Implement exit code 1 when unresolvable conflicts exist without --interactive in cmd/bip/resolve.go
-- [ ] T040 [US3] Write interactive integration tests in cmd/bip/resolve_test.go
+- [x] T035 [US3] Implement interactive prompt handler in internal/conflict/interactive.go (numbered options [1/2], input validation)
+- [x] T036 [US3] Add --interactive flag to resolve command in cmd/bip/resolve.go
+- [x] T037 [US3] Implement interactive resolution workflow (auto-resolve what possible, prompt for rest) in cmd/bip/resolve.go
+- [x] T038 [US3] Implement progress indication ("Resolving conflict 2 of 5...") in cmd/bip/resolve.go
+- [x] T039 [US3] Implement exit code 1 when unresolvable conflicts exist without --interactive in cmd/bip/resolve.go
+- [x] T040 [US3] Write interactive integration tests in cmd/bip/resolve_test.go
 
 **Checkpoint**: User Story 3 complete - `bip resolve --interactive` handles all conflict types
 
@@ -131,14 +131,14 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T041 [P] Implement exit code 3 for malformed conflict markers in cmd/bip/resolve.go
-- [ ] T042 [P] Add actionable error messages with line numbers for parse errors in internal/conflict/parser.go
-- [ ] T043 [P] Handle edge case: refs.jsonl doesn't exist or is empty in cmd/bip/resolve.go
-- [ ] T044 [P] Handle edge case: paper has no DOI on either side (match by ID fallback) in internal/conflict/matcher.go
-- [ ] T045 Register resolve command in cmd/bip/root.go
-- [ ] T046 Run quickstart.md validation scenarios manually
-- [ ] T047 [P] Verify all tests pass with go test ./...
-- [ ] T048 [P] Run go fmt ./... and go vet ./...
+- [x] T041 [P] Implement exit code 3 for malformed conflict markers in cmd/bip/resolve.go
+- [x] T042 [P] Add actionable error messages with line numbers for parse errors in internal/conflict/parser.go
+- [x] T043 [P] Handle edge case: refs.jsonl doesn't exist or is empty in cmd/bip/resolve.go
+- [x] T044 [P] Handle edge case: paper has no DOI on either side (match by ID fallback) in internal/conflict/matcher.go
+- [x] T045 Register resolve command in cmd/bip/root.go
+- [x] T046 Run quickstart.md validation scenarios manually
+- [x] T047 [P] Verify all tests pass with go test ./...
+- [x] T048 [P] Run go fmt ./... and go vet ./...
 
 ---
 
