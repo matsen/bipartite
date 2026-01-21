@@ -10,6 +10,8 @@
 - N/A (ASTA is read-only external API, no local persistence) (005-asta-mcp-integration)
 - Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (006-concept-nodes)
 - JSONL (concepts.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`) (006-concept-nodes)
+- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), html/template (HTML generation) (007-knowledge-graph-viz)
+- SQLite (read from existing refs, concepts, edges tables rebuilt from JSONL) (007-knowledge-graph-viz)
 
 ## Project Structure
 
@@ -51,6 +53,12 @@ go build -o bip ./cmd/bip && ./bip --help
 ./bip asta references DOI:10.1093/sysbio/syy032 # Get referenced papers
 ./bip asta author "Frederick Matsen"          # Search for authors
 ./bip asta author-papers 145666442            # Get papers by author ID
+
+# Visualization commands
+./bip viz                                      # Generate HTML graph visualization to stdout
+./bip viz --output graph.html                  # Generate to file
+./bip viz --layout circle                      # Use circular layout (force, circle, grid)
+./bip viz --offline                            # Bundle Cytoscape.js for offline use
 
 # Add --human flag for readable output (default is JSON)
 ```
@@ -113,5 +121,6 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 007-knowledge-graph-viz: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage), html/template (HTML generation)
 - 006-concept-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
 - 005-asta-mcp-integration: Added ASTA MCP commands (bip asta *) for paper search, snippet search, citations, references, and author lookup via Allen AI's Academic Search Tool API

@@ -1,0 +1,5 @@
+{"source_id":"Halpern1998-yc","target_id":"mutation-selection-model","relationship_type":"introduces","summary":"Introduces the mutation-selection model for protein evolution","created_at":"2024-01-15T10:00:00Z"}
+{"source_id":"Halpern1998-yc","target_id":"phylogenetics","relationship_type":"applies","summary":"Applies phylogenetic methods to analyze protein sequences","created_at":"2024-01-15T10:00:00Z"}
+{"source_id":"Yang1998-zk","target_id":"mutation-selection-model","relationship_type":"applies","summary":"Applies mutation-selection concepts to rate variation analysis","created_at":"2024-01-15T10:00:00Z"}
+{"source_id":"Bloom2017-mp","target_id":"mutation-selection-model","relationship_type":"models","summary":"Uses mutation-selection models informed by experimental data","created_at":"2024-01-15T10:00:00Z"}
+{"source_id":"Bloom2017-mp","target_id":"deep-mutational-scanning","relationship_type":"applies","summary":"Applies deep mutational scanning to improve selection models","created_at":"2024-01-15T10:00:00Z"}
