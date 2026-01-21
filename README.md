@@ -4,6 +4,46 @@ A command-line reference manager designed for AI agents and researchers. Import 
 
 The name comes from a bipartite graph connecting two worlds: the researcher's artifacts (notes, code, concepts) and the academic literature (papers, citations, authors).
 
+## What Makes Bipartite Special
+
+### Agent-First in an Agent-First World
+
+Traditional reference managers—Zotero, Mendeley, Paperpile—are GUI applications designed for humans clicking through menus. Bipartite inverts this. As AI coding agents move to the terminal, research tools need to follow. Bipartite outputs JSON by default, operates entirely via CLI, and needs no MCP server—agents just use bash. When an agent helps you write a paper, it can search your library, find relevant citations, and open PDFs for you to read, all through natural command-line interaction.
+
+### Your Library Lives in Git
+
+Most reference managers lock your data in proprietary databases or cloud services. Bipartite uses JSONL as the single source of truth—human-readable text files that git handles naturally. This means:
+
+- **Real collaboration**: Multiple researchers add papers independently, resolve conflicts through standard git merges
+- **Full provenance**: Every change tracked, every decision auditable, complete history preserved
+- **No vendor lock-in**: Your data is portable text, not trapped in a database
+- **Reproducibility**: Git enables transparent, reproducible science—your reference library should be part of that
+
+The SQLite index is ephemeral, rebuilt on demand from the source JSONL. Pull changes, run `bip rebuild`, and you're synchronized.
+
+### A Knowledge Graph That Includes Your Ideas
+
+Tools like Semantic Scholar and ResearchRabbit are powerful, but they only know about published papers. Your research group has concepts, methods, and ideas that don't exist in the public literature yet. Bipartite's concept graph bridges this gap:
+
+- Define concepts private to your group (a new algorithm you're developing, a hypothesis you're testing)
+- Link papers to your concepts: "Paper A applies our method", "Paper B critiques the same problem we're solving"
+- Build a knowledge graph where the published literature connects to your unpublished work
+
+This is the bipartite vision—one side is the public academic graph, the other is your private research world, and edges connect them with semantic meaning.
+
+### Deep Integration with Academic Search
+
+Bipartite integrates two complementary services from Allen AI:
+
+- **Semantic Scholar (S2)**: Structured database access to 200M+ papers. Add papers by DOI, track citations, discover gaps in your collection.
+- **ASTA (Academic Search Tool API)**: LLM-powered discovery that searches like an expert researcher. Find specific passages within papers, get relevancy-ranked results with evidence.
+
+S2 answers "give me this paper's citations" (structured). ASTA answers "find papers discussing convergence of variational inference in phylogenetics" (semantic). Together, they make literature discovery a conversation, not a keyword hunt.
+
+### Single Binary, No Infrastructure
+
+No database server. No heavyweight frameworks. No configuration complexity. Bipartite is a single Go binary with fast startup. Install it, run `bip init`, and you're working. The ephemeral SQLite cache means you never manage database state—if something goes wrong, delete the cache and rebuild. Local semantic search over your abstracts via Ollama embeddings means you can find conceptually related papers without external API calls. This simplicity matters when agents need to operate autonomously.
+
 ## Design Principles
 
 **Agent-first**: CLI is the primary interface. JSON output by default. No MCP server needed—agents use bash directly.
