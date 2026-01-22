@@ -1,5 +1,34 @@
 # bipartite Development Guidelines
 
+## Task Management with Beads (CRITICAL)
+
+**ALWAYS use `bd` (beads) for task tracking. NEVER use TodoWrite or internal todo lists.**
+
+Beads is a Git-backed task tracker designed for AI agents. It provides persistent memory across sessions and proper dependency tracking.
+
+### Essential Commands
+```bash
+bd ready                    # Show tasks ready to work on (no blockers)
+bd create "Title" -p 0      # Create a priority-0 (highest) task
+bd create "Title" -p 1      # Create a priority-1 task
+bd show <id>                # View task details
+bd close <id>               # Mark task complete
+bd dep add <child> <parent> # Child blocked by parent
+bd list                     # List all tasks
+```
+
+### Workflow
+1. **Start of work**: Run `bd ready` to see actionable tasks
+2. **Planning**: Create tasks with `bd create`, set dependencies with `bd dep add`
+3. **Working**: Update task status as you progress
+4. **Completion**: Mark done with `bd close <id>`
+
+### Why Beads Over TodoWrite
+- Persists across sessions (stored in `.beads/`, gitignored for local-only use)
+- Tracks dependencies between tasks
+- Prevents merge conflicts with hash-based IDs
+- Designed specifically for AI agent workflows
+
 ## Active Technologies
 - **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
 - **Ollama** for local embeddings, pure Go vector storage
@@ -89,6 +118,7 @@ Follow standard Go conventions (`go fmt`, `go vet`)
 
 ## Session Management
 
+- **Task tracking**: Use `bd` (beads) for ALL task management. Run `bd ready` at session start. **DO NOT use TodoWrite.**
 - **Continuation prompts**: Save to `_ignore/CONTINUE.md`, never commit
 - The `_ignore/` directory is gitignored for local-only files
 

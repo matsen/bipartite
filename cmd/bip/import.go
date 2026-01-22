@@ -241,7 +241,18 @@ func classifyImport(existing []reference.Reference, newRef reference.Reference) 
 		panic("classifyImport called with empty ID - parser bug")
 	}
 
-	// Check for DOI match first (primary deduplication)
+	// Check for source ID match first (prevents duplicates from re-imports)
+	if newRef.Source.ID != "" {
+		if idx, found := storage.FindBySourceID(existing, newRef.Source.Type, newRef.Source.ID); found {
+			return importAction{
+				action:      "update",
+				reason:      "source_id_match",
+				existingIdx: idx,
+			}
+		}
+	}
+
+	// Check for DOI match (secondary deduplication)
 	if newRef.DOI != "" {
 		if idx, found := storage.FindByDOI(existing, newRef.DOI); found {
 			return importAction{
@@ -252,7 +263,7 @@ func classifyImport(existing []reference.Reference, newRef reference.Reference) 
 		}
 	}
 
-	// Check for ID match (secondary deduplication)
+	// Check for ID match (tertiary deduplication)
 	if idx, found := storage.FindByID(existing, newRef.ID); found {
 		return importAction{
 			action:      "update",

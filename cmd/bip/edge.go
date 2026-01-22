@@ -40,6 +40,8 @@ func init() {
 	// bp edge list flags
 	edgeListCmd.Flags().Bool("incoming", false, "Show edges where paper is target (default: source)")
 	edgeListCmd.Flags().Bool("all", false, "Show both incoming and outgoing edges")
+	edgeListCmd.Flags().StringP("paper", "p", "", "Filter edges by paper ID")
+	edgeListCmd.Flags().StringP("concept", "c", "", "Filter edges by concept ID")
 	edgeCmd.AddCommand(edgeListCmd)
 
 	// bp edge search flags
@@ -401,31 +403,66 @@ func outputImportFailure(result EdgeImportResult) {
 	}
 }
 
-// EdgeListResult is the response for the edge list command.
+// EdgeListResult is the response for the edge list command when filtering by node.
 type EdgeListResult struct {
-	PaperID  string      `json:"paper_id"`
+	PaperID  string      `json:"paper_id,omitempty"`
 	Outgoing []edge.Edge `json:"outgoing,omitempty"`
 	Incoming []edge.Edge `json:"incoming,omitempty"`
 }
 
+// EdgeListAllResult is the response for listing all edges.
+type EdgeListAllResult struct {
+	Edges []edge.Edge `json:"edges"`
+	Count int         `json:"count"`
+}
+
 var edgeListCmd = &cobra.Command{
-	Use:   "list <paper-id>",
-	Short: "List edges for a paper",
-	Long:  `List all edges connected to a specific paper.`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runEdgeList,
+	Use:   "list [paper-id]",
+	Short: "List edges in the knowledge graph",
+	Long: `List edges in the knowledge graph.
+
+Without arguments, lists all edges. With a paper ID argument or --paper flag,
+lists edges for that specific paper. Use --concept to filter by concept.
+
+Examples:
+  bip edge list                    # List all edges
+  bip edge list Smith2026          # Edges for paper Smith2026
+  bip edge list --paper Smith2026  # Same as above
+  bip edge list --concept mcmc     # Edges involving concept "mcmc"`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runEdgeList,
 }
 
 func runEdgeList(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
-	paperID := args[0]
 
+	paperFlag, _ := cmd.Flags().GetString("paper")
+	conceptFlag, _ := cmd.Flags().GetString("concept")
 	incoming, _ := cmd.Flags().GetBool("incoming")
 	all, _ := cmd.Flags().GetBool("all")
+
+	// Determine paper ID from args or flag
+	var paperID string
+	if len(args) > 0 {
+		paperID = args[0]
+	} else if paperFlag != "" {
+		paperID = paperFlag
+	}
 
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
+	// If concept filter is specified
+	if conceptFlag != "" {
+		return runEdgeListByConcept(db, conceptFlag)
+	}
+
+	// If no paper specified, list all edges
+	if paperID == "" {
+		return runEdgeListAll(db)
+	}
+
+	// List edges for specific paper
 	var result EdgeListResult
 	result.PaperID = paperID
 
@@ -481,6 +518,68 @@ func runEdgeList(cmd *cobra.Command, args []string) error {
 			result.Incoming = []edge.Edge{}
 		}
 		outputJSON(result)
+	}
+
+	return nil
+}
+
+// runEdgeListAll outputs all edges in the graph.
+func runEdgeListAll(db *storage.DB) error {
+	edges, err := db.GetAllEdges()
+	if err != nil {
+		exitWithError(ExitDataError, "querying edges: %v", err)
+	}
+
+	if humanOutput {
+		if len(edges) == 0 {
+			fmt.Println("No edges in knowledge graph.")
+			return nil
+		}
+
+		fmt.Printf("All edges (%d total):\n", len(edges))
+		for _, e := range edges {
+			fmt.Printf("  %s --[%s]--> %s\n", e.SourceID, e.RelationshipType, e.TargetID)
+			fmt.Printf("    %q\n", e.Summary)
+		}
+	} else {
+		if edges == nil {
+			edges = []edge.Edge{}
+		}
+		outputJSON(EdgeListAllResult{
+			Edges: edges,
+			Count: len(edges),
+		})
+	}
+
+	return nil
+}
+
+// runEdgeListByConcept outputs edges involving a specific concept.
+func runEdgeListByConcept(db *storage.DB, conceptID string) error {
+	edges, err := db.GetEdgesByTarget(conceptID)
+	if err != nil {
+		exitWithError(ExitDataError, "querying edges: %v", err)
+	}
+
+	if humanOutput {
+		if len(edges) == 0 {
+			fmt.Printf("No edges found for concept %s\n", conceptID)
+			return nil
+		}
+
+		fmt.Printf("Edges to concept %s (%d total):\n", conceptID, len(edges))
+		for _, e := range edges {
+			fmt.Printf("  %s --[%s]--> %s\n", e.SourceID, e.RelationshipType, e.TargetID)
+			fmt.Printf("    %q\n", e.Summary)
+		}
+	} else {
+		if edges == nil {
+			edges = []edge.Edge{}
+		}
+		outputJSON(EdgeListAllResult{
+			Edges: edges,
+			Count: len(edges),
+		})
 	}
 
 	return nil

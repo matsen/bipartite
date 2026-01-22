@@ -1,6 +1,8 @@
 # Private data (not for commit)
 _ignore/
 .bipartite/
+.beads/
+AGENTS.md
 .env
 
 # Go build artifacts
