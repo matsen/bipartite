@@ -41,15 +41,18 @@ type DuplicateGroup struct {
 
 // DedupeResult represents the result of a dedupe operation.
 type DedupeResult struct {
-	DryRun       bool             `json:"dry_run"`
-	Groups       []DuplicateGroup `json:"groups"`
-	TotalDupes   int              `json:"total_duplicates"`
-	EdgesUpdated int              `json:"edges_updated,omitempty"`
+	DryRun        bool             `json:"dry_run"`
+	Groups        []DuplicateGroup `json:"groups"`
+	TotalDupes    int              `json:"total_duplicates"`
+	EdgesModified int              `json:"edges_modified,omitempty"`
 }
 
 func runDedupe(cmd *cobra.Command, args []string) error {
 	if !dedupeDryRun && !dedupeMerge {
 		return fmt.Errorf("must specify either --dry-run or --merge")
+	}
+	if dedupeDryRun && dedupeMerge {
+		return fmt.Errorf("cannot specify both --dry-run and --merge")
 	}
 
 	repoRoot := mustFindRepository()
@@ -68,7 +71,7 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 		if humanOutput {
 			fmt.Println("No duplicates found.")
 		} else {
-			outputJSON(DedupeResult{DryRun: dedupeDryRun, Groups: []DuplicateGroup{}})
+			outputJSON(DedupeResult{DryRun: dedupeDryRun})
 		}
 		return nil
 	}
@@ -97,38 +100,44 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 	}
 
 	// Merge mode: actually remove duplicates and update edges
-	edgesUpdated, err := performMerge(repoRoot, refs, groups)
+	edgesModified, err := performMerge(repoRoot, refs, groups)
 	if err != nil {
 		exitWithError(ExitDataError, "performing merge: %v", err)
 	}
 
 	if humanOutput {
 		fmt.Printf("Merged %d duplicate groups (%d duplicates removed)\n", len(groups), totalDupes)
-		if edgesUpdated > 0 {
-			fmt.Printf("Updated %d edge references\n", edgesUpdated)
+		if edgesModified > 0 {
+			fmt.Printf("Modified %d edges\n", edgesModified)
 		}
 	} else {
 		outputJSON(DedupeResult{
-			DryRun:       false,
-			Groups:       groups,
-			TotalDupes:   totalDupes,
-			EdgesUpdated: edgesUpdated,
+			DryRun:        false,
+			Groups:        groups,
+			TotalDupes:    totalDupes,
+			EdgesModified: edgesModified,
 		})
 	}
 
 	return nil
 }
 
+// sourceKey is a composite key for grouping references by import source.
+type sourceKey struct {
+	Type string
+	ID   string
+}
+
 // findDuplicateGroups finds references with the same source ID.
 func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
 	// Map source key -> list of ref IDs
-	sourceMap := make(map[string][]string)
+	sourceMap := make(map[sourceKey][]string)
 
 	for _, ref := range refs {
 		if ref.Source.ID == "" {
 			continue // Skip refs without source ID
 		}
-		key := ref.Source.Type + ":" + ref.Source.ID
+		key := sourceKey{Type: ref.Source.Type, ID: ref.Source.ID}
 		sourceMap[key] = append(sourceMap[key], ref.ID)
 	}
 
@@ -139,19 +148,9 @@ func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
 			continue
 		}
 
-		// Parse source type and ID from key
-		var sourceType, sourceID string
-		for i, c := range key {
-			if c == ':' {
-				sourceType = key[:i]
-				sourceID = key[i+1:]
-				break
-			}
-		}
-
 		groups = append(groups, DuplicateGroup{
-			SourceType: sourceType,
-			SourceID:   sourceID,
+			SourceType: key.Type,
+			SourceID:   key.ID,
 			Primary:    ids[0],  // Keep first occurrence
 			Duplicates: ids[1:], // Remove rest
 		})
@@ -193,27 +192,27 @@ func performMerge(repoRoot string, refs []reference.Reference, groups []Duplicat
 		return 0, fmt.Errorf("reading edges: %w", err)
 	}
 
-	edgesUpdated := 0
+	edgesModified := 0
 	for i := range edges {
-		updated := false
+		modified := false
 		if newID, ok := redirectMap[edges[i].SourceID]; ok {
 			edges[i].SourceID = newID
-			updated = true
+			modified = true
 		}
 		if newID, ok := redirectMap[edges[i].TargetID]; ok {
 			edges[i].TargetID = newID
-			updated = true
+			modified = true
 		}
-		if updated {
-			edgesUpdated++
+		if modified {
+			edgesModified++
 		}
 	}
 
-	if edgesUpdated > 0 {
+	if edgesModified > 0 {
 		if err := storage.WriteAllEdges(edgesPath, edges); err != nil {
 			return 0, fmt.Errorf("writing edges: %w", err)
 		}
 	}
 
-	return edgesUpdated, nil
+	return edgesModified, nil
 }

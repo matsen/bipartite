@@ -152,6 +152,7 @@ func GenerateUniqueID(refs []reference.Reference, baseID string) string {
 		return baseID
 	}
 
+	// Start at 2: baseID is taken, so first duplicate becomes baseID-2
 	for i := 2; ; i++ {
 		candidate := fmt.Sprintf("%s-%d", baseID, i)
 		if _, found := FindByID(refs, candidate); !found {
