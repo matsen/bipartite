@@ -313,6 +313,40 @@ func TestFindByID(t *testing.T) {
 	}
 }
 
+func TestFindBySourceID(t *testing.T) {
+	refs := []reference.Reference{
+		{ID: "A", Source: reference.ImportSource{Type: "paperpile", ID: "pp-uuid-1"}},
+		{ID: "B", Source: reference.ImportSource{Type: "paperpile", ID: "pp-uuid-2"}},
+		{ID: "C", Source: reference.ImportSource{Type: "s2", ID: "s2-id-1"}},
+		{ID: "D", Source: reference.ImportSource{Type: "manual", ID: ""}},
+	}
+
+	tests := []struct {
+		name       string
+		sourceType string
+		sourceID   string
+		wantIdx    int
+		wantOK     bool
+	}{
+		{"matches paperpile source", "paperpile", "pp-uuid-1", 0, true},
+		{"matches different paperpile source", "paperpile", "pp-uuid-2", 1, true},
+		{"matches s2 source", "s2", "s2-id-1", 2, true},
+		{"wrong type for source ID", "s2", "pp-uuid-1", -1, false},
+		{"not found source ID", "paperpile", "not-found", -1, false},
+		{"empty source ID returns not found", "paperpile", "", -1, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			idx, ok := FindBySourceID(refs, tt.sourceType, tt.sourceID)
+			if idx != tt.wantIdx || ok != tt.wantOK {
+				t.Errorf("FindBySourceID(%q, %q) = (%d, %v), want (%d, %v)",
+					tt.sourceType, tt.sourceID, idx, ok, tt.wantIdx, tt.wantOK)
+			}
+		})
+	}
+}
+
 func TestGenerateUniqueID(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -10,8 +10,9 @@ import (
 
 // Config represents repository configuration stored in .bipartite/config.json.
 type Config struct {
-	PDFRoot   string `json:"pdf_root"`   // Absolute path to PDF folder
-	PDFReader string `json:"pdf_reader"` // Reader preference: system, skim, zathura, etc.
+	PDFRoot    string `json:"pdf_root"`              // Absolute path to PDF folder
+	PDFReader  string `json:"pdf_reader"`            // Reader preference: system, skim, zathura, etc.
+	PapersRepo string `json:"papers_repo,omitempty"` // Path to bip-papers repository
 }
 
 const (
@@ -118,24 +119,34 @@ func (c *Config) Save(root string) error {
 	return nil
 }
 
-// ValidatePDFRoot checks that the PDF root path exists and is a directory.
-func ValidatePDFRoot(path string) error {
+// validateDirectoryPath validates that a path exists and is a directory.
+// Returns the expanded path and any validation error.
+func validateDirectoryPath(path string) (string, error) {
 	if path == "" {
-		return nil // Empty is allowed (not yet configured)
+		return "", nil // Empty is allowed (not yet configured)
 	}
 
-	// Expand ~ to home directory
-	expandedPath := ExpandPath(path)
+	expandedPath := ExpandTilde(path)
 
 	info, err := os.Stat(expandedPath)
 	if err != nil {
-		return fmt.Errorf("path does not exist: %s", expandedPath)
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", expandedPath)
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("path does not exist: %s", expandedPath)
+		}
+		return "", fmt.Errorf("cannot access path: %w", err)
 	}
 
-	return nil
+	if !info.IsDir() {
+		return "", fmt.Errorf("path is not a directory: %s", expandedPath)
+	}
+
+	return expandedPath, nil
+}
+
+// ValidatePDFRoot checks that the PDF root path exists and is a directory.
+func ValidatePDFRoot(path string) error {
+	_, err := validateDirectoryPath(path)
+	return err
 }
 
 // ValidatePDFReader checks that the reader value is valid.
@@ -153,9 +164,9 @@ func ValidatePDFReader(reader string) error {
 	return fmt.Errorf("invalid pdf_reader: %s (valid: %v)", reader, ValidReaders)
 }
 
-// ExpandPath expands ~ to the user's home directory.
+// ExpandTilde expands ~ to the user's home directory.
 // Returns the original path unchanged if it doesn't start with ~.
-func ExpandPath(path string) string {
+func ExpandTilde(path string) string {
 	if len(path) == 0 || path[0] != '~' {
 		return path
 	}
@@ -166,4 +177,24 @@ func ExpandPath(path string) string {
 	}
 
 	return filepath.Join(home, path[1:])
+}
+
+// ExpandPath is an alias for ExpandTilde for backward compatibility.
+// Deprecated: Use ExpandTilde instead.
+func ExpandPath(path string) string {
+	return ExpandTilde(path)
+}
+
+// ValidatePapersRepo checks that the papers repo path exists and is a bipartite repository.
+func ValidatePapersRepo(path string) error {
+	expandedPath, err := validateDirectoryPath(path)
+	if err != nil {
+		return err
+	}
+
+	if expandedPath != "" && !IsRepository(expandedPath) {
+		return fmt.Errorf("not a bipartite repository: %s (no .bipartite directory)", expandedPath)
+	}
+
+	return nil
 }

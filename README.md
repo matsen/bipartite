@@ -126,6 +126,8 @@ bip open Smith2026-ab
 | `bip resolve` | Domain-aware merge conflict resolution for refs.jsonl |
 | `bip resolve --dry-run` | Preview conflict resolution without modifying files |
 | `bip resolve --interactive` | Interactively resolve true conflicts |
+| `bip dedupe --dry-run` | Show duplicate papers (by source ID) |
+| `bip dedupe --merge` | Merge duplicates: keep first, update edges |
 
 ### Semantic Scholar (S2) Commands
 
@@ -165,7 +167,10 @@ Requires `ASTA_API_KEY` environment variable.
 |---------|-------------|
 | `bip edge add -s <source> -t <target> -r <type> -m <summary>` | Add a directed edge between papers |
 | `bip edge import <file>` | Bulk import edges from JSONL |
-| `bip edge list <paper-id>` | List edges for a paper (`--incoming`, `--all`) |
+| `bip edge list` | List all edges in the knowledge graph |
+| `bip edge list <paper-id>` | List edges for a specific paper (`--incoming`, `--all`) |
+| `bip edge list --paper <id>` | Same as above (flag form) |
+| `bip edge list --concept <id>` | List edges involving a concept |
 | `bip edge search --type <type>` | Find edges by relationship type |
 | `bip edge export` | Export edges to JSONL (`--paper` to filter) |
 

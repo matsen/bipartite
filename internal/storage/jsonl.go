@@ -132,6 +132,19 @@ func FindByID(refs []reference.Reference, id string) (int, bool) {
 	return -1, false
 }
 
+// FindBySourceID searches for a reference by import source type and ID.
+func FindBySourceID(refs []reference.Reference, sourceType, sourceID string) (int, bool) {
+	if sourceID == "" {
+		return -1, false
+	}
+	for i, ref := range refs {
+		if ref.Source.Type == sourceType && ref.Source.ID == sourceID {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
 // GenerateUniqueID returns an ID that doesn't conflict with existing references.
 // If the base ID exists, appends -2, -3, etc.
 func GenerateUniqueID(refs []reference.Reference, baseID string) string {
@@ -139,6 +152,7 @@ func GenerateUniqueID(refs []reference.Reference, baseID string) string {
 		return baseID
 	}
 
+	// Start at 2: baseID is taken, so first duplicate becomes baseID-2
 	for i := 2; ; i++ {
 		candidate := fmt.Sprintf("%s-%d", baseID, i)
 		if _, found := FindByID(refs, candidate); !found {
