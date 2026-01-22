@@ -124,6 +124,7 @@ Follow standard Go conventions (`go fmt`, `go vet`)
 
 ## Git Workflow
 
+- **Repository owner**: This repo is `matsen/bipartite`, NOT `matsengrp/bipartite`. Use `matsen` when constructing GitHub URLs or API calls.
 - **PR merge strategy**: Always use squash and merge (`gh pr merge --squash`)
 
 ## SQLite Schema Changes
