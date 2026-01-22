@@ -22,10 +22,12 @@ Usage:
   bip config pdf-root                 # Get specific value
   bip config pdf-root /path/to/pdfs   # Set value
   bip config pdf-reader skim          # Set PDF reader
+  bip config papers-repo ~/re/bip-papers  # Set papers repository
 
 Keys:
-  pdf-root    Path to PDF folder (e.g., ~/Google Drive/Paperpile)
-  pdf-reader  PDF reader preference (system, skim, zathura, evince, okular)`,
+  pdf-root     Path to PDF folder (e.g., ~/Google Drive/Paperpile)
+  pdf-reader   PDF reader preference (system, skim, zathura, evince, okular)
+  papers-repo  Path to bip-papers repository for knowledge graph`,
 	Args: cobra.MaximumNArgs(2),
 	RunE: runConfig,
 }
@@ -37,12 +39,14 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	// No args: show all config
 	if len(args) == 0 {
 		if humanOutput {
-			fmt.Printf("pdf-root:   %s\n", cfg.PDFRoot)
-			fmt.Printf("pdf-reader: %s\n", cfg.PDFReader)
+			fmt.Printf("pdf-root:    %s\n", cfg.PDFRoot)
+			fmt.Printf("pdf-reader:  %s\n", cfg.PDFReader)
+			fmt.Printf("papers-repo: %s\n", cfg.PapersRepo)
 		} else {
 			outputJSON(ConfigResponse{
-				PDFRoot:   cfg.PDFRoot,
-				PDFReader: cfg.PDFReader,
+				PDFRoot:    cfg.PDFRoot,
+				PDFReader:  cfg.PDFReader,
+				PapersRepo: cfg.PapersRepo,
 			})
 		}
 		return nil
@@ -66,6 +70,12 @@ func runConfig(cmd *cobra.Command, args []string) error {
 				fmt.Println(cfg.PDFReader)
 			} else {
 				outputJSON(map[string]string{"pdf_reader": cfg.PDFReader})
+			}
+		case "papers-repo":
+			if humanOutput {
+				fmt.Println(cfg.PapersRepo)
+			} else {
+				outputJSON(map[string]string{"papers_repo": cfg.PapersRepo})
 			}
 		default:
 			exitWithError(ExitError, "unknown configuration key: %s", key)
@@ -91,6 +101,15 @@ func runConfig(cmd *cobra.Command, args []string) error {
 			exitWithError(ExitError, "%v", err)
 		}
 		cfg.PDFReader = value
+
+	case "papers-repo":
+		// Expand ~ to home directory and validate
+		expandedValue := config.ExpandPath(value)
+
+		if err := config.ValidatePapersRepo(expandedValue); err != nil {
+			exitWithError(ExitConfigError, "%v", err)
+		}
+		cfg.PapersRepo = expandedValue
 
 	default:
 		exitWithError(ExitError, "unknown configuration key: %s", key)

@@ -71,8 +71,9 @@ type StatusResponse struct {
 
 // ConfigResponse is the response for config get commands.
 type ConfigResponse struct {
-	PDFRoot   string `json:"pdf_root,omitempty"`
-	PDFReader string `json:"pdf_reader,omitempty"`
+	PDFRoot    string `json:"pdf_root,omitempty"`
+	PDFReader  string `json:"pdf_reader,omitempty"`
+	PapersRepo string `json:"papers_repo,omitempty"`
 }
 
 // UpdateResponse is the response for config set commands.

@@ -10,8 +10,9 @@ import (
 
 // Config represents repository configuration stored in .bipartite/config.json.
 type Config struct {
-	PDFRoot   string `json:"pdf_root"`   // Absolute path to PDF folder
-	PDFReader string `json:"pdf_reader"` // Reader preference: system, skim, zathura, etc.
+	PDFRoot    string `json:"pdf_root"`              // Absolute path to PDF folder
+	PDFReader  string `json:"pdf_reader"`            // Reader preference: system, skim, zathura, etc.
+	PapersRepo string `json:"papers_repo,omitempty"` // Path to bip-papers repository
 }
 
 const (
@@ -166,4 +167,20 @@ func ExpandPath(path string) string {
 	}
 
 	return filepath.Join(home, path[1:])
+}
+
+// ValidatePapersRepo checks that the papers repo path exists and is a bipartite repository.
+func ValidatePapersRepo(path string) error {
+	if path == "" {
+		return nil // Empty is allowed (not yet configured)
+	}
+
+	// Expand ~ to home directory
+	expandedPath := ExpandPath(path)
+
+	if !IsRepository(expandedPath) {
+		return fmt.Errorf("not a bipartite repository: %s (no .bipartite directory)", expandedPath)
+	}
+
+	return nil
 }

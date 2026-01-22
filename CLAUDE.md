@@ -140,10 +140,28 @@ Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you mu
 
 Use `/bip` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `.claude/skills/bip/` and symlinked to `~/.claude/skills/` for global availability.
 
-## Ralph Loop
+## Paper Lookups (bip-papers)
 
-- Use `/ralph-loop:ralph-loop` (full qualified name) to start the autonomous task loop
-- Example: `/ralph-loop:ralph-loop "Your task prompt here" --max-iterations 30 --completion-promise "DONE"`
+When looking for papers or adding edges to the knowledge graph:
+
+1. **Get the papers-repo path** from config (if configured):
+   ```bash
+   ./bip config papers-repo
+   ```
+
+2. **Search locally first** in the papers repo using grep on `.bipartite/refs.jsonl`:
+   ```bash
+   PAPERS_REPO=$(./bip config papers-repo) && grep -i "author_name\|keyword" "$PAPERS_REPO/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
+   ```
+
+3. **Ask before using ASTA MCP** - Always ask the user before making ASTA API calls. ASTA should only be used for:
+   - Papers confirmed not in the local database
+   - Discovering new papers via citation/reference graphs
+   - Searching for papers by topic when local search yields no results
+
+4. **Add papers via S2** when rate limits allow: `./bip s2 add DOI:...`
+
+The local bip-papers library has ~6000 papers already imported - most relevant immunology/antibody papers are likely already there. **Always search locally first before proposing ASTA queries.**
 
 ## Pre-PR Quality Checklist
 
