@@ -1,4 +1,4 @@
-"""LLM infrastructure for fc_cli using claude CLI."""
+"""LLM infrastructure for flowc using claude CLI."""
 
 from __future__ import annotations
 
@@ -104,7 +104,9 @@ RECENT_COMMENTS:
 
     all_items = "\n".join(items_text)
 
-    return f"""You are helping triage GitHub activity. For each item below, provide a brief take-home summary (1 short sentence) that tells the user what happened and whether they need to act.
+    return f"""You are helping triage GitHub activity. For each item below, provide \
+a brief take-home summary (1 short sentence) that tells the user what happened \
+and whether they need to act.
 
 Focus on:
 - What's the current state/what happened?
@@ -120,7 +122,7 @@ Examples of good summaries:
 - "Merged successfully - no action"
 
 Output format: Return a JSON object mapping each REF to its summary.
-Example: {{"matsengrp/repo#123": "summary here", "matsengrp/repo#456": "another summary"}}
+Example: {{"org/repo#123": "summary here", "org/repo#456": "another summary"}}
 
 Items to summarize:
 {all_items}
@@ -265,7 +267,8 @@ def _build_digest_prompt(items: list[dict], channel: str, date_range: str) -> st
 
     all_items = "\n".join(items_text)
 
-    return f"""You are writing a weekly digest for a team Slack channel. Summarize the following GitHub activity as a concise bullet-list message.
+    return f"""You are writing a weekly digest for a team Slack channel. Summarize the \
+following GitHub activity as a concise bullet-list message.
 
 Channel: {channel}
 Date range: {date_range}

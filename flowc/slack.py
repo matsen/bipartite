@@ -1,4 +1,4 @@
-"""Slack webhook integration for fc_cli."""
+"""Slack webhook integration for flowc."""
 
 from __future__ import annotations
 

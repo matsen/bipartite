@@ -1,4 +1,4 @@
-"""Tests for fc_cli.digest.cli module."""
+"""Tests for flowc.digest.cli module."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from fc_cli.digest.cli import format_date_range, parse_duration
+from flowc.digest.cli import format_date_range, parse_duration
 
 
 class TestParseDuration:

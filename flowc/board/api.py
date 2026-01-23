@@ -7,14 +7,14 @@ import subprocess
 import sys
 from typing import Any
 
-from fc_cli.board.cache import (
+from flowc.board.cache import (
     get_board_cache,
     get_cached_item_id,
     invalidate_cache,
     set_board_cache,
     set_cached_item_id,
 )
-from fc_cli.shared.github import get_issue_node_id, gh_graphql
+from flowc.shared.github import get_issue_node_id, gh_graphql
 
 
 def parse_board_key(board_key: str) -> tuple[str, str]:

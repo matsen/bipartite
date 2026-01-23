@@ -14,10 +14,10 @@ dependencies = ["python-dotenv"]
 dev = ["pytest", "ruff"]
 
 [project.scripts]
-flowc = "fc_cli.main:main"
+flowc = "flowc.main:main"
 
 [tool.setuptools.packages.find]
-include = ["fc_cli*"]
+include = ["flowc*"]
 
 [tool.ruff]
 line-length = 88
@@ -27,4 +27,4 @@ target-version = "py310"
 select = ["E", "F", "I", "W"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests_fc"]
+testpaths = ["tests"]

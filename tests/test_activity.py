@@ -1,8 +1,7 @@
 """Tests for ball-in-my-court filtering logic."""
 
-import pytest
 
-from fc_cli.checkin.activity import (
+from flowc.checkin.activity import (
     ball_in_my_court,
     filter_by_ball_in_court,
     filter_comments_by_items,
@@ -119,7 +118,7 @@ class TestBallInMyCourt:
 
     # Edge cases
     def test_multiple_comments_on_my_item_uses_last(self):
-        """With multiple comments on my item, the last commenter determines visibility."""
+        """Multiple comments on my item: last commenter determines visibility."""
         item = make_item(1, "matsen")
         comments = [
             make_comment(1, "other_user", "2024-01-15T08:00:00Z"),
@@ -129,7 +128,7 @@ class TestBallInMyCourt:
         assert ball_in_my_court(item, comments, "matsen") is True
 
     def test_multiple_comments_on_their_item_uses_last(self):
-        """With multiple comments on their item, the last commenter determines visibility."""
+        """Multiple comments on their item: last commenter determines visibility."""
         item = make_item(1, "other_user")
         # Back-and-forth review: I commented, they replied, I commented again
         comments = [
@@ -198,7 +197,11 @@ class TestFilterCommentsByItems:
         result = filter_comments_by_items(comments, items)
 
         assert len(result) == 2
-        assert all(c["issue_url"].endswith("/1") or c["issue_url"].endswith("/3") for c in result)
+        urls_valid = all(
+            c["issue_url"].endswith("/1") or c["issue_url"].endswith("/3")
+            for c in result
+        )
+        assert urls_valid
 
     def test_empty_items_returns_empty(self):
         """No items means no comments kept."""

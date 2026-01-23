@@ -6,15 +6,15 @@ import argparse
 import json
 import sys
 
-from fc_cli.board.api import (
+from flowc.board.api import (
     add_issue_to_board,
     list_board_items,
     move_item,
     refresh_board_cache,
     remove_issue_from_board,
 )
-from fc_cli.board.sync import print_sync_report, sync_board_with_beads
-from fc_cli.shared.config import get_default_board
+from flowc.board.sync import print_sync_report, sync_board_with_beads
+from flowc.shared.config import get_default_board
 
 
 def get_board_key(args: argparse.Namespace) -> str:

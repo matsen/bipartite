@@ -1,4 +1,4 @@
-"""Tests for fc_cli.shared.config module."""
+"""Tests for flowc.shared.config module."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from fc_cli.shared.config import (
+from flowc.shared.config import (
     _repo_in_category,
     list_channels,
     load_repos,
@@ -86,19 +86,19 @@ class TestLoadReposByChannel:
 
     def test_loads_repos_for_channel(self, mock_sources):
         """Returns repos for the specified channel."""
-        with patch("fc_cli.shared.config.SOURCES_FILE", mock_sources):
+        with patch("flowc.shared.config.SOURCES_FILE", mock_sources):
             repos = load_repos_by_channel("dasm2")
             assert repos == ["matsengrp/repo1", "matsengrp/repo2"]
 
     def test_returns_empty_for_unknown_channel(self, mock_sources):
         """Returns empty list for unknown channel."""
-        with patch("fc_cli.shared.config.SOURCES_FILE", mock_sources):
+        with patch("flowc.shared.config.SOURCES_FILE", mock_sources):
             repos = load_repos_by_channel("unknown")
             assert repos == []
 
     def test_ignores_string_repos(self, mock_sources):
         """String repos (no channel) are not returned."""
-        with patch("fc_cli.shared.config.SOURCES_FILE", mock_sources):
+        with patch("flowc.shared.config.SOURCES_FILE", mock_sources):
             # writing category has only strings
             repos = load_repos_by_channel("dasm2")
             assert "matsengrp/tex-repo" not in repos
@@ -127,7 +127,7 @@ class TestListChannels:
 
     def test_lists_unique_channels(self, mock_sources):
         """Returns sorted unique channels."""
-        with patch("fc_cli.shared.config.SOURCES_FILE", mock_sources):
+        with patch("flowc.shared.config.SOURCES_FILE", mock_sources):
             channels = list_channels()
             assert channels == ["dasm2", "loris"]
 
@@ -140,7 +140,7 @@ class TestListChannels:
         sources_file = tmp_path / "sources.json"
         sources_file.write_text(json.dumps(sources))
 
-        with patch("fc_cli.shared.config.SOURCES_FILE", sources_file):
+        with patch("flowc.shared.config.SOURCES_FILE", sources_file):
             channels = list_channels()
             assert channels == []
 
@@ -167,7 +167,7 @@ class TestLoadRepos:
 
     def test_loads_all_repos(self, mock_sources):
         """Loads all repos regardless of format."""
-        with patch("fc_cli.shared.config.SOURCES_FILE", mock_sources):
+        with patch("flowc.shared.config.SOURCES_FILE", mock_sources):
             repos = load_repos()
             assert "matsengrp/repo1" in repos
             assert "matsengrp/repo2" in repos

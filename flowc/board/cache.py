@@ -6,7 +6,7 @@ import json
 import time
 from typing import Any
 
-from fc_cli.shared.config import CACHE_FILE, CACHE_TTL_HOURS
+from flowc.shared.config import CACHE_FILE, CACHE_TTL_HOURS
 
 
 def load_cache() -> dict[str, Any]:

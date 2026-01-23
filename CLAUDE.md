@@ -12,6 +12,8 @@ bd ready                    # Show tasks ready to work on (no blockers)
 bd create "Title" -p 0      # Create a priority-0 (highest) task
 bd create "Title" -p 1      # Create a priority-1 task
 bd show <id>                # View task details
+bd update <id> -p 1         # Change priority (use update, not edit)
+bd update <id> -s in_progress  # Update status
 bd close <id>               # Mark task complete
 bd dep add <child> <parent> # Child blocked by parent
 bd list                     # List all tasks
@@ -41,11 +43,10 @@ bd list                     # List all tasks
 ```text
 cmd/           # Go CLI command implementations (bip)
 internal/      # Go internal packages (s2, store, index, etc.)
-fc_cli/        # Python CLI implementation (flowc)
-tests_fc/      # Python tests
+flowc/         # Python CLI implementation (flowc)
 specs/         # Feature specifications
 testdata/      # Test fixtures
-tests/         # Go integration tests
+tests/         # Python tests + Go integration tests
 ```
 
 ## Building
@@ -140,10 +141,12 @@ Before any pull request, ensure the following workflow is completed:
 5. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
 6. **Run Tests**: Ensure all tests pass:
    - Go: `go test ./...`
-   - Python: `pytest tests_fc/`
+   - Python: `pytest tests/`
 
 ### Final Static Analysis
-7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
+7. **Vet and Lint**: Run static analysis to verify code quality:
+   - Go: `go vet ./...`
+   - Python: `ruff check flowc/ tests/`
 
 ### Documentation Sync
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes

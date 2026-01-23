@@ -5,8 +5,8 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 
-from fc_cli.shared.config import COMMENT_PREVIEW_LENGTH, DEFAULT_DISPLAY_LIMIT
-from fc_cli.shared.github import fetch_comments, fetch_issues, fetch_pr_comments
+from flowc.shared.config import COMMENT_PREVIEW_LENGTH, DEFAULT_DISPLAY_LIMIT
+from flowc.shared.github import fetch_comments, fetch_issues, fetch_pr_comments
 
 # Compiled regex patterns
 GITHUB_REF_PATTERN = re.compile(r"GitHub:\s*([^#\s]+#\d+)")
@@ -253,7 +253,8 @@ def print_items(items: list[dict], item_type: str, since: datetime):
         created = parse_github_timestamp(item["created_at"])
         is_new = created > since
         marker = "NEW" if is_new else "upd"
-        print(f"  [{marker}] {item['html_url']} - {item['title']} ({format_time_ago(updated)})")
+        time_ago = format_time_ago(updated)
+        print(f"  [{marker}] {item['html_url']} - {item['title']} ({time_ago})")
 
     if len(items) > DEFAULT_DISPLAY_LIMIT:
         print(f"  ... and {len(items) - DEFAULT_DISPLAY_LIMIT} more")

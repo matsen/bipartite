@@ -10,12 +10,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 
-from fc_cli.checkin.spawn import (
+from flowc.checkin.spawn import (
     create_tmux_window,
     is_in_tmux,
     tmux_window_exists,
 )
-from fc_cli.shared.config import (
+from flowc.shared.config import (
     MAX_COMMENTS_DISPLAY,
     extract_repo_name,
     get_repo_context_path,
@@ -448,8 +448,9 @@ def validate_repo_environment(org_repo: str) -> tuple[Path, str] | int:
     if not repo_path.exists():
         print(f"Error: Local clone not found at {repo_path}", file=sys.stderr)
         code_path = load_config().get("paths", {}).get("code", "~/re")
+        clone_url = f"git@github.com:{org_repo}.git"
         print(
-            f"Clone it with: git clone git@github.com:{org_repo}.git {code_path}/{repo_name}",
+            f"Clone it with: git clone {clone_url} {code_path}/{repo_name}",
             file=sys.stderr,
         )
         return 1

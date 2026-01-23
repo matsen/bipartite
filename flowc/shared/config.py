@@ -1,4 +1,4 @@
-"""Configuration and path management for fc_cli."""
+"""Configuration and path management for flowc."""
 
 from __future__ import annotations
 
@@ -195,7 +195,7 @@ def save_state(state: dict):
 
 
 def _repo_in_category(repo: str, category_data: list) -> bool:
-    """Check if a repo is in a category list (handles both string and object entries)."""
+    """Check if repo is in category list (handles string and object entries)."""
     for entry in category_data:
         if normalize_repo_entry(entry) == repo:
             return True

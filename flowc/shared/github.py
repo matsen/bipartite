@@ -47,7 +47,7 @@ def gh_api(endpoint: str) -> list | dict:
                         items.append(parsed)
                 except json.JSONDecodeError:
                     print(
-                        f"Warning: Failed to parse line {line_num} from 'gh api {endpoint}'",
+                        f"Warning: Failed to parse line {line_num} from gh api",
                         file=sys.stderr,
                     )
         if not items:
@@ -87,22 +87,22 @@ def gh_graphql(query: str, variables: dict | None = None) -> dict:
 def fetch_issues(repo: str, since: datetime) -> list[dict]:
     """Fetch issues updated since given time."""
     since_str = since.strftime("%Y-%m-%dT%H:%M:%SZ")
-    endpoint = f"/repos/{repo}/issues?state=all&since={since_str}&sort=updated&direction=desc&per_page=100"
-    return gh_api(endpoint)
+    params = f"state=all&since={since_str}&sort=updated&direction=desc&per_page=100"
+    return gh_api(f"/repos/{repo}/issues?{params}")
 
 
 def fetch_comments(repo: str, since: datetime) -> list[dict]:
     """Fetch issue comments since given time."""
     since_str = since.strftime("%Y-%m-%dT%H:%M:%SZ")
-    endpoint = f"/repos/{repo}/issues/comments?since={since_str}&sort=updated&direction=desc&per_page=100"
-    return gh_api(endpoint)
+    params = f"since={since_str}&sort=updated&direction=desc&per_page=100"
+    return gh_api(f"/repos/{repo}/issues/comments?{params}")
 
 
 def fetch_pr_comments(repo: str, since: datetime) -> list[dict]:
     """Fetch PR review comments since given time."""
     since_str = since.strftime("%Y-%m-%dT%H:%M:%SZ")
-    endpoint = f"/repos/{repo}/pulls/comments?since={since_str}&sort=updated&direction=desc&per_page=100"
-    return gh_api(endpoint)
+    params = f"since={since_str}&sort=updated&direction=desc&per_page=100"
+    return gh_api(f"/repos/{repo}/pulls/comments?{params}")
 
 
 def fetch_issue(repo: str, number: int) -> dict | None:

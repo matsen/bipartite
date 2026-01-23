@@ -1,4 +1,4 @@
-"""Tests for fc_cli/issue.py parsing and formatting functions.
+"""Tests for flowc/issue.py parsing and formatting functions.
 
 Run with: pytest tests/test_issue.py -v
 """
@@ -7,14 +7,14 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from fc_cli.issue import (
+from flowc.issue import (
     format_comments,
     format_pr_files,
     format_relative_time,
     format_reviews,
     parse_github_ref,
 )
-from fc_cli.shared.config import extract_repo_name
+from flowc.shared.config import extract_repo_name
 
 # =============================================================================
 # parse_github_ref Tests

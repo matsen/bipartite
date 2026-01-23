@@ -5,14 +5,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timedelta, timezone
 
-from fc_cli.checkin.activity import (
+from flowc.checkin.activity import (
     ball_in_my_court,
     fetch_all_activity,
     get_comment_item_number,
 )
-from fc_cli.checkin.board_check import check_boards, print_board_changes
-from fc_cli.issue import get_github_user
-from fc_cli.shared.config import (
+from flowc.checkin.board_check import check_boards, print_board_changes
+from flowc.issue import get_github_user
+from flowc.shared.config import (
     SOURCES_FILE,
     load_beads,
     load_boards,
@@ -20,7 +20,7 @@ from fc_cli.shared.config import (
     load_state,
     save_state,
 )
-from fc_cli.shared.github import fetch_item_details
+from flowc.shared.github import fetch_item_details
 
 
 def parse_duration(s: str) -> timedelta:
@@ -77,7 +77,8 @@ def print_summary(
     """Print final summary line."""
     print("---")
     print(
-        f"Total: {total_issues} issues, {total_prs} PRs, {total_comments} comments across {repo_count} repos"
+        f"Total: {total_issues} issues, {total_prs} PRs, "
+        f"{total_comments} comments across {repo_count} repos"
     )
 
     if board_changes:
@@ -86,7 +87,8 @@ def print_summary(
         total_orphans = sum(len(c["orphan_issues"]) for c in board_changes.values())
         if total_new_drafts or total_removed or total_orphans:
             print(
-                f"Boards: {total_new_drafts} new drafts, {total_removed} removed, {total_orphans} orphan issues"
+                f"Boards: {total_new_drafts} new drafts, "
+                f"{total_removed} removed, {total_orphans} orphan issues"
             )
 
 
@@ -143,7 +145,7 @@ def generate_summaries(
     Returns:
         Dict mapping "repo#number" -> summary string.
     """
-    from fc_cli.llm import generate_take_home_summaries
+    from flowc.llm import generate_take_home_summaries
 
     if github_user is None:
         github_user = get_github_user()

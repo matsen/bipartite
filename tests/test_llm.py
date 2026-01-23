@@ -1,8 +1,8 @@
-"""Tests for fc_cli.llm module."""
+"""Tests for flowc.llm module."""
 
 from __future__ import annotations
 
-from fc_cli.llm import (
+from flowc.llm import (
     _build_digest_prompt,
     _build_summary_prompt,
     _parse_summary_response,

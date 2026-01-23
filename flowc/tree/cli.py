@@ -5,8 +5,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
-import sys
 import tempfile
 import webbrowser
 from datetime import datetime
@@ -25,12 +23,16 @@ HTML_HEADER = """<!DOCTYPE html>
   .help { position: fixed; bottom: 1rem; right: 1rem; font-size: 0.85em; color: #666; }
   .help summary { cursor: pointer; list-style: none; }
   .help summary::-webkit-details-marker { display: none; }
-  .help-content { background: white; padding: 0.5rem 1rem; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 0.5rem; }
-  .help kbd { background: #eee; padding: 0.1rem 0.4rem; border-radius: 3px; font-family: monospace; }
-  body { font-family: -apple-system, system-ui, sans-serif; margin: 2rem; background: #fafafa; }
+  .help-content { background: white; padding: 0.5rem 1rem; border-radius: 4px; }
+  .help-content { box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 0.5rem; }
+  .help kbd { background: #eee; padding: 0.1rem 0.4rem; border-radius: 3px; }
+  .help kbd { font-family: monospace; }
+  body { font-family: -apple-system, system-ui, sans-serif; margin: 2rem; }
+  body { background: #fafafa; }
   details { margin-left: 1.5rem; }
   details[open] > summary { margin-bottom: 0; }
-  summary { cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 4px; list-style: none; }
+  summary { cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 4px; }
+  summary { list-style: none; }
   summary:hover { background: #e8e8e8; }
   summary::-webkit-details-marker { display: none; }
   summary::before { content: "▶ "; font-size: 0.7em; color: #666; }
@@ -66,8 +68,9 @@ HTML_FOOTER = """
   </div>
 </details>
 <script>
-function collapseAll() { document.querySelectorAll('details:not(.help)').forEach(d => d.open = false); }
-function expandAll() { document.querySelectorAll('details:not(.help)').forEach(d => d.open = true); }
+const sel = 'details:not(.help)';
+function collapseAll() { document.querySelectorAll(sel).forEach(d => d.open = false); }
+function expandAll() { document.querySelectorAll(sel).forEach(d => d.open = true); }
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.key === 'c') collapseAll();
@@ -143,7 +146,9 @@ def is_new(issue: dict, since: datetime | None) -> bool:
         return False
 
 
-def render_node(node: dict, is_root: bool = False, since: datetime | None = None) -> str:
+def render_node(
+    node: dict, is_root: bool = False, since: datetime | None = None
+) -> str:
     """Render a tree node as HTML."""
     html = []
     for key in sorted(node.keys()):
@@ -166,7 +171,9 @@ def render_node(node: dict, is_root: bool = False, since: datetime | None = None
             if new:
                 css_classes.append("new")
             class_attr = f' class="{" ".join(css_classes)}"' if css_classes else ""
-            inner = f'<summary{desc_attr}><span class="id">{key}</span><span class="title">{title}</span></summary>'
+            id_span = f'<span class="id">{key}</span>'
+            title_span = f'<span class="title">{title}</span>'
+            inner = f'<summary{desc_attr}>{id_span}{title_span}</summary>'
             inner += render_node(children, since=since)
             html.append(f"<details{class_attr} open>{inner}</details>")
         else:

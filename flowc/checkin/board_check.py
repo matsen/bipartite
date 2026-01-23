@@ -6,7 +6,7 @@ import json
 import subprocess
 import sys
 
-from fc_cli.checkin.activity import (
+from flowc.checkin.activity import (
     collect_all_github_refs,
     parse_board_marker,
 )
@@ -27,8 +27,9 @@ def fetch_board_items(owner: str, project_num: str) -> list[dict]:
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     if result.returncode != 0:
+        err = result.stderr.strip()
         print(
-            f"  Error fetching board with 'gh project item-list {project_num}': {result.stderr.strip()}",
+            f"  Error fetching board 'gh project item-list {project_num}': {err}",
             file=sys.stderr,
         )
         return []

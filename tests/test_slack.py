@@ -1,11 +1,11 @@
-"""Tests for fc_cli.slack module."""
+"""Tests for flowc.slack module."""
 
 from __future__ import annotations
 
 import os
 from unittest.mock import patch
 
-from fc_cli.slack import get_webhook_url
+from flowc.slack import get_webhook_url
 
 
 class TestGetWebhookUrl:

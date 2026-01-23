@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from fc_cli.shared.config import validate_nexus_directory
+from flowc.shared.config import validate_nexus_directory
 
 
 def main():
@@ -53,7 +53,7 @@ def main():
     list_parser.add_argument("--json", action="store_true", help="Output as JSON")
     list_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # board add
@@ -66,7 +66,7 @@ def main():
     )
     add_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # board move
@@ -80,7 +80,7 @@ def main():
     )
     move_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # board remove
@@ -93,7 +93,7 @@ def main():
     )
     remove_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # board sync
@@ -103,7 +103,7 @@ def main():
     sync_parser.add_argument("--fix", action="store_true", help="Auto-fix mismatches")
     sync_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # board refresh-cache
@@ -112,7 +112,7 @@ def main():
     )
     refresh_parser.add_argument(
         "--board",
-        help="Board to use (owner/number, e.g., matsengrp/30). Defaults to first board in sources.json",
+        help="Board to use (owner/number). Defaults to first in sources.json",
     )
 
     # Spawn subcommand (replaces issue, handles both issues and PRs)
@@ -121,11 +121,11 @@ def main():
     )
     spawn_parser.add_argument(
         "ref",
-        help="GitHub reference: org/repo#number or full URL (e.g., matsengrp/repo#166 or https://github.com/org/repo/pull/42)",
+        help="GitHub reference: org/repo#number or full URL",
     )
     spawn_parser.add_argument(
         "--prompt",
-        help="Custom prompt to use instead of default review prompt; project context is prepended automatically",
+        help="Custom prompt instead of default; project context prepended",
     )
 
     # Issue subcommand (deprecated, kept for backwards compatibility)
@@ -135,7 +135,7 @@ def main():
     )
     issue_parser.add_argument(
         "issue_ref",
-        help="Issue reference in org/repo#number format (e.g., matsengrp/dasm2-experiments#166)",
+        help="Issue reference in org/repo#number format",
     )
 
     # Digest subcommand
@@ -158,7 +158,7 @@ def main():
     )
     digest_parser.add_argument(
         "--repos",
-        help="Override repos to scan (comma-separated, e.g., matsengrp/repo1,matsengrp/repo2)",
+        help="Override repos to scan (comma-separated, e.g., org/repo1,org/repo2)",
     )
 
     # Tree subcommand
@@ -186,7 +186,7 @@ def main():
         sys.exit(1)
 
     if args.command == "checkin":
-        from fc_cli.checkin.cli import run_checkin
+        from flowc.checkin.cli import run_checkin
 
         run_checkin(args)
 
@@ -195,27 +195,27 @@ def main():
             board_parser.print_help()
             sys.exit(1)
 
-        from fc_cli.board.cli import run_board
+        from flowc.board.cli import run_board
 
         run_board(args)
 
     elif args.command == "spawn":
-        from fc_cli.issue import run_spawn
+        from flowc.issue import run_spawn
 
         sys.exit(run_spawn(args))
 
     elif args.command == "issue":
-        from fc_cli.issue import run_issue
+        from flowc.issue import run_issue
 
         sys.exit(run_issue(args))
 
     elif args.command == "digest":
-        from fc_cli.digest.cli import run_digest
+        from flowc.digest.cli import run_digest
 
         sys.exit(run_digest(args))
 
     elif args.command == "tree":
-        from fc_cli.tree.cli import run_tree
+        from flowc.tree.cli import run_tree
 
         sys.exit(run_tree(args))
 

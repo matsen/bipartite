@@ -5,14 +5,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timedelta, timezone
 
-from fc_cli.llm import generate_digest_summary
-from fc_cli.shared.config import list_channels, load_repos_by_channel
-from fc_cli.shared.github import (
+from flowc.llm import generate_digest_summary
+from flowc.shared.config import list_channels, load_repos_by_channel
+from flowc.shared.github import (
     fetch_issues,
     fetch_item_commenters,
     fetch_pr_reviewers,
 )
-from fc_cli.slack import get_webhook_url, send_digest
+from flowc.slack import get_webhook_url, send_digest
 
 
 def parse_duration(s: str) -> timedelta:

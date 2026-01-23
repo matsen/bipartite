@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import re
 
-from fc_cli.board.api import add_issue_to_board, list_board_items
-from fc_cli.shared.config import load_beads
+from flowc.board.api import add_issue_to_board, list_board_items
+from flowc.shared.config import load_beads
 
 GITHUB_REF_PATTERN = re.compile(r"GitHub:\s*([^#\s]+)#(\d+)")
 PRIORITY_PATTERN = re.compile(r"\bP([0-4])\b")
