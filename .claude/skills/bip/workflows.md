@@ -139,6 +139,52 @@ Import references from a Paperpile export.
 
 ---
 
+## Finding a Specific Paper ("Needle in Haystack")
+
+When you know a paper exists and need to find it:
+
+### Strategy: Narrow to Broad
+
+1. **If you know authors**: Start with author name + key term
+   ```bash
+   ./bip search "Felsenstein distance"
+   ./bip asta search "Bruno Halpern neighbor joining" --human
+   ```
+
+2. **If you know the method/algorithm**: Use specific names
+   ```bash
+   ./bip asta search "WEIGHBOR likelihood" --human
+   ./bip asta search "FASTME balanced minimum evolution" --human
+   ```
+
+3. **Broaden progressively**: Remove constraints one at a time
+   ```bash
+   # Start specific
+   ./bip asta search "Gascuel BME likelihood correlation" --human
+   # Remove one term
+   ./bip asta search "Gascuel BME likelihood" --human
+   # Try synonyms
+   ./bip asta search "minimum evolution maximum likelihood" --human
+   ```
+
+4. **Citation chain**: Find a known related paper, trace its citations
+   ```bash
+   # Find the foundational paper
+   ./bip asta search "Desper Gascuel BME" --human
+   # See what cites it
+   ./bip asta citations DOI:10.1093/molbev/msh049 --limit 50 --human
+   ```
+
+### When You Can't Find It
+
+The paper might:
+- Use different terminology (try synonyms)
+- Be too old to be well-indexed
+- Not exist (the result you're looking for may not have been published)
+- Be in a thesis/preprint not indexed by Semantic Scholar
+
+---
+
 ## Explore Literature
 
 For open-ended literature exploration without adding to your collection.

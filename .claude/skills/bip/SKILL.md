@@ -26,6 +26,60 @@ A CLI tool for managing academic references with local storage and external pape
 | Papers for concept | `./bip concept papers <concept-id>` |
 | Concepts for paper | `./bip paper concepts <paper-id>` |
 
+## Search Strategy
+
+### Query Formulation Tips
+
+**Keep queries short and specific** - Long conceptual queries perform poorly:
+- Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
+- Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
+
+**Include author names when known** - Author + topic is highly effective:
+- `"Gascuel minimum evolution"` beats `"balanced minimum evolution statistical properties"`
+- `"Felsenstein distance methods"` beats `"distance-based phylogenetic inference justification"`
+
+**Use specific method/algorithm names**:
+- `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions
+
+### Systematic Search Workflow
+
+For finding a specific paper or result:
+
+1. **Local library first** (fastest, already curated):
+   ```bash
+   ./bip search "author topic"
+   ./bip semantic "conceptual description"  # for topic-heavy queries
+   ```
+
+2. **External keyword search** with author names:
+   ```bash
+   ./bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
+   ```
+
+3. **Broaden if needed** - remove author, try synonyms:
+   ```bash
+   ./bip asta search "minimum evolution likelihood" --human
+   ./bip asta search "distance method maximum likelihood phylogeny" --human
+   ```
+
+4. **Citation tracing** - if you find a related paper, check what cites it:
+   ```bash
+   ./bip asta citations DOI:10.xxxx/yyyy --limit 50 --human
+   ```
+
+5. **MCP tools directly** - for more control over fields and filters:
+   ```
+   mcp__asta__search_papers_by_relevance with specific date ranges
+   mcp__asta__get_citations with publication_date_range filter
+   ```
+
+### Snippet Search Caveats
+
+The `bip asta snippet` command can be **slow and unreliable** (timeouts are common). Alternatives:
+- Use keyword search first to find candidate papers
+- Use MCP `mcp__asta__snippet_search` directly with smaller limits
+- If snippet times out, fall back to `bip asta search`
+
 ## S2 vs ASTA: When to Use Which
 
 Both access Semantic Scholar's paper database but through different APIs:
@@ -191,3 +245,42 @@ Build a knowledge graph by creating concepts and linking papers to them.
 # Merge duplicate concepts
 ./bip concept merge shm somatic-hypermutation --human
 ```
+
+## Troubleshooting
+
+### Snippet Search Timeouts
+
+`bip asta snippet` frequently times out with "context deadline exceeded". Workarounds:
+
+1. **Reduce limit**: `--limit 5` instead of default
+2. **Use MCP directly**: `mcp__asta__snippet_search` with small limit
+3. **Fall back to keyword search**: `bip asta search` is more reliable
+4. **Retry once** - sometimes it's transient
+
+### No Results Found
+
+If searches return nothing relevant:
+
+1. **Check spelling** of author names and technical terms
+2. **Simplify query** - fewer terms, more common synonyms
+3. **Try both local and external**:
+   ```bash
+   ./bip search "topic"        # local
+   ./bip semantic "topic"      # local semantic
+   ./bip asta search "topic"   # external
+   ```
+4. **Check date filters** - paper may be too old/new for range
+
+### Paper Not Found by ID
+
+If `bip get <id>` or `bip asta paper <id>` fails:
+
+1. **Verify ID format**: `DOI:10.xxxx/yyyy` (include prefix)
+2. **Try alternate IDs**: Same paper may have DOI, PMID, arXiv ID
+3. **Search by title instead**: `bip asta search "exact paper title"`
+
+### Slow Performance
+
+- `bip s2` commands are rate-limited to 1 req/sec
+- Use `bip asta` for bulk exploration (10 req/sec)
+- Run searches in parallel when independent

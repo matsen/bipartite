@@ -12,6 +12,8 @@ bd ready                    # Show tasks ready to work on (no blockers)
 bd create "Title" -p 0      # Create a priority-0 (highest) task
 bd create "Title" -p 1      # Create a priority-1 task
 bd show <id>                # View task details
+bd update <id> -p 1         # Change priority (use update, not edit)
+bd update <id> -s in_progress  # Update status
 bd close <id>               # Mark task complete
 bd dep add <child> <parent> # Child blocked by parent
 bd list                     # List all tasks
@@ -39,11 +41,12 @@ bd list                     # List all tasks
 ## Project Structure
 
 ```text
-cmd/           # CLI command implementations
-internal/      # Internal packages (s2, store, index, etc.)
+cmd/           # Go CLI command implementations (bip)
+internal/      # Go internal packages (s2, store, index, etc.)
+flowc/         # Python CLI implementation (flowc)
 specs/         # Feature specifications
 testdata/      # Test fixtures
-tests/         # Integration tests
+tests/         # Python tests + Go integration tests
 ```
 
 ## Building
@@ -84,28 +87,41 @@ Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you mu
 
 Use `/bip` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `.claude/skills/bip/` and symlinked to `~/.claude/skills/` for global availability.
 
-## Paper Lookups (bip-papers)
+## Paper Lookups (nexus)
 
 When looking for papers or adding edges to the knowledge graph:
 
-1. **Get the papers-repo path** from config (if configured):
+1. **Search locally first** in nexus using grep on `.bipartite/refs.jsonl`:
    ```bash
-   ./bip config papers-repo
+   grep -i "author_name\|keyword" ~/re/nexus/.bipartite/refs.jsonl | jq -r '.id + " - " + .title'
    ```
 
-2. **Search locally first** in the papers repo using grep on `.bipartite/refs.jsonl`:
-   ```bash
-   PAPERS_REPO=$(./bip config papers-repo) && grep -i "author_name\|keyword" "$PAPERS_REPO/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
-   ```
-
-3. **Ask before using ASTA MCP** - Always ask the user before making ASTA API calls. ASTA should only be used for:
+2. **Ask before using ASTA MCP** - Always ask the user before making ASTA API calls. ASTA should only be used for:
    - Papers confirmed not in the local database
    - Discovering new papers via citation/reference graphs
    - Searching for papers by topic when local search yields no results
 
-4. **Add papers via S2** when rate limits allow: `./bip s2 add DOI:...`
+3. **Add papers via S2** when rate limits allow: `./bip s2 add DOI:...`
 
-The local bip-papers library has ~6000 papers already imported - most relevant immunology/antibody papers are likely already there. **Always search locally first before proposing ASTA queries.**
+The nexus library has ~6000 papers already imported - most relevant immunology/antibody papers are likely already there. **Always search locally first before proposing ASTA queries.**
+
+## flowc (Python CLI)
+
+flowc manages GitHub activity and project boards. It must be run from the nexus directory:
+
+```bash
+cd ~/re/nexus
+flowc checkin              # Check recent GitHub activity
+flowc board list           # View project boards
+flowc spawn org/repo#123   # Spawn tmux window for issue review
+```
+
+**Claude Code slash commands:** `/flowc.checkin`, `/flowc.spawn`, `/flowc.board`, `/flowc.digest`, `/flowc.tree`
+
+flowc reads configuration from:
+- `sources.json` - Repository list and board mappings
+- `config.json` - Local path configuration
+- `context/` - Project context files
 
 ## Pre-PR Quality Checklist
 
@@ -123,10 +139,14 @@ Before any pull request, ensure the following workflow is completed:
 
 ### Test Quality Validation
 5. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
-6. **Run Tests**: Ensure all tests pass with `go test ./...`
+6. **Run Tests**: Ensure all tests pass:
+   - Go: `go test ./...`
+   - Python: `pytest tests/`
 
 ### Final Static Analysis
-7. **Vet and Lint**: Run `go vet ./...` and any configured linters to verify code quality
+7. **Vet and Lint**: Run static analysis to verify code quality:
+   - Go: `go vet ./...`
+   - Python: `ruff check flowc/ tests/`
 
 ### Documentation Sync
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
