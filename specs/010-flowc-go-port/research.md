@@ -6,11 +6,11 @@ This document captures the exact behavior of the Python flowc implementation, de
 
 | Module | Test File | Test Count | Description |
 |--------|-----------|------------|-------------|
-| activity | test_activity.py | 18 | Ball-in-court filtering logic |
+| activity | test_activity.py | 20 | Ball-in-court filtering logic |
 | config | test_config.py | 12 | sources.json parsing |
 | digest | test_digest.py | 9 | Duration parsing, date range formatting |
-| issue | test_issue.py | 22 | GitHub ref parsing, output formatting |
-| llm | test_llm.py | 21 | LLM prompt building and response parsing |
+| issue | test_issue.py | 34 | GitHub ref parsing, output formatting |
+| llm | test_llm.py | 31 | LLM prompt building and response parsing |
 | slack | test_slack.py | 4 | Webhook URL lookup |
 
 Total: 110 tests
