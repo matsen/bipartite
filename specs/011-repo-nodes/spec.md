@@ -167,8 +167,8 @@ Projects are stored in `projects.jsonl`:
 
 **Optional fields**:
 - `description`: Project description
-- `created_at`: When the project node was created
-- `updated_at`: When the project node was last updated
+- `created_at`: Auto-populated timestamp when the project node was created
+- `updated_at`: Auto-populated timestamp when the project node was last modified
 
 ### Repo Node Schema
 
@@ -176,7 +176,7 @@ Repos are stored in `repos.jsonl`:
 
 ```jsonl
 {"id":"dasm2-code","project":"dasm2","type":"github","github_url":"https://github.com/matsen/dasm2","name":"dasm2","description":"Distance-based antibody sequence modeling","topics":["antibodies","ml"],"language":"Python","created_at":"2026-01-23T10:00:00Z","updated_at":"2026-01-23T10:00:00Z"}
-{"id":"dasm2-paper","project":"dasm2","type":"github","github_url":"https://github.com/matsen/dasm2-paper","name":"dasm2-paper","description":"Manuscript for DASM2 methods paper","topics":["manuscript"],"language":"TeX","created_at":"2026-01-23T11:00:00Z","updated_at":"2026-01-23T11:00:00Z"}
+{"id":"dasm2-paper","project":"dasm2","type":"github","github_url":"https://github.com/matsen/dasm2-paper","name":"dasm2-paper","description":"Manuscript for DASM2 methods paper","topics":["manuscript"],"language":"LaTeX","created_at":"2026-01-23T11:00:00Z","updated_at":"2026-01-23T11:00:00Z"}
 {"id":"bipartite-code","project":"bipartite","type":"github","github_url":"https://github.com/matsen/bipartite","name":"bipartite","description":"Agent-first academic reference manager","topics":["reference-manager","cli"],"language":"Go","created_at":"2026-01-23T10:00:00Z","updated_at":"2026-01-23T10:00:00Z"}
 ```
 
@@ -191,8 +191,8 @@ Repos are stored in `repos.jsonl`:
 - `description`: Repo description
 - `topics`: Array of topic tags (from GitHub or user-defined)
 - `language`: Primary programming language (from GitHub)
-- `created_at`: When the repo node was created
-- `updated_at`: When the repo node was last updated
+- `created_at`: Auto-populated timestamp when the repo node was created
+- `updated_at`: Auto-populated timestamp when the repo node was last modified
 
 ### Edge Relationship Types
 
@@ -216,20 +216,33 @@ New relationship types for `relationship-types.json`:
 
 ### Node Type Disambiguation
 
-Since edges reference nodes by ID and we now have three edge-capable node types (papers, concepts, projects), we need a disambiguation strategy:
+Since edges reference nodes by ID and we now have three edge-capable node types (papers, concepts, projects), we need a disambiguation strategy.
 
-**Recommendation**: Explicit type fields for clarity and future extensibility.
+**Strategy**: Type-prefixed IDs for unambiguous identification.
+
+All node IDs include a type prefix:
+- Papers: `paper:<id>` (e.g., `paper:10.1038/s41586-021-03819-2`)
+- Concepts: `concept:<id>` (e.g., `concept:variational-inference`)
+- Projects: `project:<id>` (e.g., `project:dasm2`)
+- Repos: `repo:<id>` (e.g., `repo:dasm2-code`)
+
+This enables:
+- Validation without loading all node stores
+- Batch schema updates for a given type
+- Clear provenance in edge definitions
+
+Edge schema uses prefixed IDs directly:
 
 ```json
-{"source_id": "variational-inference", "source_type": "concept", "target_id": "dasm2", "target_type": "project", ...}
+{"source_id": "concept:variational-inference", "target_id": "project:dasm2", ...}
 ```
 
-This enables validation without loading all node stores.
+The `source_type`/`target_type` fields become redundant but MAY be retained for query optimization.
 
 ### Updated Edge Schema
 
 ```jsonl
-{"source_id":"variational-inference","source_type":"concept","target_id":"dasm2","target_type":"project","relationship_type":"implemented-in","summary":"DASM2 uses variational inference for the latent space model","created_at":"2026-01-23T12:00:00Z"}
+{"source_id":"concept:variational-inference","target_id":"project:dasm2","relationship_type":"implemented-in","summary":"DASM2 uses variational inference for the latent space model","created_at":"2026-01-23T12:00:00Z"}
 ```
 
 ### Graph Structure
@@ -263,7 +276,7 @@ Transitive queries (e.g., "papers relevant to project X") traverse through conce
 - **FR-003**: System MUST allow users to retrieve a project by its ID
 - **FR-004**: System MUST allow users to list all projects
 - **FR-005**: System MUST allow users to update a project's metadata
-- **FR-006**: System MUST allow users to delete a project (with safeguards if edges or repos exist)
+- **FR-006**: System MUST allow users to delete a project, which cascade-deletes all repos belonging to that project and all edges involving the project
 
 **Project ID Validation**:
 - **FR-007**: Project IDs MUST be non-empty strings containing only lowercase alphanumeric characters, hyphens, and underscores
@@ -287,7 +300,8 @@ Transitive queries (e.g., "papers relevant to project X") traverse through conce
 - **FR-021**: Repo IDs MUST be non-empty strings containing only lowercase alphanumeric characters, hyphens, and underscores
 - **FR-022**: Repo IDs MUST be unique within the repos store
 - **FR-023**: System SHOULD derive default repo ID from GitHub repo name (e.g., `matsen/dasm2` → `dasm2`)
-- **FR-024**: System MUST allow user to override the derived ID
+- **FR-024**: System MUST allow user to override the derived ID via `--id` flag
+- **FR-024a**: A GitHub URL MUST NOT appear in more than one repo entry (enforces one-project-per-repo)
 
 **Concept↔Project Edges**:
 - **FR-025**: System MUST allow edges from concepts to projects (concept→project)
@@ -314,19 +328,18 @@ Transitive queries (e.g., "papers relevant to project X") traverse through conce
 - **FR-042**: System MUST provide `bip project repos <id>` for listing repos in a project
 - **FR-043**: System MUST provide `bip project concepts <id>` for querying linked concepts
 - **FR-044**: System MUST provide `bip project papers <id>` for transitive paper query (via concepts)
-- **FR-045**: System MUST provide `bip project graph <id>` for full neighborhood view
-- **FR-046**: All project commands MUST support `--human` flag for human-readable output
+- **FR-045**: All project commands MUST support `--json` flag for JSON output (default is human-readable)
 
 **CLI Interface — Repo Commands**:
-- **FR-047**: System MUST provide `bip repo add <github-url-or-org/repo> --project <id>` for adding GitHub repos
-- **FR-048**: System MUST provide `bip repo add --manual --name <name> --project <id>` for adding manual repos
+- **FR-047**: System MUST provide `bip repo add <github-url-or-org/repo> --project <id> [--id <id>]` for adding GitHub repos
+- **FR-048**: System MUST provide `bip repo add --manual --name <name> --project <id> [--id <id>]` for adding manual repos
 - **FR-049**: System MUST provide `bip repo get <id>` for retrieving a repo
 - **FR-050**: System MUST provide `bip repo list` for listing all repos
 - **FR-051**: System MUST provide `bip repo list --project <id>` for filtering by project
 - **FR-052**: System MUST provide `bip repo update <id>` for modifying repos
 - **FR-053**: System MUST provide `bip repo delete <id>` for removing repos
 - **FR-054**: System MUST provide `bip repo refresh <id>` for updating GitHub metadata
-- **FR-055**: All repo commands MUST support `--human` flag for human-readable output
+- **FR-055**: All repo commands MUST support `--json` flag for JSON output (default is human-readable)
 
 **Edge Commands (extensions)**:
 - **FR-056**: `bip edge add` MUST support `--source-type` and `--target-type` flags
@@ -428,7 +441,7 @@ The existing `bip viz` command (spec 007) should be extended to:
 
 2. **Bulk import**: Should there be a `bip project import` for adding multiple projects/repos from a GitHub org or a YAML config file?
 
-3. **flowc integration**: The flowc tool already tracks GitHub repos via `sources.json`. Should `projects.jsonl` + `repos.jsonl` become the single source of truth, with flowc reading from it? Or should there be a sync mechanism?
+3. **flowc integration**: The flowc tool already tracks GitHub repos and boards via `sources.json`. This spec folds project/repo data into `sources.json` as the single source of truth. The `projects.jsonl` and `repos.jsonl` files described above are logical schemas; the actual storage merges with `sources.json` to include boards and other flowc metadata.
 
 4. **Concept auto-suggestion**: When linking a project to concepts, should the system suggest concepts that are already linked to papers in the user's collection? (e.g., "You have 5 papers about 'variational-inference' — link this project to that concept?")
 
