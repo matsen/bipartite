@@ -11,6 +11,14 @@ AGENTS.md
 *.test
 *.out
 
+# Python
+.venv/
+*.pyc
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
 # IDE
 .idea/
 .vscode/
