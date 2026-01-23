@@ -66,6 +66,7 @@ Use `bip asta` for **fast, read-only exploration**:
 
 **Key ASTA capabilities**:
 - `bip asta snippet` - Search actual text within papers (unique to ASTA)
+  - **Note**: Snippet search can be slow and may timeout. Use `--limit 5` or fall back to keyword search if it fails.
 - 10x faster rate limit for bulk exploration
 - Author search functionality
 

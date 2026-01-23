@@ -161,6 +161,24 @@ def main():
         help="Override repos to scan (comma-separated, e.g., matsengrp/repo1,matsengrp/repo2)",
     )
 
+    # Tree subcommand
+    tree_parser = subparsers.add_parser(
+        "tree", help="Generate interactive HTML tree view of beads issues"
+    )
+    tree_parser.add_argument(
+        "--since",
+        help="Highlight beads created after this date (YYYY-MM-DD or ISO format)",
+    )
+    tree_parser.add_argument(
+        "-o", "--output",
+        help="Output file path (default: stdout)",
+    )
+    tree_parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open in browser after generating",
+    )
+
     args = parser.parse_args()
 
     if args.command is None:
@@ -195,6 +213,11 @@ def main():
         from fc_cli.digest.cli import run_digest
 
         sys.exit(run_digest(args))
+
+    elif args.command == "tree":
+        from fc_cli.tree.cli import run_tree
+
+        sys.exit(run_tree(args))
 
 
 if __name__ == "__main__":

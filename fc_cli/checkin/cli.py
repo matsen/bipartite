@@ -11,8 +11,8 @@ from fc_cli.checkin.activity import (
     get_comment_item_number,
 )
 from fc_cli.checkin.board_check import check_boards, print_board_changes
+from fc_cli.issue import get_github_user
 from fc_cli.shared.config import (
-    GITHUB_USER,
     SOURCES_FILE,
     load_beads,
     load_boards,
@@ -132,18 +132,21 @@ def filter_comments_for_item(comments: list[dict], number: int) -> list[dict]:
 
 
 def generate_summaries(
-    activity: dict[str, dict], github_user: str = GITHUB_USER
+    activity: dict[str, dict], github_user: str | None = None
 ) -> dict[str, str]:
     """Generate take-home summaries for all items in activity.
 
     Args:
         activity: Activity dict from fetch_all_activity.
-        github_user: Current user's GitHub login.
+        github_user: Current user's GitHub login. If None, fetched dynamically.
 
     Returns:
         Dict mapping "repo#number" -> summary string.
     """
     from fc_cli.llm import generate_take_home_summaries
+
+    if github_user is None:
+        github_user = get_github_user()
 
     items_to_summarize = []
     items_list = collect_items_for_summary(activity)
@@ -199,7 +202,7 @@ def run_checkin(args: argparse.Namespace):
     repos = get_repos_to_check(args)
 
     # Filter by ball-in-my-court unless --all is specified
-    filter_user = None if args.all else GITHUB_USER
+    filter_user = None if args.all else get_github_user()
     activity, counts = fetch_all_activity(repos, since, github_user=filter_user)
 
     boards = load_boards()

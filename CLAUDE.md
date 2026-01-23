@@ -115,6 +115,8 @@ flowc board list           # View project boards
 flowc spawn org/repo#123   # Spawn tmux window for issue review
 ```
 
+**Claude Code slash commands:** `/flowc.checkin`, `/flowc.spawn`, `/flowc.board`, `/flowc.digest`, `/flowc.tree`
+
 flowc reads configuration from:
 - `sources.json` - Repository list and board mappings
 - `config.json` - Local path configuration

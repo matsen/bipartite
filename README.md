@@ -114,6 +114,23 @@ pipx install -e .  # Installs flowc command globally
 
 Requires Python 3.10+.
 
+### Claude Code Slash Commands
+
+To make flowc commands available as `/flowc.checkin`, `/flowc.spawn`, etc. in Claude Code:
+
+```bash
+# Symlink commands to global Claude commands directory
+cd ~/.claude/commands
+ln -sf /path/to/bipartite/.claude/commands/flowc.*.md .
+```
+
+Available commands:
+- `/flowc.checkin` - Check GitHub activity
+- `/flowc.spawn` - Open tmux window for issue review
+- `/flowc.board` - Manage project boards
+- `/flowc.digest` - Generate Slack digests
+- `/flowc.tree` - Generate beads tree view
+
 ## Quick Start
 
 ```bash
