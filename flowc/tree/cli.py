@@ -173,7 +173,7 @@ def render_node(
             class_attr = f' class="{" ".join(css_classes)}"' if css_classes else ""
             id_span = f'<span class="id">{key}</span>'
             title_span = f'<span class="title">{title}</span>'
-            inner = f'<summary{desc_attr}>{id_span}{title_span}</summary>'
+            inner = f"<summary{desc_attr}>{id_span}{title_span}</summary>"
             inner += render_node(children, since=since)
             html.append(f"<details{class_attr} open>{inner}</details>")
         else:
@@ -255,9 +255,7 @@ def run_tree(args: argparse.Namespace) -> int:
             webbrowser.open(f"file://{output_path.absolute()}")
     elif args.open:
         # Write to temp file and open
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".html", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
             f.write(html)
             temp_path = f.name
         webbrowser.open(f"file://{temp_path}")

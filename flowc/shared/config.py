@@ -9,7 +9,7 @@ from pathlib import Path
 # Paths relative to current working directory (nexus)
 ROOT = Path.cwd()
 SOURCES_FILE = ROOT / "sources.json"
-BEADS_FILE = ROOT / "issues.jsonl"
+BEADS_FILE = ROOT / ".beads" / "issues.jsonl"
 STATE_FILE = ROOT / ".last-checkin.json"
 CACHE_FILE = ROOT / ".flow-cache.json"
 
