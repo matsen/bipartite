@@ -8,7 +8,6 @@ from flowc.board.api import add_issue_to_board, list_board_items
 from flowc.shared.config import load_beads
 
 GITHUB_REF_PATTERN = re.compile(r"GitHub:\s*([^#\s]+)#(\d+)")
-PRIORITY_PATTERN = re.compile(r"\bP([0-4])\b")
 
 
 def get_p0_beads_with_github_refs() -> list[dict]:
@@ -20,29 +19,22 @@ def get_p0_beads_with_github_refs() -> list[dict]:
     p0_beads = []
 
     for bead in beads:
-        bead_id = bead.get("id", "")
-        title = bead.get("title", "")
-        desc = bead.get("description", "")
-
-        # Check if P0
-        priority_match = PRIORITY_PATTERN.search(title) or PRIORITY_PATTERN.search(desc)
-        if not priority_match or priority_match.group(1) != "0":
+        # Check if P0 (priority stored as integer field)
+        if bead.get("priority") != 0:
             continue
 
-        # Extract GitHub reference
+        # Extract GitHub reference from description
+        desc = bead.get("description", "")
         github_match = GITHUB_REF_PATTERN.search(desc)
         if not github_match:
             continue
 
-        repo = github_match.group(1)
-        issue_number = int(github_match.group(2))
-
         p0_beads.append(
             {
-                "bead_id": bead_id,
-                "title": title,
-                "repo": repo,
-                "issue_number": issue_number,
+                "bead_id": bead.get("id", ""),
+                "title": bead.get("title", ""),
+                "repo": github_match.group(1),
+                "issue_number": int(github_match.group(2)),
             }
         )
 

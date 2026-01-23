@@ -61,9 +61,7 @@ def main():
     add_parser.add_argument("issue", type=int, help="Issue number to add")
     add_parser.add_argument("--status", help="Initial status (blocked, next, active)")
     add_parser.add_argument("--label", help="Label to apply")
-    add_parser.add_argument(
-        "--repo", help="Repository (org/repo format, required)"
-    )
+    add_parser.add_argument("--repo", help="Repository (org/repo format, required)")
     add_parser.add_argument(
         "--board",
         help="Board to use (owner/number). Defaults to first in sources.json",
@@ -75,9 +73,7 @@ def main():
     )
     move_parser.add_argument("issue", type=int, help="Issue number to move")
     move_parser.add_argument("--status", required=True, help="New status")
-    move_parser.add_argument(
-        "--repo", help="Repository (org/repo format, required)"
-    )
+    move_parser.add_argument("--repo", help="Repository (org/repo format, required)")
     move_parser.add_argument(
         "--board",
         help="Board to use (owner/number). Defaults to first in sources.json",
@@ -88,9 +84,7 @@ def main():
         "remove", help="Remove issue from board"
     )
     remove_parser.add_argument("issue", type=int, help="Issue number to remove")
-    remove_parser.add_argument(
-        "--repo", help="Repository (org/repo format, required)"
-    )
+    remove_parser.add_argument("--repo", help="Repository (org/repo format, required)")
     remove_parser.add_argument(
         "--board",
         help="Board to use (owner/number). Defaults to first in sources.json",
@@ -170,7 +164,8 @@ def main():
         help="Highlight beads created after this date (YYYY-MM-DD or ISO format)",
     )
     tree_parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         help="Output file path (default: stdout)",
     )
     tree_parser.add_argument(

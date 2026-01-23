@@ -1,6 +1,5 @@
 """Tests for ball-in-my-court filtering logic."""
 
-
 from flowc.checkin.activity import (
     ball_in_my_court,
     filter_by_ball_in_court,
