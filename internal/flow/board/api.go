@@ -326,7 +326,7 @@ func SetItemStatus(boardKey, itemID, status string) error {
 
 	statusFieldID := meta.FieldIDs["Status"]
 	if statusFieldID == "" {
-		return fmt.Errorf("Status field not found on board")
+		return fmt.Errorf("status field not found on board")
 	}
 
 	optionID := meta.StatusOptions[strings.ToLower(status)]

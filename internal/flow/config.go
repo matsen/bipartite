@@ -296,10 +296,12 @@ func GetRepoLocalPath(orgRepo string) (string, bool) {
 }
 
 // GetRepoContextPath returns the context file path for a repo if defined.
+// Returns empty string if no context is defined for the repo or if sources.json
+// cannot be loaded.
 func GetRepoContextPath(orgRepo string) string {
 	sources, err := LoadSources()
 	if err != nil {
-		return ""
+		return "" // Caller should have validated nexus directory first
 	}
 
 	if relPath, ok := sources.Context[orgRepo]; ok {
@@ -321,11 +323,13 @@ func expandPath(path string) string {
 	return path
 }
 
-// RepoInCategory checks if a repo is in a specific category.
+// RepoInCategory checks if a repo is in a specific category (code or writing).
+// Returns false if the repo is not in the category, if the category is invalid,
+// or if sources.json cannot be loaded.
 func RepoInCategory(repo, category string) bool {
 	sources, err := LoadSources()
 	if err != nil {
-		return false
+		return false // Caller should have validated nexus directory first
 	}
 
 	var entries []RepoEntry

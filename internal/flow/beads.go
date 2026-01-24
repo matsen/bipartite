@@ -3,9 +3,11 @@ package flow
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 )
 
 // GitHub reference pattern: "GitHub: org/repo#N"
@@ -120,11 +122,15 @@ func CollectAllGitHubRefs() (map[string]bool, error) {
 	return refs, nil
 }
 
-// helper to parse int
+// errInvalidInteger is returned when parsing an invalid integer string.
+var errInvalidInteger = errors.New("invalid integer format")
+
+// mustParseInt parses a string as a positive integer, panicking on error.
+// Use only when input is known to be valid (e.g., from regex capture groups).
 func mustParseInt(s string) int {
-	var n int
-	for _, c := range s {
-		n = n*10 + int(c-'0')
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		panic("mustParseInt: " + err.Error())
 	}
 	return n
 }
@@ -132,17 +138,14 @@ func mustParseInt(s string) int {
 // parsePositiveInt parses a string as a positive integer.
 func parsePositiveInt(s string) (int, error) {
 	if s == "" {
-		return 0, ErrInvalidDuration
+		return 0, errInvalidInteger
 	}
-	var n int
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return 0, ErrInvalidDuration
-		}
-		n = n*10 + int(c-'0')
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, errInvalidInteger
 	}
 	if n <= 0 {
-		return 0, ErrInvalidDuration
+		return 0, errInvalidInteger
 	}
 	return n, nil
 }

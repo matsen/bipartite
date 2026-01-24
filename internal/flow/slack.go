@@ -39,7 +39,7 @@ func PostToSlack(webhookURL, message string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Slack API error: %s", resp.Status)
+		return fmt.Errorf("slack API error: %s", resp.Status)
 	}
 
 	return nil
