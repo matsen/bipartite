@@ -72,28 +72,29 @@ To make this concrete, here's how a research group might use bipartite:
 
 **Minimal dependencies**: Fast startup, single binary, no heavyweight frameworks.
 
-## Two Tools, One Repository
+## GitHub Activity & Project Management
 
-Bipartite provides two CLI tools:
-
-- **bip** (Go): Reference manager for academic papers
-- **flowc** (Python): GitHub activity tracker and project board manager
-
-Both tools share the same data model and are designed to work together from a central "nexus" directory that contains your project configuration, paper library, and context files.
-
-### flowc Commands
+Bipartite includes built-in GitHub activity tracking and project board management:
 
 | Command | Description |
 |---------|-------------|
-| `flowc checkin` | Check recent GitHub activity across tracked repos |
-| `flowc checkin --summarize` | Generate LLM summaries for each item |
-| `flowc board list` | List items on project boards by status |
-| `flowc board add 123 --repo org/repo` | Add issue to board |
-| `flowc board move 123 --status Done --repo org/repo` | Move issue to new status |
-| `flowc spawn org/repo#123` | Spawn tmux window for issue review |
-| `flowc digest --channel <name>` | Generate and post activity digest to Slack |
+| `bip checkin` | Check recent GitHub activity across tracked repos |
+| `bip checkin --summarize` | Generate LLM summaries for each item |
+| `bip checkin --since 2d` | Check activity from the last 2 days |
+| `bip checkin --repo org/repo` | Check a single repo |
+| `bip checkin --all` | Show all activity (disable ball-in-my-court filtering) |
+| `bip board list` | List items on project boards by status |
+| `bip board add 123 --repo org/repo` | Add issue to board |
+| `bip board move 123 --status Done --repo org/repo` | Move issue to new status |
+| `bip board remove 123 --repo org/repo` | Remove issue from board |
+| `bip board sync` | Compare P0 beads with board items |
+| `bip board sync --fix` | Auto-add missing P0 beads to board |
+| `bip spawn org/repo#123` | Spawn tmux window for issue review |
+| `bip digest --channel <name>` | Generate and post activity digest to Slack |
+| `bip tree` | Generate interactive HTML tree of beads issues |
+| `bip tree --open` | Generate and open in browser |
 
-flowc must be run from a directory containing `sources.json` (the nexus directory).
+These commands require a `sources.json` configuration file in the current directory (the "nexus" directory).
 
 ## Installation
 
@@ -105,31 +106,6 @@ ln -sf $(pwd)/bip ~/.local/bin/bip  # Optional: add to PATH
 ```
 
 Requires Go 1.21+.
-
-### flowc (Python)
-
-```bash
-pipx install -e .  # Installs flowc command globally
-```
-
-Requires Python 3.10+.
-
-### Claude Code Slash Commands
-
-To make flowc commands available as `/flowc.checkin`, `/flowc.spawn`, etc. in Claude Code:
-
-```bash
-# Symlink commands to global Claude commands directory
-cd ~/.claude/commands
-ln -sf /path/to/bipartite/.claude/commands/flowc.*.md .
-```
-
-Available commands:
-- `/flowc.checkin` - Check GitHub activity
-- `/flowc.spawn` - Open tmux window for issue review
-- `/flowc.board` - Manage project boards
-- `/flowc.digest` - Generate Slack digests
-- `/flowc.tree` - Generate beads tree view
 
 ## Quick Start
 

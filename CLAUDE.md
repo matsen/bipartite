@@ -44,11 +44,10 @@ bd list                     # List all tasks
 
 ```text
 cmd/           # Go CLI command implementations (bip)
-internal/      # Go internal packages (s2, store, index, etc.)
-flowc/         # Python CLI implementation (flowc)
+internal/      # Go internal packages (s2, store, index, flow, etc.)
 specs/         # Feature specifications
 testdata/      # Test fixtures
-tests/         # Python tests + Go integration tests
+tests/         # Go integration tests
 ```
 
 ## Building
@@ -107,20 +106,22 @@ When looking for papers or adding edges to the knowledge graph:
 
 The nexus library has ~6000 papers already imported - most relevant immunology/antibody papers are likely already there. **Always search locally first before proposing ASTA queries.**
 
-## flowc (Python CLI)
+## GitHub Activity Commands (bip)
 
-flowc manages GitHub activity and project boards. It must be run from the nexus directory:
+bip includes built-in GitHub activity tracking and project board management. These commands must be run from the nexus directory:
 
 ```bash
 cd ~/re/nexus
-flowc checkin              # Check recent GitHub activity
-flowc board list           # View project boards
-flowc spawn org/repo#123   # Spawn tmux window for issue review
+bip checkin              # Check recent GitHub activity
+bip board list           # View project boards
+bip spawn org/repo#123   # Spawn tmux window for issue review
+bip digest --channel foo # Generate Slack digest
+bip tree --open          # View beads hierarchy in browser
 ```
 
-**Claude Code slash commands:** `/flowc.checkin`, `/flowc.spawn`, `/flowc.board`, `/flowc.digest`, `/flowc.tree`
+**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`
 
-flowc reads configuration from:
+These commands read configuration from:
 - `sources.json` - Repository list and board mappings
 - `config.json` - Local path configuration
 - `context/` - Project context files
@@ -141,14 +142,10 @@ Before any pull request, ensure the following workflow is completed:
 
 ### Test Quality Validation
 5. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
-6. **Run Tests**: Ensure all tests pass:
-   - Go: `go test ./...`
-   - Python: `pytest tests/`
+6. **Run Tests**: Ensure all tests pass: `go test ./...`
 
 ### Final Static Analysis
-7. **Vet and Lint**: Run static analysis to verify code quality:
-   - Go: `go vet ./...`
-   - Python: `ruff check flowc/ tests/`
+7. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
 
 ### Documentation Sync
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
