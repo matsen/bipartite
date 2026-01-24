@@ -1,1 +1,0 @@
-"""Checkin subcommand package."""
