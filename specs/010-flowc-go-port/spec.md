@@ -13,7 +13,7 @@ flowc is a CLI for managing GitHub activity and project boards, centered around 
 - `config.json` - Local path configuration (code directory, writing directory)
 - `context/` - Project context files for issue review
 
-The port will add these commands under `bip flow` (or integrate directly into bip).
+The port will add these commands directly to bip (e.g., `bip checkin`, `bip board`, `bip spawn`).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -23,11 +23,11 @@ A researcher starts their day and wants to see what needs attention across all t
 
 **Why this priority**: This is the primary daily workflow - understanding what needs attention across multiple repos.
 
-**Independent Test**: Run `bip flow checkin` and verify it shows issues/PRs where the user needs to take action.
+**Independent Test**: Run `bip checkin` and verify it shows issues/PRs where the user needs to take action.
 
 **Acceptance Scenarios**:
 
-1. **Given** repos with active issues/PRs, **When** user runs `bip flow checkin`, **Then** only items requiring user action are shown (ball-in-my-court filtering)
+1. **Given** repos with active issues/PRs, **When** user runs `bip checkin`, **Then** only items requiring user action are shown (ball-in-my-court filtering)
 2. **Given** an issue I created with no comments, **When** I run checkin, **Then** it is hidden (waiting for feedback)
 3. **Given** an issue someone else created with no comments, **When** I run checkin, **Then** it is shown (needs my review)
 4. **Given** their issue where I commented last, **When** I run checkin, **Then** it is hidden (waiting for their reply)
@@ -42,12 +42,12 @@ A researcher uses GitHub project boards to track priorities and wants to ensure 
 
 **Why this priority**: Board sync is critical for maintaining alignment between local planning (beads) and GitHub project management.
 
-**Independent Test**: Run `bip flow board sync` and verify it correctly matches P0 beads with board issues via `GitHub: org/repo#N` pattern in bead descriptions.
+**Independent Test**: Run `bip board sync` and verify it correctly matches P0 beads with board issues via `GitHub: org/repo#N` pattern in bead descriptions.
 
 **Acceptance Scenarios**:
 
-1. **Given** P0 beads with GitHub references not on the board, **When** user runs `bip flow board sync`, **Then** these are listed as "P0 beads not on board"
-2. **Given** board issues without matching P0 beads, **When** user runs `bip flow board sync`, **Then** these are listed as "Board issues without P0 bead"
+1. **Given** P0 beads with GitHub references not on the board, **When** user runs `bip board sync`, **Then** these are listed as "P0 beads not on board"
+2. **Given** board issues without matching P0 beads, **When** user runs `bip board sync`, **Then** these are listed as "Board issues without P0 bead"
 3. **Given** P0 beads with GitHub references that ARE on the board, **When** user runs sync, **Then** these are not listed in either category
 4. **Given** `--fix` flag, **When** user runs sync, **Then** missing P0s are automatically added to the board
 
@@ -59,7 +59,7 @@ A researcher wants to review a specific GitHub issue or PR with full context. Th
 
 **Why this priority**: Important for deep work on specific issues, but less frequent than daily checkin.
 
-**Independent Test**: Run `bip flow spawn org/repo#123` and verify tmux window is created with correct context.
+**Independent Test**: Run `bip spawn org/repo#123` and verify tmux window is created with correct context.
 
 **Acceptance Scenarios**:
 
@@ -75,11 +75,11 @@ A researcher wants to generate a summary of activity across repos in a channel (
 
 **Why this priority**: Useful for team communication but less critical than individual workflow.
 
-**Independent Test**: Run `bip flow digest --channel dasm2 --since 1w` and verify summary is generated.
+**Independent Test**: Run `bip digest --channel dasm2 --since 1w` and verify summary is generated.
 
 **Acceptance Scenarios**:
 
-1. **Given** repos with activity, **When** user runs `bip flow digest --channel dasm2`, **Then** an LLM-generated summary is produced
+1. **Given** repos with activity, **When** user runs `bip digest --channel dasm2`, **Then** an LLM-generated summary is produced
 2. **Given** a Slack webhook configured, **When** user runs digest with `--post-to`, **Then** summary is posted to Slack
 3. **Given** date range `--since 1w`, **When** user runs digest, **Then** only activity from the last week is included
 
@@ -91,7 +91,7 @@ A researcher wants to visualize their beads hierarchy as an interactive HTML tre
 
 **Why this priority**: Visualization is helpful but not critical path for daily work.
 
-**Independent Test**: Run `bip flow tree --open` and verify HTML tree opens in browser.
+**Independent Test**: Run `bip tree --open` and verify HTML tree opens in browser.
 
 **Acceptance Scenarios**:
 
@@ -110,10 +110,10 @@ A researcher wants to add, move, or remove issues from their GitHub project boar
 
 **Acceptance Scenarios**:
 
-1. **Given** an issue number and repo, **When** user runs `bip flow board add 123 --repo org/repo`, **Then** issue is added to the board
-2. **Given** an issue on the board, **When** user runs `bip flow board move 123 --status active`, **Then** issue is moved to the "active" column
-3. **Given** an issue on the board, **When** user runs `bip flow board remove 123`, **Then** issue is removed from the board
-4. **Given** a board, **When** user runs `bip flow board list`, **Then** all board items are listed by status
+1. **Given** an issue number and repo, **When** user runs `bip board add 123 --repo org/repo`, **Then** issue is added to the board
+2. **Given** an issue on the board, **When** user runs `bip board move 123 --status active`, **Then** issue is moved to the "active" column
+3. **Given** an issue on the board, **When** user runs `bip board remove 123`, **Then** issue is removed from the board
+4. **Given** a board, **When** user runs `bip board list`, **Then** all board items are listed by status
 
 ---
 
@@ -229,7 +229,7 @@ The ball-in-my-court filter determines whether an item needs the user's attentio
 
 - **SC-001**: All 110 existing Python tests have equivalent Go tests that pass
 - **SC-002**: No Python dependencies remain - single Go binary
-- **SC-003**: CLI interface is backward compatible (`bip flow checkin` works like `flowc checkin`)
+- **SC-003**: CLI interface is backward compatible (`bip checkin` works like `flowc checkin`)
 - **SC-004**: Ball-in-my-court logic matches Python implementation exactly
 - **SC-005**: Duration parsing handles all documented formats
 - **SC-006**: GitHub reference parsing handles all URL variants from tests
