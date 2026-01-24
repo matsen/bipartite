@@ -37,6 +37,8 @@ bd list                     # List all tasks
 - **Semantic Scholar API** for paper metadata (internal/s2 package)
 - **Data storage**: JSONL (refs.jsonl, edges.jsonl, concepts.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
+- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (011-repo-nodes)
+- JSONL (source of truth) + SQLite (ephemeral query layer, rebuilt via `bip rebuild`) (011-repo-nodes)
 
 ## Project Structure
 
@@ -152,3 +154,6 @@ Before any pull request, ensure the following workflow is completed:
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
 
 <!-- MANUAL ADDITIONS END -->
+
+## Recent Changes
+- 011-repo-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)

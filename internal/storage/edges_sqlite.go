@@ -162,6 +162,54 @@ func (d *DB) CountEdges() (int, error) {
 	return count, nil
 }
 
+// GetEdgesByProject returns all edges where the project (with prefix) is source or target.
+func (d *DB) GetEdgesByProject(projectID string) ([]edge.Edge, error) {
+	prefixedID := "project:" + projectID
+	return d.queryEdges(`
+		SELECT source_id, target_id, relationship_type, summary, created_at
+		FROM edges
+		WHERE source_id = ? OR target_id = ?
+		ORDER BY source_id, target_id, relationship_type
+	`, "querying edges by project", prefixedID, prefixedID)
+}
+
+// GetConceptsByProject returns edges where a concept links to a project (either direction).
+func (d *DB) GetConceptsByProject(projectID string) ([]edge.Edge, error) {
+	prefixedID := "project:" + projectID
+	return d.queryEdges(`
+		SELECT source_id, target_id, relationship_type, summary, created_at
+		FROM edges
+		WHERE (source_id = ? AND target_id LIKE 'concept:%')
+		   OR (target_id = ? AND source_id LIKE 'concept:%')
+		ORDER BY source_id, target_id
+	`, "querying concepts by project", prefixedID, prefixedID)
+}
+
+// GetPapersByProjectTransitive returns papers linked to concepts that are linked to a project.
+// This performs a two-hop query: project ← concept ← paper
+func (d *DB) GetPapersByProjectTransitive(projectID string) ([]edge.Edge, error) {
+	prefixedID := "project:" + projectID
+	// First get concepts linked to this project
+	// Then get papers linked to those concepts
+	return d.queryEdges(`
+		WITH project_concepts AS (
+			SELECT
+				CASE
+					WHEN source_id = ? THEN target_id
+					WHEN target_id = ? THEN source_id
+				END AS concept_id
+			FROM edges
+			WHERE (source_id = ? AND target_id LIKE 'concept:%')
+			   OR (target_id = ? AND source_id LIKE 'concept:%')
+		)
+		SELECT e.source_id, e.target_id, e.relationship_type, e.summary, e.created_at
+		FROM edges e
+		JOIN project_concepts pc ON e.target_id = REPLACE(pc.concept_id, 'concept:', '')
+		WHERE e.source_id NOT LIKE '%:%'
+		ORDER BY e.source_id, e.target_id
+	`, "querying papers by project transitive", prefixedID, prefixedID, prefixedID, prefixedID)
+}
+
 // scanEdges scans rows into a slice of edges.
 func scanEdges(rows *sql.Rows) ([]edge.Edge, error) {
 	var edges []edge.Edge

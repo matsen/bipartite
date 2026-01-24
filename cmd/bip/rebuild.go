@@ -27,6 +27,8 @@ type RebuildResult struct {
 	References int    `json:"references"`
 	Edges      int    `json:"edges"`
 	Concepts   int    `json:"concepts"`
+	Projects   int    `json:"projects"`
+	Repos      int    `json:"repos"`
 }
 
 func runRebuild(cmd *cobra.Command, args []string) error {
@@ -62,15 +64,31 @@ func runRebuild(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "rebuilding concepts database: %v", err)
 	}
 
+	// Rebuild projects from JSONL
+	projectsPath := config.ProjectsPath(repoRoot)
+	projectsCount, err := db.RebuildProjectsFromJSONL(projectsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "rebuilding projects database: %v", err)
+	}
+
+	// Rebuild repos from JSONL
+	reposPath := config.ReposPath(repoRoot)
+	reposCount, err := db.RebuildReposFromJSONL(reposPath)
+	if err != nil {
+		exitWithError(ExitDataError, "rebuilding repos database: %v", err)
+	}
+
 	// Output results
 	if humanOutput {
-		fmt.Printf("Rebuilt query database with %d references, %d edges, and %d concepts\n", refsCount, edgesCount, conceptsCount)
+		fmt.Printf("Rebuilt query database with %d references, %d edges, %d concepts, %d projects, and %d repos\n", refsCount, edgesCount, conceptsCount, projectsCount, reposCount)
 	} else {
 		outputJSON(RebuildResult{
 			Status:     "rebuilt",
 			References: refsCount,
 			Edges:      edgesCount,
 			Concepts:   conceptsCount,
+			Projects:   projectsCount,
+			Repos:      reposCount,
 		})
 	}
 

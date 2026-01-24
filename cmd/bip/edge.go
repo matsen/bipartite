@@ -42,6 +42,7 @@ func init() {
 	edgeListCmd.Flags().Bool("all", false, "Show both incoming and outgoing edges")
 	edgeListCmd.Flags().StringP("paper", "p", "", "Filter edges by paper ID")
 	edgeListCmd.Flags().StringP("concept", "c", "", "Filter edges by concept ID")
+	edgeListCmd.Flags().StringP("project", "P", "", "Filter edges by project ID")
 	edgeCmd.AddCommand(edgeListCmd)
 
 	// bp edge search flags
@@ -88,20 +89,98 @@ func loadConceptIDSet(repoRoot string) map[string]bool {
 	return idSet
 }
 
-// validateEdgeEndpoints checks that source paper exists and target exists in either refs or concepts.
-// Returns the target type ("paper" or "concept") and any validation error.
-func validateEdgeEndpoints(e edge.Edge, paperIDs, conceptIDs map[string]bool) (targetType string, err error) {
-	if !paperIDs[e.SourceID] {
-		return "", fmt.Errorf("source paper %q not found", e.SourceID)
+// loadProjectIDSet loads all project IDs and returns them as a set for O(1) lookup.
+func loadProjectIDSet(repoRoot string) map[string]bool {
+	projectsPath := config.ProjectsPath(repoRoot)
+	idSet, err := storage.LoadProjectIDSet(projectsPath)
+	if err != nil {
+		exitWithError(ExitDataError, "reading projects: %v", err)
+	}
+	if idSet == nil {
+		idSet = make(map[string]bool)
+	}
+	return idSet
+}
+
+// parseNodeType extracts the node type and bare ID from a potentially prefixed ID.
+// Returns (type, bareID) where type is "paper", "concept", "project", or "repo".
+// IDs without prefix are assumed to be papers (for backward compatibility).
+func parseNodeType(id string) (nodeType, bareID string) {
+	if strings.HasPrefix(id, "concept:") {
+		return "concept", strings.TrimPrefix(id, "concept:")
+	}
+	if strings.HasPrefix(id, "project:") {
+		return "project", strings.TrimPrefix(id, "project:")
+	}
+	if strings.HasPrefix(id, "repo:") {
+		return "repo", strings.TrimPrefix(id, "repo:")
+	}
+	// Unprefixed IDs are papers (backward compatible)
+	return "paper", id
+}
+
+// validateEdgeEndpoints checks that source and target nodes exist and form valid edge combinations.
+// Returns the source type, target type, and any validation error.
+// Valid combinations:
+//   - paper ↔ paper
+//   - paper ↔ concept
+//   - concept ↔ paper
+//   - concept ↔ project
+//   - project ↔ concept
+//
+// Invalid combinations:
+//   - paper ↔ project (must go through concept)
+//   - * ↔ repo (repos have no edges)
+func validateEdgeEndpoints(e edge.Edge, paperIDs, conceptIDs, projectIDs map[string]bool) (sourceType, targetType string, err error) {
+	sourceType, sourceBareID := parseNodeType(e.SourceID)
+	targetType, targetBareID := parseNodeType(e.TargetID)
+
+	// Reject any edge involving repos
+	if sourceType == "repo" {
+		return "", "", fmt.Errorf("cannot create edge from repo (repos have no edges)")
+	}
+	if targetType == "repo" {
+		return "", "", fmt.Errorf("cannot create edge to repo (repos have no edges)")
 	}
 
-	if paperIDs[e.TargetID] {
-		return "paper", nil
+	// Reject direct paper↔project edges
+	if (sourceType == "paper" && targetType == "project") || (sourceType == "project" && targetType == "paper") {
+		return "", "", fmt.Errorf("cannot create paper↔project edge directly (must go through concept)")
 	}
-	if conceptIDs[e.TargetID] {
-		return "concept", nil
+
+	// Validate source exists
+	switch sourceType {
+	case "paper":
+		if !paperIDs[sourceBareID] {
+			return "", "", fmt.Errorf("source paper %q not found", e.SourceID)
+		}
+	case "concept":
+		if !conceptIDs[sourceBareID] {
+			return "", "", fmt.Errorf("source concept %q not found", sourceBareID)
+		}
+	case "project":
+		if !projectIDs[sourceBareID] {
+			return "", "", fmt.Errorf("source project %q not found", sourceBareID)
+		}
 	}
-	return "", fmt.Errorf("target %q not found (not a paper or concept)", e.TargetID)
+
+	// Validate target exists
+	switch targetType {
+	case "paper":
+		if !paperIDs[targetBareID] {
+			return "", "", fmt.Errorf("target paper %q not found", e.TargetID)
+		}
+	case "concept":
+		if !conceptIDs[targetBareID] {
+			return "", "", fmt.Errorf("target concept %q not found", targetBareID)
+		}
+	case "project":
+		if !projectIDs[targetBareID] {
+			return "", "", fmt.Errorf("target project %q not found", targetBareID)
+		}
+	}
+
+	return sourceType, targetType, nil
 }
 
 // validateEdgePapers checks that source and target papers exist (legacy, for paper-paper edges only).
@@ -126,10 +205,26 @@ var paperConceptRelTypes = map[string]bool{
 	"extends":        true,
 }
 
+// Standard concept-project relationship types (from data-model.md)
+var conceptProjectRelTypes = map[string]bool{
+	"implemented-in": true,
+	"applied-in":     true,
+	"studied-by":     true,
+	"introduces":     true,
+	"refines":        true,
+}
+
 // warnNonStandardRelationType prints a warning if the relationship type is non-standard for paper-concept edges.
 func warnNonStandardRelationType(relType string) {
 	if !paperConceptRelTypes[relType] {
 		fmt.Fprintf(os.Stderr, "warning: relationship type %q is not a standard paper-concept type (introduces, applies, models, evaluates-with, critiques, extends)\n", relType)
+	}
+}
+
+// warnNonStandardConceptProjectRelType prints a warning if the relationship type is non-standard for concept-project edges.
+func warnNonStandardConceptProjectRelType(relType string) {
+	if !conceptProjectRelTypes[relType] {
+		fmt.Fprintf(os.Stderr, "warning: relationship type %q is not a standard concept-project type (implemented-in, applied-in, studied-by, introduces, refines)\n", relType)
 	}
 }
 
@@ -167,23 +262,29 @@ func runEdgeAdd(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitEdgeInvalidArgs, "invalid edge: %v", err)
 	}
 
-	// Load paper and concept IDs for validation
+	// Load paper, concept, and project IDs for validation
 	paperIDs := loadPaperIDSet(repoRoot)
 	conceptIDs := loadConceptIDSet(repoRoot)
+	projectIDs := loadProjectIDSet(repoRoot)
 
-	// Validate endpoints (source must be paper, target can be paper or concept)
-	targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs)
+	// Validate endpoints
+	sourceType, targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs, projectIDs)
 	if err != nil {
-		if strings.Contains(err.Error(), "source paper") {
+		if strings.Contains(err.Error(), "source") {
 			exitWithError(ExitEdgeSourceNotFound, "%v", err)
-		} else {
+		} else if strings.Contains(err.Error(), "target") {
 			exitWithError(ExitEdgeTargetNotFound, "%v", err)
+		} else {
+			// Constraint violations (paper↔project, repo edges)
+			exitWithError(ExitEdgeInvalidArgs, "%v", err)
 		}
 	}
 
-	// Warn if using non-standard relationship type for paper-concept edges
-	if targetType == "concept" {
+	// Warn if using non-standard relationship type
+	if (sourceType == "paper" && targetType == "concept") || (sourceType == "concept" && targetType == "paper") {
 		warnNonStandardRelationType(relType)
+	} else if (sourceType == "concept" && targetType == "project") || (sourceType == "project" && targetType == "concept") {
+		warnNonStandardConceptProjectRelType(relType)
 	}
 
 	// Load existing edges
@@ -270,9 +371,10 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	}
 	defer f.Close()
 
-	// Load paper and concept IDs for validation
+	// Load paper, concept, and project IDs for validation
 	paperIDs := loadPaperIDSet(repoRoot)
 	conceptIDs := loadConceptIDSet(repoRoot)
+	projectIDs := loadProjectIDSet(repoRoot)
 
 	// Load existing edges
 	edgesPath := config.EdgesPath(repoRoot)
@@ -283,7 +385,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 	// Process import file
 	result := EdgeImportResult{Errors: []EdgeImportError{}}
-	edges, err = processImportFile(f, edges, paperIDs, conceptIDs, &result)
+	edges, err = processImportFile(f, edges, paperIDs, conceptIDs, projectIDs, &result)
 	if err != nil {
 		exitWithError(ExitDataError, "%v", err)
 	}
@@ -325,7 +427,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 // processImportFile reads edges from a file and validates/upserts them.
 // Returns the updated edges slice and any file reading error.
-func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
+func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs, projectIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
 	scanner := bufio.NewScanner(f)
 	buf := make([]byte, storage.MaxJSONLLineCapacity)
 	scanner.Buffer(buf, storage.MaxJSONLLineCapacity)
@@ -358,8 +460,8 @@ func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs map[s
 			continue
 		}
 
-		// Validate endpoints (source must be paper, target can be paper or concept)
-		targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs)
+		// Validate endpoints
+		sourceType, targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs, projectIDs)
 		if err != nil {
 			result.Errors = append(result.Errors, EdgeImportError{
 				Line:  lineNum,
@@ -369,9 +471,11 @@ func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs map[s
 			continue
 		}
 
-		// Warn if using non-standard relationship type for paper-concept edges
-		if targetType == "concept" {
+		// Warn if using non-standard relationship type
+		if (sourceType == "paper" && targetType == "concept") || (sourceType == "concept" && targetType == "paper") {
 			warnNonStandardRelationType(e.RelationshipType)
+		} else if (sourceType == "concept" && targetType == "project") || (sourceType == "project" && targetType == "concept") {
+			warnNonStandardConceptProjectRelType(e.RelationshipType)
 		}
 
 		// Upsert edge
@@ -438,6 +542,7 @@ func runEdgeList(cmd *cobra.Command, args []string) error {
 
 	paperFlag, _ := cmd.Flags().GetString("paper")
 	conceptFlag, _ := cmd.Flags().GetString("concept")
+	projectFlag, _ := cmd.Flags().GetString("project")
 	incoming, _ := cmd.Flags().GetBool("incoming")
 	all, _ := cmd.Flags().GetBool("all")
 
@@ -451,6 +556,11 @@ func runEdgeList(cmd *cobra.Command, args []string) error {
 
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
+
+	// If project filter is specified
+	if projectFlag != "" {
+		return runEdgeListByProject(db, projectFlag)
+	}
 
 	// If concept filter is specified
 	if conceptFlag != "" {
@@ -537,6 +647,37 @@ func runEdgeListAll(db *storage.DB) error {
 		}
 
 		fmt.Printf("All edges (%d total):\n", len(edges))
+		for _, e := range edges {
+			fmt.Printf("  %s --[%s]--> %s\n", e.SourceID, e.RelationshipType, e.TargetID)
+			fmt.Printf("    %q\n", e.Summary)
+		}
+	} else {
+		if edges == nil {
+			edges = []edge.Edge{}
+		}
+		outputJSON(EdgeListAllResult{
+			Edges: edges,
+			Count: len(edges),
+		})
+	}
+
+	return nil
+}
+
+// runEdgeListByProject outputs edges involving a specific project.
+func runEdgeListByProject(db *storage.DB, projectID string) error {
+	edges, err := db.GetEdgesByProject(projectID)
+	if err != nil {
+		exitWithError(ExitDataError, "querying edges: %v", err)
+	}
+
+	if humanOutput {
+		if len(edges) == 0 {
+			fmt.Printf("No edges found for project %s\n", projectID)
+			return nil
+		}
+
+		fmt.Printf("Edges for project %s (%d total):\n", projectID, len(edges))
 		for _, e := range edges {
 			fmt.Printf("  %s --[%s]--> %s\n", e.SourceID, e.RelationshipType, e.TargetID)
 			fmt.Printf("    %q\n", e.Summary)
