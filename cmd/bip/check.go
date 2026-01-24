@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/edge"
@@ -170,8 +169,11 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	// T074: Check for orphaned project edges (project deleted but edge remains)
 	// T075: Check for invalid paper↔project or *↔repo edges
 	for _, e := range edges {
+		sourceType, sourceBareID := parseNodeType(e.SourceID)
+		targetType, targetBareID := parseNodeType(e.TargetID)
+
 		// Check for repo edges (invalid - repos have no edges)
-		if strings.HasPrefix(e.SourceID, "repo:") {
+		if sourceType == "repo" {
 			issues = append(issues, CheckIssue{
 				Type:     "invalid_repo_edge",
 				SourceID: e.SourceID,
@@ -179,7 +181,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 				Reason:   "source is a repo (repos have no edges)",
 			})
 		}
-		if strings.HasPrefix(e.TargetID, "repo:") {
+		if targetType == "repo" {
 			issues = append(issues, CheckIssue{
 				Type:     "invalid_repo_edge",
 				SourceID: e.SourceID,
@@ -189,12 +191,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 
 		// Check for direct paper↔project edges (invalid - must go through concept)
-		sourceIsProject := strings.HasPrefix(e.SourceID, "project:")
-		targetIsProject := strings.HasPrefix(e.TargetID, "project:")
-		sourceIsPaper := !strings.Contains(e.SourceID, ":")
-		targetIsPaper := !strings.Contains(e.TargetID, ":")
-
-		if (sourceIsPaper && targetIsProject) || (sourceIsProject && targetIsPaper) {
+		if (sourceType == "paper" && targetType == "project") || (sourceType == "project" && targetType == "paper") {
 			issues = append(issues, CheckIssue{
 				Type:     "invalid_paper_project_edge",
 				SourceID: e.SourceID,
@@ -204,51 +201,39 @@ func runCheck(cmd *cobra.Command, args []string) error {
 		}
 
 		// Check for orphaned project references
-		if sourceIsProject {
-			projectID := strings.TrimPrefix(e.SourceID, "project:")
-			if !projectIDs[projectID] {
-				issues = append(issues, CheckIssue{
-					Type:     "orphaned_project_edge",
-					SourceID: e.SourceID,
-					TargetID: e.TargetID,
-					Reason:   fmt.Sprintf("source project %q does not exist", projectID),
-				})
-			}
+		if sourceType == "project" && !projectIDs[sourceBareID] {
+			issues = append(issues, CheckIssue{
+				Type:     "orphaned_project_edge",
+				SourceID: e.SourceID,
+				TargetID: e.TargetID,
+				Reason:   fmt.Sprintf("source project %q does not exist", sourceBareID),
+			})
 		}
-		if targetIsProject {
-			projectID := strings.TrimPrefix(e.TargetID, "project:")
-			if !projectIDs[projectID] {
-				issues = append(issues, CheckIssue{
-					Type:     "orphaned_project_edge",
-					SourceID: e.SourceID,
-					TargetID: e.TargetID,
-					Reason:   fmt.Sprintf("target project %q does not exist", projectID),
-				})
-			}
+		if targetType == "project" && !projectIDs[targetBareID] {
+			issues = append(issues, CheckIssue{
+				Type:     "orphaned_project_edge",
+				SourceID: e.SourceID,
+				TargetID: e.TargetID,
+				Reason:   fmt.Sprintf("target project %q does not exist", targetBareID),
+			})
 		}
 
 		// Check for orphaned concept references in edges
-		if strings.HasPrefix(e.SourceID, "concept:") {
-			conceptID := strings.TrimPrefix(e.SourceID, "concept:")
-			if !conceptIDs[conceptID] {
-				issues = append(issues, CheckIssue{
-					Type:     "orphaned_concept_edge",
-					SourceID: e.SourceID,
-					TargetID: e.TargetID,
-					Reason:   fmt.Sprintf("source concept %q does not exist", conceptID),
-				})
-			}
+		if sourceType == "concept" && !conceptIDs[sourceBareID] {
+			issues = append(issues, CheckIssue{
+				Type:     "orphaned_concept_edge",
+				SourceID: e.SourceID,
+				TargetID: e.TargetID,
+				Reason:   fmt.Sprintf("source concept %q does not exist", sourceBareID),
+			})
 		}
-		if strings.HasPrefix(e.TargetID, "concept:") {
-			conceptID := strings.TrimPrefix(e.TargetID, "concept:")
-			if !conceptIDs[conceptID] {
-				issues = append(issues, CheckIssue{
-					Type:     "orphaned_concept_edge",
-					SourceID: e.SourceID,
-					TargetID: e.TargetID,
-					Reason:   fmt.Sprintf("target concept %q does not exist", conceptID),
-				})
-			}
+		if targetType == "concept" && !conceptIDs[targetBareID] {
+			issues = append(issues, CheckIssue{
+				Type:     "orphaned_concept_edge",
+				SourceID: e.SourceID,
+				TargetID: e.TargetID,
+				Reason:   fmt.Sprintf("target concept %q does not exist", targetBareID),
+			})
 		}
 	}
 

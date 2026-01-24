@@ -61,6 +61,22 @@ var edgeCmd = &cobra.Command{
 	Long:  `Commands for managing directed edges between papers in the knowledge graph.`,
 }
 
+// nodeIDSets holds all entity ID sets for edge validation.
+type nodeIDSets struct {
+	papers   map[string]bool
+	concepts map[string]bool
+	projects map[string]bool
+}
+
+// loadAllNodeIDSets loads paper, concept, and project ID sets for edge validation.
+func loadAllNodeIDSets(repoRoot string) nodeIDSets {
+	return nodeIDSets{
+		papers:   loadPaperIDSet(repoRoot),
+		concepts: loadConceptIDSet(repoRoot),
+		projects: loadProjectIDSet(repoRoot),
+	}
+}
+
 // loadPaperIDSet loads all paper IDs from refs and returns them as a set for O(1) lookup.
 func loadPaperIDSet(repoRoot string) map[string]bool {
 	refsPath := config.RefsPath(repoRoot)
@@ -83,10 +99,7 @@ func loadConceptIDSet(repoRoot string) map[string]bool {
 	if err != nil {
 		exitWithError(ExitDataError, "reading concepts: %v", err)
 	}
-	if idSet == nil {
-		idSet = make(map[string]bool)
-	}
-	return idSet
+	return ensureNonNil(idSet)
 }
 
 // loadProjectIDSet loads all project IDs and returns them as a set for O(1) lookup.
@@ -96,10 +109,15 @@ func loadProjectIDSet(repoRoot string) map[string]bool {
 	if err != nil {
 		exitWithError(ExitDataError, "reading projects: %v", err)
 	}
-	if idSet == nil {
-		idSet = make(map[string]bool)
+	return ensureNonNil(idSet)
+}
+
+// ensureNonNil returns a non-nil map (creates empty map if input is nil).
+func ensureNonNil(m map[string]bool) map[string]bool {
+	if m == nil {
+		return make(map[string]bool)
 	}
-	return idSet
+	return m
 }
 
 // parseNodeType extracts the node type and bare ID from a potentially prefixed ID.
@@ -262,13 +280,11 @@ func runEdgeAdd(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitEdgeInvalidArgs, "invalid edge: %v", err)
 	}
 
-	// Load paper, concept, and project IDs for validation
-	paperIDs := loadPaperIDSet(repoRoot)
-	conceptIDs := loadConceptIDSet(repoRoot)
-	projectIDs := loadProjectIDSet(repoRoot)
+	// Load all node IDs for validation
+	ids := loadAllNodeIDSets(repoRoot)
 
 	// Validate endpoints
-	sourceType, targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs, projectIDs)
+	sourceType, targetType, err := validateEdgeEndpoints(e, ids.papers, ids.concepts, ids.projects)
 	if err != nil {
 		if strings.Contains(err.Error(), "source") {
 			exitWithError(ExitEdgeSourceNotFound, "%v", err)
@@ -371,10 +387,8 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 	}
 	defer f.Close()
 
-	// Load paper, concept, and project IDs for validation
-	paperIDs := loadPaperIDSet(repoRoot)
-	conceptIDs := loadConceptIDSet(repoRoot)
-	projectIDs := loadProjectIDSet(repoRoot)
+	// Load all node IDs for validation
+	ids := loadAllNodeIDSets(repoRoot)
 
 	// Load existing edges
 	edgesPath := config.EdgesPath(repoRoot)
@@ -385,7 +399,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 	// Process import file
 	result := EdgeImportResult{Errors: []EdgeImportError{}}
-	edges, err = processImportFile(f, edges, paperIDs, conceptIDs, projectIDs, &result)
+	edges, err = processImportFile(f, edges, ids, &result)
 	if err != nil {
 		exitWithError(ExitDataError, "%v", err)
 	}
@@ -427,7 +441,7 @@ func runEdgeImport(cmd *cobra.Command, args []string) error {
 
 // processImportFile reads edges from a file and validates/upserts them.
 // Returns the updated edges slice and any file reading error.
-func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs, projectIDs map[string]bool, result *EdgeImportResult) ([]edge.Edge, error) {
+func processImportFile(f *os.File, edges []edge.Edge, ids nodeIDSets, result *EdgeImportResult) ([]edge.Edge, error) {
 	scanner := bufio.NewScanner(f)
 	buf := make([]byte, storage.MaxJSONLLineCapacity)
 	scanner.Buffer(buf, storage.MaxJSONLLineCapacity)
@@ -461,7 +475,7 @@ func processImportFile(f *os.File, edges []edge.Edge, paperIDs, conceptIDs, proj
 		}
 
 		// Validate endpoints
-		sourceType, targetType, err := validateEdgeEndpoints(e, paperIDs, conceptIDs, projectIDs)
+		sourceType, targetType, err := validateEdgeEndpoints(e, ids.papers, ids.concepts, ids.projects)
 		if err != nil {
 			result.Errors = append(result.Errors, EdgeImportError{
 				Line:  lineNum,

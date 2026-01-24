@@ -154,31 +154,48 @@ func (d *DB) CountRepos() (int, error) {
 	return count, err
 }
 
+// repoScanFields holds the scan targets for a repo row.
+type repoScanFields struct {
+	id, project, repoType, name                  sql.NullString
+	githubURL, description, topicsJSON, language sql.NullString
+	createdAt, updatedAt                         sql.NullString
+}
+
+// toRepo converts scanned fields to a Repo struct, parsing topics JSON.
+func (f *repoScanFields) toRepo() (repo.Repo, error) {
+	r := repo.Repo{
+		ID:          f.id.String,
+		Project:     f.project.String,
+		Type:        f.repoType.String,
+		Name:        f.name.String,
+		GitHubURL:   f.githubURL.String,
+		Description: f.description.String,
+		Language:    f.language.String,
+		CreatedAt:   f.createdAt.String,
+		UpdatedAt:   f.updatedAt.String,
+	}
+	if f.topicsJSON.Valid && f.topicsJSON.String != "" {
+		if err := json.Unmarshal([]byte(f.topicsJSON.String), &r.Topics); err != nil {
+			return repo.Repo{}, fmt.Errorf("parsing topics JSON for %s: %w", r.ID, err)
+		}
+	}
+	return r, nil
+}
+
 // scanRepo scans a single repo from a row.
 func scanRepo(row *sql.Row) (*repo.Repo, error) {
-	var r repo.Repo
-	var githubURL, description, topicsJSON, language, createdAt, updatedAt sql.NullString
-
-	err := row.Scan(&r.ID, &r.Project, &r.Type, &r.Name, &githubURL, &description, &topicsJSON, &language, &createdAt, &updatedAt)
+	var f repoScanFields
+	err := row.Scan(&f.id, &f.project, &f.repoType, &f.name, &f.githubURL, &f.description, &f.topicsJSON, &f.language, &f.createdAt, &f.updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-
-	r.GitHubURL = githubURL.String
-	r.Description = description.String
-	r.Language = language.String
-	r.CreatedAt = createdAt.String
-	r.UpdatedAt = updatedAt.String
-
-	if topicsJSON.Valid && topicsJSON.String != "" {
-		if err := json.Unmarshal([]byte(topicsJSON.String), &r.Topics); err != nil {
-			return nil, fmt.Errorf("parsing topics JSON for %s: %w", r.ID, err)
-		}
+	r, err := f.toRepo()
+	if err != nil {
+		return nil, err
 	}
-
 	return &r, nil
 }
 
@@ -186,25 +203,14 @@ func scanRepo(row *sql.Row) (*repo.Repo, error) {
 func scanRepos(rows *sql.Rows) ([]repo.Repo, error) {
 	var repos []repo.Repo
 	for rows.Next() {
-		var r repo.Repo
-		var githubURL, description, topicsJSON, language, createdAt, updatedAt sql.NullString
-
-		if err := rows.Scan(&r.ID, &r.Project, &r.Type, &r.Name, &githubURL, &description, &topicsJSON, &language, &createdAt, &updatedAt); err != nil {
+		var f repoScanFields
+		if err := rows.Scan(&f.id, &f.project, &f.repoType, &f.name, &f.githubURL, &f.description, &f.topicsJSON, &f.language, &f.createdAt, &f.updatedAt); err != nil {
 			return nil, err
 		}
-
-		r.GitHubURL = githubURL.String
-		r.Description = description.String
-		r.Language = language.String
-		r.CreatedAt = createdAt.String
-		r.UpdatedAt = updatedAt.String
-
-		if topicsJSON.Valid && topicsJSON.String != "" {
-			if err := json.Unmarshal([]byte(topicsJSON.String), &r.Topics); err != nil {
-				return nil, fmt.Errorf("parsing topics JSON for %s: %w", r.ID, err)
-			}
+		r, err := f.toRepo()
+		if err != nil {
+			return nil, err
 		}
-
 		repos = append(repos, r)
 	}
 	return repos, rows.Err()

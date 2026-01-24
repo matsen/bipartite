@@ -373,7 +373,25 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 	projectID := args[0]
 	force, _ := cmd.Flags().GetBool("force")
 
-	// Load and validate project exists
+	// Validate project exists and check dependencies
+	projects, repos, repoCount, edgeCount := validateProjectForDelete(repoRoot, projectID)
+
+	// Block if not force and has dependencies
+	if !force && (repoCount > 0 || edgeCount > 0) {
+		outputDeleteBlocked(projectID, repoCount, edgeCount)
+		os.Exit(ExitProjectValidation)
+	}
+
+	// Perform cascade delete
+	reposRemoved, edgesRemoved := cascadeDeleteProject(repoRoot, projectID, projects, repos, repoCount, edgeCount)
+
+	// Output result
+	outputDeleteResult(projectID, reposRemoved, edgesRemoved)
+	return nil
+}
+
+// validateProjectForDelete checks project exists and counts dependencies.
+func validateProjectForDelete(repoRoot, projectID string) ([]project.Project, []repo.Repo, int, int) {
 	projectsPath := config.ProjectsPath(repoRoot)
 	projects, err := storage.ReadAllProjects(projectsPath)
 	if err != nil {
@@ -383,36 +401,40 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitProjectNotFound, "project %q not found", projectID)
 	}
 
-	// Check for linked repos
 	reposPath := config.ReposPath(repoRoot)
 	repos, err := storage.ReadAllRepos(reposPath)
 	if err != nil {
 		exitWithError(ExitDataError, "reading repos: %v", err)
 	}
-	repoCount := countReposByProject(repos, projectID)
 
-	// Check for linked edges
+	repoCount := countReposByProject(repos, projectID)
 	edgeCount := countEdgesForProject(repoRoot, projectID)
 
-	// Block if not force and has dependencies
-	if !force && (repoCount > 0 || edgeCount > 0) {
-		if humanOutput {
-			fmt.Fprintf(os.Stderr, "error: project %q has %d repos and %d linked edges; use --force to delete anyway\n", projectID, repoCount, edgeCount)
-		} else {
-			outputJSON(ProjectDeleteBlockedResult{
-				Error:     fmt.Sprintf("project %q has %d repos and %d linked edges; use --force to delete anyway", projectID, repoCount, edgeCount),
-				EdgeCount: edgeCount,
-				RepoCount: repoCount,
-			})
-		}
-		os.Exit(ExitProjectValidation)
-	}
+	return projects, repos, repoCount, edgeCount
+}
 
+// outputDeleteBlocked outputs error when delete is blocked by dependencies.
+func outputDeleteBlocked(projectID string, repoCount, edgeCount int) {
+	if humanOutput {
+		fmt.Fprintf(os.Stderr, "error: project %q has %d repos and %d linked edges; use --force to delete anyway\n", projectID, repoCount, edgeCount)
+	} else {
+		outputJSON(ProjectDeleteBlockedResult{
+			Error:     fmt.Sprintf("project %q has %d repos and %d linked edges; use --force to delete anyway", projectID, repoCount, edgeCount),
+			EdgeCount: edgeCount,
+			RepoCount: repoCount,
+		})
+	}
+}
+
+// cascadeDeleteProject deletes a project and its dependent repos/edges.
+func cascadeDeleteProject(repoRoot, projectID string, projects []project.Project, repos []repo.Repo, repoCount, edgeCount int) (reposRemoved, edgesRemoved int) {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
+	reposPath := config.ReposPath(repoRoot)
+	projectsPath := config.ProjectsPath(repoRoot)
+
 	// Delete repos belonging to this project
-	reposRemoved := 0
 	if repoCount > 0 {
 		repos, reposRemoved = deleteReposByProject(repos, projectID)
 		if err := storage.WriteAllRepos(reposPath, repos); err != nil {
@@ -424,7 +446,6 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 	}
 
 	// Delete edges involving this project
-	edgesRemoved := 0
 	if edgeCount > 0 {
 		edgesRemoved = deleteEdgesForProject(repoRoot, projectID, db)
 	}
@@ -440,7 +461,11 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "updating index: %v", err)
 	}
 
-	// Output
+	return reposRemoved, edgesRemoved
+}
+
+// outputDeleteResult outputs the delete result.
+func outputDeleteResult(projectID string, reposRemoved, edgesRemoved int) {
 	if humanOutput {
 		if reposRemoved > 0 || edgesRemoved > 0 {
 			fmt.Printf("Deleted project %q with %d repos and %d edges\n", projectID, reposRemoved, edgesRemoved)
@@ -455,8 +480,6 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 			EdgesRemoved: edgesRemoved,
 		})
 	}
-
-	return nil
 }
 
 // countReposByProject counts repos belonging to a project.

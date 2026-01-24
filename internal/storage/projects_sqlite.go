@@ -107,22 +107,33 @@ func (d *DB) CountProjects() (int, error) {
 	return count, err
 }
 
+// projectScanFields holds the scan targets for a project row.
+type projectScanFields struct {
+	id, name, description, createdAt, updatedAt sql.NullString
+}
+
+// toProject converts scanned fields to a Project struct.
+func (f *projectScanFields) toProject() project.Project {
+	return project.Project{
+		ID:          f.id.String,
+		Name:        f.name.String,
+		Description: f.description.String,
+		CreatedAt:   f.createdAt.String,
+		UpdatedAt:   f.updatedAt.String,
+	}
+}
+
 // scanProject scans a single project from a row.
 func scanProject(row *sql.Row) (*project.Project, error) {
-	var p project.Project
-	var description, createdAt, updatedAt sql.NullString
-
-	err := row.Scan(&p.ID, &p.Name, &description, &createdAt, &updatedAt)
+	var f projectScanFields
+	err := row.Scan(&f.id, &f.name, &f.description, &f.createdAt, &f.updatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-
-	p.Description = description.String
-	p.CreatedAt = createdAt.String
-	p.UpdatedAt = updatedAt.String
+	p := f.toProject()
 	return &p, nil
 }
 
@@ -130,16 +141,11 @@ func scanProject(row *sql.Row) (*project.Project, error) {
 func scanProjects(rows *sql.Rows) ([]project.Project, error) {
 	var projects []project.Project
 	for rows.Next() {
-		var p project.Project
-		var description, createdAt, updatedAt sql.NullString
-
-		if err := rows.Scan(&p.ID, &p.Name, &description, &createdAt, &updatedAt); err != nil {
+		var f projectScanFields
+		if err := rows.Scan(&f.id, &f.name, &f.description, &f.createdAt, &f.updatedAt); err != nil {
 			return nil, err
 		}
-		p.Description = description.String
-		p.CreatedAt = createdAt.String
-		p.UpdatedAt = updatedAt.String
-		projects = append(projects, p)
+		projects = append(projects, f.toProject())
 	}
 	return projects, rows.Err()
 }
