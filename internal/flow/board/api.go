@@ -13,7 +13,7 @@ import (
 // ParseBoardKey parses a board key like "matsengrp/30" into (owner, number).
 func ParseBoardKey(boardKey string) (owner, number string, err error) {
 	parts := strings.Split(boardKey, "/")
-	if len(parts) != 2 {
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", "", fmt.Errorf("invalid board key: %s (expected owner/number)", boardKey)
 	}
 	return parts[0], parts[1], nil
