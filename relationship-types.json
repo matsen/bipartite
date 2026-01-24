@@ -15,5 +15,12 @@
     {"type": "evaluates-with", "description": "Paper uses this for evaluation/benchmarking"},
     {"type": "critiques", "description": "Paper identifies limitations of concept"},
     {"type": "extends", "description": "Paper builds upon concept"}
+  ],
+  "concept-project": [
+    {"type": "implemented-in", "description": "Concept is implemented in this project"},
+    {"type": "applied-in", "description": "Concept is applied/used in this project"},
+    {"type": "studied-by", "description": "Concept is studied/investigated by this project"},
+    {"type": "introduces", "description": "Project introduces or defines this concept"},
+    {"type": "refines", "description": "Project refines understanding of this concept"}
   ]
 }

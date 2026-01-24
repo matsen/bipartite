@@ -222,6 +222,7 @@ Requires `ASTA_API_KEY` environment variable.
 | `bip edge list <paper-id>` | List edges for a specific paper (`--incoming`, `--all`) |
 | `bip edge list --paper <id>` | Same as above (flag form) |
 | `bip edge list --concept <id>` | List edges involving a concept |
+| `bip edge list --project <id>` | List edges involving a project |
 | `bip edge search --type <type>` | Find edges by relationship type |
 | `bip edge export` | Export edges to JSONL (`--paper` to filter) |
 
@@ -243,6 +244,39 @@ Concepts are named ideas, methods, or phenomena that papers relate to. They enab
 | `bip paper concepts <id>` | Find concepts linked to a paper (`--type` to filter) |
 
 Paper-concept relationship types: `introduces`, `applies`, `models`, `evaluates-with`, `critiques`, `extends`.
+
+### Project Commands
+
+Projects represent ongoing research work (papers being written, software tools). They connect to concepts, forming the complete bipartite graph: papers ↔ concepts ↔ projects.
+
+| Command | Description |
+|---------|-------------|
+| `bip project add <id> --name <name>` | Create a project with optional `--description` |
+| `bip project get <id>` | Get a project by ID |
+| `bip project list` | List all projects |
+| `bip project update <id>` | Update project `--name` or `--description` |
+| `bip project delete <id>` | Delete project (use `--force` if repos/edges exist) |
+| `bip project repos <id>` | List repos belonging to a project |
+| `bip project concepts <id>` | List concepts linked to a project (`--type` to filter) |
+| `bip project papers <id>` | List papers transitively linked via concepts |
+
+Concept-project relationship types: `implemented-in`, `applied-in`, `studied-by`, `introduces`, `refines`.
+
+### Repo Commands
+
+Repos are GitHub repositories belonging to projects. They store metadata but cannot have edges.
+
+| Command | Description |
+|---------|-------------|
+| `bip repo add <github-url> --project <id>` | Add GitHub repo to project (auto-fetches metadata) |
+| `bip repo add --manual --project <id> --id <id> --name <name>` | Add non-GitHub repo |
+| `bip repo get <id>` | Get a repo by ID |
+| `bip repo list` | List all repos (`--project` to filter) |
+| `bip repo update <id>` | Update repo `--name`, `--description`, or `--topics` |
+| `bip repo delete <id>` | Delete a repo |
+| `bip repo refresh <id>` | Re-fetch GitHub metadata |
+
+Accepts GitHub URLs or shorthand: `matsen/bipartite` or `https://github.com/matsen/bipartite`.
 
 ### Visualization Commands
 
@@ -296,6 +330,8 @@ Tested on a 6,400 paper library (32MB Paperpile export):
 ├── refs.jsonl      # Papers - human-readable, git-mergeable
 ├── edges.jsonl     # Knowledge graph edges - git-mergeable
 ├── concepts.jsonl  # Concept nodes - git-mergeable
+├── projects.jsonl  # Project nodes - git-mergeable
+├── repos.jsonl     # Repo nodes - git-mergeable
 ├── config.json     # Local configuration
 └── cache/
     └── refs.db     # SQLite with FTS5 - ephemeral, gitignored

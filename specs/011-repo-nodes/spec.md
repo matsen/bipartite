@@ -435,14 +435,14 @@ The existing `bip viz` command (spec 007) should be extended to:
 - Direct paper↔project edges (by design — must go through concepts)
 - Edges to/from repos (repos are metadata, not edge endpoints)
 
-## Open Questions
+## Open Questions (Resolved)
 
-1. **ID collision handling**: The spec requires globally unique IDs across papers/concepts/projects. Should `bip project add` automatically suffix IDs if collision detected, or fail and require explicit ID change?
+1. **ID collision handling**: ✅ Fail with error requiring explicit ID change (no auto-suffix).
 
-2. **Bulk import**: Should there be a `bip project import` for adding multiple projects/repos from a GitHub org or a YAML config file?
+2. **Bulk import**: ✅ Out of scope for initial implementation.
 
-3. **flowc integration**: The flowc tool already tracks GitHub repos and boards via `sources.json`. This spec folds project/repo data into `sources.json` as the single source of truth. The `projects.jsonl` and `repos.jsonl` files described above are logical schemas; the actual storage merges with `sources.json` to include boards and other flowc metadata.
+3. **flowc integration**: ✅ Use separate `projects.jsonl` and `repos.jsonl` files for simplicity. Integration with `sources.json` deferred to issue #30.
 
-4. **Concept auto-suggestion**: When linking a project to concepts, should the system suggest concepts that are already linked to papers in the user's collection? (e.g., "You have 5 papers about 'variational-inference' — link this project to that concept?")
+4. **Concept auto-suggestion**: ✅ Not needed - AI agents will suggest concepts based on graph queries.
 
-5. **Repo reassignment**: Can a repo be moved from one project to another? If so, what happens to project-level concept edges?
+5. **Repo reassignment**: ✅ Not supported initially. Delete and re-add if needed.
