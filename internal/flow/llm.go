@@ -7,8 +7,12 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
+
+// maxSummarizeConcurrency limits parallel Claude CLI calls for summarization.
+const maxSummarizeConcurrency = 10
 
 // CallClaude calls the claude CLI with the given prompt.
 func CallClaude(prompt string, model string) (string, error) {
@@ -276,4 +280,94 @@ func postprocessDigest(digest string, items []DigestItem) string {
 	}
 
 	return strings.Join(resultLines, "\n")
+}
+
+// SummarizeDigestItems generates summaries for digest items using Claude Haiku.
+// Uses bounded concurrency to avoid overwhelming the CLI.
+func SummarizeDigestItems(items []DigestItem) ([]DigestItem, error) {
+	if len(items) == 0 {
+		return items, nil
+	}
+
+	// Create result slice with same capacity
+	result := make([]DigestItem, len(items))
+	copy(result, items)
+
+	// Semaphore for bounded concurrency
+	sem := make(chan struct{}, maxSummarizeConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	for i := range result {
+		// Skip items with no body
+		if result[i].Body == "" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Check if we should abort due to earlier error
+			mu.Lock()
+			if firstErr != nil {
+				mu.Unlock()
+				return
+			}
+			mu.Unlock()
+
+			// Generate summary
+			summary, err := summarizeSingleItem(result[idx])
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("summarizing %s: %w", result[idx].Ref, err)
+				}
+				mu.Unlock()
+				return
+			}
+
+			mu.Lock()
+			result[idx].Summary = summary
+			mu.Unlock()
+		}(i)
+	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	return result, nil
+}
+
+// summarizeSingleItem generates a one-sentence summary for a single item.
+func summarizeSingleItem(item DigestItem) (string, error) {
+	itemType := "Issue"
+	if item.IsPR {
+		itemType = "PR"
+	}
+
+	// Truncate body to avoid token limits
+	body := item.Body
+	if len(body) > 1000 {
+		body = body[:1000] + "..."
+	}
+
+	prompt := fmt.Sprintf(`Summarize this GitHub %s in ONE short sentence (max 15 words).
+Focus on what it does or proposes, not implementation details.
+
+Title: %s
+Body:
+%s
+
+Return ONLY the summary sentence, nothing else.`, itemType, item.Title, body)
+
+	return CallClaude(prompt, "haiku")
 }

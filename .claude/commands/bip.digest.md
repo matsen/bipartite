@@ -1,19 +1,21 @@
 # /bip.digest
 
-Generate and post activity digest to Slack.
+Generate activity digest (preview only by default).
 
 ## Instructions
 
 ```bash
-bip digest --channel dasm2                  # Weekly digest for channel
+bip digest --channel dasm2                  # Preview digest for channel
 bip digest --channel dasm2 --since 2d       # Last 2 days
-bip digest --channel dasm2 --post-to scratch  # Test to scratch channel
+bip digest --channel dasm2 --post           # Actually post to Slack
+bip digest --channel dasm2 --post-to scratch --post  # Post to scratch channel
 ```
 
 ## Options
 
 - `--channel CHANNEL` — Channel whose repos to scan (required)
 - `--since PERIOD` — Time period (e.g., 1w, 2d, 12h). Default: 1w
+- `--post` — Actually post to Slack (default: preview only)
 - `--post-to CHANNEL` — Override destination (e.g., scratch for testing)
 - `--repos REPOS` — Override repos (comma-separated)
 
@@ -22,8 +24,9 @@ bip digest --channel dasm2 --post-to scratch  # Test to scratch channel
 1. Scans repos associated with the channel (from sources.json)
 2. Fetches merged PRs, new issues, active discussions
 3. Uses LLM to generate summary
-4. Posts to Slack webhook (env: `SLACK_WEBHOOK_<CHANNEL>`)
+4. Shows preview (default) or posts to Slack (if --post)
 
-## Testing
+## Safe by Default
 
-Always test with `--post-to scratch` first to avoid spamming real channels.
+The digest command previews output by default. Use `--post` to actually send to Slack.
+This prevents accidental posts to real channels.

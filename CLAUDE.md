@@ -116,11 +116,27 @@ cd ~/re/nexus
 bip checkin              # Check recent GitHub activity
 bip board list           # View project boards
 bip spawn org/repo#123   # Spawn tmux window for issue review
-bip digest --channel foo --dry-run  # Generate Slack digest (use --dry-run to preview)
+bip digest --channel foo # Preview Slack digest (safe default)
+bip digest --channel foo --post  # Actually post to Slack
+bip digest --channel foo --verbose  # Include PR/issue body summaries
 bip tree --open          # View beads hierarchy in browser
 ```
 
-**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`
+**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`, `/bip.narrative`
+
+### Narrative Digests
+
+Use `/bip.narrative` to generate thematic, prose-style digests:
+
+```bash
+/bip.narrative dasm2                 # Generate narrative for channel
+/bip.narrative dasm2 --since 2w      # Custom date range
+/bip.narrative dasm2 --verbose       # Include body summaries
+```
+
+Output is written to `narrative/{channel}/{YYYY-MM-DD}.md`. Requires config files:
+- `narrative/preferences.md` - Shared formatting rules
+- `narrative/{channel}.md` - Channel themes and repo context
 
 These commands read configuration from:
 - `sources.json` - Repository list and board mappings

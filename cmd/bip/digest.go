@@ -13,11 +13,11 @@ import (
 
 var digestCmd = &cobra.Command{
 	Use:   "digest",
-	Short: "Generate and post activity digest to Slack",
+	Short: "Generate activity digest (preview only by default)",
 	Long: `Generate an LLM-summarized digest of GitHub activity for a channel.
 
 Channels are defined in sources.json via the "channel" field on repos.
-The digest can be posted to Slack if a webhook is configured.`,
+By default, shows a preview only. Use --post to actually send to Slack.`,
 	Run: runDigest,
 }
 
@@ -26,7 +26,8 @@ var (
 	digestSince   string
 	digestPostTo  string
 	digestRepos   string
-	digestDryRun  bool
+	digestPost    bool
+	digestVerbose bool
 )
 
 func init() {
@@ -36,7 +37,8 @@ func init() {
 	digestCmd.Flags().StringVar(&digestSince, "since", "1w", "Time period to summarize (e.g., 1w, 2d, 12h)")
 	digestCmd.Flags().StringVar(&digestPostTo, "post-to", "", "Override destination channel for posting")
 	digestCmd.Flags().StringVar(&digestRepos, "repos", "", "Override repos to scan (comma-separated)")
-	digestCmd.Flags().BoolVar(&digestDryRun, "dry-run", false, "Preview digest without posting to Slack")
+	digestCmd.Flags().BoolVar(&digestPost, "post", false, "Actually post to Slack (default: preview only)")
+	digestCmd.Flags().BoolVar(&digestVerbose, "verbose", false, "Fetch PR/issue bodies and include LLM summaries")
 	digestCmd.MarkFlagRequired("channel")
 }
 
@@ -80,8 +82,8 @@ func runDigest(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Check webhook is configured for destination (skip if dry-run)
-	if !digestDryRun {
+	// Check webhook is configured for destination (only if posting)
+	if digestPost {
 		webhookURL := flow.GetWebhookURL(postTo)
 		if webhookURL == "" {
 			fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
@@ -108,12 +110,22 @@ func runDigest(cmd *cobra.Command, args []string) {
 	fmt.Printf("Scanning %d repos...\n", len(repos))
 
 	// Fetch activity
-	items, err := fetchChannelActivity(repos, since)
+	items, err := fetchChannelActivity(repos, since, digestVerbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Found %d items\n", len(items))
+
+	// Generate summaries if verbose mode
+	if digestVerbose && len(items) > 0 {
+		fmt.Println("Generating summaries with Claude Haiku...")
+		items, err = flow.SummarizeDigestItems(items)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error generating summaries: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	// Generate summary
 	fmt.Println("Generating summary...")
@@ -137,20 +149,20 @@ func runDigest(cmd *cobra.Command, args []string) {
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println()
 
-	// Post to Slack (skip if dry-run)
-	if digestDryRun {
-		fmt.Println("(dry-run: not posting to Slack)")
-	} else {
+	// Post to Slack (only if --post flag is set)
+	if digestPost {
 		fmt.Printf("Posting to #%s...\n", postTo)
 		if err := flow.SendDigest(postTo, message); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println("Posted successfully!")
+	} else {
+		fmt.Println("(preview only: use --post to send to Slack)")
 	}
 }
 
-func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, error) {
+func fetchChannelActivity(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
 	var items []flow.DigestItem
 
 	for _, repo := range repos {
@@ -185,7 +197,7 @@ func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, e
 			}
 			sort.Strings(sortedContribs)
 
-			items = append(items, flow.DigestItem{
+			digestItem := flow.DigestItem{
 				Ref:          fmt.Sprintf("%s#%d", repo, item.Number),
 				Number:       item.Number,
 				Title:        item.Title,
@@ -196,7 +208,13 @@ func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, e
 				CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 				UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
 				Contributors: sortedContribs,
-			})
+			}
+
+			if includeBody {
+				digestItem.Body = item.Body
+			}
+
+			items = append(items, digestItem)
 		}
 	}
 
