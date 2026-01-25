@@ -102,11 +102,17 @@ These commands require a `sources.json` configuration file in the current direct
 ### bip (Go)
 
 ```bash
+# Build and install globally (recommended)
+go install ./cmd/bip
+
+# Or build locally and symlink
 go build -o bip ./cmd/bip
-ln -sf $(pwd)/bip ~/.local/bin/bip  # Optional: add to PATH
+ln -sf $(pwd)/bip ~/.local/bin/bip
 ```
 
-Requires Go 1.21+.
+After installation, `bip` is available globally. Run commands from the nexus directory (for GitHub activity features) or any bipartite repository (for library features).
+
+Requires Go 1.21+ and `~/go/bin` or `~/.local/bin` in your PATH.
 
 ## Quick Start
 
