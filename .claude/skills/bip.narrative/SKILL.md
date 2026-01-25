@@ -90,9 +90,11 @@ Using the raw activity from Step 1, the preferences from Step 2, and the channel
 - Include GitHub links as `[#N](url)` or `[title](url)`
 
 **Looking Ahead Section:**
-- List only open items (open PRs and issues)
-- Brief description of what's pending or in progress
-- Omit this section if no open items exist
+- Focus on **open issues only** (not PRs, unless a PR directly addresses a new issue worth explaining)
+- Use **prose style**, not bullets—this section introduces new material to readers
+- Provide **substantial detail**: explain what the issue is about, why it matters, and what needs to happen
+- Group related issues together in coherent paragraphs
+- Omit this section if no open issues exist
 
 **Content Guidelines (from preferences.md):**
 - Follow all rules in the shared preferences file
@@ -131,8 +133,7 @@ The germline alignment step now handles ambiguous calls gracefully.
 
 ## Looking Ahead
 
-- Open: Investigate OOM on large batches ([#156](url))
-- In progress: Benchmark new loss function on held-out set ([#147](url))
+Several architectural decisions are pending. The OOM issues on large batches ([#156](url)) need investigation—this is blocking production use on full-size datasets. Separately, the team is considering whether to refactor the attention mechanism for memory efficiency, which would enable scaling to longer sequences without proportional memory growth.
 ```
 
 ## Error Handling
