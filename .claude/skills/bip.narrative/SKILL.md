@@ -143,9 +143,11 @@ After the user has reviewed the narrative, ask if they want to post it to Slack.
    WEBHOOK=$(grep SLACK_WEBHOOK_{{CHANNEL_UPPER}} ~/re/nexus/.env | cut -d= -f2)
 
    curl -X POST -H 'Content-type: application/json' \
-     --data '{"text":"*Weekly Narrative Digest* ({{date_range}})\n\nA themed summary of this week'\''s {{channel}} activity:\n<https://github.com/matsengrp/nexus/blob/main/narrative/{{channel}}/{{YYYY-MM-DD}}.md|View narrative on GitHub>"}' \
+     --data '{"text":"*Weekly Narrative Digest* ({{date_range}})\n\nA themed summary of this week'\''s {{channel}} activity:\n\nhttps://github.com/matsengrp/nexus/blob/main/narrative/{{channel}}/{{YYYY-MM-DD}}.md"}' \
      "$WEBHOOK"
    ```
+
+   Note: Using raw URL format (cleaner than Slack's `<url|label>` syntax).
 
 3. Report: "Posted to #{{channel}} with link to narrative."
 
