@@ -120,7 +120,36 @@ Where `{{YYYY-MM-DD}}` is today's date.
 
 1. Create the directory if needed: `mkdir -p ~/re/nexus/narrative/{{channel}}`
 2. Write the generated narrative to the file
-3. Report success: "Narrative digest written to: narrative/{{channel}}/{{YYYY-MM-DD}}.md"
+3. Open the file for review: `zed ~/re/nexus/narrative/{{channel}}/{{YYYY-MM-DD}}.md`
+4. Report success: "Narrative digest written to: narrative/{{channel}}/{{YYYY-MM-DD}}.md"
+
+### Step 6: Ask About Posting to Slack
+
+After the user has reviewed the narrative, ask if they want to post it to Slack.
+
+**If user approves:**
+
+1. Commit and push the narrative:
+   ```bash
+   cd ~/re/nexus
+   git add narrative/{{channel}}/{{YYYY-MM-DD}}.md
+   git commit -m "Add {{channel}} narrative digest for {{date_range}}"
+   git push
+   ```
+
+2. Post to Slack with a link to the GitHub file:
+   ```bash
+   # Get webhook from .env
+   WEBHOOK=$(grep SLACK_WEBHOOK_{{CHANNEL_UPPER}} ~/re/nexus/.env | cut -d= -f2)
+
+   curl -X POST -H 'Content-type: application/json' \
+     --data '{"text":"*Weekly Narrative Digest* ({{date_range}})\n\nA themed summary of this week'\''s {{channel}} activity:\n<https://github.com/matsengrp/nexus/blob/main/narrative/{{channel}}/{{YYYY-MM-DD}}.md|View narrative on GitHub>"}' \
+     "$WEBHOOK"
+   ```
+
+3. Report: "Posted to #{{channel}} with link to narrative."
+
+**If user declines:** Report "Narrative saved but not posted."
 
 ## Example Output
 
