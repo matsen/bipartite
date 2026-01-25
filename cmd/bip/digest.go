@@ -13,11 +13,11 @@ import (
 
 var digestCmd = &cobra.Command{
 	Use:   "digest",
-	Short: "Generate and post activity digest to Slack",
+	Short: "Generate activity digest (preview only by default)",
 	Long: `Generate an LLM-summarized digest of GitHub activity for a channel.
 
 Channels are defined in sources.json via the "channel" field on repos.
-The digest can be posted to Slack if a webhook is configured.`,
+By default, shows a preview only. Use --post to actually send to Slack.`,
 	Run: runDigest,
 }
 
@@ -26,6 +26,8 @@ var (
 	digestSince   string
 	digestPostTo  string
 	digestRepos   string
+	digestPost    bool
+	digestVerbose bool
 )
 
 func init() {
@@ -35,12 +37,14 @@ func init() {
 	digestCmd.Flags().StringVar(&digestSince, "since", "1w", "Time period to summarize (e.g., 1w, 2d, 12h)")
 	digestCmd.Flags().StringVar(&digestPostTo, "post-to", "", "Override destination channel for posting")
 	digestCmd.Flags().StringVar(&digestRepos, "repos", "", "Override repos to scan (comma-separated)")
+	digestCmd.Flags().BoolVar(&digestPost, "post", false, "Actually post to Slack (default: preview only)")
+	digestCmd.Flags().BoolVar(&digestVerbose, "verbose", false, "Fetch PR/issue bodies and include LLM summaries")
 	digestCmd.MarkFlagRequired("channel")
 }
 
 func runDigest(cmd *cobra.Command, args []string) {
 	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: validating nexus directory: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -59,7 +63,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	} else {
 		repos, err = flow.LoadReposByChannel(digestChannel)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error: loading repos for channel %s: %v\n", digestChannel, err)
 			os.Exit(1)
 		}
 	}
@@ -78,18 +82,20 @@ func runDigest(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Check webhook is configured for destination
-	webhookURL := flow.GetWebhookURL(postTo)
-	if webhookURL == "" {
-		fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
-		fmt.Printf("Set SLACK_WEBHOOK_%s in .env file.\n", strings.ToUpper(postTo))
-		os.Exit(1)
+	// Check webhook is configured for destination (only if posting)
+	if digestPost {
+		webhookURL := flow.GetWebhookURL(postTo)
+		if webhookURL == "" {
+			fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
+			fmt.Printf("Set SLACK_WEBHOOK_%s in .env file.\n", strings.ToUpper(postTo))
+			os.Exit(1)
+		}
 	}
 
 	// Determine time range
 	duration, err := flow.ParseDuration(digestSince)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: invalid --since value: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: invalid --since value: %v\n", err)
 		os.Exit(1)
 	}
 	until := time.Now().UTC()
@@ -103,19 +109,29 @@ func runDigest(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("Scanning %d repos...\n", len(repos))
 
-	// Fetch activity
-	items, err := fetchChannelActivity(repos, since)
+	// Fetch digest items from GitHub activity
+	items, err := fetchDigestItems(repos, since, digestVerbose)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: building digest items: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Found %d items\n", len(items))
+
+	// Generate summaries if verbose mode
+	if digestVerbose && len(items) > 0 {
+		fmt.Println("Generating summaries with Claude Haiku...")
+		items, err = flow.SummarizeDigestItems(items)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: generating summaries: %v\n", err)
+			os.Exit(1)
+		}
+	}
 
 	// Generate summary
 	fmt.Println("Generating summary...")
 	message, err := flow.GenerateDigestSummary(items, digestChannel, dateRange)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating summary: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: generating digest summary: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -133,52 +149,70 @@ func runDigest(cmd *cobra.Command, args []string) {
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println()
 
-	// Post to Slack
-	fmt.Printf("Posting to #%s...\n", postTo)
-	if err := flow.SendDigest(postTo, message); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	// Post to Slack (only if --post flag is set)
+	if digestPost {
+		fmt.Printf("Posting to #%s...\n", postTo)
+		if err := flow.SendDigest(postTo, message); err != nil {
+			fmt.Fprintf(os.Stderr, "error: posting to Slack: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Posted successfully!")
+	} else {
+		fmt.Println("(preview only: use --post to send to Slack)")
 	}
-
-	fmt.Println("Posted successfully!")
 }
 
-func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, error) {
+// fetchDigestItems fetches GitHub activity and transforms it into digest items.
+// For each repo, it fetches issues/PRs updated since the given time, collects
+// contributors (author, commenters, reviewers), and builds DigestItem structs.
+// Returns an error if all repo fetches fail (to distinguish from "no activity").
+func fetchDigestItems(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
 	var items []flow.DigestItem
+	var successfulFetches int
 
 	for _, repo := range repos {
 		allItems, err := flow.FetchIssues(repo, since)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to fetch %s: %v\n", repo, err)
 			continue // Skip repos with errors
 		}
+		successfulFetches++
 
 		for _, item := range allItems {
 			// Collect contributors
 			contributors := make(map[string]bool)
 			contributors[item.User.Login] = true
 
-			commenters, _ := flow.FetchItemCommenters(repo, item.Number)
-			for _, c := range commenters {
-				contributors[c] = true
+			commenters, err := flow.FetchItemCommenters(repo, item.Number)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to fetch commenters for %s#%d: %v\n", repo, item.Number, err)
+			} else {
+				for _, c := range commenters {
+					contributors[c] = true
+				}
 			}
 
 			if item.IsPR {
-				reviewers, _ := flow.FetchPRReviewers(repo, item.Number)
-				for _, r := range reviewers {
-					contributors[r] = true
+				reviewers, err := flow.FetchPRReviewers(repo, item.Number)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to fetch reviewers for %s#%d: %v\n", repo, item.Number, err)
+				} else {
+					for _, r := range reviewers {
+						contributors[r] = true
+					}
 				}
 			}
 
 			// Remove "unknown" and sort
 			delete(contributors, "unknown")
 			delete(contributors, "")
-			var sortedContribs []string
+			var sortedContributors []string
 			for c := range contributors {
-				sortedContribs = append(sortedContribs, c)
+				sortedContributors = append(sortedContributors, c)
 			}
-			sort.Strings(sortedContribs)
+			sort.Strings(sortedContributors)
 
-			items = append(items, flow.DigestItem{
+			digestItem := flow.DigestItem{
 				Ref:          fmt.Sprintf("%s#%d", repo, item.Number),
 				Number:       item.Number,
 				Title:        item.Title,
@@ -188,9 +222,20 @@ func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, e
 				HTMLURL:      item.HTMLURL,
 				CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 				UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
-				Contributors: sortedContribs,
-			})
+				Contributors: sortedContributors,
+			}
+
+			if includeBody {
+				digestItem.Body = item.Body
+			}
+
+			items = append(items, digestItem)
 		}
+	}
+
+	// Fail if all repos failed to fetch (distinguishes from "no activity")
+	if successfulFetches == 0 && len(repos) > 0 {
+		return nil, fmt.Errorf("failed to fetch activity from all %d repos", len(repos))
 	}
 
 	return items, nil

@@ -7,24 +7,24 @@ description: Unified guidance for using the bipartite reference library CLI. Use
 
 A CLI tool for managing academic references with local storage and external paper search.
 
-**Repository**: `/Users/matsen/re/bipartite`
+**Repository**: `~/re/nexus`
 **PDF Storage**: `/Users/matsen/Google Drive/My Drive/Paperpile`
 
 ## Quick Reference
 
 | Task | Command |
 |------|---------|
-| Search local library | `./bip search "query"` |
-| Semantic search | `./bip semantic "query"` |
-| Get paper details | `./bip get <id>` |
-| Add paper to collection | `./bip s2 add DOI:10.1234/...` |
-| Find literature gaps | `./bip s2 gaps` |
-| Fast paper search (external) | `./bip asta search "query"` |
-| Find text snippets | `./bip asta snippet "query"` |
-| Create concept | `./bip concept add <id> --name "Name"` |
-| Link paper to concept | `./bip edge add -s <paper> -t <concept> -r <type> -m "summary"` |
-| Papers for concept | `./bip concept papers <concept-id>` |
-| Concepts for paper | `./bip paper concepts <paper-id>` |
+| Search local library | `bip search "query"` |
+| Semantic search | `bip semantic "query"` |
+| Get paper details | `bip get <id>` |
+| Add paper to collection | `bip s2 add DOI:10.1234/...` |
+| Find literature gaps | `bip s2 gaps` |
+| Fast paper search (external) | `bip asta search "query"` |
+| Find text snippets | `bip asta snippet "query"` |
+| Create concept | `bip concept add <id> --name "Name"` |
+| Link paper to concept | `bip edge add -s <paper> -t <concept> -r <type> -m "summary"` |
+| Papers for concept | `bip concept papers <concept-id>` |
+| Concepts for paper | `bip paper concepts <paper-id>` |
 
 ## Search Strategy
 
@@ -47,24 +47,24 @@ For finding a specific paper or result:
 
 1. **Local library first** (fastest, already curated):
    ```bash
-   ./bip search "author topic"
-   ./bip semantic "conceptual description"  # for topic-heavy queries
+   bip search "author topic"
+   bip semantic "conceptual description"  # for topic-heavy queries
    ```
 
 2. **External keyword search** with author names:
    ```bash
-   ./bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
+   bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
    ```
 
 3. **Broaden if needed** - remove author, try synonyms:
    ```bash
-   ./bip asta search "minimum evolution likelihood" --human
-   ./bip asta search "distance method maximum likelihood phylogeny" --human
+   bip asta search "minimum evolution likelihood" --human
+   bip asta search "distance method maximum likelihood phylogeny" --human
    ```
 
 4. **Citation tracing** - if you find a related paper, check what cites it:
    ```bash
-   ./bip asta citations DOI:10.xxxx/yyyy --limit 50 --human
+   bip asta citations DOI:10.xxxx/yyyy --limit 50 --human
    ```
 
 5. **MCP tools directly** - for more control over fields and filters:
@@ -103,20 +103,20 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 1. **Search local library first**:
    ```bash
-   ./bip search "Schmidler phylogenetics"
+   bip search "Schmidler phylogenetics"
    # or for topic-heavy queries:
-   ./bip semantic "importance sampling MCMC"
+   bip semantic "importance sampling MCMC"
    ```
 
 2. **Get PDF path** for a result:
    ```bash
-   ./bip get <id>
+   bip get <id>
    # pdf_path field + "/Users/matsen/Google Drive/My Drive/Paperpile"
    ```
 
 3. **If not in library**, search externally:
    ```bash
-   ./bip asta search "phylogenetic inference"
+   bip asta search "phylogenetic inference"
    ```
 
 ### Update Library from Paperpile
@@ -128,7 +128,7 @@ See [api-guide.md](api-guide.md) for detailed comparison.
    ```
 3. Import:
    ```bash
-   ./bip import --format paperpile "<path>"
+   bip import --format paperpile "<path>"
    ```
 4. Optionally delete the export file after confirming success
 
@@ -136,23 +136,23 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 1. **Search by topic**:
    ```bash
-   ./bip asta search "variational inference phylogenetics" --limit 20
+   bip asta search "variational inference phylogenetics" --limit 20
    ```
 
 2. **Find specific text passages**:
    ```bash
-   ./bip asta snippet "Bayesian phylogenetic inference"
+   bip asta snippet "Bayesian phylogenetic inference"
    ```
 
 3. **Trace citations**:
    ```bash
-   ./bip asta citations DOI:10.1093/sysbio/syy032
-   ./bip asta references DOI:10.1093/sysbio/syy032
+   bip asta citations DOI:10.1093/sysbio/syy032
+   bip asta references DOI:10.1093/sysbio/syy032
    ```
 
 4. **Add interesting papers** to your collection:
    ```bash
-   ./bip s2 add DOI:10.1093/sysbio/syy032
+   bip s2 add DOI:10.1093/sysbio/syy032
    ```
 
 See [workflows.md](workflows.md) for detailed workflow instructions.
@@ -162,8 +162,8 @@ See [workflows.md](workflows.md) for detailed workflow instructions.
 All commands output JSON by default. Add `--human` for readable format:
 
 ```bash
-./bip asta search "phylogenetics" --human
-./bip s2 lookup DOI:10.1234/example --human
+bip asta search "phylogenetics" --human
+bip s2 lookup DOI:10.1234/example --human
 ```
 
 ## Paper ID Formats
@@ -183,26 +183,26 @@ Build a knowledge graph by creating concepts and linking papers to them.
 
 ```bash
 # Add a concept with name, aliases, and description
-./bip concept add somatic-hypermutation \
+bip concept add somatic-hypermutation \
   --name "Somatic Hypermutation" \
   --aliases "SHM,shm" \
   --description "Process by which B cells diversify antibody genes"
 
 # List all concepts
-./bip concept list --human
+bip concept list --human
 
 # Get a specific concept
-./bip concept get somatic-hypermutation --human
+bip concept get somatic-hypermutation --human
 ```
 
 ### Link Papers to Concepts
 
 ```bash
 # Use flags: -s (source paper), -t (target concept), -r (relationship type), -m (summary)
-./bip edge add -s Halpern1998-yc -t mutation-selection-model -r introduces \
+bip edge add -s Halpern1998-yc -t mutation-selection-model -r introduces \
   -m "Foundational paper defining the mutation-selection model"
 
-./bip edge add -s Yaari2013-dg -t somatic-hypermutation -r models \
+bip edge add -s Yaari2013-dg -t somatic-hypermutation -r models \
   -m "Introduces S5F model for SHM targeting"
 ```
 
@@ -221,29 +221,29 @@ Build a knowledge graph by creating concepts and linking papers to them.
 
 ```bash
 # Find all papers linked to a concept
-./bip concept papers somatic-hypermutation --human
+bip concept papers somatic-hypermutation --human
 
 # Filter by relationship type
-./bip concept papers somatic-hypermutation --type introduces
+bip concept papers somatic-hypermutation --type introduces
 
 # Find what concepts a paper relates to
-./bip paper concepts Halpern1998-yc --human
+bip paper concepts Halpern1998-yc --human
 ```
 
 ### Manage Concepts
 
 ```bash
 # Update a concept
-./bip concept update somatic-hypermutation --description "Updated description"
+bip concept update somatic-hypermutation --description "Updated description"
 
 # Delete a concept (warns if papers linked)
-./bip concept delete unused-concept
+bip concept delete unused-concept
 
 # Force delete (removes linked edges too)
-./bip concept delete old-concept --force
+bip concept delete old-concept --force
 
 # Merge duplicate concepts
-./bip concept merge shm somatic-hypermutation --human
+bip concept merge shm somatic-hypermutation --human
 ```
 
 ## Troubleshooting
@@ -265,9 +265,9 @@ If searches return nothing relevant:
 2. **Simplify query** - fewer terms, more common synonyms
 3. **Try both local and external**:
    ```bash
-   ./bip search "topic"        # local
-   ./bip semantic "topic"      # local semantic
-   ./bip asta search "topic"   # external
+   bip search "topic"        # local
+   bip semantic "topic"      # local semantic
+   bip asta search "topic"   # external
    ```
 4. **Check date filters** - paper may be too old/new for range
 

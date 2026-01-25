@@ -144,6 +144,8 @@ type DigestItem struct {
 	CreatedAt    string   // ISO timestamp
 	UpdatedAt    string   // ISO timestamp
 	Contributors []string // List of contributor logins
+	Body         string   // Full body text from GitHub (issue/PR description)
+	Summary      string   // AI-generated one-sentence summary of the body
 }
 
 // TakehomeSummary maps GitHub refs to their take-home summaries.

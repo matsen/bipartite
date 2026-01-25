@@ -1,8 +1,8 @@
 # bipartite
 
-A command-line reference manager designed for AI agents and researchers. Import from Paperpile, search with full-text, open PDFs, export to BibTeX.
+A unified command-line tool for AI agents and researchers that bridges two workflows: **academic reference management** and **research team coordination**. Import papers from Paperpile, search with full-text, build knowledge graphs—and synchronize research work across GitHub repositories, generate themed team digests, and post updates to Slack.
 
-The name comes from a bipartite graph connecting two worlds: the researcher's artifacts (notes, code, concepts) and the academic literature (papers, citations, authors).
+The name comes from a bipartite graph connecting two worlds: the researcher's artifacts (notes, code, repos, concepts) and the academic literature (papers, citations, authors).
 
 ## What Makes Bipartite Special
 
@@ -44,6 +44,18 @@ S2 answers "give me this paper's citations" (structured). ASTA answers "find pap
 
 No database server. No heavyweight frameworks. No configuration complexity. Bipartite is a single Go binary with fast startup. Install it, run `bip init`, and you're working. The ephemeral SQLite cache means you never manage database state—if something goes wrong, delete the cache and rebuild. Local semantic search over your abstracts via Ollama embeddings means you can find conceptually related papers without external API calls. This simplicity matters when agents need to operate autonomously.
 
+### Research Team Coordination
+
+Research groups juggle work across many GitHub repositories. Bipartite provides tools to keep everyone synchronized:
+
+- **Activity tracking**: See what needs your attention across all tracked repos with smart "ball-in-my-court" filtering
+- **Themed digests**: Generate narrative summaries organized by research themes (Data Prep, Architecture, Training, etc.), not just repo-by-repo lists
+- **Slack integration**: Post weekly digests directly to team channels
+- **Board sync**: Keep GitHub project boards aligned with your priorities
+- **Spawn Claude sessions**: Launch Claude Code in tmux with issue/PR context pre-loaded
+
+This isn't just GitHub monitoring—it's structured communication for research teams, with AI agents helping generate readable summaries from raw activity.
+
 ## A Workflow in Practice
 
 To make this concrete, here's how a research group might use bipartite:
@@ -64,6 +76,20 @@ To make this concrete, here's how a research group might use bipartite:
 
 - Reading the commit message, Bernadetta realizes they should **compare their method to Paper Z's approach**. She spins up coding agents to develop such a comparison, with Z's citation already in hand.
 
+### Team Coordination Workflow
+
+Here's how a research group might use bipartite's coordination features:
+
+- **Throughout the day**: Researchers run `bip checkin` to see what needs attention across all tracked repos. Ball-in-my-court filtering shows only items waiting for their action.
+
+- **During the week**: Team members work on PRs across multiple repositories—data pipelines, model architectures, experiment notebooks.
+
+- **Friday afternoon**: An agent runs `/bip.narrative dasm2 --verbose` to generate a themed digest. The output organizes the week's work by research themes (Data Prep, Architecture, Training) rather than by repository.
+
+- **Review and post**: The P.I. reviews the generated markdown, makes any edits, then runs `bip digest --channel dasm2 --post` to share the summary to Slack.
+
+- **Board sync**: Running `bip board sync` ensures the GitHub project board reflects current priorities, flagging any P0 items not yet tracked.
+
 ## Design Principles
 
 **Agent-first**: CLI is the primary interface. JSON output by default. No MCP server needed—agents use bash directly.
@@ -72,9 +98,9 @@ To make this concrete, here's how a research group might use bipartite:
 
 **Minimal dependencies**: Fast startup, single binary, no heavyweight frameworks.
 
-## GitHub Activity & Project Management
+## Team Coordination Commands
 
-Bipartite includes built-in GitHub activity tracking and project board management:
+Bipartite includes tools for synchronizing research work across GitHub repositories:
 
 | Command | Description |
 |---------|-------------|
@@ -89,10 +115,20 @@ Bipartite includes built-in GitHub activity tracking and project board managemen
 | `bip board remove 123 --repo org/repo` | Remove issue from board |
 | `bip board sync` | Compare P0 beads with board items |
 | `bip board sync --fix` | Auto-add missing P0 beads to board |
-| `bip spawn org/repo#123` | Spawn tmux window for issue review |
-| `bip digest --channel <name>` | Generate and post activity digest to Slack |
+| `bip spawn org/repo#123` | Launch Claude Code in tmux with issue/PR context |
+| `bip digest --channel <name>` | Preview activity digest (use `--post` to send to Slack) |
+| `bip digest --channel <name> --verbose` | Include PR/issue body summaries |
 | `bip tree` | Generate interactive HTML tree of beads issues |
 | `bip tree --open` | Generate and open in browser |
+
+**Claude Code slash commands** for AI-assisted workflows:
+
+| Command | Description |
+|---------|-------------|
+| `/bip.narrative <channel>` | Generate themed prose digest from GitHub activity |
+| `/bip.narrative <channel> --verbose` | Include AI-summarized PR/issue bodies |
+| `/bip.checkin` | Interactive check-in on GitHub activity |
+| `/bip.digest` | Generate and optionally post Slack digest |
 
 These commands require a `sources.json` configuration file in the current directory (the "nexus" directory).
 
@@ -101,11 +137,17 @@ These commands require a `sources.json` configuration file in the current direct
 ### bip (Go)
 
 ```bash
+# Build and install globally (recommended)
+go install ./cmd/bip
+
+# Or build locally and symlink
 go build -o bip ./cmd/bip
-ln -sf $(pwd)/bip ~/.local/bin/bip  # Optional: add to PATH
+ln -sf $(pwd)/bip ~/.local/bin/bip
 ```
 
-Requires Go 1.21+.
+After installation, `bip` is available globally. Run commands from your nexus directory, which contains both the reference library (`.bipartite/`) and GitHub activity config (`sources.json`).
+
+Requires Go 1.21+ and `~/go/bin` or `~/.local/bin` in your PATH.
 
 ## Quick Start
 
@@ -129,7 +171,7 @@ bip search "phylogenetics"
 bip open Smith2026-ab
 ```
 
-## Commands
+## Reference Management Commands
 
 | Command | Description |
 |---------|-------------|
@@ -352,16 +394,6 @@ Resolution logic:
 - **Complementary metadata**: Merges both (e.g., one has abstract, other has venue)
 - **Different papers**: Includes both
 - **True conflicts**: Requires `--interactive` (both have different abstracts, for example)
-
-## Roadmap
-
-- **Phase I** ✓: Core reference manager with Paperpile import
-- **Phase II** ✓: RAG index for semantic search over abstracts
-- **Phase III-a** ✓: Knowledge graph with directed edges between papers
-- **Phase III-b** ✓: Concept nodes and artifact connections
-- **Phase IV** ✓: Semantic Scholar integration for metadata enrichment
-
-See [VISION.md](VISION.md) for details.
 
 ## License
 

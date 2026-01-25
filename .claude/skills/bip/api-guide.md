@@ -18,19 +18,19 @@ Use `bip s2` when you need to **modify your local collection**:
 
 ```bash
 # Add a paper to your collection
-./bip s2 add DOI:10.1093/sysbio/syy032
+bip s2 add DOI:10.1093/sysbio/syy032
 
 # Look up paper info (slower, 1 req/sec)
-./bip s2 lookup DOI:10.1093/sysbio/syy032
+bip s2 lookup DOI:10.1093/sysbio/syy032
 
 # Find citing papers
-./bip s2 citations <paper-id>
+bip s2 citations <paper-id>
 
 # Find referenced papers
-./bip s2 references <paper-id>
+bip s2 references <paper-id>
 
 # Find literature gaps (papers cited by collection but not in it)
-./bip s2 gaps
+bip s2 gaps
 ```
 
 **Key S2 capabilities**:
@@ -43,25 +43,25 @@ Use `bip asta` for **fast, read-only exploration**:
 
 ```bash
 # Fast paper search (10x faster rate limit)
-./bip asta search "phylogenetic inference" --limit 20 --human
+bip asta search "phylogenetic inference" --limit 20 --human
 
 # UNIQUE: Search text snippets within papers
-./bip asta snippet "variational inference" --human
+bip asta snippet "variational inference" --human
 
 # Get paper details
-./bip asta paper DOI:10.1093/sysbio/syy032 --human
+bip asta paper DOI:10.1093/sysbio/syy032 --human
 
 # Get citations (faster than S2)
-./bip asta citations DOI:10.1093/sysbio/syy032 --human
+bip asta citations DOI:10.1093/sysbio/syy032 --human
 
 # Get references
-./bip asta references DOI:10.1093/sysbio/syy032 --human
+bip asta references DOI:10.1093/sysbio/syy032 --human
 
 # Search for authors
-./bip asta author "Frederick Matsen" --human
+bip asta author "Frederick Matsen" --human
 
 # Get author's papers
-./bip asta author-papers 145666442 --human
+bip asta author-papers 145666442 --human
 ```
 
 **Key ASTA capabilities**:
@@ -103,8 +103,8 @@ Both APIs accept the same identifier formats:
 Both command families output JSON by default. Add `--human` for readable output:
 
 ```bash
-./bip s2 lookup DOI:10.1093/sysbio/syy032 --human
-./bip asta search "phylogenetics" --human
+bip s2 lookup DOI:10.1093/sysbio/syy032 --human
+bip asta search "phylogenetics" --human
 ```
 
 ## Environment Variables

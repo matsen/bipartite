@@ -96,13 +96,13 @@ After running this skill, use the output to update the knowledge graph:
 
 ```bash
 # Check which papers exist in bip
-./bip get Smith2026-ab
+bip get Smith2026-ab
 
 # Create suggested concepts
-./bip concept add x-model --name "X Model" --description "..."
+bip concept add x-model --name "X Model" --description "..."
 
 # Add edges
-./bip edge add -s Smith2026-ab -t x-model -r introduces -m "Foundational paper"
+bip edge add -s Smith2026-ab -t x-model -r introduces -m "Foundational paper"
 ```
 
 ## Example Session

@@ -18,13 +18,13 @@ Parse user queries to identify:
 
 1. **Search the local library**:
    ```bash
-   cd /Users/matsen/re/bipartite
-   ./bip search "<constructed query>"
+   cd ~/re/nexus
+   bip search "<constructed query>"
    ```
 
 2. **For topic-heavy queries**, also try semantic search:
    ```bash
-   ./bip semantic "<topic>"
+   bip semantic "<topic>"
    ```
 
 3. **Filter results** by author/year criteria from the query.
@@ -46,7 +46,7 @@ Display results numbered, showing:
 
 Combine:
 - Root: `/Users/matsen/Google Drive/My Drive/Paperpile`
-- Plus `pdf_path` from `./bip get <id>`
+- Plus `pdf_path` from `bip get <id>`
 
 ### Example Interactions
 
@@ -63,7 +63,7 @@ Use ASTA MCP tools (or `bip asta` commands) to search broader literature:
 ### Search by Title/Keyword
 
 ```bash
-./bip asta search "phylogenetic inference" --human
+bip asta search "phylogenetic inference" --human
 ```
 
 Or via MCP tools:
@@ -75,7 +75,7 @@ mcp__asta__search_paper_by_title
 ### Get Verbatim Quotes (for provenance)
 
 ```bash
-./bip asta snippet "exact phrase to find"
+bip asta snippet "exact phrase to find"
 ```
 
 Or via MCP:
@@ -86,8 +86,8 @@ mcp__asta__snippet_search with query like "exact phrase to find"
 ### Trace Citations
 
 ```bash
-./bip asta citations DOI:10.1093/sysbio/syy032
-./bip asta references DOI:10.1093/sysbio/syy032
+bip asta citations DOI:10.1093/sysbio/syy032
+bip asta references DOI:10.1093/sysbio/syy032
 ```
 
 Or via MCP:
@@ -99,7 +99,7 @@ mcp__asta__get_paper (with references field)
 ### Get Paper Details
 
 ```bash
-./bip asta paper DOI:10.1093/sysbio/syy032 --human
+bip asta paper DOI:10.1093/sysbio/syy032 --human
 ```
 
 Or via MCP:
@@ -129,8 +129,8 @@ Import references from a Paperpile export.
 
 3. **Run the import**:
    ```bash
-   cd /Users/matsen/re/bipartite
-   ./bip import --format paperpile "<path>"
+   cd ~/re/nexus
+   bip import --format paperpile "<path>"
    ```
 
 4. **Report results**: Show new/updated/unchanged counts.
@@ -147,32 +147,32 @@ When you know a paper exists and need to find it:
 
 1. **If you know authors**: Start with author name + key term
    ```bash
-   ./bip search "Felsenstein distance"
-   ./bip asta search "Bruno Halpern neighbor joining" --human
+   bip search "Felsenstein distance"
+   bip asta search "Bruno Halpern neighbor joining" --human
    ```
 
 2. **If you know the method/algorithm**: Use specific names
    ```bash
-   ./bip asta search "WEIGHBOR likelihood" --human
-   ./bip asta search "FASTME balanced minimum evolution" --human
+   bip asta search "WEIGHBOR likelihood" --human
+   bip asta search "FASTME balanced minimum evolution" --human
    ```
 
 3. **Broaden progressively**: Remove constraints one at a time
    ```bash
    # Start specific
-   ./bip asta search "Gascuel BME likelihood correlation" --human
+   bip asta search "Gascuel BME likelihood correlation" --human
    # Remove one term
-   ./bip asta search "Gascuel BME likelihood" --human
+   bip asta search "Gascuel BME likelihood" --human
    # Try synonyms
-   ./bip asta search "minimum evolution maximum likelihood" --human
+   bip asta search "minimum evolution maximum likelihood" --human
    ```
 
 4. **Citation chain**: Find a known related paper, trace its citations
    ```bash
    # Find the foundational paper
-   ./bip asta search "Desper Gascuel BME" --human
+   bip asta search "Desper Gascuel BME" --human
    # See what cites it
-   ./bip asta citations DOI:10.1093/molbev/msh049 --limit 50 --human
+   bip asta citations DOI:10.1093/molbev/msh049 --limit 50 --human
    ```
 
 ### When You Can't Find It
@@ -193,37 +193,37 @@ For open-ended literature exploration without adding to your collection.
 
 ```bash
 # Search by keyword relevance
-./bip asta search "variational inference" --limit 30 --human
+bip asta search "variational inference" --limit 30 --human
 
 # Filter by year
-./bip asta search "deep learning phylogenetics" --year 2023:2025 --human
+bip asta search "deep learning phylogenetics" --year 2023:2025 --human
 ```
 
 ### Citation Network Exploration
 
 ```bash
 # Find papers citing a foundational paper
-./bip asta citations DOI:10.1093/sysbio/syy032 --limit 50 --human
+bip asta citations DOI:10.1093/sysbio/syy032 --limit 50 --human
 
 # Find what a paper builds on
-./bip asta references DOI:10.1093/sysbio/syy032 --human
+bip asta references DOI:10.1093/sysbio/syy032 --human
 ```
 
 ### Author Exploration
 
 ```bash
 # Find an author
-./bip asta author "Frederick Matsen" --human
+bip asta author "Frederick Matsen" --human
 
 # Get their papers (use author ID from previous result)
-./bip asta author-papers 145666442 --human
+bip asta author-papers 145666442 --human
 ```
 
 ### Add Papers to Collection
 
 When you find papers worth keeping:
 ```bash
-./bip s2 add DOI:10.1093/sysbio/syy032
+bip s2 add DOI:10.1093/sysbio/syy032
 ```
 
 ---
@@ -233,10 +233,10 @@ When you find papers worth keeping:
 Identify papers cited by your collection but not in it.
 
 ```bash
-./bip s2 gaps --human
+bip s2 gaps --human
 ```
 
 Review the gaps and add interesting papers:
 ```bash
-./bip s2 add DOI:10.xxxx/yyyy
+bip s2 add DOI:10.xxxx/yyyy
 ```

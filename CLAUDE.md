@@ -39,6 +39,7 @@ bd list                     # List all tasks
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
 - Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (011-repo-nodes)
 - JSONL (source of truth) + SQLite (ephemeral query layer, rebuilt via `bip rebuild`) (011-repo-nodes)
+- JSONL (source of truth) + SQLite (ephemeral query layer) (012-narrative-digest)
 
 ## Project Structure
 
@@ -115,11 +116,27 @@ cd ~/re/nexus
 bip checkin              # Check recent GitHub activity
 bip board list           # View project boards
 bip spawn org/repo#123   # Spawn tmux window for issue review
-bip digest --channel foo # Generate Slack digest
+bip digest --channel foo # Preview Slack digest (safe default)
+bip digest --channel foo --post  # Actually post to Slack
+bip digest --channel foo --verbose  # Include PR/issue body summaries
 bip tree --open          # View beads hierarchy in browser
 ```
 
-**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`
+**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`, `/bip.narrative`
+
+### Narrative Digests
+
+Use `/bip.narrative` to generate thematic, prose-style digests:
+
+```bash
+/bip.narrative dasm2                 # Generate narrative for channel
+/bip.narrative dasm2 --since 2w      # Custom date range
+/bip.narrative dasm2 --verbose       # Include body summaries
+```
+
+Output is written to `narrative/{channel}/{YYYY-MM-DD}.md`. Requires config files:
+- `narrative/preferences.md` - Shared formatting rules
+- `narrative/{channel}.md` - Channel themes and repo context
 
 These commands read configuration from:
 - `sources.json` - Repository list and board mappings
@@ -153,4 +170,5 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 012-narrative-digest: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
 - 011-repo-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)

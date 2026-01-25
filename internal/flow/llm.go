@@ -7,8 +7,48 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
+	"unicode/utf8"
 )
+
+const (
+	// maxSummarizeConcurrency limits parallel Claude CLI calls for summarization.
+	// Set to 10 to stay well under typical API rate limits while providing good throughput.
+	maxSummarizeConcurrency = 10
+
+	// maxCommentLength limits comment body length in take-home prompts.
+	maxCommentLength = 200
+
+	// maxBodyPreviewLength limits body preview in take-home prompts.
+	maxBodyPreviewLength = 300
+
+	// maxBodyForSummary limits input body size for single-item summarization.
+	maxBodyForSummary = 1000
+
+	// maxSummaryWords is the target word limit for single-item summaries.
+	maxSummaryWords = 15
+)
+
+// truncateUTF8 safely truncates text to approximately maxLen bytes
+// without splitting multi-byte UTF-8 characters. Adds "..." if truncated.
+func truncateUTF8(text string, maxLen int) string {
+	if len(text) <= maxLen {
+		return text
+	}
+
+	// Find the last valid UTF-8 character boundary before maxLen
+	validLen := maxLen
+	for validLen > 0 && !utf8.RuneStart(text[validLen]) {
+		validLen--
+	}
+
+	if validLen == 0 {
+		return ""
+	}
+
+	return text[:validLen] + "..."
+}
 
 // CallClaude calls the claude CLI with the given prompt.
 func CallClaude(prompt string, model string) (string, error) {
@@ -59,9 +99,6 @@ func buildSummaryPrompt(items []ItemDetails) string {
 			itemType = "PR"
 		}
 
-		ballStatus := "waiting"
-		// Note: ball_in_my_court would be passed separately in a real impl
-
 		// Format comments (last 5, truncated to 200 chars each)
 		var commentsText strings.Builder
 		start := 0
@@ -69,17 +106,11 @@ func buildSummaryPrompt(items []ItemDetails) string {
 			start = len(item.Comments) - 5
 		}
 		for _, c := range item.Comments[start:] {
-			body := c.Body
-			if len(body) > 200 {
-				body = body[:200]
-			}
+			body := truncateUTF8(c.Body, maxCommentLength)
 			commentsText.WriteString(fmt.Sprintf("    @%s: %s\n", c.Author, body))
 		}
 
-		bodyPreview := item.Body
-		if len(bodyPreview) > 300 {
-			bodyPreview = bodyPreview[:300]
-		}
+		bodyPreview := truncateUTF8(item.Body, maxBodyPreviewLength)
 
 		itemsText.WriteString(fmt.Sprintf(`
 ---
@@ -87,10 +118,9 @@ REF: %s
 TYPE: %s
 TITLE: %s
 AUTHOR: %s
-STATUS: %s
 BODY: %s
 RECENT_COMMENTS:
-%s---`, item.Ref, itemType, item.Title, item.Author, ballStatus, bodyPreview, commentsText.String()))
+%s---`, item.Ref, itemType, item.Title, item.Author, bodyPreview, commentsText.String()))
 	}
 
 	return fmt.Sprintf(`You are helping triage GitHub activity. For each item below, provide a brief take-home summary (1 short sentence) that tells the user what happened and whether they need to act.
@@ -185,32 +215,38 @@ func buildDigestPrompt(items []DigestItem, channel, dateRange string) string {
 			itemType, item.Number, item.Title, item.Author, state, item.HTMLURL))
 	}
 
-	return fmt.Sprintf(`You are writing a weekly digest for a team Slack channel. Summarize the following GitHub activity as a concise bullet-list message.
+	return fmt.Sprintf(`You are writing a weekly digest for a team Slack channel.
 
 Channel: %s
 Date range: %s
 
 Activity to summarize:
 %s
+
+CRITICAL REQUIREMENTS:
+- You MUST include EVERY SINGLE ITEM listed above. Do NOT summarize, skip, or omit ANY activity.
+- EVERY repository with activity MUST appear in the output. Missing repos is a failure.
+- Group similar items from the same repo on one line if needed, but NEVER drop items.
+
 Format the output as a Slack message using mrkdwn:
 - Start with: *This week in %s* (%s)
 - Use bullet points (•) for each item
-- Categorize by: Merged PRs, New issues, Active discussions
+- Categorize by: Merged PRs, Open PRs, New Issues
 - Include Slack-style links: <URL|#number> or <URL|title>
-- Keep it concise - one line per item
+- Keep it concise - one line per item (or group related items from same repo)
 - Skip categories with no items
 
 Example output:
 *This week in dasm2* (Jan 12-18)
 
 *Merged*
-• Structure-aware loss function (<https://github.com/...|#142>)
+• repo-name PR: Structure-aware loss function (<https://github.com/...|#142>)
+
+*Open PRs*
+• repo-name PR: New feature in progress (<https://github.com/...|#147>)
 
 *New Issues*
-• OOM on large batches (<https://github.com/...|#156>)
-
-*Discussion*
-• Dataset versioning approach (<https://github.com/...|#148>)
+• repo-name Issue: OOM on large batches (<https://github.com/...|#156>)
 
 Return ONLY the formatted Slack message, no other text.`, channel, dateRange, itemsText.String(), channel, dateRange)
 }
@@ -276,4 +312,101 @@ func postprocessDigest(digest string, items []DigestItem) string {
 	}
 
 	return strings.Join(resultLines, "\n")
+}
+
+// SummarizeDigestItems generates AI summaries for digest items with controlled concurrency.
+//
+// For items with non-empty Body fields, this function calls Claude Haiku to generate
+// one-sentence summaries. The Summary field is populated on successful generation.
+//
+// Concurrency behavior:
+//   - Runs up to maxSummarizeConcurrency (10) Claude CLI calls in parallel
+//   - Stops processing on first error encountered
+//   - Returns error immediately if any summarization fails
+//   - Items without bodies are skipped (no API call, no error)
+//
+// Returns a new slice to avoid modifying the input (preserves original state).
+// Note: DigestItem structs are shallow-copied, not deep-cloned.
+func SummarizeDigestItems(items []DigestItem) ([]DigestItem, error) {
+	if len(items) == 0 {
+		return items, nil
+	}
+
+	// Create result slice with same capacity
+	result := make([]DigestItem, len(items))
+	copy(result, items)
+
+	// Semaphore for bounded concurrency
+	sem := make(chan struct{}, maxSummarizeConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	var firstErr error
+
+	for i := range result {
+		// Skip items with no body
+		if result[i].Body == "" {
+			continue
+		}
+
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Check if we should abort due to earlier error
+			mu.Lock()
+			if firstErr != nil {
+				mu.Unlock()
+				return
+			}
+			mu.Unlock()
+
+			// Generate summary
+			summary, err := summarizeSingleItem(result[idx])
+			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("summarizing %s: %w", result[idx].Ref, err)
+				}
+				mu.Unlock()
+				return
+			}
+
+			// No mutex needed - each goroutine writes to its own unique index
+			result[idx].Summary = summary
+		}(i)
+	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	return result, nil
+}
+
+// summarizeSingleItem generates a one-sentence summary for a single item.
+func summarizeSingleItem(item DigestItem) (string, error) {
+	itemType := "Issue"
+	if item.IsPR {
+		itemType = "PR"
+	}
+
+	// Truncate body to avoid token limits (UTF-8 safe)
+	body := truncateUTF8(item.Body, maxBodyForSummary)
+
+	prompt := fmt.Sprintf(`Summarize this GitHub %s in ONE short sentence (max %d words).
+Focus on what it does or proposes, not implementation details.
+
+Title: %s
+Body:
+%s
+
+Return ONLY the summary sentence, nothing else.`, itemType, maxSummaryWords, item.Title, body)
+
+	return CallClaude(prompt, "haiku")
 }
