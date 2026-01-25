@@ -44,7 +44,7 @@ func init() {
 
 func runDigest(cmd *cobra.Command, args []string) {
 	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: validating nexus directory: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -63,7 +63,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	} else {
 		repos, err = flow.LoadReposByChannel(digestChannel)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error: loading repos for channel %s: %v\n", digestChannel, err)
 			os.Exit(1)
 		}
 	}
@@ -95,7 +95,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	// Determine time range
 	duration, err := flow.ParseDuration(digestSince)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: invalid --since value: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: invalid --since value: %v\n", err)
 		os.Exit(1)
 	}
 	until := time.Now().UTC()
@@ -109,10 +109,10 @@ func runDigest(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("Scanning %d repos...\n", len(repos))
 
-	// Fetch activity
-	items, err := fetchChannelActivity(repos, since, digestVerbose)
+	// Build digest items from GitHub activity
+	items, err := buildDigestItems(repos, since, digestVerbose)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: building digest items: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Printf("Found %d items\n", len(items))
@@ -122,7 +122,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 		fmt.Println("Generating summaries with Claude Haiku...")
 		items, err = flow.SummarizeDigestItems(items)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating summaries: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error: generating summaries: %v\n", err)
 			os.Exit(1)
 		}
 	}
@@ -131,7 +131,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	fmt.Println("Generating summary...")
 	message, err := flow.GenerateDigestSummary(items, digestChannel, dateRange)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error generating summary: %v\n", err)
+		fmt.Fprintf(os.Stderr, "error: generating digest summary: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -153,7 +153,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	if digestPost {
 		fmt.Printf("Posting to #%s...\n", postTo)
 		if err := flow.SendDigest(postTo, message); err != nil {
-			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "error: posting to Slack: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println("Posted successfully!")
@@ -162,7 +162,10 @@ func runDigest(cmd *cobra.Command, args []string) {
 	}
 }
 
-func fetchChannelActivity(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
+// buildDigestItems fetches GitHub activity and transforms it into digest items.
+// For each repo, it fetches issues/PRs updated since the given time, collects
+// contributors (author, commenters, reviewers), and builds DigestItem structs.
+func buildDigestItems(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
 	var items []flow.DigestItem
 
 	for _, repo := range repos {
@@ -177,26 +180,34 @@ func fetchChannelActivity(repos []string, since time.Time, includeBody bool) ([]
 			contributors := make(map[string]bool)
 			contributors[item.User.Login] = true
 
-			commenters, _ := flow.FetchItemCommenters(repo, item.Number)
-			for _, c := range commenters {
-				contributors[c] = true
+			commenters, err := flow.FetchItemCommenters(repo, item.Number)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: failed to fetch commenters for %s#%d: %v\n", repo, item.Number, err)
+			} else {
+				for _, c := range commenters {
+					contributors[c] = true
+				}
 			}
 
 			if item.IsPR {
-				reviewers, _ := flow.FetchPRReviewers(repo, item.Number)
-				for _, r := range reviewers {
-					contributors[r] = true
+				reviewers, err := flow.FetchPRReviewers(repo, item.Number)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Warning: failed to fetch reviewers for %s#%d: %v\n", repo, item.Number, err)
+				} else {
+					for _, r := range reviewers {
+						contributors[r] = true
+					}
 				}
 			}
 
 			// Remove "unknown" and sort
 			delete(contributors, "unknown")
 			delete(contributors, "")
-			var sortedContribs []string
+			var sortedContributors []string
 			for c := range contributors {
-				sortedContribs = append(sortedContribs, c)
+				sortedContributors = append(sortedContributors, c)
 			}
-			sort.Strings(sortedContribs)
+			sort.Strings(sortedContributors)
 
 			digestItem := flow.DigestItem{
 				Ref:          fmt.Sprintf("%s#%d", repo, item.Number),
@@ -208,7 +219,7 @@ func fetchChannelActivity(repos []string, since time.Time, includeBody bool) ([]
 				HTMLURL:      item.HTMLURL,
 				CreatedAt:    item.CreatedAt.Format(time.RFC3339),
 				UpdatedAt:    item.UpdatedAt.Format(time.RFC3339),
-				Contributors: sortedContribs,
+				Contributors: sortedContributors,
 			}
 
 			if includeBody {

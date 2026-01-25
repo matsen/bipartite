@@ -9,10 +9,45 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 )
 
-// maxSummarizeConcurrency limits parallel Claude CLI calls for summarization.
-const maxSummarizeConcurrency = 10
+const (
+	// maxSummarizeConcurrency limits parallel Claude CLI calls for summarization.
+	maxSummarizeConcurrency = 10
+
+	// maxCommentLength limits comment body length in take-home prompts.
+	maxCommentLength = 200
+
+	// maxBodyPreviewLength limits body preview in take-home prompts.
+	maxBodyPreviewLength = 300
+
+	// maxBodyForSummary limits input body size for single-item summarization.
+	maxBodyForSummary = 1000
+
+	// maxSummaryWords is the target word limit for single-item summaries.
+	maxSummaryWords = 15
+)
+
+// truncateUTF8 safely truncates text to approximately maxLen bytes
+// without splitting multi-byte UTF-8 characters. Adds "..." if truncated.
+func truncateUTF8(text string, maxLen int) string {
+	if len(text) <= maxLen {
+		return text
+	}
+
+	// Find the last valid UTF-8 character boundary before maxLen
+	validLen := maxLen
+	for validLen > 0 && !utf8.RuneStart(text[validLen]) {
+		validLen--
+	}
+
+	if validLen == 0 {
+		return ""
+	}
+
+	return text[:validLen] + "..."
+}
 
 // CallClaude calls the claude CLI with the given prompt.
 func CallClaude(prompt string, model string) (string, error) {
@@ -73,17 +108,11 @@ func buildSummaryPrompt(items []ItemDetails) string {
 			start = len(item.Comments) - 5
 		}
 		for _, c := range item.Comments[start:] {
-			body := c.Body
-			if len(body) > 200 {
-				body = body[:200]
-			}
+			body := truncateUTF8(c.Body, maxCommentLength)
 			commentsText.WriteString(fmt.Sprintf("    @%s: %s\n", c.Author, body))
 		}
 
-		bodyPreview := item.Body
-		if len(bodyPreview) > 300 {
-			bodyPreview = bodyPreview[:300]
-		}
+		bodyPreview := truncateUTF8(item.Body, maxBodyPreviewLength)
 
 		itemsText.WriteString(fmt.Sprintf(`
 ---
@@ -288,8 +317,19 @@ func postprocessDigest(digest string, items []DigestItem) string {
 	return strings.Join(resultLines, "\n")
 }
 
-// SummarizeDigestItems generates summaries for digest items using Claude Haiku.
-// Uses bounded concurrency to avoid overwhelming the CLI.
+// SummarizeDigestItems generates AI summaries for digest items with controlled concurrency.
+//
+// For items with non-empty Body fields, this function calls Claude Haiku to generate
+// one-sentence summaries. The Summary field is populated on successful generation.
+//
+// Concurrency behavior:
+//   - Runs up to maxSummarizeConcurrency (10) Claude CLI calls in parallel
+//   - Stops processing on first error encountered
+//   - Returns error immediately if any summarization fails
+//   - Items without bodies are skipped (no API call, no error)
+//
+// Returns a new slice to avoid modifying the input (preserves original state).
+// Note: DigestItem structs are shallow-copied, not deep-cloned.
 func SummarizeDigestItems(items []DigestItem) ([]DigestItem, error) {
 	if len(items) == 0 {
 		return items, nil
@@ -360,20 +400,17 @@ func summarizeSingleItem(item DigestItem) (string, error) {
 		itemType = "PR"
 	}
 
-	// Truncate body to avoid token limits
-	body := item.Body
-	if len(body) > 1000 {
-		body = body[:1000] + "..."
-	}
+	// Truncate body to avoid token limits (UTF-8 safe)
+	body := truncateUTF8(item.Body, maxBodyForSummary)
 
-	prompt := fmt.Sprintf(`Summarize this GitHub %s in ONE short sentence (max 15 words).
+	prompt := fmt.Sprintf(`Summarize this GitHub %s in ONE short sentence (max %d words).
 Focus on what it does or proposes, not implementation details.
 
 Title: %s
 Body:
 %s
 
-Return ONLY the summary sentence, nothing else.`, itemType, item.Title, body)
+Return ONLY the summary sentence, nothing else.`, itemType, maxSummaryWords, item.Title, body)
 
 	return CallClaude(prompt, "haiku")
 }
