@@ -110,7 +110,7 @@ go build -o bip ./cmd/bip
 ln -sf $(pwd)/bip ~/.local/bin/bip
 ```
 
-After installation, `bip` is available globally. Run commands from the nexus directory (for GitHub activity features) or any bipartite repository (for library features).
+After installation, `bip` is available globally. Run commands from your nexus directory, which contains both the reference library (`.bipartite/`) and GitHub activity config (`sources.json`).
 
 Requires Go 1.21+ and `~/go/bin` or `~/.local/bin` in your PATH.
 
