@@ -109,8 +109,8 @@ func runDigest(cmd *cobra.Command, args []string) {
 
 	fmt.Printf("Scanning %d repos...\n", len(repos))
 
-	// Build digest items from GitHub activity
-	items, err := buildDigestItems(repos, since, digestVerbose)
+	// Fetch digest items from GitHub activity
+	items, err := fetchDigestItems(repos, since, digestVerbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: building digest items: %v\n", err)
 		os.Exit(1)
@@ -162,11 +162,13 @@ func runDigest(cmd *cobra.Command, args []string) {
 	}
 }
 
-// buildDigestItems fetches GitHub activity and transforms it into digest items.
+// fetchDigestItems fetches GitHub activity and transforms it into digest items.
 // For each repo, it fetches issues/PRs updated since the given time, collects
 // contributors (author, commenters, reviewers), and builds DigestItem structs.
-func buildDigestItems(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
+// Returns an error if all repo fetches fail (to distinguish from "no activity").
+func fetchDigestItems(repos []string, since time.Time, includeBody bool) ([]flow.DigestItem, error) {
 	var items []flow.DigestItem
+	var successfulFetches int
 
 	for _, repo := range repos {
 		allItems, err := flow.FetchIssues(repo, since)
@@ -174,6 +176,7 @@ func buildDigestItems(repos []string, since time.Time, includeBody bool) ([]flow
 			fmt.Fprintf(os.Stderr, "Warning: failed to fetch %s: %v\n", repo, err)
 			continue // Skip repos with errors
 		}
+		successfulFetches++
 
 		for _, item := range allItems {
 			// Collect contributors
@@ -228,6 +231,11 @@ func buildDigestItems(repos []string, since time.Time, includeBody bool) ([]flow
 
 			items = append(items, digestItem)
 		}
+	}
+
+	// Fail if all repos failed to fetch (distinguishes from "no activity")
+	if successfulFetches == 0 && len(repos) > 0 {
+		return nil, fmt.Errorf("failed to fetch activity from all %d repos", len(repos))
 	}
 
 	return items, nil

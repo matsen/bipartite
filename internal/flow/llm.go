@@ -14,6 +14,7 @@ import (
 
 const (
 	// maxSummarizeConcurrency limits parallel Claude CLI calls for summarization.
+	// Set to 10 to stay well under typical API rate limits while providing good throughput.
 	maxSummarizeConcurrency = 10
 
 	// maxCommentLength limits comment body length in take-home prompts.
@@ -98,9 +99,6 @@ func buildSummaryPrompt(items []ItemDetails) string {
 			itemType = "PR"
 		}
 
-		ballStatus := "waiting"
-		// Note: ball_in_my_court would be passed separately in a real impl
-
 		// Format comments (last 5, truncated to 200 chars each)
 		var commentsText strings.Builder
 		start := 0
@@ -120,10 +118,9 @@ REF: %s
 TYPE: %s
 TITLE: %s
 AUTHOR: %s
-STATUS: %s
 BODY: %s
 RECENT_COMMENTS:
-%s---`, item.Ref, itemType, item.Title, item.Author, ballStatus, bodyPreview, commentsText.String()))
+%s---`, item.Ref, itemType, item.Title, item.Author, bodyPreview, commentsText.String()))
 	}
 
 	return fmt.Sprintf(`You are helping triage GitHub activity. For each item below, provide a brief take-home summary (1 short sentence) that tells the user what happened and whether they need to act.
@@ -378,9 +375,8 @@ func SummarizeDigestItems(items []DigestItem) ([]DigestItem, error) {
 				return
 			}
 
-			mu.Lock()
+			// No mutex needed - each goroutine writes to its own unique index
 			result[idx].Summary = summary
-			mu.Unlock()
 		}(i)
 	}
 
