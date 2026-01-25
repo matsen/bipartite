@@ -189,32 +189,38 @@ func buildDigestPrompt(items []DigestItem, channel, dateRange string) string {
 			itemType, item.Number, item.Title, item.Author, state, item.HTMLURL))
 	}
 
-	return fmt.Sprintf(`You are writing a weekly digest for a team Slack channel. Summarize the following GitHub activity as a concise bullet-list message.
+	return fmt.Sprintf(`You are writing a weekly digest for a team Slack channel.
 
 Channel: %s
 Date range: %s
 
 Activity to summarize:
 %s
+
+CRITICAL REQUIREMENTS:
+- You MUST include EVERY SINGLE ITEM listed above. Do NOT summarize, skip, or omit ANY activity.
+- EVERY repository with activity MUST appear in the output. Missing repos is a failure.
+- Group similar items from the same repo on one line if needed, but NEVER drop items.
+
 Format the output as a Slack message using mrkdwn:
 - Start with: *This week in %s* (%s)
 - Use bullet points (•) for each item
-- Categorize by: Merged PRs, New issues, Active discussions
+- Categorize by: Merged PRs, Open PRs, New Issues
 - Include Slack-style links: <URL|#number> or <URL|title>
-- Keep it concise - one line per item
+- Keep it concise - one line per item (or group related items from same repo)
 - Skip categories with no items
 
 Example output:
 *This week in dasm2* (Jan 12-18)
 
 *Merged*
-• Structure-aware loss function (<https://github.com/...|#142>)
+• repo-name PR: Structure-aware loss function (<https://github.com/...|#142>)
+
+*Open PRs*
+• repo-name PR: New feature in progress (<https://github.com/...|#147>)
 
 *New Issues*
-• OOM on large batches (<https://github.com/...|#156>)
-
-*Discussion*
-• Dataset versioning approach (<https://github.com/...|#148>)
+• repo-name Issue: OOM on large batches (<https://github.com/...|#156>)
 
 Return ONLY the formatted Slack message, no other text.`, channel, dateRange, itemsText.String(), channel, dateRange)
 }

@@ -103,6 +103,12 @@ Using the raw activity from Step 1, the preferences from Step 2, and the channel
 - Typically includes: no attribution, factual descriptions only
 - Stick to available information—do not invent context
 
+**CRITICAL — Include ALL Activity:**
+- You MUST include EVERY item from the raw activity output. Do NOT skip or omit ANY PR or issue.
+- EVERY repository that appears in the raw output MUST be represented in the narrative.
+- If a repo has activity, it MUST appear somewhere in the digest. Missing repos is a failure.
+- When in doubt, include the item. Completeness is more important than brevity.
+
 ### Step 5: Write Output
 
 Determine output path:
