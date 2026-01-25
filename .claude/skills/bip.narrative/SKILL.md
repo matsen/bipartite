@@ -87,7 +87,9 @@ Using the raw activity from Step 1, the preferences from Step 2, and the channel
 - Status prefixes for non-merged items:
   - `In progress:` for open PRs
   - `Open:` for open issues
-- Include GitHub links as `[#N](url)` or `[title](url)`
+- **CRITICAL: Every PR/issue mentioned MUST have a link** — never refer to work without its `[#N](url)` link inline
+  - Bad: "A modular dataset registry was merged"
+  - Good: "A modular dataset registry was merged ([#176](url))"
 
 **Looking Ahead Section:**
 - Focus on **open issues only** (not PRs, unless a PR directly addresses a new issue worth explaining)
@@ -121,15 +123,15 @@ Where `{{YYYY-MM-DD}}` is today's date.
 
 ## Model Architecture
 
-The training pipeline saw significant improvements this week. The structure-aware loss function was merged, enabling better handling of hierarchical outputs. In progress: refactoring the attention mechanism for memory efficiency.
+The training pipeline saw significant improvements this week. The structure-aware loss function was merged ([#142](url)), enabling better handling of hierarchical outputs. In progress: refactoring the attention mechanism for memory efficiency ([#147](url)).
 
 ## Data Processing
 
 **Viral:**
-New preprocessing filters were added for low-quality sequences.
+New preprocessing filters were added for low-quality sequences ([#138](url)).
 
 **Antibody:**
-The germline alignment step now handles ambiguous calls gracefully.
+The germline alignment step now handles ambiguous calls gracefully ([#151](url)).
 
 ## Looking Ahead
 
