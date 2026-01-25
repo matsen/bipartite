@@ -39,6 +39,7 @@ bd list                     # List all tasks
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
 - Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (011-repo-nodes)
 - JSONL (source of truth) + SQLite (ephemeral query layer, rebuilt via `bip rebuild`) (011-repo-nodes)
+- JSONL (source of truth) + SQLite (ephemeral query layer) (012-narrative-digest)
 
 ## Project Structure
 
@@ -153,4 +154,5 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 012-narrative-digest: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
 - 011-repo-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)

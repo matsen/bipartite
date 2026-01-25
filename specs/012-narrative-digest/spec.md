@@ -256,6 +256,7 @@ Output uses bullets for independent items, prose for connected items.
 
 - **FR-022**: If no activity found, command MUST skip file creation and print informative message
 - **FR-023**: Malformed config file MUST produce helpful error with guidance on expected format
+- **FR-023a**: In verbose mode, if Claude CLI fails for any item, command MUST fail immediately with error (fail-fast)
 
 #### Documentation
 
@@ -283,7 +284,7 @@ The skill file at `.claude/skills/bip.narrative/` should:
 
 1. Parse channel argument and flags (`--since`, `--verbose`)
 2. Run `bip digest --channel {channel} --since {since} [--verbose]`
-   - With `--verbose`, digest output includes Ollama-generated summaries of PR/issue bodies
+   - With `--verbose`, digest output includes Claude Haiku-generated summaries of PR/issue bodies
 3. Read `narrative/preferences.md` (shared defaults)
 4. Read `narrative/{channel}.md` (themes, repo context, project-specific prefs)
 5. Construct prompt with:
@@ -318,6 +319,13 @@ Cost is negligible (~$0.01-0.02 per digest run).
 - Change `bip digest` default to preview-only (NEW - do before slash command)
 - `claude` CLI available for Haiku summarization (for --verbose)
 - Bead bipartite-c39: Narrative digest format (this feature)
+
+## Clarifications
+
+### Session 2026-01-25
+
+- Q: Verbose mode uses Ollama or Claude Haiku for summarization? → A: Claude Haiku via `claude --model haiku` CLI
+- Q: If Claude CLI fails during verbose summarization, what happens? → A: Fail entire digest with error (fail-fast)
 
 ## Constitution Note
 
