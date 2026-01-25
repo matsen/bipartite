@@ -168,6 +168,7 @@ func fetchChannelActivity(repos []string, since time.Time, includeBody bool) ([]
 	for _, repo := range repos {
 		allItems, err := flow.FetchIssues(repo, since)
 		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to fetch %s: %v\n", repo, err)
 			continue // Skip repos with errors
 		}
 
