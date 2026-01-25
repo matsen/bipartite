@@ -115,7 +115,7 @@ cd ~/re/nexus
 bip checkin              # Check recent GitHub activity
 bip board list           # View project boards
 bip spawn org/repo#123   # Spawn tmux window for issue review
-bip digest --channel foo # Generate Slack digest
+bip digest --channel foo --dry-run  # Generate Slack digest (use --dry-run to preview)
 bip tree --open          # View beads hierarchy in browser
 ```
 

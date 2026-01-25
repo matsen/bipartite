@@ -26,6 +26,7 @@ var (
 	digestSince   string
 	digestPostTo  string
 	digestRepos   string
+	digestDryRun  bool
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	digestCmd.Flags().StringVar(&digestSince, "since", "1w", "Time period to summarize (e.g., 1w, 2d, 12h)")
 	digestCmd.Flags().StringVar(&digestPostTo, "post-to", "", "Override destination channel for posting")
 	digestCmd.Flags().StringVar(&digestRepos, "repos", "", "Override repos to scan (comma-separated)")
+	digestCmd.Flags().BoolVar(&digestDryRun, "dry-run", false, "Preview digest without posting to Slack")
 	digestCmd.MarkFlagRequired("channel")
 }
 
@@ -78,12 +80,14 @@ func runDigest(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Check webhook is configured for destination
-	webhookURL := flow.GetWebhookURL(postTo)
-	if webhookURL == "" {
-		fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
-		fmt.Printf("Set SLACK_WEBHOOK_%s in .env file.\n", strings.ToUpper(postTo))
-		os.Exit(1)
+	// Check webhook is configured for destination (skip if dry-run)
+	if !digestDryRun {
+		webhookURL := flow.GetWebhookURL(postTo)
+		if webhookURL == "" {
+			fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
+			fmt.Printf("Set SLACK_WEBHOOK_%s in .env file.\n", strings.ToUpper(postTo))
+			os.Exit(1)
+		}
 	}
 
 	// Determine time range
@@ -133,14 +137,17 @@ func runDigest(cmd *cobra.Command, args []string) {
 	fmt.Println(strings.Repeat("=", 60))
 	fmt.Println()
 
-	// Post to Slack
-	fmt.Printf("Posting to #%s...\n", postTo)
-	if err := flow.SendDigest(postTo, message); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	// Post to Slack (skip if dry-run)
+	if digestDryRun {
+		fmt.Println("(dry-run: not posting to Slack)")
+	} else {
+		fmt.Printf("Posting to #%s...\n", postTo)
+		if err := flow.SendDigest(postTo, message); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Posted successfully!")
 	}
-
-	fmt.Println("Posted successfully!")
 }
 
 func fetchChannelActivity(repos []string, since time.Time) ([]flow.DigestItem, error) {
