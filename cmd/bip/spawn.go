@@ -80,12 +80,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Check tmux
-	if !spawn.IsInTmux() {
-		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
-		os.Exit(1)
-	}
-
 	// Detect item type if not known from URL
 	itemType := ref.ItemType
 	if itemType == "" {
@@ -116,12 +110,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	repoName := flow.ExtractRepoName(ref.Repo)
 	windowName := fmt.Sprintf("%s#%d", repoName, ref.Number)
 
-	// Check if window already exists
-	if spawn.WindowExists(windowName) {
-		fmt.Printf("Window %s already exists, skipping\n", windowName)
-		return
-	}
-
 	// Build prompt
 	var prompt string
 	if spawnPrompt != "" {
@@ -142,39 +130,32 @@ func runSpawn(cmd *cobra.Command, args []string) {
 
 	// Create tmux window
 	url := flow.GitHubURL(ref.Repo, ref.Number, itemType)
-	err = spawn.CreateWindow(windowName, repoPath, prompt, url)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	spawnWindow(windowName, repoPath, prompt, url)
 }
 
 func runAdhocSpawn() {
-	// Check tmux
-	if !spawn.IsInTmux() {
-		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
-		os.Exit(1)
-	}
-
-	// Build window name with timestamp
 	windowName := fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
-
-	// Check if window already exists
-	if spawn.WindowExists(windowName) {
-		fmt.Printf("Window %s already exists, skipping\n", windowName)
-		return
-	}
-
-	// Get working directory - use current directory
 	workDir, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
 		os.Exit(1)
 	}
+	spawnWindow(windowName, workDir, spawnPrompt, "")
+}
 
-	// Create tmux window with just the prompt
-	err = spawn.CreateWindow(windowName, workDir, spawnPrompt, "")
-	if err != nil {
+// spawnWindow validates tmux, checks for duplicates, and creates the window.
+func spawnWindow(windowName, workDir, prompt, url string) {
+	if !spawn.IsInTmux() {
+		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
+		os.Exit(1)
+	}
+
+	if spawn.WindowExists(windowName) {
+		fmt.Printf("Window %s already exists, skipping\n", windowName)
+		return
+	}
+
+	if err := spawn.CreateWindow(windowName, workDir, prompt, url); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
