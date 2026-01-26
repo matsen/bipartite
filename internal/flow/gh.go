@@ -75,8 +75,7 @@ func GHGraphQL(query string, variables map[string]interface{}) (json.RawMessage,
 			// Use -F for non-string types (gh CLI handles type conversion)
 			args = append(args, "-F", fmt.Sprintf("%s=%v", key, v))
 		default:
-			// Default to string representation with -f
-			args = append(args, "-f", fmt.Sprintf("%s=%v", key, value))
+			return nil, fmt.Errorf("unsupported variable type %T for key %s", value, key)
 		}
 	}
 

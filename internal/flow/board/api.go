@@ -25,7 +25,7 @@ func FetchProjectID(owner, projectNum string) (string, error) {
 	// Convert project number to int for GraphQL
 	projectNumInt, err := strconv.Atoi(projectNum)
 	if err != nil {
-		return "", fmt.Errorf("invalid project number: %s", projectNum)
+		return "", fmt.Errorf("invalid project number %q: %w", projectNum, err)
 	}
 
 	// Try org first
