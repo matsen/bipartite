@@ -62,10 +62,22 @@ func normalizeJSONLines(data []byte) json.RawMessage {
 }
 
 // GHGraphQL executes a GraphQL query via the gh CLI.
-func GHGraphQL(query string, variables map[string]string) (json.RawMessage, error) {
+// Variables can be any type: strings use -f flag, other types (int, bool) use -F flag
+// for proper GraphQL type handling.
+func GHGraphQL(query string, variables map[string]interface{}) (json.RawMessage, error) {
 	args := []string{"api", "graphql", "-f", "query=" + query}
 	for key, value := range variables {
-		args = append(args, "-f", key+"="+value)
+		switch v := value.(type) {
+		case string:
+			// Use -f for string values
+			args = append(args, "-f", key+"="+v)
+		case int, int64, float64, bool:
+			// Use -F for non-string types (gh CLI handles type conversion)
+			args = append(args, "-F", fmt.Sprintf("%s=%v", key, v))
+		default:
+			// Default to string representation with -f
+			args = append(args, "-f", fmt.Sprintf("%s=%v", key, value))
+		}
 	}
 
 	cmd := exec.Command("gh", args...)

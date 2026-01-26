@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/flow"
@@ -21,6 +22,12 @@ func ParseBoardKey(boardKey string) (owner, number string, err error) {
 
 // FetchProjectID fetches the GraphQL node ID for a project.
 func FetchProjectID(owner, projectNum string) (string, error) {
+	// Convert project number to int for GraphQL
+	projectNumInt, err := strconv.Atoi(projectNum)
+	if err != nil {
+		return "", fmt.Errorf("invalid project number: %s", projectNum)
+	}
+
 	// Try org first
 	query := `
 	query($owner: String!, $number: Int!) {
@@ -31,9 +38,9 @@ func FetchProjectID(owner, projectNum string) (string, error) {
 	  }
 	}`
 
-	data, err := flow.GHGraphQL(query, map[string]string{
+	data, err := flow.GHGraphQL(query, map[string]interface{}{
 		"owner":  owner,
-		"number": projectNum,
+		"number": projectNumInt,
 	})
 	if err == nil {
 		var result struct {
@@ -60,9 +67,9 @@ func FetchProjectID(owner, projectNum string) (string, error) {
 	  }
 	}`
 
-	data, err = flow.GHGraphQL(query, map[string]string{
+	data, err = flow.GHGraphQL(query, map[string]interface{}{
 		"owner":  owner,
-		"number": projectNum,
+		"number": projectNumInt,
 	})
 	if err != nil {
 		return "", err
@@ -124,7 +131,7 @@ func FetchProjectFields(projectID string) (*BoardMetadata, error) {
 	  }
 	}`
 
-	data, err := flow.GHGraphQL(query, map[string]string{"projectId": projectID})
+	data, err := flow.GHGraphQL(query, map[string]interface{}{"projectId": projectID})
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +289,7 @@ func addIssueViaGraphQL(boardKey string, issueNumber int, repo string) (string, 
 	  }
 	}`
 
-	data, err := flow.GHGraphQL(mutation, map[string]string{
+	data, err := flow.GHGraphQL(mutation, map[string]interface{}{
 		"projectId": projectID,
 		"contentId": issueNodeID,
 	})
@@ -352,7 +359,7 @@ func SetItemStatus(boardKey, itemID, status string) error {
 	  }
 	}`
 
-	_, err = flow.GHGraphQL(mutation, map[string]string{
+	_, err = flow.GHGraphQL(mutation, map[string]interface{}{
 		"projectId": projectID,
 		"itemId":    itemID,
 		"fieldId":   statusFieldID,
@@ -412,7 +419,7 @@ func RemoveIssueFromBoard(boardKey string, issueNumber int, repo string) error {
 	  }
 	}`
 
-	_, err = flow.GHGraphQL(mutation, map[string]string{
+	_, err = flow.GHGraphQL(mutation, map[string]interface{}{
 		"projectId": projectID,
 		"itemId":    itemID,
 	})
