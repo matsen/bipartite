@@ -66,6 +66,7 @@ A researcher wants to review a specific GitHub issue or PR with full context. Th
 1. **Given** a valid issue reference `org/repo#123`, **When** user runs spawn, **Then** a tmux window is created with the issue context
 2. **Given** a GitHub URL, **When** user runs spawn, **Then** URL is parsed and tmux window is created
 3. **Given** a repo with context defined in sources.json, **When** user runs spawn, **Then** project context is prepended to the prompt
+4. **Given** `--prompt` without issue reference, **When** user runs spawn, **Then** an adhoc tmux window is created with the prompt as context
 
 ---
 
@@ -163,6 +164,7 @@ A researcher wants to add, move, or remove issues from their GitHub project boar
 - **FR-026**: System MUST spawn tmux window with appropriate context
 - **FR-027**: System MUST prepend project context if defined for the repo
 - **FR-028**: System MUST support `--prompt` flag for custom prompt override
+- **FR-028b**: System MUST allow `--prompt` without issue reference for adhoc sessions (window named `adhoc-YYYY-MM-DD-HHMMSS`)
 
 #### Digest Command
 

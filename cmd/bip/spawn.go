@@ -14,7 +14,7 @@ import (
 )
 
 var spawnCmd = &cobra.Command{
-	Use:   "spawn <ref>",
+	Use:   "spawn [ref]",
 	Short: "Spawn tmux window for GitHub issue or PR review",
 	Long: `Spawn a tmux window for reviewing a GitHub issue or PR.
 
@@ -23,11 +23,14 @@ The ref can be:
   - https://github.com/org/repo/issues/123
   - https://github.com/org/repo/pull/123
 
+Or use --prompt without a ref for adhoc sessions:
+  - bip spawn --prompt "Explore the clamping question"
+
 Requires:
   - Running inside tmux
-  - Repository defined in sources.json
-  - Local clone of the repository`,
-	Args: cobra.ExactArgs(1),
+  - Repository defined in sources.json (unless using --prompt alone)
+  - Local clone of the repository (unless using --prompt alone)`,
+	Args: cobra.MaximumNArgs(1),
 	Run:  runSpawn,
 }
 
@@ -39,7 +42,17 @@ func init() {
 }
 
 func runSpawn(cmd *cobra.Command, args []string) {
-	// Validate nexus directory
+	// Handle adhoc mode (--prompt without ref) - doesn't need nexus directory
+	if len(args) == 0 {
+		if spawnPrompt == "" {
+			fmt.Fprintf(os.Stderr, "Error: Either provide a GitHub reference or use --prompt for adhoc sessions\n")
+			os.Exit(1)
+		}
+		runAdhocSpawn()
+		return
+	}
+
+	// Validate nexus directory (required for issue/PR lookups)
 	if err := flow.ValidateNexusDirectory(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -64,12 +77,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
 		fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
-		os.Exit(1)
-	}
-
-	// Check tmux
-	if !spawn.IsInTmux() {
-		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
 		os.Exit(1)
 	}
 
@@ -103,12 +110,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	repoName := flow.ExtractRepoName(ref.Repo)
 	windowName := fmt.Sprintf("%s#%d", repoName, ref.Number)
 
-	// Check if window already exists
-	if spawn.WindowExists(windowName) {
-		fmt.Printf("Window %s already exists, skipping\n", windowName)
-		return
-	}
-
 	// Build prompt
 	var prompt string
 	if spawnPrompt != "" {
@@ -129,8 +130,32 @@ func runSpawn(cmd *cobra.Command, args []string) {
 
 	// Create tmux window
 	url := flow.GitHubURL(ref.Repo, ref.Number, itemType)
-	err = spawn.CreateWindow(windowName, repoPath, prompt, url)
+	spawnWindow(windowName, repoPath, prompt, url)
+}
+
+func runAdhocSpawn() {
+	windowName := fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
+	workDir, err := os.Getwd()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
+		os.Exit(1)
+	}
+	spawnWindow(windowName, workDir, spawnPrompt, "")
+}
+
+// spawnWindow validates tmux, checks for duplicates, and creates the window.
+func spawnWindow(windowName, workDir, prompt, url string) {
+	if !spawn.IsInTmux() {
+		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
+		os.Exit(1)
+	}
+
+	if spawn.WindowExists(windowName) {
+		fmt.Printf("Window %s already exists, skipping\n", windowName)
+		return
+	}
+
+	if err := spawn.CreateWindow(windowName, workDir, prompt, url); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
