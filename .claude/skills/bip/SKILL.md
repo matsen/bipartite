@@ -10,6 +10,27 @@ A CLI tool for managing academic references with local storage and external pape
 **Repository**: `~/re/nexus`
 **PDF Storage**: `/Users/matsen/Google Drive/My Drive/Paperpile`
 
+## Argument Handling
+
+When invoked with arguments like `/bip find <query>` or `/bip <query>`:
+
+1. **Always search local library first** with `bip search "<query>"`
+2. If not found locally, then search externally with `bip asta search`
+3. For title searches, use the full title; for topic searches, use key terms
+
+## Proactive Concept Discovery
+
+When discussing papers, **always look for opportunities to create concept nodes**:
+
+- Papers that **introduce** new methods, models, or techniques (e.g., "categorical Jacobian")
+- Papers that **apply** existing concepts in novel ways
+- Connections between papers through shared concepts
+
+Suggest creating concepts when you notice:
+- A named method or algorithm being introduced
+- A technique being reused across multiple papers
+- A bridge between the user's work and external literature
+
 ## Quick Reference
 
 | Task | Command |
@@ -22,7 +43,7 @@ A CLI tool for managing academic references with local storage and external pape
 | Fast paper search (external) | `bip asta search "query"` |
 | Find text snippets | `bip asta snippet "query"` |
 | Create concept | `bip concept add <id> --name "Name"` |
-| Link paper to concept | `bip edge add -s <paper> -t <concept> -r <type> -m "summary"` |
+| Link paper to concept | `bip edge add -s <paper> -t concept:<concept> -r <type> -m "summary"` |
 | Papers for concept | `bip concept papers <concept-id>` |
 | Concepts for paper | `bip paper concepts <paper-id>` |
 
@@ -198,13 +219,15 @@ bip concept get somatic-hypermutation --human
 ### Link Papers to Concepts
 
 ```bash
-# Use flags: -s (source paper), -t (target concept), -r (relationship type), -m (summary)
-bip edge add -s Halpern1998-yc -t mutation-selection-model -r introduces \
+# Use flags: -s (source paper), -t (target concept with concept: prefix), -r (relationship type), -m (summary)
+bip edge add -s Halpern1998-yc -t concept:mutation-selection-model -r introduces \
   -m "Foundational paper defining the mutation-selection model"
 
-bip edge add -s Yaari2013-dg -t somatic-hypermutation -r models \
+bip edge add -s Yaari2013-dg -t concept:somatic-hypermutation -r models \
   -m "Introduces S5F model for SHM targeting"
 ```
+
+**Note**: Use `concept:` prefix for concept targets, `project:` for project targets.
 
 ### Standard Relationship Types
 
