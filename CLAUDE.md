@@ -116,6 +116,7 @@ cd ~/re/nexus
 bip checkin              # Check recent GitHub activity
 bip board list           # View project boards
 bip spawn org/repo#123   # Spawn tmux window for issue review
+bip spawn --prompt "Explore the clamping question"  # Adhoc session without issue
 bip digest --channel foo # Preview Slack digest (safe default)
 bip digest --channel foo --post  # Actually post to Slack
 bip digest --channel foo --verbose  # Include PR/issue body summaries
