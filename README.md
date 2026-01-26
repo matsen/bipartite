@@ -116,6 +116,7 @@ Bipartite includes tools for synchronizing research work across GitHub repositor
 | `bip board sync` | Compare P0 beads with board items |
 | `bip board sync --fix` | Auto-add missing P0 beads to board |
 | `bip spawn org/repo#123` | Launch Claude Code in tmux with issue/PR context |
+| `bip spawn --prompt "..."` | Launch adhoc Claude Code session (no issue required) |
 | `bip digest --channel <name>` | Preview activity digest (use `--post` to send to Slack) |
 | `bip digest --channel <name> --verbose` | Include PR/issue body summaries |
 | `bip tree` | Generate interactive HTML tree of beads issues |
