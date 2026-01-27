@@ -1,314 +1,233 @@
 # bipartite
 
-A unified command-line tool for AI agents and researchers that bridges two workflows: **academic reference management** and **research team coordination**. Import papers from Paperpile, search with full-text, build knowledge graphs—and synchronize research work across GitHub repositories, generate themed team digests, and post updates to Slack.
+Bipartite is:
 
-The name comes from a bipartite graph connecting two worlds: the researcher's artifacts (notes, code, repos, concepts) and the academic literature (papers, citations, authors).
+* A **Go CLI** for querying local and remote academic literature, GitHub activity across repos, and your group's knowledge graph
+* A collection of **Claude Code skills** for synthesis: narrative digests, interactive check-ins, spawning sessions with context
+* A **git-backed system** that keeps your group's papers, concepts, projects, and coordination state in one repository
 
-## What Makes Bipartite Special
+The name refers to the graph at the core: one side is your world (projects, repos, concepts, active work), the other is the literature (papers, citations, authors), with typed edges connecting them.
 
-### Agent-First in an Agent-First World
+## The Problem
 
-Traditional reference managers—Zotero, Mendeley, Paperpile—are GUI applications designed for humans clicking through menus. Bipartite inverts this. As AI coding agents move to the terminal, research tools need to follow. Bipartite outputs JSON by default, operates entirely via CLI, and needs no MCP server—agents just use bash. When an agent helps you write a paper, it can search your library, find relevant citations, and open PDFs for you to read, all through natural command-line interaction.
+Agentic coding has transformed individual contributor (IC) work. A researcher can pair with Claude to write code, debug pipelines, and draft papers. But agents haven't had an equivalent effect for group leaders (PIs, team leads, managers) who need to:
 
-### Your Library Lives in Git
+- Track activity across many repositories
+- Connect ongoing work to relevant literature
+- Identify what needs attention and make decisions
 
-Most reference managers lock your data in proprietary databases or cloud services. Bipartite uses JSONL as the single source of truth—human-readable text files that git handles naturally. This means:
+The context for these tasks is scattered across GitHub, Slack, reference managers, and memory. Agents can't help because they can't access it.
 
-- **Real collaboration**: Multiple researchers add papers independently, resolve conflicts through standard git merges
-- **Full provenance**: Every change tracked, every decision auditable, complete history preserved
-- **No vendor lock-in**: Your data is portable text, not trapped in a database
-- **Reproducibility**: Git enables transparent, reproducible science—your reference library should be part of that
+Bipartite creates a **context layer** that both agents and humans can query: connecting your internal research world to the external academic world.
 
-The SQLite index is ephemeral, rebuilt on demand from the source JSONL. Pull changes, run `bip rebuild`, and you're synchronized.
+## The Solution
 
-### A Knowledge Graph That Includes Your Ideas
+Edges in the graph carry meaning: a paper *introduces* a concept, a project *implements* a method. Agents traverse these edges to find relevant citations or understand how your work relates to published research.
 
-Tools like Semantic Scholar and ResearchRabbit are powerful, but they only know about published papers. Your research group has concepts, methods, and ideas that don't exist in the public literature yet. Bipartite's concept graph bridges this gap:
+### Three Audiences, One Tool
 
-- Define concepts private to your group (a new algorithm you're developing, a hypothesis you're testing)
-- Link papers to your concepts: "Paper A applies our method", "Paper B critiques the same problem we're solving"
-- Build a knowledge graph where the published literature connects to your unpublished work
+| Audience | What they need | How bipartite helps |
+|----------|----------------|---------------------|
+| **Agents** | Structured context, CLI access | JSON by default, bash interface, no MCP server needed |
+| **ICs** | Track work, find papers, manage references | Fast local commands, git-synced library, PDF integration |
+| **Group leaders** | Visibility across repos, decision support, team communication | Themed digests, board sync, attention filtering |
 
-This is the bipartite vision—one side is the public academic graph, the other is your private research world, and edges connect them with semantic meaning.
+### Design Principles
 
-### Deep Integration with Academic Search
+**Agent-native, human-friendly.** CLI-first with JSON output by default. Agents call commands via bash. Humans add `--human` for readable output.
 
-Bipartite integrates two complementary services from Allen AI:
+**Private by default, shareable by design.** Everything lives in git-versionable files (JSONL). You control what's committed and shared. Multiple researchers can collaborate through standard git workflows.
 
-- **Semantic Scholar (S2)**: Structured database access to 200M+ papers. Add papers by DOI, track citations, discover gaps in your collection.
-- **ASTA (Academic Search Tool API)**: LLM-powered discovery that searches like an expert researcher. Find specific passages within papers, get relevancy-ranked results with evidence.
+**Fast core (Go) + smart synthesis (Claude Skills).** The CLI is a single Go binary. `bip search` returns in milliseconds. When you need synthesis (narrative digests, summarization), Claude Code skills like `/bip.narrative` provide it.
 
-S2 answers "give me this paper's citations" (structured). ASTA answers "find papers discussing convergence of variational inference in phylogenetics" (semantic). Together, they make literature discovery a conversation, not a keyword hunt.
+## What It Does
 
-### Single Binary, No Infrastructure
+### For Agents: Structured Context
 
-No database server. No heavyweight frameworks. No configuration complexity. Bipartite is a single Go binary with fast startup. Install it, run `bip init`, and you're working. The ephemeral SQLite cache means you never manage database state—if something goes wrong, delete the cache and rebuild. Local semantic search over your abstracts via Ollama embeddings means you can find conceptually related papers without external API calls. This simplicity matters when agents need to operate autonomously.
+Traditional reference managers are GUI applications designed for humans. Bipartite provides a CLI that agents can use directly:
 
-### Research Team Coordination
+```bash
+# Search the library
+bip search "variational inference" --limit 5
 
-Research groups juggle work across many GitHub repositories. Bipartite provides tools to keep everyone synchronized:
+# Get paper details as JSON
+bip get Smith2024-ab
 
-- **Activity tracking**: See what needs your attention across all tracked repos with smart "ball-in-my-court" filtering
-- **Themed digests**: Generate narrative summaries organized by research themes (Data Prep, Architecture, Training, etc.), not just repo-by-repo lists
-- **Slack integration**: Post weekly digests directly to team channels
-- **Board sync**: Keep GitHub project boards aligned with your priorities
-- **Spawn Claude sessions**: Launch Claude Code in tmux with issue/PR context pre-loaded
+# Find papers linked to a concept
+bip concept papers phylogenetic-inference
 
-This isn't just GitHub monitoring—it's structured communication for research teams, with AI agents helping generate readable summaries from raw activity.
+# Check what needs attention across repos
+bip checkin --since 2d
+```
+
+Agents read JSON output and call commands via bash. No MCP server required.
+
+### For ICs: Reference Management + Workflow
+
+Your paper library lives in git, not a proprietary database:
+
+```bash
+# Import from Paperpile
+bip import --format paperpile export.json
+
+# Add papers via DOI
+bip s2 add DOI:10.1038/s41586-024-07487-w
+
+# Open PDFs
+bip open Smith2024-ab
+
+# Export citations
+bip export --bibtex --append paper.bib Smith2024-ab Jones2023-cd
+
+# Build knowledge graph
+bip edge add -s Smith2024-ab -t phylogenetic-inference -r introduces
+```
+
+Pull changes from collaborators, run `bip rebuild`, and your index updates. `bip resolve` handles merge conflicts in refs.jsonl using paper metadata.
+
+### For Group Leaders: Coordination + Visibility
+
+See across all your team's repos without checking each one:
+
+```bash
+# What needs my attention?
+bip checkin
+
+# What happened this week?
+bip checkin --since 7d --summarize
+
+# Generate a narrative digest organized by research themes
+/bip.narrative dasm2 --verbose
+
+# Post to Slack
+bip digest --channel dasm2 --post
+
+# Spawn a Claude session with issue context pre-loaded
+bip spawn org/repo#123
+```
+
+Filtering shows only items waiting for your action. Digests organize work by research theme rather than by repository.
 
 ## A Workflow in Practice
 
-To make this concrete, here's how a research group might use bipartite:
+**Alice**, a graduate student, downloads two new papers to her Paperpile folder.
 
-- **Alice**, a graduate student, learns of two new papers—X and Y—through her research notifications feed. She downloads the PDFs to her Paperpile folder.
+Her **coding agent reads both papers** using the pdf-navigator MCP. It determines Paper X is directly relevant; Paper Y is tangential but cites a foundational Paper Z.
 
-- Her **coding agent reads both papers**. It determines that X is directly relevant to their current project, but Y is only tangentially related. However, Y cites an earlier paper Z that turns out to be central to the group's research program.
+The agent **fetches Paper Z** via Semantic Scholar, adds X and Z to the library with `bip s2 add`, and creates edges linking them to the group's concepts.
 
-- The agent **fetches paper Z** via Semantic Scholar, then adds both X and Z to Alice's local bipartite database with `bip s2 add`. It creates edges linking X and Z to the group's concepts.
+`bip open` **opens the PDFs** for Alice to verify. She confirms, the agent commits and pushes.
 
-- `bip open` **opens both PDFs** so Alice can verify they're indeed relevant. She reads them, confirms the agent's judgment, and approves.
+**Bernadetta**, the PI, pulls the changes and runs `bip rebuild`. Her agent scans the additions against her manuscripts and adds Paper X to the references where appropriate.
 
-- The agent **commits and pushes** to the group's shared paper repository with a message explaining that X is directly relevant to their current project and Z is a foundational paper cited by Y.
-
-- **Bernadetta**, the P.I., pulls these new papers to her machine and runs `bip rebuild`. Her agents scan the additions against her in-progress manuscripts.
-
-- An agent determines that **Paper X should be cited** in one of her drafts and adds it to the references at an appropriate location, updating the manuscript's `.bib` file.
-
-- Reading the commit message, Bernadetta realizes they should **compare their method to Paper Z's approach**. She spins up coding agents to develop such a comparison, with Z's citation already in hand.
-
-### Team Coordination Workflow
-
-Here's how a research group might use bipartite's coordination features:
-
-- **Throughout the day**: Researchers run `bip checkin` to see what needs attention across all tracked repos. Ball-in-my-court filtering shows only items waiting for their action.
-
-- **During the week**: Team members work on PRs across multiple repositories—data pipelines, model architectures, experiment notebooks.
-
-- **Friday afternoon**: An agent runs `/bip.narrative dasm2 --verbose` to generate a themed digest. The output organizes the week's work by research themes (Data Prep, Architecture, Training) rather than by repository.
-
-- **Review and post**: The P.I. reviews the generated markdown, makes any edits, then runs `bip digest --channel dasm2 --post` to share the summary to Slack.
-
-- **Board sync**: Running `bip board sync` ensures the GitHub project board reflects current priorities, flagging any P0 items not yet tracked.
-
-## Design Principles
-
-**Agent-first**: CLI is the primary interface. JSON output by default. No MCP server needed—agents use bash directly.
-
-**Git-versionable**: JSONL is the source of truth, human-readable and merge-friendly. SQLite is an ephemeral cache rebuilt on demand. Multiple researchers can add papers and resolve conflicts through git.
-
-**Minimal dependencies**: Fast startup, single binary, no heavyweight frameworks.
-
-## Team Coordination Commands
-
-Bipartite includes tools for synchronizing research work across GitHub repositories:
-
-| Command | Description |
-|---------|-------------|
-| `bip checkin` | Check recent GitHub activity across tracked repos |
-| `bip checkin --summarize` | Generate LLM summaries for each item |
-| `bip checkin --since 2d` | Check activity from the last 2 days |
-| `bip checkin --repo org/repo` | Check a single repo |
-| `bip checkin --all` | Show all activity (disable ball-in-my-court filtering) |
-| `bip board list` | List items on project boards by status |
-| `bip board add 123 --repo org/repo` | Add issue to board |
-| `bip board move 123 --status Done --repo org/repo` | Move issue to new status |
-| `bip board remove 123 --repo org/repo` | Remove issue from board |
-| `bip board sync` | Compare P0 beads with board items |
-| `bip board sync --fix` | Auto-add missing P0 beads to board |
-| `bip spawn org/repo#123` | Launch Claude Code in tmux with issue/PR context |
-| `bip spawn --prompt "..."` | Launch adhoc Claude Code session (no issue required) |
-| `bip digest --channel <name>` | Preview activity digest (use `--post` to send to Slack) |
-| `bip digest --channel <name> --verbose` | Include PR/issue body summaries |
-| `bip tree` | Generate interactive HTML tree of beads issues |
-| `bip tree --open` | Generate and open in browser |
-
-**Claude Code slash commands** for AI-assisted workflows:
-
-| Command | Description |
-|---------|-------------|
-| `/bip.narrative <channel>` | Generate themed prose digest from GitHub activity |
-| `/bip.narrative <channel> --verbose` | Include AI-summarized PR/issue bodies |
-| `/bip.checkin` | Interactive check-in on GitHub activity |
-| `/bip.digest` | Generate and optionally post Slack digest |
-
-These commands require a `sources.json` configuration file in the current directory (the "nexus" directory).
+**Friday afternoon**, an agent runs `/bip.narrative` to generate a themed digest of the week's work across all repos. Bernadetta reviews it and posts to Slack with `bip digest --post`.
 
 ## Installation
 
-### bip (Go)
-
 ```bash
-# Build and install globally (recommended)
+# Build and install
 go install ./cmd/bip
 
-# Or build locally and symlink
+# Or build locally
 go build -o bip ./cmd/bip
-ln -sf $(pwd)/bip ~/.local/bin/bip
 ```
 
-After installation, `bip` is available globally. Run commands from your nexus directory, which contains both the reference library (`.bipartite/`) and GitHub activity config (`sources.json`).
-
-Requires Go 1.21+ and `~/go/bin` or `~/.local/bin` in your PATH.
+Requires Go 1.21+ and `~/go/bin` in your PATH.
 
 ## Quick Start
 
 ```bash
-# Initialize repository
+# Initialize
 bip init
 
-# Configure PDF location (e.g., Paperpile's Google Drive folder)
+# Configure PDF location
 bip config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
 
 # Import references
-bip import --format paperpile ~/Downloads/paperpile-export.json
+bip import --format paperpile ~/Downloads/export.json
 
-# Rebuild search index
+# Build search index
 bip rebuild
 
 # Search
 bip search "phylogenetics"
-
-# Open a paper
-bip open Smith2026-ab
 ```
 
-## Reference Management Commands
+## Commands
+
+### Reference Management
 
 | Command | Description |
 |---------|-------------|
-| `bip init` | Initialize a new repository |
-| `bip config [key] [value]` | Get/set configuration |
-| `bip import --format paperpile <file>` | Import from Paperpile JSON |
-| `bip rebuild` | Rebuild search index from source data |
-| `bip search <query>` | Full-text search across titles, abstracts, authors, years |
-| `bip list` | List all references |
-| `bip get <id>` | Get a specific reference by ID |
-| `bip open <id>...` | Open PDFs by ID (supports multiple) |
-| `bip open --recent N` | Open N most recently added papers |
-| `bip open --since <commit>` | Open papers added since commit |
-| `bip export --bibtex [<id>...]` | Export to BibTeX (all or specific papers) |
-| `bip export --bibtex --append <file> <id>...` | Append to .bib with deduplication |
+| `bip init` | Initialize repository |
+| `bip import --format paperpile <file>` | Import from Paperpile |
+| `bip rebuild` | Rebuild search index |
+| `bip search <query>` | Full-text search |
+| `bip get <id>` | Get paper by ID |
+| `bip open <id>` | Open PDF |
+| `bip export --bibtex [<id>...]` | Export to BibTeX |
 | `bip diff` | Show papers added/removed since last commit |
-| `bip new --since <commit>` | List papers added since commit |
-| `bip new --days N` | List papers added in last N days |
-| `bip check` | Validate repository integrity |
-| `bip groom` | Detect orphaned edges; use `--fix` to remove |
-| `bip resolve` | Domain-aware merge conflict resolution for refs.jsonl |
-| `bip resolve --dry-run` | Preview conflict resolution without modifying files |
-| `bip resolve --interactive` | Interactively resolve true conflicts |
-| `bip dedupe --dry-run` | Show duplicate papers (by source ID) |
-| `bip dedupe --merge` | Merge duplicates: keep first, update edges |
+| `bip resolve` | Smart merge conflict resolution |
 
-### Semantic Scholar (S2) Commands
+### Semantic Scholar Integration
 
 | Command | Description |
 |---------|-------------|
-| `bip s2 add <paper-id>` | Add paper by DOI, arXiv ID, or S2 ID |
-| `bip s2 add-pdf <file>` | Add paper by extracting DOI from PDF |
-| `bip s2 lookup <paper-id>` | Look up paper info without adding |
-| `bip s2 citations <paper-id>` | Find papers that cite this paper |
-| `bip s2 references <paper-id>` | Find papers referenced by this paper |
+| `bip s2 add <paper-id>` | Add paper by DOI, arXiv, or S2 ID |
+| `bip s2 lookup <paper-id>` | Look up without adding |
+| `bip s2 citations <paper-id>` | Find citing papers |
 | `bip s2 gaps` | Discover highly-cited papers you're missing |
-| `bip s2 link-published` | Link preprints to published versions |
 
-Paper IDs support: `DOI:10.xxx`, `ARXIV:xxxx.xxxxx`, `PMID:xxxxxxxx`, or local IDs.
-
-### ASTA (Academic Search Tool API) Commands
-
-Read-only exploration of academic papers via Allen AI's ASTA service.
+### Knowledge Graph
 
 | Command | Description |
 |---------|-------------|
-| `bip asta search <query>` | Search papers by keyword relevance |
-| `bip asta snippet <query>` | Search text snippets within papers |
-| `bip asta paper <paper-id>` | Get paper details |
-| `bip asta citations <paper-id>` | Get papers that cite this paper |
-| `bip asta references <paper-id>` | Get papers referenced by this paper |
-| `bip asta author <name>` | Search for authors by name |
-| `bip asta author-papers <author-id>` | Get papers by an author |
+| `bip edge add -s <source> -t <target> -r <type>` | Add edge |
+| `bip edge list [<paper-id>]` | List edges |
+| `bip concept add <id> --name <name>` | Create concept |
+| `bip concept papers <id>` | Find linked papers |
+| `bip project add <id> --name <name>` | Create project |
+| `bip viz` | Generate interactive graph visualization |
 
-Common flags: `--limit N`, `--year YYYY:YYYY`, `--venue <name>`, `--human`.
-
-Requires `ASTA_API_KEY` environment variable.
-
-### Knowledge Graph Commands
+### Team Coordination
 
 | Command | Description |
 |---------|-------------|
-| `bip edge add -s <source> -t <target> -r <type> -m <summary>` | Add a directed edge between papers |
-| `bip edge import <file>` | Bulk import edges from JSONL |
-| `bip edge list` | List all edges in the knowledge graph |
-| `bip edge list <paper-id>` | List edges for a specific paper (`--incoming`, `--all`) |
-| `bip edge list --paper <id>` | Same as above (flag form) |
-| `bip edge list --concept <id>` | List edges involving a concept |
-| `bip edge list --project <id>` | List edges involving a project |
-| `bip edge search --type <type>` | Find edges by relationship type |
-| `bip edge export` | Export edges to JSONL (`--paper` to filter) |
+| `bip checkin` | Check GitHub activity across repos |
+| `bip checkin --summarize` | With LLM summaries |
+| `bip board list` | View project board |
+| `bip board sync` | Sync priorities with board |
+| `bip spawn org/repo#123` | Launch Claude with issue context |
+| `bip digest --channel <name>` | Preview Slack digest |
+| `bip digest --channel <name> --post` | Post to Slack |
+| `bip tree --open` | View task hierarchy in browser |
 
-Relationship types: `cites`, `extends`, `contradicts`, `implements`, `applies-to`, `builds-on` (custom types also allowed).
+### Claude Code Skills
 
-### Concept Commands
+| Skill | Description |
+|-------|-------------|
+| `/bip.narrative <channel>` | Generate themed prose digest |
+| `/bip.checkin` | Interactive activity check-in |
+| `/bip.digest` | Generate and post Slack digest |
+| `/bip.spawn` | Launch Claude session with context |
+| `/bip.board` | Project board operations |
+| `/bip.tree` | Task hierarchy visualization |
 
-Concepts are named ideas, methods, or phenomena that papers relate to. They enable organizing your library by topic.
+## Data Storage
 
-| Command | Description |
-|---------|-------------|
-| `bip concept add <id> --name <name>` | Create a concept with optional `--aliases`, `--description` |
-| `bip concept get <id>` | Get a concept by ID |
-| `bip concept list` | List all concepts |
-| `bip concept update <id>` | Update concept `--name`, `--aliases`, or `--description` |
-| `bip concept delete <id>` | Delete concept (use `--force` if edges exist) |
-| `bip concept papers <id>` | Find papers linked to a concept (`--type` to filter) |
-| `bip concept merge <source> <target>` | Merge one concept into another |
-| `bip paper concepts <id>` | Find concepts linked to a paper (`--type` to filter) |
+```
+.bipartite/
+├── refs.jsonl      # Papers (source of truth)
+├── edges.jsonl     # Knowledge graph edges
+├── concepts.jsonl  # Concept nodes
+├── projects.jsonl  # Project nodes
+├── repos.jsonl     # Repo nodes
+├── config.json     # Local config
+└── cache/
+    └── refs.db     # SQLite index (ephemeral, gitignored)
+```
 
-Paper-concept relationship types: `introduces`, `applies`, `models`, `evaluates-with`, `critiques`, `extends`.
-
-### Project Commands
-
-Projects represent ongoing research work (papers being written, software tools). They connect to concepts, forming the complete bipartite graph: papers ↔ concepts ↔ projects.
-
-| Command | Description |
-|---------|-------------|
-| `bip project add <id> --name <name>` | Create a project with optional `--description` |
-| `bip project get <id>` | Get a project by ID |
-| `bip project list` | List all projects |
-| `bip project update <id>` | Update project `--name` or `--description` |
-| `bip project delete <id>` | Delete project (use `--force` if repos/edges exist) |
-| `bip project repos <id>` | List repos belonging to a project |
-| `bip project concepts <id>` | List concepts linked to a project (`--type` to filter) |
-| `bip project papers <id>` | List papers transitively linked via concepts |
-
-Concept-project relationship types: `implemented-in`, `applied-in`, `studied-by`, `introduces`, `refines`.
-
-### Repo Commands
-
-Repos are GitHub repositories belonging to projects. They store metadata but cannot have edges.
-
-| Command | Description |
-|---------|-------------|
-| `bip repo add <github-url> --project <id>` | Add GitHub repo to project (auto-fetches metadata) |
-| `bip repo add --manual --project <id> --id <id> --name <name>` | Add non-GitHub repo |
-| `bip repo get <id>` | Get a repo by ID |
-| `bip repo list` | List all repos (`--project` to filter) |
-| `bip repo update <id>` | Update repo `--name`, `--description`, or `--topics` |
-| `bip repo delete <id>` | Delete a repo |
-| `bip repo refresh <id>` | Re-fetch GitHub metadata |
-
-Accepts GitHub URLs or shorthand: `matsen/bipartite` or `https://github.com/matsen/bipartite`.
-
-### Visualization Commands
-
-| Command | Description |
-|---------|-------------|
-| `bip viz` | Generate interactive HTML knowledge graph to stdout |
-| `bip viz --output <file>` | Generate to file |
-| `bip viz --layout <type>` | Layout: `force` (default), `circle`, `grid` |
-| `bip viz --offline` | Bundle Cytoscape.js inline for offline use |
-
-The visualization shows papers (blue circles) and concepts (orange diamonds) with edges colored by relationship type. Hover for details, click to highlight connections.
-
-All commands output JSON by default. Use `--human` for readable output.
+JSONL files are human-readable and git-mergeable. The SQLite cache rebuilds on demand.
 
 ## Configuration
 
@@ -321,80 +240,8 @@ All commands output JSON by default. Use `--human` for readable output.
 
 | Variable | Description |
 |----------|-------------|
-| `S2_API_KEY` | Semantic Scholar API key for higher rate limits (optional) |
-| `ASTA_API_KEY` | ASTA API key for academic search (required for `bip asta` commands) |
-
-Add to `.env` file (gitignored):
-```
-S2_API_KEY=your_key_here
-ASTA_API_KEY=your_key_here
-```
-
-Get an S2 API key at: https://www.semanticscholar.org/product/api#api-key-form
-
-## Performance
-
-Tested on a 6,400 paper library (32MB Paperpile export):
-
-| Operation | Time |
-|-----------|------|
-| Import | 0.4s |
-| Rebuild index | 7s |
-| Search | 9ms |
-
-## Data Storage
-
-```
-.bipartite/
-├── refs.jsonl      # Papers - human-readable, git-mergeable
-├── edges.jsonl     # Knowledge graph edges - git-mergeable
-├── concepts.jsonl  # Concept nodes - git-mergeable
-├── projects.jsonl  # Project nodes - git-mergeable
-├── repos.jsonl     # Repo nodes - git-mergeable
-├── config.json     # Local configuration
-└── cache/
-    └── refs.db     # SQLite with FTS5 - ephemeral, gitignored
-```
-
-JSONL files are the source of truth and can be version-controlled. The SQLite cache is rebuilt with `bip rebuild` after pulling changes.
-
-## Collaboration Workflow
-
-```bash
-# Researcher A adds papers
-bip import --format paperpile export-a.json
-git add .bipartite/refs.jsonl
-git commit -m "Add phylogenetics papers"
-git push
-
-# Researcher B does the same
-bip import --format paperpile export-b.json
-git commit -m "Add ML papers"
-git push
-
-# After pull/merge
-git pull
-bip rebuild  # Refresh local index
-```
-
-### Resolving Merge Conflicts
-
-When two researchers add the same paper independently (common with popular papers), git sees a conflict in refs.jsonl. But bip understands paper metadata:
-
-```bash
-# After git merge with conflicts in refs.jsonl
-bip resolve --dry-run    # Preview what would happen
-bip resolve              # Auto-resolve: keep more complete version, merge complementary metadata
-
-# For true conflicts (same field, different values)
-bip resolve --interactive  # Prompts for each unresolvable field
-```
-
-Resolution logic:
-- **Same paper, different completeness**: Keeps the version with more metadata (abstract, authors, venue)
-- **Complementary metadata**: Merges both (e.g., one has abstract, other has venue)
-- **Different papers**: Includes both
-- **True conflicts**: Requires `--interactive` (both have different abstracts, for example)
+| `S2_API_KEY` | Semantic Scholar API key (optional, for higher rate limits) |
+| `ASTA_API_KEY` | ASTA API key (required for `bip asta` commands) |
 
 ## License
 
