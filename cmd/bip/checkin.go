@@ -173,11 +173,89 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating summaries: %v\n", err)
 		} else {
-			for ref, summary := range summaries {
-				fmt.Printf("  %s: %s\n", ref, summary)
-			}
+			printSummariesByRepo(allItems, summaries)
 		}
 	}
+}
+
+// printSummariesByRepo prints summaries grouped by repo with clickable URLs.
+func printSummariesByRepo(items []flow.ItemDetails, summaries flow.TakehomeSummary) {
+	// Build lookup for item info (IsPR) by ref
+	itemInfo := make(map[string]flow.ItemDetails)
+	for _, item := range items {
+		itemInfo[item.Ref] = item
+	}
+
+	// Group refs by repo (preserving order)
+	type repoItems struct {
+		repo string
+		refs []string
+	}
+	var repoOrder []repoItems
+	repoMap := make(map[string]int) // repo -> index in repoOrder
+
+	for _, item := range items {
+		ref := item.Ref
+		// Extract repo from ref (e.g., "org/repo#123" -> "org/repo")
+		repo := extractRepoFromRef(ref)
+		if idx, exists := repoMap[repo]; exists {
+			repoOrder[idx].refs = append(repoOrder[idx].refs, ref)
+		} else {
+			repoMap[repo] = len(repoOrder)
+			repoOrder = append(repoOrder, repoItems{repo: repo, refs: []string{ref}})
+		}
+	}
+
+	// Print grouped output
+	for _, ri := range repoOrder {
+		repoName := flow.ExtractRepoName(ri.repo)
+		fmt.Printf("\n  %s\n\n", repoName)
+
+		for _, ref := range ri.refs {
+			summary, ok := summaries[ref]
+			if !ok {
+				continue
+			}
+
+			// Generate URL
+			info := itemInfo[ref]
+			number := extractNumberFromRef(ref)
+			itemType := "issue"
+			if info.IsPR {
+				itemType = "pr"
+			}
+			url := flow.GitHubURL(ri.repo, number, itemType)
+
+			fmt.Printf("  - %s\n", summary)
+			fmt.Printf("    %s\n", url)
+		}
+	}
+}
+
+// extractRepoFromRef extracts "org/repo" from "org/repo#123".
+func extractRepoFromRef(ref string) string {
+	for i := len(ref) - 1; i >= 0; i-- {
+		if ref[i] == '#' {
+			return ref[:i]
+		}
+	}
+	return ref
+}
+
+// extractNumberFromRef extracts 123 from "org/repo#123".
+func extractNumberFromRef(ref string) int {
+	for i := len(ref) - 1; i >= 0; i-- {
+		if ref[i] == '#' {
+			num := 0
+			for _, ch := range ref[i+1:] {
+				if ch >= '0' && ch <= '9' {
+					num = num*10 + int(ch-'0')
+				}
+			}
+			return num
+		}
+	}
+	return 0
 }
 
 func printItems(items []flow.GitHubItem, label string, since time.Time) {

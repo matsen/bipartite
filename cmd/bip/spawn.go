@@ -110,6 +110,9 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	repoName := flow.ExtractRepoName(ref.Repo)
 	windowName := fmt.Sprintf("%s#%d", repoName, ref.Number)
 
+	// Print spawning message first
+	fmt.Printf("Spawning tmux window %s...\n", windowName)
+
 	// Build prompt
 	var prompt string
 	if spawnPrompt != "" {
@@ -123,6 +126,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	// Add project context if available
 	contextPath := flow.GetRepoContextPath(ref.Repo)
 	if contextPath != "" {
+		fmt.Printf("Context: %s\n", contextPath)
 		if contextData, err := os.ReadFile(contextPath); err == nil {
 			prompt = fmt.Sprintf("## Project Context\n\n%s\n\n---\n\n%s", string(contextData), prompt)
 		}
@@ -131,6 +135,9 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	// Create tmux window
 	url := flow.GitHubURL(ref.Repo, ref.Number, itemType)
 	spawnWindow(windowName, repoPath, prompt, url)
+
+	// Print URL as last line for easy clicking
+	fmt.Println(url)
 }
 
 func runAdhocSpawn() {
@@ -140,6 +147,7 @@ func runAdhocSpawn() {
 		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Printf("Spawning tmux window %s...\n", windowName)
 	spawnWindow(windowName, workDir, spawnPrompt, "")
 }
 

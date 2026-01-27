@@ -72,7 +72,6 @@ func CreateWindow(windowName, repoPath, prompt, url string) error {
 		return fmt.Errorf("sending command to window: %w", err)
 	}
 
-	fmt.Printf("Created window: %s\n", windowName)
 	return nil
 }
 
