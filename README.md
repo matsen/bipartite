@@ -4,13 +4,13 @@ Bipartite is:
 
 * A **Go CLI** for querying local and remote academic literature, GitHub activity across repos, and your group's knowledge graph
 * A collection of **Claude Code skills** for synthesis: narrative digests, interactive check-ins, spawning sessions with context
-* A **git-backed system** that keeps your group's papers, concepts, projects, and coordination state in one repository
+* A **git-backed system** that keeps your group's papers, concepts, projects, and coordination state in one private repository
 
 The name refers to the graph at the core: one side is your world (projects, repos, concepts, active work), the other is the literature (papers, citations, authors), with typed edges connecting them.
 
 ## The Problem
 
-Agentic coding has transformed individual contributor (IC) work. A researcher can pair with Claude to write code, debug pipelines, and draft papers. But agents haven't had an equivalent effect for group leaders (PIs, team leads, managers) who need to:
+Agentic coding has transformed individual contributor (IC) work. A researcher can pair with Claude to write code and debug pipelines. But agents haven't had an equivalent effect for group leaders (PIs, team leads, managers) who need to:
 
 - Track activity across many repositories
 - Connect ongoing work to relevant literature
@@ -20,9 +20,21 @@ The context for these tasks is scattered across GitHub, Slack, reference manager
 
 Bipartite creates a **context layer** that both agents and humans can query: connecting your internal research world to the external academic world.
 
-## The Solution
+## Is This For You?
 
-Edges in the graph carry meaning: a paper *introduces* a concept, a project *implements* a method. Agents traverse these edges to find relevant citations or understand how your work relates to published research.
+I wrote this for me. It might be for you if:
+
+- You're happiest spending your working life in the terminal
+- Your work concerns text files (e.g. `.tex` and `.py`)
+- GitHub is how your group coordinates
+
+This isn't true for everyone, and that's fine. 
+
+## How It Works
+
+The CLI provides fast local operations: searching papers, checking GitHub activity, managing references. When you need synthesis (narrative digests, summarization, connecting ideas), Claude Code skills layer intelligence on top.
+
+The knowledge graph connects your internal world (projects, repos, concepts) to the external academic world (papers, citations, authors). Edges carry meaning: a paper *introduces* a concept, a project *implements* a method. But the graph is one part of the system, not the whole thing.
 
 ### Three Audiences, One Tool
 
@@ -80,7 +92,7 @@ bip open Smith2024-ab
 bip export --bibtex --append paper.bib Smith2024-ab Jones2023-cd
 
 # Build knowledge graph
-bip edge add -s Smith2024-ab -t phylogenetic-inference -r introduces
+bip edge add -s Kingma2014-mo -t variational-autoencoder -r introduces
 ```
 
 Pull changes from collaborators, run `bip rebuild`, and your index updates. `bip resolve` handles merge conflicts in refs.jsonl using paper metadata.
