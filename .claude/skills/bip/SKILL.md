@@ -10,13 +10,40 @@ A CLI tool for managing academic references with local storage and external pape
 **Repository**: `~/re/nexus`
 **PDF Storage**: `/Users/matsen/Google Drive/My Drive/Paperpile`
 
+## ⚠️ CRITICAL: Local-First Search Policy
+
+**ALWAYS search locally before using external APIs. NEVER call ASTA without explicit user permission.**
+
+The nexus library has ~6000 papers. Most relevant papers are already there.
+
+### Required Search Order
+
+1. **Local search FIRST** (always do this):
+   ```bash
+   cd ~/re/nexus && bip search "author keyword"
+   ```
+
+2. **If `bip search` fails** (e.g., schema error), rebuild the database:
+   ```bash
+   cd ~/re/nexus && rm .bipartite/cache/refs.db && bip rebuild
+   ```
+   Then retry the search.
+
+3. **Only if not found locally AND user confirms**, use ASTA:
+   ```
+   "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
+   ```
+
+**DO NOT** call `bip asta`, `mcp__asta__*`, or any external API without asking first.
+
 ## Argument Handling
 
 When invoked with arguments like `/bip find <query>` or `/bip <query>`:
 
 1. **Always search local library first** with `bip search "<query>"`
-2. If not found locally, then search externally with `bip asta search`
-3. For title searches, use the full title; for topic searches, use key terms
+2. If local search fails with an error, rebuild the database and retry
+3. **Only after exhausting local options**, ask user if they want to search externally
+4. For title searches, use the full title; for topic searches, use key terms
 
 ## Proactive Concept Discovery
 
@@ -301,6 +328,16 @@ If `bip get <id>` or `bip asta paper <id>` fails:
 1. **Verify ID format**: `DOI:10.xxxx/yyyy` (include prefix)
 2. **Try alternate IDs**: Same paper may have DOI, PMID, arXiv ID
 3. **Search by title instead**: `bip asta search "exact paper title"`
+
+### SQL Schema Errors
+
+If you see errors like `no such column: pmid` or similar schema mismatches:
+
+```bash
+cd ~/re/nexus && rm .bipartite/cache/refs.db && bip rebuild
+```
+
+The SQLite database is ephemeral and rebuilt from the JSONL source of truth. Schema changes require deleting and rebuilding.
 
 ### Slow Performance
 

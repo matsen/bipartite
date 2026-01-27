@@ -58,7 +58,11 @@ Combine:
 
 ## If Paper NOT in Local Library
 
-Use ASTA MCP tools (or `bip asta` commands) to search broader literature:
+**⚠️ STOP: Ask the user before proceeding with external search.**
+
+Say: "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
+
+Only after user confirms, use ASTA MCP tools (or `bip asta` commands) to search broader literature:
 
 ### Search by Title/Keyword
 
