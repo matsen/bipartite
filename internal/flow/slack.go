@@ -15,6 +15,11 @@ import (
 // slackAPITimeout is the HTTP client timeout for Slack API calls.
 const slackAPITimeout = 30 * time.Second
 
+// newSlackHTTPClient creates an HTTP client configured for Slack API calls.
+func newSlackHTTPClient() *http.Client {
+	return &http.Client{Timeout: slackAPITimeout}
+}
+
 // SlackClient provides read access to Slack channels via the API.
 type SlackClient struct {
 	token      string
@@ -31,7 +36,7 @@ func NewSlackClient() (*SlackClient, error) {
 
 	return &SlackClient{
 		token:      token,
-		httpClient: &http.Client{Timeout: slackAPITimeout},
+		httpClient: newSlackHTTPClient(),
 		userCache:  make(map[string]string),
 	}, nil
 }
@@ -77,11 +82,15 @@ type ChannelInfo struct {
 	Purpose string `json:"purpose"`
 }
 
+// webhookEnvVar returns the environment variable name for a channel's webhook.
+func webhookEnvVar(channel string) string {
+	return "SLACK_WEBHOOK_" + strings.ToUpper(channel)
+}
+
 // GetWebhookURL returns the Slack webhook URL for a channel from environment.
 // Looks for SLACK_WEBHOOK_<CHANNEL> environment variable.
 func GetWebhookURL(channel string) string {
-	envVar := fmt.Sprintf("SLACK_WEBHOOK_%s", strings.ToUpper(channel))
-	return os.Getenv(envVar)
+	return os.Getenv(webhookEnvVar(channel))
 }
 
 // PostToSlack posts a message to Slack via webhook.
@@ -92,7 +101,7 @@ func PostToSlack(webhookURL, message string) error {
 		return fmt.Errorf("marshaling payload: %w", err)
 	}
 
-	client := &http.Client{Timeout: slackAPITimeout}
+	client := newSlackHTTPClient()
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
@@ -116,7 +125,7 @@ func PostToSlack(webhookURL, message string) error {
 func SendDigest(channel, message string) error {
 	webhookURL := GetWebhookURL(channel)
 	if webhookURL == "" {
-		return fmt.Errorf("no webhook configured for channel '%s'; set SLACK_WEBHOOK_%s", channel, strings.ToUpper(channel))
+		return fmt.Errorf("no webhook configured for channel '%s'; set %s", channel, webhookEnvVar(channel))
 	}
 	return PostToSlack(webhookURL, message)
 }
@@ -195,9 +204,9 @@ type slackUserProfile struct {
 	RealName    string `json:"real_name"`
 }
 
-// preferredName returns the best display name for the user.
-// Prefers display name, falls back to real name, then username.
-func (u slackUser) preferredName() string {
+// displayNameWithFallback returns the best display name for the user.
+// Priority: display name → real name → username.
+func (u slackUser) displayNameWithFallback() string {
 	if u.Profile.DisplayName != "" {
 		return u.Profile.DisplayName
 	}
@@ -236,11 +245,13 @@ func (c *SlackClient) GetUsers() (map[string]string, error) {
 		}
 
 		var result slackUsersResponse
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			resp.Body.Close()
+		err = func() error {
+			defer resp.Body.Close()
+			return json.NewDecoder(resp.Body).Decode(&result)
+		}()
+		if err != nil {
 			return nil, fmt.Errorf("parsing users response: %w", err)
 		}
-		resp.Body.Close()
 
 		if !result.OK {
 			return nil, fmt.Errorf("Slack API error: %s", result.Error)
@@ -248,7 +259,7 @@ func (c *SlackClient) GetUsers() (map[string]string, error) {
 
 		// Update cache with users from this page
 		for _, user := range result.Members {
-			c.userCache[user.ID] = user.preferredName()
+			c.userCache[user.ID] = user.displayNameWithFallback()
 		}
 
 		// Check for more pages
@@ -285,11 +296,31 @@ type slackMessage struct {
 
 // GetChannelHistory fetches messages from a Slack channel.
 func (c *SlackClient) GetChannelHistory(channelID string, oldest time.Time, limit int) ([]Message, error) {
+	// Validate inputs
+	if channelID == "" {
+		return nil, fmt.Errorf("channelID cannot be empty")
+	}
+	if limit <= 0 {
+		return nil, fmt.Errorf("limit must be positive, got %d", limit)
+	}
+
 	// Load user cache
 	if err := c.loadUserCache(); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: could not load user cache: %v\n", err)
 	}
 
+	// Fetch messages from Slack API
+	slackMessages, err := c.fetchChannelMessages(channelID, oldest, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to our Message format with user name resolution
+	return c.convertSlackMessages(slackMessages)
+}
+
+// fetchChannelMessages calls the Slack conversations.history API.
+func (c *SlackClient) fetchChannelMessages(channelID string, oldest time.Time, limit int) ([]slackMessage, error) {
 	url := fmt.Sprintf("https://slack.com/api/conversations.history?channel=%s&oldest=%d&limit=%d",
 		channelID, oldest.Unix(), limit)
 
@@ -318,9 +349,13 @@ func (c *SlackClient) GetChannelHistory(channelID string, oldest time.Time, limi
 		return nil, fmt.Errorf("Slack API error: %s", result.Error)
 	}
 
-	// Convert to our Message format
+	return result.Messages, nil
+}
+
+// convertSlackMessages transforms Slack API messages to our Message format.
+func (c *SlackClient) convertSlackMessages(slackMessages []slackMessage) ([]Message, error) {
 	var messages []Message
-	for _, m := range result.Messages {
+	for _, m := range slackMessages {
 		// Skip non-user messages (subtypes like channel_join, etc.)
 		if m.SubType != "" {
 			continue
@@ -331,29 +366,33 @@ func (c *SlackClient) GetChannelHistory(channelID string, oldest time.Time, limi
 		if err != nil {
 			return nil, fmt.Errorf("parsing message timestamp: %w", err)
 		}
-		date := ts.Format("2006-01-02")
 
-		// Look up user name (with fallback to API for Enterprise Grid users)
-		userName := c.userCache[m.User]
-		if userName == "" {
-			// Try to fetch individual user (handles Enterprise Grid)
-			if fetched := c.lookupUser(m.User); fetched != "" {
-				userName = fetched
-			} else {
-				userName = m.User // Fall back to user ID
-			}
-		}
+		// Resolve user name
+		userName := c.resolveUserNameWithFallback(m.User)
 
 		messages = append(messages, Message{
 			Timestamp: m.TS,
 			UserID:    m.User,
 			UserName:  userName,
-			Date:      date,
+			Date:      ts.Format("2006-01-02"),
 			Text:      m.Text,
 		})
 	}
-
 	return messages, nil
+}
+
+// resolveUserNameWithFallback looks up a user name from cache, falling back to API lookup.
+func (c *SlackClient) resolveUserNameWithFallback(userID string) string {
+	if name, ok := c.userCache[userID]; ok {
+		return name
+	}
+
+	// Try to fetch individual user (handles Enterprise Grid)
+	if name, err := c.lookupUser(userID); err == nil && name != "" {
+		return name
+	}
+
+	return userID // Fall back to user ID
 }
 
 // slackUserInfoResponse is the response from users.info API.
@@ -363,32 +402,32 @@ type slackUserInfoResponse struct {
 }
 
 // lookupUser fetches a single user by ID via users.info API.
-// Updates the cache if successful. Returns empty string on failure.
-func (c *SlackClient) lookupUser(userID string) string {
+// Updates the cache if successful. Returns an error on failure.
+func (c *SlackClient) lookupUser(userID string) (string, error) {
 	url := fmt.Sprintf("https://slack.com/api/users.info?user=%s", userID)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("creating request: %w", err)
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("fetching user info: %w", err)
 	}
 	defer resp.Body.Close()
 
 	var result slackUserInfoResponse
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return ""
+		return "", fmt.Errorf("parsing user info response: %w", err)
 	}
 
 	if !result.OK {
-		return ""
+		return "", fmt.Errorf("Slack API error: %s", result.Error)
 	}
 
-	name := result.User.preferredName()
+	name := result.User.displayNameWithFallback()
 
 	// Update cache
 	c.userCache[userID] = name
@@ -396,18 +435,29 @@ func (c *SlackClient) lookupUser(userID string) string {
 		fmt.Fprintf(os.Stderr, "Warning: could not save user cache: %v\n", err)
 	}
 
-	return name
+	return name, nil
 }
 
 // parseSlackTimestamp parses a Slack timestamp string (e.g., "1737990123.000100").
+// The format is Unix seconds, optionally followed by a decimal point and microseconds.
 func parseSlackTimestamp(ts string) (time.Time, error) {
-	parts := strings.Split(ts, ".")
-	if len(parts) == 0 || parts[0] == "" {
-		return time.Time{}, fmt.Errorf("invalid Slack timestamp: %s", ts)
+	if ts == "" {
+		return time.Time{}, fmt.Errorf("timestamp cannot be empty")
 	}
-	sec, err := strconv.ParseInt(parts[0], 10, 64)
+
+	// Extract seconds (before decimal point)
+	secStr := ts
+	if idx := strings.IndexByte(ts, '.'); idx != -1 {
+		secStr = ts[:idx]
+	}
+
+	if secStr == "" {
+		return time.Time{}, fmt.Errorf("invalid Slack timestamp: %q", ts)
+	}
+
+	sec, err := strconv.ParseInt(secStr, 10, 64)
 	if err != nil {
-		return time.Time{}, fmt.Errorf("invalid Slack timestamp %s: %w", ts, err)
+		return time.Time{}, fmt.Errorf("invalid Slack timestamp %q: %w", ts, err)
 	}
 	return time.Unix(sec, 0), nil
 }
