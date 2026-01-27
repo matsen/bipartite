@@ -2,11 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/store"
@@ -74,15 +73,10 @@ func runSlackIngest(cmd *cobra.Command, args []string) error {
 		return outputSlackError(ExitSlackChannelNotFound, "channel_not_found", err.Error())
 	}
 
-	// Create Slack client
-	client, err := flow.NewSlackClient()
+	// Create Slack client with user cache
+	client, err := createSlackClientWithUsers()
 	if err != nil {
-		return outputSlackError(ExitSlackMissingToken, "missing_token", err.Error())
-	}
-
-	// Load user cache
-	if _, err := client.GetUsers(); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not load users: %v\n", err)
+		return err
 	}
 
 	// Open or create store
@@ -91,49 +85,78 @@ func runSlackIngest(cmd *cobra.Command, args []string) error {
 		return outputSlackError(ExitError, "store_error", err.Error())
 	}
 
-	// Calculate time range
-	var oldest time.Time
-	if slackIngestSince != "" {
-		t, err := time.Parse("2006-01-02", slackIngestSince)
-		if err != nil {
-			return outputSlackError(1, "invalid_date", fmt.Sprintf("invalid date format '%s'; use YYYY-MM-DD", slackIngestSince))
-		}
-		oldest = t
-	} else {
-		oldest = time.Now().AddDate(0, 0, -slackIngestDays)
-	}
-
-	// Fetch messages
-	messages, err := client.GetChannelHistory(channelConfig.ID, oldest, slackIngestLimit)
+	// Fetch messages from Slack
+	messages, err := fetchSlackMessages(client, channelConfig.ID, channelName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not_in_channel") {
-			return outputSlackError(ExitSlackNotMember, "not_member",
-				fmt.Sprintf("Bot is not a member of channel '%s'. Invite the bot with /invite @bot-name", channelName))
-		}
-		return outputSlackError(1, "api_error", err.Error())
+		return err
 	}
 
 	// Ingest messages into store
-	ingested := 0
-	skipped := 0
-
-	for _, msg := range messages {
-		record := messageToRecord(channelName, msg)
-		err := s.Append(record)
-		if err != nil {
-			if strings.Contains(err.Error(), "duplicate primary key") {
-				skipped++
-				continue
-			}
-			return outputSlackError(ExitError, "store_error", fmt.Sprintf("appending record: %v", err))
-		}
-		ingested++
+	ingested, skipped, err := ingestMessagesToStore(s, channelName, messages)
+	if err != nil {
+		return err
 	}
 
 	// Output result
+	outputIngestResult(channelName, slackIngestStore, ingested, skipped, storeCreated)
+	return nil
+}
+
+// createSlackClientWithUsers creates a Slack client and loads the user cache.
+func createSlackClientWithUsers() (*flow.SlackClient, error) {
+	client, err := flow.NewSlackClient()
+	if err != nil {
+		return nil, outputSlackError(ExitSlackMissingToken, "missing_token", err.Error())
+	}
+
+	if _, err := client.GetUsers(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not load users: %v\n", err)
+	}
+
+	return client, nil
+}
+
+// fetchSlackMessages fetches messages from a Slack channel with proper error handling.
+func fetchSlackMessages(client *flow.SlackClient, channelID, channelName string) ([]flow.Message, error) {
+	timeRange, err := flow.ParseTimeRange(slackIngestSince, slackIngestDays)
+	if err != nil {
+		return nil, outputSlackError(1, "invalid_date", err.Error())
+	}
+
+	messages, err := client.GetChannelHistory(channelID, timeRange.Oldest, slackIngestLimit)
+	if err != nil {
+		if errors.Is(err, flow.ErrSlackNotInChannel) {
+			return nil, outputSlackError(ExitSlackNotMember, "not_member",
+				fmt.Sprintf("Bot is not a member of channel '%s'. Invite the bot with /invite @bot-name", channelName))
+		}
+		return nil, outputSlackError(1, "api_error", err.Error())
+	}
+
+	return messages, nil
+}
+
+// ingestMessagesToStore appends messages to the store, skipping duplicates.
+// Returns the count of ingested and skipped messages.
+func ingestMessagesToStore(s *store.Store, channelName string, messages []flow.Message) (ingested, skipped int, err error) {
+	for _, msg := range messages {
+		record := messageToRecord(channelName, msg)
+		if appendErr := s.Append(record); appendErr != nil {
+			if errors.Is(appendErr, store.ErrDuplicatePrimaryKey) {
+				skipped++
+				continue
+			}
+			return ingested, skipped, outputSlackError(ExitError, "store_error", fmt.Sprintf("appending record: %v", appendErr))
+		}
+		ingested++
+	}
+	return ingested, skipped, nil
+}
+
+// outputIngestResult outputs the ingestion result in JSON or human-readable format.
+func outputIngestResult(channel, storeName string, ingested, skipped int, storeCreated bool) {
 	result := SlackIngestResult{
-		Channel:      channelName,
-		Store:        slackIngestStore,
+		Channel:      channel,
+		Store:        storeName,
 		Ingested:     ingested,
 		Skipped:      skipped,
 		StoreCreated: storeCreated,
@@ -141,18 +164,16 @@ func runSlackIngest(cmd *cobra.Command, args []string) error {
 
 	if humanOutput {
 		if storeCreated {
-			fmt.Printf("Created store '%s'\n", slackIngestStore)
+			fmt.Printf("Created store '%s'\n", storeName)
 		}
 		if skipped > 0 {
-			fmt.Printf("Ingested %d messages into '%s' (%d duplicates skipped)\n", ingested, slackIngestStore, skipped)
+			fmt.Printf("Ingested %d messages into '%s' (%d duplicates skipped)\n", ingested, storeName, skipped)
 		} else {
-			fmt.Printf("Ingested %d messages into '%s'\n", ingested, slackIngestStore)
+			fmt.Printf("Ingested %d messages into '%s'\n", ingested, storeName)
 		}
 	} else {
 		outputJSON(result)
 	}
-
-	return nil
 }
 
 // messageToRecord converts a Slack message to a store record.

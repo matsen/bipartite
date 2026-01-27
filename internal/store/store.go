@@ -3,12 +3,16 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 )
+
+// ErrDuplicatePrimaryKey is returned when attempting to append a record with an existing primary key.
+var ErrDuplicatePrimaryKey = errors.New("duplicate primary key")
 
 // Store represents a registered data store.
 type Store struct {
@@ -408,7 +412,7 @@ func (s *Store) Append(record Record) error {
 		return fmt.Errorf("checking duplicates: %w", err)
 	}
 	if isDupe {
-		return fmt.Errorf("duplicate primary key: %q already exists", pkValue)
+		return fmt.Errorf("%w: %q already exists", ErrDuplicatePrimaryKey, pkValue)
 	}
 
 	// Append to JSONL

@@ -3,6 +3,7 @@ package flow
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"strings"
 	"time"
 )
+
+// ErrSlackNotInChannel is returned when the bot is not a member of the channel.
+var ErrSlackNotInChannel = errors.New("bot is not a member of this channel")
 
 // slackAPITimeout is the HTTP client timeout for Slack API calls.
 const slackAPITimeout = 30 * time.Second
@@ -344,7 +348,7 @@ func (c *SlackClient) fetchChannelMessages(channelID string, oldest time.Time, l
 
 	if !result.OK {
 		if result.Error == "channel_not_found" || result.Error == "not_in_channel" {
-			return nil, fmt.Errorf("not_in_channel: bot is not a member of this channel; invite the bot with /invite @bot-name")
+			return nil, fmt.Errorf("%w: invite the bot with /invite @bot-name", ErrSlackNotInChannel)
 		}
 		return nil, fmt.Errorf("Slack API error: %s", result.Error)
 	}
