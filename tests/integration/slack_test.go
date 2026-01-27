@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/matsen/bipartite/internal/flow"
@@ -193,7 +194,7 @@ func filterEnv(env []string, key string) []string {
 	result := make([]string, 0, len(env))
 	prefix := key + "="
 	for _, e := range env {
-		if len(e) > len(prefix) && e[:len(prefix)] == prefix {
+		if strings.HasPrefix(e, prefix) {
 			continue
 		}
 		result = append(result, e)
@@ -268,27 +269,8 @@ func TestSlackIngestJSONFormat(t *testing.T) {
 	}
 
 	bp := getBPBinary(t)
-
-	// Create a temp directory for the test
-	tmpDir, err := os.MkdirTemp("", "slack-ingest-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
+	tmpDir := setupTempDirWithSlackConfig(t)
 	defer os.RemoveAll(tmpDir)
-
-	// Copy sources.json from nexus to temp dir
-	nexusDir := getNexusDir(t)
-	if !hasSlackConfig(nexusDir) {
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
-	}
-
-	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
-	if err != nil {
-		t.Fatalf("failed to read sources.json: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
-		t.Fatalf("failed to write sources.json: %v", err)
-	}
 
 	// Run ingest with --create-store to create a new store
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "test_slack_msgs", "--create-store", "--limit", "5", "--days", "7")
@@ -344,27 +326,8 @@ func TestSlackIngestIdempotency(t *testing.T) {
 	}
 
 	bp := getBPBinary(t)
-
-	// Create a temp directory for the test
-	tmpDir, err := os.MkdirTemp("", "slack-ingest-idem-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
+	tmpDir := setupTempDirWithSlackConfig(t)
 	defer os.RemoveAll(tmpDir)
-
-	// Copy sources.json from nexus to temp dir
-	nexusDir := getNexusDir(t)
-	if !hasSlackConfig(nexusDir) {
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
-	}
-
-	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
-	if err != nil {
-		t.Fatalf("failed to read sources.json: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
-		t.Fatalf("failed to write sources.json: %v", err)
-	}
 
 	// First ingest - creates store and ingests messages
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--create-store", "--limit", "3", "--days", "7")
@@ -415,3 +378,32 @@ func TestSlackIngestIdempotency(t *testing.T) {
 
 // Ensure we import runtime (used by getBPBinary in edge_test.go)
 var _ = runtime.GOOS
+
+// setupTempDirWithSlackConfig creates a temp directory and copies sources.json from nexus.
+// Returns the temp dir path. The caller is responsible for cleanup with os.RemoveAll.
+func setupTempDirWithSlackConfig(t *testing.T) string {
+	t.Helper()
+
+	tmpDir, err := os.MkdirTemp("", "slack-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	nexusDir := getNexusDir(t)
+	if !hasSlackConfig(nexusDir) {
+		os.RemoveAll(tmpDir)
+		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+	}
+
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		t.Fatalf("failed to read sources.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
+		os.RemoveAll(tmpDir)
+		t.Fatalf("failed to write sources.json: %v", err)
+	}
+
+	return tmpDir
+}

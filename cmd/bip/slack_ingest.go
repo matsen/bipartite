@@ -120,7 +120,7 @@ func createSlackClientWithUsers() (*flow.SlackClient, error) {
 func fetchSlackMessages(client *flow.SlackClient, channelID, channelName string) ([]flow.Message, error) {
 	timeRange, err := flow.ParseTimeRange(slackIngestSince, slackIngestDays)
 	if err != nil {
-		return nil, outputSlackError(1, "invalid_date", err.Error())
+		return nil, outputSlackError(ExitError, "invalid_date", err.Error())
 	}
 
 	messages, err := client.GetChannelHistory(channelID, timeRange.Oldest, slackIngestLimit)
@@ -129,7 +129,7 @@ func fetchSlackMessages(client *flow.SlackClient, channelID, channelName string)
 			return nil, outputSlackError(ExitSlackNotMember, "not_member",
 				fmt.Sprintf("Bot is not a member of channel '%s'. Invite the bot with /invite @bot-name", channelName))
 		}
-		return nil, outputSlackError(1, "api_error", err.Error())
+		return nil, outputSlackError(ExitError, "api_error", err.Error())
 	}
 
 	return messages, nil
