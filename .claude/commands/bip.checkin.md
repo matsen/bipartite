@@ -57,3 +57,9 @@ Each window:
 - Named by repo and number (e.g., `repo#123`)
 
 Tmux window existence = item under review. Close the window when done.
+
+## Output guidelines
+
+When summarizing checkin results:
+- Do NOT include tmux window-switching advice (users have custom prefix keys)
+- Include full GitHub URLs for each item so they're clickable
