@@ -171,7 +171,7 @@ Before any pull request, ensure the following workflow is completed:
 7. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
 
 ### Documentation Sync
-8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
+8. **README and Skill Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` and `.claude/skills/bip/` to document the changes
 
 <!-- MANUAL ADDITIONS END -->
 
