@@ -136,6 +136,8 @@ The agent **fetches Paper Z** via Semantic Scholar, adds X and Z to the library 
 
 ## Installation
 
+### CLI Binary
+
 ```bash
 # Build and install
 go install ./cmd/bip
@@ -156,6 +158,18 @@ go env GOPATH # otherwise, use $GOPATH/bin (defaults to ~/go)
 ```
 
 The `~/go` default is a Go convention, not a requirement. You can customize with `GOPATH` and `GOBIN` environment variables.
+
+### Claude Code Skills
+
+The skills (`/bip.narrative`, `/bip.checkin`, etc.) require [Claude Code](https://claude.ai/code) and a local clone of this repo:
+
+```bash
+git clone https://github.com/matsen/bipartite
+cd bipartite
+ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
+```
+
+Skills are now available globally. Updates to the repo automatically reflect in your skills.
 
 ## Quick Start
 
