@@ -26,10 +26,10 @@ This project uses:
 
 **Purpose**: Extend existing Slack module with reading infrastructure
 
-- [ ] T001 Add SlackClient struct and constructor in internal/flow/slack.go
-- [ ] T002 [P] Add Message, HistoryResponse, Period data types in internal/flow/slack.go
-- [ ] T003 [P] Add ChannelConfig, ChannelsResponse, ChannelInfo data types in internal/flow/slack.go
-- [ ] T004 Implement user cache load/save functions (loadUserCache, saveUserCache) in internal/flow/slack.go
+- [x] T001 Add SlackClient struct and constructor in internal/flow/slack.go
+- [x] T002 [P] Add Message, HistoryResponse, Period data types in internal/flow/slack.go
+- [x] T003 [P] Add ChannelConfig, ChannelsResponse, ChannelInfo data types in internal/flow/slack.go
+- [x] T004 Implement user cache load/save functions (loadUserCache, saveUserCache) in internal/flow/slack.go
 
 ---
 
@@ -39,10 +39,10 @@ This project uses:
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T005 Implement GetUsers() API call for user ID to name mapping in internal/flow/slack.go
-- [ ] T006 Implement GetChannelHistory() API call for message fetching in internal/flow/slack.go
-- [ ] T007 [P] Add LoadChannelConfig() to read channels from sources.json in internal/flow/slack.go
-- [ ] T008 Create parent `bip slack` command in cmd/bip/slack.go (following s2.go pattern)
+- [x] T005 Implement GetUsers() API call for user ID to name mapping in internal/flow/slack.go
+- [x] T006 Implement GetChannelHistory() API call for message fetching in internal/flow/slack.go
+- [x] T007 [P] Add LoadChannelConfig() to read channels from sources.json in internal/flow/slack.go
+- [x] T008 Create parent `bip slack` command in cmd/bip/slack.go (following s2.go pattern)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -56,16 +56,16 @@ This project uses:
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Implement `bip slack history <channel>` subcommand in cmd/bip/slack_history.go
-- [ ] T010 [US1] Add --days flag (default: 14) for time period filtering in cmd/bip/slack_history.go
-- [ ] T011 [US1] Add --since flag (YYYY-MM-DD) that overrides --days in cmd/bip/slack_history.go
-- [ ] T012 [US1] Add --limit flag (default: 100) for message count limit in cmd/bip/slack_history.go
-- [ ] T013 [US1] Add --human flag for human-readable markdown output in cmd/bip/slack_history.go
-- [ ] T014 [US1] Implement JSON output format (default) with channel, period, messages in cmd/bip/slack_history.go
-- [ ] T015 [US1] Implement human-readable markdown output with headers per user/date in cmd/bip/slack_history.go
-- [ ] T016 [US1] Add error handling for channel not in configuration (exit code 2) in cmd/bip/slack_history.go
-- [ ] T017 [US1] Add error handling for bot not member of channel (exit code 3) in cmd/bip/slack_history.go
-- [ ] T018 [US1] Add error handling for missing SLACK_BOT_TOKEN (exit code 1) in cmd/bip/slack_history.go
+- [x] T009 [US1] Implement `bip slack history <channel>` subcommand in cmd/bip/slack_history.go
+- [x] T010 [US1] Add --days flag (default: 14) for time period filtering in cmd/bip/slack_history.go
+- [x] T011 [US1] Add --since flag (YYYY-MM-DD) that overrides --days in cmd/bip/slack_history.go
+- [x] T012 [US1] Add --limit flag (default: 100) for message count limit in cmd/bip/slack_history.go
+- [x] T013 [US1] Add --human flag for human-readable markdown output in cmd/bip/slack_history.go
+- [x] T014 [US1] Implement JSON output format (default) with channel, period, messages in cmd/bip/slack_history.go
+- [x] T015 [US1] Implement human-readable markdown output with headers per user/date in cmd/bip/slack_history.go
+- [x] T016 [US1] Add error handling for channel not in configuration (exit code 2) in cmd/bip/slack_history.go
+- [x] T017 [US1] Add error handling for bot not member of channel (exit code 3) in cmd/bip/slack_history.go
+- [x] T018 [US1] Add error handling for missing SLACK_BOT_TOKEN (exit code 1) in cmd/bip/slack_history.go
 
 **Checkpoint**: User Story 1 should be fully functional - can fetch history from configured channels
 
@@ -79,10 +79,10 @@ This project uses:
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Implement `bip slack channels` subcommand in cmd/bip/slack_channels.go
-- [ ] T020 [US2] Add --human flag for human-readable table output in cmd/bip/slack_channels.go
-- [ ] T021 [US2] Implement JSON output format (default) with channels array in cmd/bip/slack_channels.go
-- [ ] T022 [US2] Implement human-readable table format output in cmd/bip/slack_channels.go
+- [x] T019 [US2] Implement `bip slack channels` subcommand in cmd/bip/slack_channels.go
+- [x] T020 [US2] Add --human flag for human-readable table output in cmd/bip/slack_channels.go
+- [x] T021 [US2] Implement JSON output format (default) with channels array in cmd/bip/slack_channels.go
+- [x] T022 [US2] Implement human-readable table format output in cmd/bip/slack_channels.go
 
 **Checkpoint**: User Stories 1 AND 2 should both work independently
 
@@ -96,8 +96,8 @@ This project uses:
 
 ### Implementation for User Story 3
 
-- [ ] T023 [US3] Verify JSON output includes all required fields (timestamp, user, date, text) in internal/flow/slack.go
-- [ ] T024 [US3] Add integration test for agent workflow parsing in tests/slack_integration_test.go
+- [x] T023 [US3] Verify JSON output includes all required fields (timestamp, user, date, text) in internal/flow/slack.go
+- [x] T024 [US3] Add integration test for agent workflow parsing in tests/slack_integration_test.go
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -107,11 +107,11 @@ This project uses:
 
 **Purpose**: Testing, validation, and documentation
 
-- [ ] T025 [P] Create unit tests for SlackClient methods in internal/flow/slack_test.go
-- [ ] T026 [P] Create integration tests against real Slack workspace in tests/slack_integration_test.go
-- [ ] T027 Verify all error conditions produce actionable error messages (SC-002)
-- [ ] T028 Verify JSON output is valid and parseable by standard tools (SC-003)
-- [ ] T029 Update README.md with new `bip slack` commands
+- [x] T025 [P] Create unit tests for SlackClient methods in internal/flow/slack_test.go
+- [x] T026 [P] Create integration tests against real Slack workspace in tests/slack_integration_test.go
+- [x] T027 Verify all error conditions produce actionable error messages (SC-002)
+- [x] T028 Verify JSON output is valid and parseable by standard tools (SC-003)
+- [x] T029 Update README.md with new `bip slack` commands
 
 ---
 
