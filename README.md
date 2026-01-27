@@ -144,7 +144,18 @@ go install ./cmd/bip
 go build -o bip ./cmd/bip
 ```
 
-Requires Go 1.21+ and `~/go/bin` in your PATH.
+Requires Go 1.21+. If using `go install`, add your Go bin directory to PATH:
+
+```bash
+# Default location (most common)
+export PATH="$HOME/go/bin:$PATH"
+
+# Or check your actual GOBIN location
+go env GOBIN  # if set, use this path
+go env GOPATH # otherwise, use $GOPATH/bin (defaults to ~/go)
+```
+
+The `~/go` default is a Go convention, not a requirement. You can customize with `GOPATH` and `GOBIN` environment variables.
 
 ## Quick Start
 
@@ -177,6 +188,7 @@ bip search "phylogenetics"
 | `bip search <query>` | Full-text search |
 | `bip get <id>` | Get paper by ID |
 | `bip open <id>` | Open PDF |
+| `bip url <id>` | Get DOI URL (with `--copy` to clipboard) |
 | `bip export --bibtex [<id>...]` | Export to BibTeX |
 | `bip diff` | Show papers added/removed since last commit |
 | `bip resolve` | Smart merge conflict resolution |

@@ -240,3 +240,75 @@ Review the gaps and add interesting papers:
 ```bash
 bip s2 add DOI:10.xxxx/yyyy
 ```
+
+---
+
+## Get Paper URLs
+
+Get a URL for any paper in your library and optionally copy it to clipboard.
+
+### Basic URL Retrieval
+
+```bash
+# Get DOI URL (default)
+bip url Smith2024-ab --human
+# Output: https://doi.org/10.1234/example
+
+# Copy to clipboard
+bip url Smith2024-ab --copy --human
+# Output: https://doi.org/10.1234/example
+# Copied to clipboard
+```
+
+### Alternative URL Formats
+
+Papers imported via S2 have multiple external identifiers:
+
+```bash
+# PubMed URL
+bip url Smith2024-ab --pubmed --human
+
+# PubMed Central URL
+bip url Smith2024-ab --pmc --human
+
+# arXiv URL
+bip url Smith2024-ab --arxiv --human
+
+# Semantic Scholar URL
+bip url Smith2024-ab --s2 --human
+```
+
+### JSON Output (for Agents)
+
+```bash
+# Default JSON output
+bip url Smith2024-ab
+# {"url":"https://doi.org/10.1234/example","format":"doi","copied":false}
+
+# With copy
+bip url Smith2024-ab --copy
+# {"url":"https://doi.org/10.1234/example","format":"doi","copied":true}
+```
+
+### Pipeline Usage
+
+URL goes to stdout, messages to stderr for easy piping:
+
+```bash
+# Copy and open in browser
+bip url Smith2024-ab --copy --human | xargs open
+
+# Get multiple URLs
+for id in Smith2024-ab Jones2023-cd; do
+  bip url "$id" --human
+done
+```
+
+### Linux Clipboard Support
+
+On Linux, install `xclip` or `xsel` for clipboard support:
+```bash
+sudo apt install xclip  # or xsel
+```
+
+If clipboard is unavailable, the command still outputs the URL with a warning.

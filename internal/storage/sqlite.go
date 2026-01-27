@@ -20,7 +20,8 @@ type DB struct {
 const selectRefFields = `id, doi, title, abstract, venue,
 	pub_year, pub_month, pub_day,
 	pdf_path, source_type, source_id, supersedes,
-	authors_json, supplement_paths_json`
+	authors_json, supplement_paths_json,
+	pmid, pmcid, arxiv_id, s2_id`
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
@@ -64,7 +65,11 @@ func createSchema(db *sql.DB) error {
 			source_id TEXT,
 			supersedes TEXT,
 			authors_json TEXT NOT NULL,
-			supplement_paths_json TEXT
+			supplement_paths_json TEXT,
+			pmid TEXT,
+			pmcid TEXT,
+			arxiv_id TEXT,
+			s2_id TEXT
 		);
 
 		-- Index for DOI lookups
@@ -114,8 +119,9 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			id, doi, title, abstract, venue,
 			pub_year, pub_month, pub_day,
 			pdf_path, source_type, source_id, supersedes,
-			authors_json, supplement_paths_json
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			authors_json, supplement_paths_json,
+			pmid, pmcid, arxiv_id, s2_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
@@ -150,6 +156,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			ref.Published.Year, ref.Published.Month, ref.Published.Day,
 			ref.PDFPath, ref.Source.Type, ref.Source.ID, ref.Supersedes,
 			string(authorsJSON), nullableString(supplementJSON),
+			nullableStringValue(ref.PMID), nullableStringValue(ref.PMCID),
+			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -193,12 +201,9 @@ func (d *DB) Search(query string, limit int) ([]reference.Reference, error) {
 	ftsQuery := prepareFTSQuery(query)
 
 	rows, err := d.db.Query(`
-		SELECT r.id, r.doi, r.title, r.abstract, r.venue,
-			r.pub_year, r.pub_month, r.pub_day,
-			r.pdf_path, r.source_type, r.source_id, r.supersedes,
-			r.authors_json, r.supplement_paths_json
-		FROM refs r
-		WHERE r.id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
+		SELECT `+selectRefFields+`
+		FROM refs
+		WHERE id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
 		LIMIT ?`, ftsQuery, limit)
 	if err != nil {
 		return nil, fmt.Errorf("searching: %w", err)
@@ -222,12 +227,9 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	}
 
 	rows, err := d.db.Query(`
-		SELECT r.id, r.doi, r.title, r.abstract, r.venue,
-			r.pub_year, r.pub_month, r.pub_day,
-			r.pdf_path, r.source_type, r.source_id, r.supersedes,
-			r.authors_json, r.supplement_paths_json
-		FROM refs r
-		WHERE r.id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
+		SELECT `+selectRefFields+`
+		FROM refs
+		WHERE id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)
 		LIMIT ?
 	`, ftsQuery, limit)
 	if err != nil {
@@ -273,6 +275,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	var ref reference.Reference
 	var authorsJSON, supplementJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
+	var pmid, pmcid, arxivID, s2id sql.NullString
 	var pubMonth, pubDay sql.NullInt64
 
 	err := s.Scan(
@@ -280,6 +283,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&ref.Published.Year, &pubMonth, &pubDay,
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
+		&pmid, &pmcid, &arxivID, &s2id,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -295,6 +299,10 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.PDFPath = pdfPath.String
 	ref.Source.ID = sourceID.String
 	ref.Supersedes = supersedes.String
+	ref.PMID = pmid.String
+	ref.PMCID = pmcid.String
+	ref.ArXivID = arxivID.String
+	ref.S2ID = s2id.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)
@@ -337,6 +345,14 @@ func nullableString(b []byte) sql.NullString {
 		return sql.NullString{}
 	}
 	return sql.NullString{String: string(b), Valid: true}
+}
+
+// nullableStringValue converts a string to sql.NullString, treating empty as NULL.
+func nullableStringValue(s string) sql.NullString {
+	if s == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: s, Valid: true}
 }
 
 // prepareFTSQuery escapes special characters for FTS5 queries.
