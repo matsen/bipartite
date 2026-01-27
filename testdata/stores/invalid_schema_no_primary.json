@@ -1,0 +1,7 @@
+{
+  "name": "invalid_store",
+  "fields": {
+    "title": {"type": "string"},
+    "count": {"type": "integer"}
+  }
+}

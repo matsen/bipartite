@@ -201,6 +201,36 @@ bip search "phylogenetics"
 | `bip project add <id> --name <name>` | Create project |
 | `bip viz` | Generate interactive graph visualization |
 
+### Generic Store Management
+
+Create custom JSONL-backed data stores with SQLite query indexes:
+
+| Command | Description |
+|---------|-------------|
+| `bip store init <name> --schema <file>` | Create a new store with JSON schema |
+| `bip store append <name> <json>` | Append record(s) to store |
+| `bip store sync <name>` | Rebuild SQLite index from JSONL |
+| `bip store sync --all` | Sync all registered stores |
+| `bip store query <name> <sql>` | Query store with SQL |
+| `bip store query --cross <sql>` | Cross-store query (JOIN across stores) |
+| `bip store delete <name> <id>` | Delete record by primary key |
+| `bip store delete <name> --where <clause>` | Delete records by condition |
+| `bip store list` | List all registered stores |
+| `bip store info <name>` | Show store details and schema |
+
+Stores use JSONL as source of truth with ephemeral SQLite for fast queries. Schemas define field types, indexes, enums, and full-text search:
+
+```json
+{
+  "name": "my_store",
+  "fields": {
+    "id": {"type": "string", "primary": true},
+    "title": {"type": "string", "fts": true},
+    "status": {"type": "string", "index": true, "enum": ["active", "archived"]}
+  }
+}
+```
+
 ### Team Coordination
 
 | Command | Description |
