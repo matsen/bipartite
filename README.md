@@ -214,6 +214,17 @@ bip search "phylogenetics"
 | `bip digest --channel <name> --post` | Post to Slack |
 | `bip tree --open` | View task hierarchy in browser |
 
+### Slack Integration
+
+| Command | Description |
+|---------|-------------|
+| `bip slack history <channel>` | Fetch message history from a channel |
+| `bip slack history <channel> --days 7` | Fetch last 7 days of messages |
+| `bip slack history <channel> --since 2025-01-01` | Fetch messages since a date |
+| `bip slack history <channel> --human` | Human-readable markdown output |
+| `bip slack channels` | List configured Slack channels |
+| `bip slack channels --human` | Human-readable channel list |
+
 ### Claude Code Skills
 
 | Skill | Description |
@@ -254,6 +265,7 @@ JSONL files are human-readable and git-mergeable. The SQLite cache rebuilds on d
 |----------|-------------|
 | `S2_API_KEY` | Semantic Scholar API key (optional, for higher rate limits) |
 | `ASTA_API_KEY` | ASTA API key (required for `bip asta` commands) |
+| `SLACK_BOT_TOKEN` | Slack bot token for reading channels (requires `channels:history`, `channels:read`, `users:read` scopes) |
 
 ## License
 

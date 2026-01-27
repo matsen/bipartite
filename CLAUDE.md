@@ -32,14 +32,15 @@ bd list                     # List all tasks
 - Designed specifically for AI agent workflows
 
 ## Active Technologies
-- **Go 1.25.5** with spf13/cobra (CLI) and modernc.org/sqlite (storage)
-- **Ollama** for local embeddings, pure Go vector storage
-- **Semantic Scholar API** for paper metadata (internal/s2 package)
-- **Data storage**: JSONL (refs.jsonl, edges.jsonl, concepts.jsonl) + ephemeral SQLite (rebuilt on `bip rebuild`)
+
+**Go version**: See `go.mod` for minimum version (no cutting-edge features required)
+
+- **CLI**: spf13/cobra
+- **Storage**: modernc.org/sqlite (pure Go, no CGO)
+- **Embeddings**: Ollama for local embeddings, pure Go vector storage
+- **External APIs**: Semantic Scholar (internal/s2 package)
+- **Data model**: JSONL (source of truth) + ephemeral SQLite (rebuilt on `bip rebuild`)
 - **Vector index**: GOB-serialized (ephemeral, gitignored)
-- Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage) (011-repo-nodes)
-- JSONL (source of truth) + SQLite (ephemeral query layer, rebuilt via `bip rebuild`) (011-repo-nodes)
-- JSONL (source of truth) + SQLite (ephemeral query layer) (012-narrative-digest)
 
 ## Project Structure
 
@@ -169,7 +170,3 @@ Before any pull request, ensure the following workflow is completed:
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
 
 <!-- MANUAL ADDITIONS END -->
-
-## Recent Changes
-- 012-narrative-digest: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
-- 011-repo-nodes: Added Go 1.25.5 + spf13/cobra (CLI), modernc.org/sqlite (storage)
