@@ -25,6 +25,12 @@ type Reference struct {
 
 	// Relationships
 	Supersedes string `json:"supersedes,omitempty"` // DOI of paper this replaces
+
+	// External Identifiers (typically populated from Semantic Scholar API)
+	PMID    string `json:"pmid,omitempty"`
+	PMCID   string `json:"pmcid,omitempty"`
+	ArXivID string `json:"arxiv_id,omitempty"`
+	S2ID    string `json:"s2_id,omitempty"`
 }
 
 // PublicationDate represents a publication date with optional month and day.

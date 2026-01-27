@@ -34,6 +34,8 @@ bd list                     # List all tasks
 ## Active Technologies
 - Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (014-jsonl-sqlite-store)
 - JSONL (source of truth) + SQLite (ephemeral index) (014-jsonl-sqlite-store)
+- Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (015-url-clipboard)
+- JSONL (source of truth) + ephemeral SQLite (rebuilt via `bip rebuild`) (015-url-clipboard)
 
 **Go version**: See `go.mod` for minimum version (no cutting-edge features required)
 
@@ -174,4 +176,5 @@ Before any pull request, ensure the following workflow is completed:
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 015-url-clipboard: Added Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)
 - 014-jsonl-sqlite-store: Added Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)

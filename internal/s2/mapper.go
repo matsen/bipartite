@@ -38,6 +38,11 @@ func MapS2ToReference(paper S2Paper) reference.Reference {
 			Type: "s2",
 			ID:   paper.PaperID,
 		},
+		// External identifiers
+		PMID:    paper.ExternalIDs.PubMed,
+		PMCID:   paper.ExternalIDs.PubMedCentral,
+		ArXivID: paper.ExternalIDs.ArXiv,
+		S2ID:    paper.PaperID,
 	}
 
 	// Parse publication date
