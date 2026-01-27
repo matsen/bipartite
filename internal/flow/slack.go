@@ -7,16 +7,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
-// Exit codes for Slack commands.
-const (
-	ExitSlackMissingToken    = 1 // SLACK_BOT_TOKEN not set
-	ExitSlackChannelNotFound = 2 // Channel not in configuration
-	ExitSlackNotMember       = 3 // Bot not member of channel
-)
+// slackAPITimeout is the HTTP client timeout for Slack API calls.
+const slackAPITimeout = 30 * time.Second
 
 // SlackClient provides read access to Slack channels via the API.
 type SlackClient struct {
@@ -34,7 +31,7 @@ func NewSlackClient() (*SlackClient, error) {
 
 	return &SlackClient{
 		token:      token,
-		httpClient: &http.Client{Timeout: 30 * time.Second},
+		httpClient: &http.Client{Timeout: slackAPITimeout},
 		userCache:  make(map[string]string),
 	}, nil
 }
@@ -95,7 +92,7 @@ func PostToSlack(webhookURL, message string) error {
 		return fmt.Errorf("marshaling payload: %w", err)
 	}
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: slackAPITimeout}
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewReader(data))
 	if err != nil {
 		return fmt.Errorf("creating request: %w", err)
@@ -198,6 +195,18 @@ type slackUserProfile struct {
 	RealName    string `json:"real_name"`
 }
 
+// preferredName returns the best display name for the user.
+// Prefers display name, falls back to real name, then username.
+func (u slackUser) preferredName() string {
+	if u.Profile.DisplayName != "" {
+		return u.Profile.DisplayName
+	}
+	if u.Profile.RealName != "" {
+		return u.Profile.RealName
+	}
+	return u.Name
+}
+
 // GetUsers fetches all users from the Slack workspace and updates the cache.
 // Handles pagination to ensure all users are fetched.
 func (c *SlackClient) GetUsers() (map[string]string, error) {
@@ -239,15 +248,7 @@ func (c *SlackClient) GetUsers() (map[string]string, error) {
 
 		// Update cache with users from this page
 		for _, user := range result.Members {
-			// Prefer display name, fall back to real name, then username
-			name := user.Profile.DisplayName
-			if name == "" {
-				name = user.Profile.RealName
-			}
-			if name == "" {
-				name = user.Name
-			}
-			c.userCache[user.ID] = name
+			c.userCache[user.ID] = user.preferredName()
 		}
 
 		// Check for more pages
@@ -326,7 +327,10 @@ func (c *SlackClient) GetChannelHistory(channelID string, oldest time.Time, limi
 		}
 
 		// Parse timestamp to get date
-		ts, _ := parseSlackTimestamp(m.TS)
+		ts, err := parseSlackTimestamp(m.TS)
+		if err != nil {
+			return nil, fmt.Errorf("parsing message timestamp: %w", err)
+		}
 		date := ts.Format("2006-01-02")
 
 		// Look up user name (with fallback to API for Enterprise Grid users)
@@ -384,19 +388,13 @@ func (c *SlackClient) lookupUser(userID string) string {
 		return ""
 	}
 
-	// Extract name
-	name := result.User.Profile.DisplayName
-	if name == "" {
-		name = result.User.Profile.RealName
-	}
-	if name == "" {
-		name = result.User.Name
-	}
+	name := result.User.preferredName()
 
 	// Update cache
 	c.userCache[userID] = name
-	// Save cache (ignore errors)
-	_ = c.saveUserCache()
+	if err := c.saveUserCache(); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not save user cache: %v\n", err)
+	}
 
 	return name
 }
@@ -404,11 +402,13 @@ func (c *SlackClient) lookupUser(userID string) string {
 // parseSlackTimestamp parses a Slack timestamp string (e.g., "1737990123.000100").
 func parseSlackTimestamp(ts string) (time.Time, error) {
 	parts := strings.Split(ts, ".")
-	if len(parts) == 0 {
-		return time.Time{}, fmt.Errorf("invalid timestamp: %s", ts)
+	if len(parts) == 0 || parts[0] == "" {
+		return time.Time{}, fmt.Errorf("invalid Slack timestamp: %s", ts)
 	}
-	var sec int64
-	fmt.Sscanf(parts[0], "%d", &sec)
+	sec, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid Slack timestamp %s: %w", ts, err)
+	}
 	return time.Unix(sec, 0), nil
 }
 
@@ -420,12 +420,12 @@ func LoadSlackChannels() (map[string]SlackChannelConfig, error) {
 	}
 
 	// Parse into a map to extract the slack section
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var sourcesConfig map[string]json.RawMessage
+	if err := json.Unmarshal(data, &sourcesConfig); err != nil {
 		return nil, fmt.Errorf("parsing sources.json: %w", err)
 	}
 
-	slackRaw, ok := raw["slack"]
+	slackSection, ok := sourcesConfig["slack"]
 	if !ok {
 		return nil, fmt.Errorf("no 'slack' section in sources.json")
 	}
@@ -433,7 +433,7 @@ func LoadSlackChannels() (map[string]SlackChannelConfig, error) {
 	var slackConfig struct {
 		Channels map[string]SlackChannelConfig `json:"channels"`
 	}
-	if err := json.Unmarshal(slackRaw, &slackConfig); err != nil {
+	if err := json.Unmarshal(slackSection, &slackConfig); err != nil {
 		return nil, fmt.Errorf("parsing slack config: %w", err)
 	}
 

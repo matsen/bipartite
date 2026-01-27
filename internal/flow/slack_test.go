@@ -7,6 +7,24 @@ import (
 	"testing"
 )
 
+// withTempWorkDir creates a temp directory and changes to it for the test.
+// Returns a cleanup function that restores the original directory.
+func withTempWorkDir(t *testing.T) func() {
+	t.Helper()
+	tmpDir, err := os.MkdirTemp("", "slack-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	oldDir, _ := os.Getwd()
+	os.Chdir(tmpDir)
+
+	return func() {
+		os.Chdir(oldDir)
+		os.RemoveAll(tmpDir)
+	}
+}
+
 func TestGetWebhookURL(t *testing.T) {
 	// Save and restore original env
 	origEnv := os.Getenv("SLACK_WEBHOOK_DASM2")
@@ -103,17 +121,10 @@ func TestNewSlackClient_WithToken(t *testing.T) {
 }
 
 func TestUserCache_SaveLoad(t *testing.T) {
-	// Create temp directory for cache
-	tmpDir, err := os.MkdirTemp("", "slack-cache-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
+	cleanup := withTempWorkDir(t)
+	defer cleanup()
 
-	// Change to temp dir to use relative cache path
-	oldDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(oldDir)
+	tmpDir, _ := os.Getwd()
 
 	client := &SlackClient{
 		userCache: map[string]string{
@@ -151,15 +162,8 @@ func TestUserCache_SaveLoad(t *testing.T) {
 }
 
 func TestUserCache_LoadNonExistent(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "slack-cache-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	oldDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(oldDir)
+	cleanup := withTempWorkDir(t)
+	defer cleanup()
 
 	client := &SlackClient{
 		userCache: make(map[string]string),
@@ -168,6 +172,11 @@ func TestUserCache_LoadNonExistent(t *testing.T) {
 	// Should not error on missing file
 	if err := client.loadUserCache(); err != nil {
 		t.Errorf("unexpected error loading non-existent cache: %v", err)
+	}
+
+	// Cache should remain empty
+	if len(client.userCache) != 0 {
+		t.Errorf("expected empty cache after loading non-existent file, got %d entries", len(client.userCache))
 	}
 }
 
@@ -193,16 +202,29 @@ func TestParseSlackTimestamp(t *testing.T) {
 	}
 }
 
-func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "slack-config-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
+func TestParseSlackTimestamp_Errors(t *testing.T) {
+	tests := []struct {
+		name string
+		ts   string
+	}{
+		{"empty string", ""},
+		{"invalid integer", "notanumber.000100"},
+		{"just dot", ".000100"},
 	}
-	defer os.RemoveAll(tmpDir)
 
-	oldDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(oldDir)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := parseSlackTimestamp(tt.ts)
+			if err == nil {
+				t.Error("expected error, got nil")
+			}
+		})
+	}
+}
+
+func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
+	cleanup := withTempWorkDir(t)
+	defer cleanup()
 
 	// Write invalid sources.json (missing slack section)
 	sourcesContent := `{"boards": {}}`
@@ -210,22 +232,15 @@ func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	_, err = LoadSlackChannels()
+	_, err := LoadSlackChannels()
 	if err == nil {
 		t.Error("expected error for missing slack section")
 	}
 }
 
 func TestLoadSlackChannels_Valid(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "slack-config-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	oldDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(oldDir)
+	cleanup := withTempWorkDir(t)
+	defer cleanup()
 
 	// Write valid sources.json
 	sourcesContent := `{
@@ -255,15 +270,8 @@ func TestLoadSlackChannels_Valid(t *testing.T) {
 }
 
 func TestGetSlackChannel_NotFound(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "slack-config-test-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	oldDir, _ := os.Getwd()
-	os.Chdir(tmpDir)
-	defer os.Chdir(oldDir)
+	cleanup := withTempWorkDir(t)
+	defer cleanup()
 
 	// Write valid sources.json with different channels
 	sourcesContent := `{
@@ -277,7 +285,7 @@ func TestGetSlackChannel_NotFound(t *testing.T) {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	_, err = GetSlackChannel("nonexistent")
+	_, err := GetSlackChannel("nonexistent")
 	if err == nil {
 		t.Error("expected error for nonexistent channel")
 	}
