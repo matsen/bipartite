@@ -26,7 +26,7 @@ type Reference struct {
 	// Relationships
 	Supersedes string `json:"supersedes,omitempty"` // DOI of paper this replaces
 
-	// External Identifiers (populated from S2 API)
+	// External Identifiers (typically populated from Semantic Scholar API)
 	PMID    string `json:"pmid,omitempty"`
 	PMCID   string `json:"pmcid,omitempty"`
 	ArXivID string `json:"arxiv_id,omitempty"`

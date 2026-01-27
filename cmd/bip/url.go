@@ -4,10 +4,24 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/matsen/bipartite/internal/clipboard"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
+
+// URL template constants for each external identifier format.
+const (
+	urlTemplateDOI    = "https://doi.org/%s"
+	urlTemplatePubMed = "https://pubmed.ncbi.nlm.nih.gov/%s/"
+	urlTemplatePMC    = "https://www.ncbi.nlm.nih.gov/pmc/articles/%s/"
+	urlTemplateArXiv  = "https://arxiv.org/abs/%s"
+	urlTemplateS2     = "https://www.semanticscholar.org/paper/%s"
+)
+
+// clipboardUnavailableMsg is the standard warning when clipboard is not available.
+const clipboardUnavailableMsg = "clipboard unavailable (install xclip or xsel on Linux)"
 
 // URL format flags
 var (
@@ -18,11 +32,53 @@ var (
 	urlS2Flag     bool
 )
 
+// urlFormat defines how to generate a URL for a specific external identifier type.
+type urlFormat struct {
+	name     string                            // Format identifier (doi, pubmed, etc.)
+	template string                            // URL template with %s placeholder
+	getID    func(*reference.Reference) string // Extracts the ID from a reference
+	idName   string                            // Human-readable name for error messages
+}
+
+// urlFormats maps format names to their configuration.
+var urlFormats = map[string]urlFormat{
+	"doi": {
+		name:     "doi",
+		template: urlTemplateDOI,
+		getID:    func(r *reference.Reference) string { return r.DOI },
+		idName:   "DOI",
+	},
+	"pubmed": {
+		name:     "pubmed",
+		template: urlTemplatePubMed,
+		getID:    func(r *reference.Reference) string { return r.PMID },
+		idName:   "PubMed ID",
+	},
+	"pmc": {
+		name:     "pmc",
+		template: urlTemplatePMC,
+		getID:    func(r *reference.Reference) string { return r.PMCID },
+		idName:   "PMC ID",
+	},
+	"arxiv": {
+		name:     "arxiv",
+		template: urlTemplateArXiv,
+		getID:    func(r *reference.Reference) string { return r.ArXivID },
+		idName:   "arXiv ID",
+	},
+	"s2": {
+		name:     "s2",
+		template: urlTemplateS2,
+		getID:    func(r *reference.Reference) string { return r.S2ID },
+		idName:   "Semantic Scholar ID",
+	},
+}
+
 // URLResult is the JSON output for bip url command.
 type URLResult struct {
-	URL    string `json:"url"`
-	Format string `json:"format"` // doi, pubmed, pmc, arxiv, s2
-	Copied bool   `json:"copied"` // true if --copy succeeded
+	URL    string `json:"url"`    // The generated URL
+	Format string `json:"format"` // Format identifier: doi, pubmed, pmc, arxiv, s2
+	Copied bool   `json:"copied"` // true if --copy succeeded; false if --copy not used or failed
 }
 
 func init() {
@@ -52,25 +108,57 @@ Examples:
 	RunE: runURL,
 }
 
-func runURL(cmd *cobra.Command, args []string) error {
-	// Check mutual exclusivity of format flags
-	flagCount := 0
-	if urlPubmedFlag {
-		flagCount++
-	}
-	if urlPmcFlag {
-		flagCount++
-	}
-	if urlArxivFlag {
-		flagCount++
-	}
-	if urlS2Flag {
-		flagCount++
-	}
-	if flagCount > 1 {
-		exitWithError(ExitError, "specify only one URL format flag (--pubmed, --pmc, --arxiv, or --s2)")
+// getSelectedFormat determines which URL format to use based on command flags.
+// Returns the format name and an error if multiple format flags are specified.
+func getSelectedFormat() (string, error) {
+	formatFlags := map[string]bool{
+		"pubmed": urlPubmedFlag,
+		"pmc":    urlPmcFlag,
+		"arxiv":  urlArxivFlag,
+		"s2":     urlS2Flag,
 	}
 
+	var selected []string
+	for name, isSet := range formatFlags {
+		if isSet {
+			selected = append(selected, "--"+name)
+		}
+	}
+
+	if len(selected) > 1 {
+		return "", fmt.Errorf("specify only one URL format flag, got: %s", strings.Join(selected, ", "))
+	}
+	if len(selected) == 1 {
+		// Extract format name from "--name"
+		return strings.TrimPrefix(selected[0], "--"), nil
+	}
+	return "doi", nil // default
+}
+
+// generateURL creates a URL for the given reference using the specified format.
+// Returns the URL and an error if the required external ID is not available.
+func generateURL(ref *reference.Reference, formatName string) (string, error) {
+	format, ok := urlFormats[formatName]
+	if !ok {
+		return "", fmt.Errorf("unknown URL format: %s", formatName)
+	}
+
+	externalID := format.getID(ref)
+	if externalID == "" {
+		return "", fmt.Errorf("no %s available for %s", format.idName, ref.ID)
+	}
+
+	return fmt.Sprintf(format.template, externalID), nil
+}
+
+func runURL(cmd *cobra.Command, args []string) error {
+	// Determine which format to use
+	formatName, err := getSelectedFormat()
+	if err != nil {
+		exitWithError(ExitError, "%v", err)
+	}
+
+	// Open database and look up reference
 	repoRoot := mustFindRepository()
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
@@ -78,62 +166,25 @@ func runURL(cmd *cobra.Command, args []string) error {
 	id := args[0]
 	ref, err := db.GetByID(id)
 	if err != nil {
-		exitWithError(ExitError, "getting reference: %v", err)
+		exitWithError(ExitError, "reference %s: failed to retrieve: %v", id, err)
 	}
 	if ref == nil {
-		exitWithError(ExitError, "reference not found: %s", id)
+		exitWithError(ExitError, "reference %s: not found", id)
 	}
 
-	// Determine URL and format based on flags
-	var url, format string
-
-	switch {
-	case urlPubmedFlag:
-		format = "pubmed"
-		if ref.PMID == "" {
-			exitWithError(ExitError, "no PubMed ID available for %s", id)
-		}
-		url = fmt.Sprintf("https://pubmed.ncbi.nlm.nih.gov/%s/", ref.PMID)
-
-	case urlPmcFlag:
-		format = "pmc"
-		if ref.PMCID == "" {
-			exitWithError(ExitError, "no PMC ID available for %s", id)
-		}
-		url = fmt.Sprintf("https://www.ncbi.nlm.nih.gov/pmc/articles/%s/", ref.PMCID)
-
-	case urlArxivFlag:
-		format = "arxiv"
-		if ref.ArXivID == "" {
-			exitWithError(ExitError, "no arXiv ID available for %s", id)
-		}
-		url = fmt.Sprintf("https://arxiv.org/abs/%s", ref.ArXivID)
-
-	case urlS2Flag:
-		format = "s2"
-		if ref.S2ID == "" {
-			exitWithError(ExitError, "no Semantic Scholar ID available for %s", id)
-		}
-		url = fmt.Sprintf("https://www.semanticscholar.org/paper/%s", ref.S2ID)
-
-	default:
-		// Default to DOI
-		format = "doi"
-		if ref.DOI == "" {
-			exitWithError(ExitError, "no DOI available for %s", id)
-		}
-		url = fmt.Sprintf("https://doi.org/%s", ref.DOI)
+	// Generate URL
+	url, err := generateURL(ref, formatName)
+	if err != nil {
+		exitWithError(ExitError, "%v", err)
 	}
 
 	// Handle clipboard copy
 	copied := false
 	var clipboardWarning string
 	if urlCopyFlag {
-		if !clipboard.IsAvailable() {
-			clipboardWarning = "clipboard unavailable (install xclip or xsel on Linux)"
-		} else if err := clipboard.Copy(url); err != nil {
+		if err := clipboard.Copy(url); err != nil {
 			if errors.Is(err, clipboard.ErrClipboardUnavailable) {
-				clipboardWarning = "clipboard unavailable (install xclip or xsel on Linux)"
+				clipboardWarning = clipboardUnavailableMsg
 			} else {
 				clipboardWarning = fmt.Sprintf("clipboard error: %v", err)
 			}
@@ -155,7 +206,7 @@ func runURL(cmd *cobra.Command, args []string) error {
 	} else {
 		outputJSON(URLResult{
 			URL:    url,
-			Format: format,
+			Format: formatName,
 			Copied: copied,
 		})
 	}

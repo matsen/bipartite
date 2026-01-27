@@ -9,50 +9,46 @@ import (
 )
 
 // ErrClipboardUnavailable is returned when clipboard access is not available.
+// On Linux, this typically means xclip or xsel is not installed.
 var ErrClipboardUnavailable = errors.New("clipboard unavailable")
 
-// IsAvailable checks if clipboard functionality is available on this system.
-func IsAvailable() bool {
+// getClipboardCommand returns the appropriate clipboard command for the current platform.
+// Returns ErrClipboardUnavailable if no clipboard tool is found.
+func getClipboardCommand() (*exec.Cmd, error) {
 	switch runtime.GOOS {
 	case "darwin":
 		// macOS always has pbcopy
-		_, err := exec.LookPath("pbcopy")
-		return err == nil
+		if _, err := exec.LookPath("pbcopy"); err != nil {
+			return nil, ErrClipboardUnavailable
+		}
+		return exec.Command("pbcopy"), nil
 	case "linux":
-		// Check for xclip or xsel
+		// Try xclip first, fall back to xsel
 		if _, err := exec.LookPath("xclip"); err == nil {
-			return true
+			return exec.Command("xclip", "-selection", "clipboard"), nil
 		}
 		if _, err := exec.LookPath("xsel"); err == nil {
-			return true
+			return exec.Command("xsel", "--clipboard", "--input"), nil
 		}
-		return false
+		return nil, ErrClipboardUnavailable
 	default:
-		return false
+		return nil, ErrClipboardUnavailable
 	}
+}
+
+// IsAvailable checks if clipboard functionality is available on this system.
+func IsAvailable() bool {
+	_, err := getClipboardCommand()
+	return err == nil
 }
 
 // Copy copies the given text to the system clipboard.
 // Returns ErrClipboardUnavailable if clipboard access is not available.
 func Copy(text string) error {
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case "darwin":
-		cmd = exec.Command("pbcopy")
-	case "linux":
-		// Try xclip first, fall back to xsel
-		if _, err := exec.LookPath("xclip"); err == nil {
-			cmd = exec.Command("xclip", "-selection", "clipboard")
-		} else if _, err := exec.LookPath("xsel"); err == nil {
-			cmd = exec.Command("xsel", "--clipboard", "--input")
-		} else {
-			return ErrClipboardUnavailable
-		}
-	default:
-		return ErrClipboardUnavailable
+	cmd, err := getClipboardCommand()
+	if err != nil {
+		return err
 	}
-
 	cmd.Stdin = strings.NewReader(text)
 	return cmd.Run()
 }
