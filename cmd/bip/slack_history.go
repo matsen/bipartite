@@ -2,10 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/matsen/bipartite/internal/flow"
@@ -65,27 +65,15 @@ func runSlackHistory(cmd *cobra.Command, args []string) error {
 	}
 
 	// Calculate time range
-	var oldest time.Time
-	var startDate string
-
-	if slackHistorySince != "" {
-		// Parse --since date
-		t, err := time.Parse("2006-01-02", slackHistorySince)
-		if err != nil {
-			return outputSlackError(1, "invalid_date", fmt.Sprintf("invalid date format '%s'; use YYYY-MM-DD", slackHistorySince))
-		}
-		oldest = t
-		startDate = slackHistorySince
-	} else {
-		// Use --days
-		oldest = time.Now().AddDate(0, 0, -slackHistoryDays)
-		startDate = oldest.Format("2006-01-02")
+	timeRange, err := flow.ParseTimeRange(slackHistorySince, slackHistoryDays)
+	if err != nil {
+		return outputSlackError(1, "invalid_date", err.Error())
 	}
 
 	// Fetch history
-	messages, err := client.GetChannelHistory(channelConfig.ID, oldest, slackHistoryLimit)
+	messages, err := client.GetChannelHistory(channelConfig.ID, timeRange.Oldest, slackHistoryLimit)
 	if err != nil {
-		if strings.Contains(err.Error(), "not_in_channel") {
+		if errors.Is(err, flow.ErrSlackNotInChannel) {
 			return outputSlackError(ExitSlackNotMember, "not_member",
 				fmt.Sprintf("Bot is not a member of channel '%s'. Invite the bot with /invite @bot-name", channelName))
 		}
@@ -97,7 +85,7 @@ func runSlackHistory(cmd *cobra.Command, args []string) error {
 		Channel:   channelName,
 		ChannelID: channelConfig.ID,
 		Period: flow.Period{
-			Start: startDate,
+			Start: timeRange.StartDate,
 			End:   time.Now().Format("2006-01-02"),
 		},
 		Messages: messages,

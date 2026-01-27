@@ -80,3 +80,43 @@ func TestParseGitHubTimestamp(t *testing.T) {
 		})
 	}
 }
+
+func TestParseTimeRange(t *testing.T) {
+	t.Run("with since date", func(t *testing.T) {
+		tr, err := ParseTimeRange("2026-01-15", 7)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if tr.StartDate != "2026-01-15" {
+			t.Errorf("StartDate = %q, want %q", tr.StartDate, "2026-01-15")
+		}
+		expected := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+		if !tr.Oldest.Equal(expected) {
+			t.Errorf("Oldest = %v, want %v", tr.Oldest, expected)
+		}
+	})
+
+	t.Run("with days", func(t *testing.T) {
+		tr, err := ParseTimeRange("", 7)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// Oldest should be about 7 days ago
+		expectedOldest := time.Now().AddDate(0, 0, -7)
+		diff := tr.Oldest.Sub(expectedOldest)
+		if diff < -time.Second || diff > time.Second {
+			t.Errorf("Oldest = %v, want approximately %v", tr.Oldest, expectedOldest)
+		}
+		// StartDate should be YYYY-MM-DD format
+		if len(tr.StartDate) != 10 {
+			t.Errorf("StartDate = %q, want YYYY-MM-DD format", tr.StartDate)
+		}
+	})
+
+	t.Run("invalid date format", func(t *testing.T) {
+		_, err := ParseTimeRange("01-15-2026", 7)
+		if err == nil {
+			t.Error("expected error for invalid date format")
+		}
+	})
+}

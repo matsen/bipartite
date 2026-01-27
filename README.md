@@ -254,6 +254,8 @@ Stores use JSONL as source of truth with ephemeral SQLite for fast queries. Sche
 | `bip slack history <channel> --human` | Human-readable markdown output |
 | `bip slack channels` | List configured Slack channels |
 | `bip slack channels --human` | Human-readable channel list |
+| `bip slack ingest <channel> --store <name>` | Ingest messages into a store |
+| `bip slack ingest <channel> --store <name> --create-store` | Create store and ingest |
 
 ### Claude Code Skills
 

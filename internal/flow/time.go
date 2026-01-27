@@ -98,3 +98,31 @@ func ParseGitHubTimestamp(s string) (time.Time, error) {
 	// GitHub uses RFC3339 format
 	return time.Parse(time.RFC3339, s)
 }
+
+// TimeRange represents a time range with an oldest time and formatted start date.
+type TimeRange struct {
+	Oldest    time.Time // The oldest timestamp to fetch from
+	StartDate string    // Formatted date string (YYYY-MM-DD)
+}
+
+// ParseTimeRange calculates a time range from either a --since date string or --days count.
+// If sinceDate is non-empty, it parses it as YYYY-MM-DD.
+// Otherwise, it calculates the range from days ago.
+func ParseTimeRange(sinceDate string, days int) (TimeRange, error) {
+	var oldest time.Time
+	var startDate string
+
+	if sinceDate != "" {
+		t, err := time.Parse("2006-01-02", sinceDate)
+		if err != nil {
+			return TimeRange{}, fmt.Errorf("invalid date format %q; use YYYY-MM-DD", sinceDate)
+		}
+		oldest = t
+		startDate = sinceDate
+	} else {
+		oldest = time.Now().AddDate(0, 0, -days)
+		startDate = oldest.Format("2006-01-02")
+	}
+
+	return TimeRange{Oldest: oldest, StartDate: startDate}, nil
+}
