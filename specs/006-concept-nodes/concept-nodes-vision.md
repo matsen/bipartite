@@ -36,7 +36,7 @@ Extend the knowledge graph with **concept nodes** — named ideas, methods, or p
 
 ### Paper → Concept Edges
 
-Standard relationship types are documented in `/relationship-types.json`. Bip accepts any string, but tools should use standard types by default. Extensions are encouraged when justified — add them to the vocabulary file with a clear description before use.
+Standard relationship types are documented in `schemas/relationship-types.json`. Bip accepts any string, but tools should use standard types by default. Extensions are encouraged when justified — add them to the vocabulary file with a clear description before use.
 
 ```jsonl
 {"source_id":"Halpern1998-yc","target_id":"mutation-selection-model","relationship_type":"introduces","summary":"Introduces codon-level mutation-selection framework with site-specific amino acid frequencies"}

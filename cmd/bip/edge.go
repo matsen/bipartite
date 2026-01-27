@@ -213,7 +213,7 @@ func validateEdgePapers(e edge.Edge, paperIDs map[string]bool) error {
 	return nil
 }
 
-// Standard paper-concept relationship types (from relationship-types.json)
+// Standard paper-concept relationship types (from schemas/relationship-types.json)
 var paperConceptRelTypes = map[string]bool{
 	"introduces":     true,
 	"applies":        true,
