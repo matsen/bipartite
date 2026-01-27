@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -87,7 +88,7 @@ func runSlackIngest(cmd *cobra.Command, args []string) error {
 	// Open or create store
 	s, storeCreated, err := openOrCreateSlackStore(repoRoot, slackIngestStore)
 	if err != nil {
-		exitWithError(ExitError, "%v", err)
+		return outputSlackError(ExitError, "store_error", err.Error())
 	}
 
 	// Calculate time range
@@ -124,7 +125,7 @@ func runSlackIngest(cmd *cobra.Command, args []string) error {
 				skipped++
 				continue
 			}
-			exitWithError(ExitError, "appending record: %v", err)
+			return outputSlackError(ExitError, "store_error", fmt.Sprintf("appending record: %v", err))
 		}
 		ingested++
 	}
@@ -221,40 +222,12 @@ func slackMessageSchema(name string) *store.Schema {
 
 // writeSchemaFile writes a schema to a JSON file.
 func writeSchemaFile(path string, schema *store.Schema) error {
-	f, err := os.Create(path)
+	data, err := json.MarshalIndent(schema, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling schema: %w", err)
 	}
-	defer f.Close()
-
-	// Write JSON manually for nice formatting
-	fmt.Fprintf(f, "{\n")
-	fmt.Fprintf(f, "  \"name\": %q,\n", schema.Name)
-	fmt.Fprintf(f, "  \"fields\": {\n")
-
-	// Write fields in a consistent order
-	fieldOrder := []string{"id", "channel", "user", "date", "text"}
-	for i, name := range fieldOrder {
-		field := schema.Fields[name]
-		fmt.Fprintf(f, "    %q: {\"type\": %q", name, field.Type)
-		if field.Primary {
-			fmt.Fprintf(f, ", \"primary\": true")
-		}
-		if field.Index {
-			fmt.Fprintf(f, ", \"index\": true")
-		}
-		if field.FTS {
-			fmt.Fprintf(f, ", \"fts\": true")
-		}
-		fmt.Fprintf(f, "}")
-		if i < len(fieldOrder)-1 {
-			fmt.Fprintf(f, ",")
-		}
-		fmt.Fprintf(f, "\n")
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("writing schema file: %w", err)
 	}
-
-	fmt.Fprintf(f, "  }\n")
-	fmt.Fprintf(f, "}\n")
-
 	return nil
 }

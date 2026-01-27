@@ -229,5 +229,189 @@ func hasSlackConfig(nexusDir string) bool {
 	return len(slackConfig.Channels) > 0
 }
 
+// TestSlackIngestMissingStore verifies error when store doesn't exist.
+func TestSlackIngestMissingStore(t *testing.T) {
+	if os.Getenv("SLACK_BOT_TOKEN") == "" {
+		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	}
+
+	bp := getBPBinary(t)
+	nexusDir := getNexusDir(t)
+
+	// Check if nexus has Slack config
+	if !hasSlackConfig(nexusDir) {
+		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+	}
+
+	// Run ingest with nonexistent store
+	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "nonexistent_test_store_xyz")
+	cmd.Dir = nexusDir
+	err := cmd.Run()
+
+	if err == nil {
+		t.Fatal("expected error for missing store, got success")
+	}
+
+	// Should fail with exit code 1 (store error)
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr.ExitCode() != 1 {
+			t.Errorf("expected exit code 1 (store error), got %d", exitErr.ExitCode())
+		}
+	}
+}
+
+// TestSlackIngestJSONFormat verifies the JSON output format for successful ingest.
+// This test creates a temporary store and ingests messages into it.
+func TestSlackIngestJSONFormat(t *testing.T) {
+	if os.Getenv("SLACK_BOT_TOKEN") == "" {
+		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	}
+
+	bp := getBPBinary(t)
+
+	// Create a temp directory for the test
+	tmpDir, err := os.MkdirTemp("", "slack-ingest-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sources.json from nexus to temp dir
+	nexusDir := getNexusDir(t)
+	if !hasSlackConfig(nexusDir) {
+		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+	}
+
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
+	if err != nil {
+		t.Fatalf("failed to read sources.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
+		t.Fatalf("failed to write sources.json: %v", err)
+	}
+
+	// Run ingest with --create-store to create a new store
+	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "test_slack_msgs", "--create-store", "--limit", "5", "--days", "7")
+	cmd.Dir = tmpDir
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("command failed with exit code %d: %s", exitErr.ExitCode(), string(exitErr.Stderr))
+		}
+		t.Fatalf("command failed: %v", err)
+	}
+
+	// Parse JSON output
+	var result struct {
+		Channel      string `json:"channel"`
+		Store        string `json:"store"`
+		Ingested     int    `json:"ingested"`
+		Skipped      int    `json:"skipped"`
+		StoreCreated bool   `json:"store_created"`
+	}
+	if err := json.Unmarshal(output, &result); err != nil {
+		t.Fatalf("failed to parse JSON output: %v\nOutput: %s", err, string(output))
+	}
+
+	// Verify required fields
+	if result.Channel != "fortnight-goals" {
+		t.Errorf("expected channel 'fortnight-goals', got %q", result.Channel)
+	}
+	if result.Store != "test_slack_msgs" {
+		t.Errorf("expected store 'test_slack_msgs', got %q", result.Store)
+	}
+	if !result.StoreCreated {
+		t.Error("expected store_created to be true")
+	}
+
+	// Verify store was actually created
+	storePath := filepath.Join(tmpDir, ".bipartite", "test_slack_msgs.jsonl")
+	if _, err := os.Stat(storePath); os.IsNotExist(err) {
+		t.Error("store JSONL file was not created")
+	}
+
+	// Verify schema was created
+	schemaPath := filepath.Join(tmpDir, ".bipartite", "schemas", "test_slack_msgs.json")
+	if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
+		t.Error("store schema file was not created")
+	}
+}
+
+// TestSlackIngestIdempotency verifies running ingest twice skips duplicates.
+func TestSlackIngestIdempotency(t *testing.T) {
+	if os.Getenv("SLACK_BOT_TOKEN") == "" {
+		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	}
+
+	bp := getBPBinary(t)
+
+	// Create a temp directory for the test
+	tmpDir, err := os.MkdirTemp("", "slack-ingest-idem-test-*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Copy sources.json from nexus to temp dir
+	nexusDir := getNexusDir(t)
+	if !hasSlackConfig(nexusDir) {
+		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+	}
+
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
+	if err != nil {
+		t.Fatalf("failed to read sources.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
+		t.Fatalf("failed to write sources.json: %v", err)
+	}
+
+	// First ingest - creates store and ingests messages
+	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--create-store", "--limit", "3", "--days", "7")
+	cmd.Dir = tmpDir
+	output1, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("first ingest failed with exit code %d: %s", exitErr.ExitCode(), string(exitErr.Stderr))
+		}
+		t.Fatalf("first ingest failed: %v", err)
+	}
+
+	var result1 struct {
+		Ingested int `json:"ingested"`
+		Skipped  int `json:"skipped"`
+	}
+	if err := json.Unmarshal(output1, &result1); err != nil {
+		t.Fatalf("failed to parse first ingest output: %v", err)
+	}
+
+	// Second ingest - should skip duplicates
+	cmd2 := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--limit", "3", "--days", "7")
+	cmd2.Dir = tmpDir
+	output2, err := cmd2.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("second ingest failed with exit code %d: %s", exitErr.ExitCode(), string(exitErr.Stderr))
+		}
+		t.Fatalf("second ingest failed: %v", err)
+	}
+
+	var result2 struct {
+		Ingested int `json:"ingested"`
+		Skipped  int `json:"skipped"`
+	}
+	if err := json.Unmarshal(output2, &result2); err != nil {
+		t.Fatalf("failed to parse second ingest output: %v", err)
+	}
+
+	// Second run should skip the same messages that were ingested first time
+	if result2.Skipped != result1.Ingested {
+		t.Errorf("expected second run to skip %d messages (same as first ingested), got skipped=%d", result1.Ingested, result2.Skipped)
+	}
+	if result2.Ingested != 0 {
+		t.Errorf("expected second run to ingest 0 new messages, got %d", result2.Ingested)
+	}
+}
+
 // Ensure we import runtime (used by getBPBinary in edge_test.go)
 var _ = runtime.GOOS
