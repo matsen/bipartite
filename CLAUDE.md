@@ -32,6 +32,8 @@ bd list                     # List all tasks
 - Designed specifically for AI agent workflows
 
 ## Active Technologies
+- Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (014-jsonl-sqlite-store)
+- JSONL (source of truth) + SQLite (ephemeral index) (014-jsonl-sqlite-store)
 
 **Go version**: See `go.mod` for minimum version (no cutting-edge features required)
 
@@ -170,3 +172,6 @@ Before any pull request, ensure the following workflow is completed:
 8. **README Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` to document the changes
 
 <!-- MANUAL ADDITIONS END -->
+
+## Recent Changes
+- 014-jsonl-sqlite-store: Added Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)

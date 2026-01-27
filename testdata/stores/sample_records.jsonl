@@ -1,0 +1,5 @@
+{"id":"rec-001","title":"First Record","status":"active","count":10,"score":3.14,"active":true,"created":"2026-01-01","modified":"2026-01-27T10:30:00Z","metadata":{"tags":["test","sample"]}}
+{"id":"rec-002","title":"Second Record","status":"draft","count":20,"score":2.71,"active":false,"created":"2026-01-15","modified":"2026-01-27T11:00:00Z","metadata":{"tags":["example"]}}
+{"id":"rec-003","title":"Third Record","status":"archived","count":5,"score":1.41,"active":false,"created":"2025-12-01","modified":"2026-01-20T09:00:00Z","metadata":{}}
+{"id":"rec-004","title":"Fourth Record with Full Text Search","status":"active","count":100,"score":9.99,"active":true,"created":"2026-01-25","modified":"2026-01-27T12:00:00Z","metadata":{"priority":"high"}}
+{"id":"rec-005","title":"Fifth and Final Record","status":"draft","count":0,"score":0.0,"active":false,"created":"2026-01-27","modified":"2026-01-27T15:30:00Z","metadata":{"notes":"last entry"}}

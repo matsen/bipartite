@@ -1,0 +1,14 @@
+{
+  "name": "test_store",
+  "fields": {
+    "id": {"type": "string", "primary": true},
+    "title": {"type": "string", "fts": true},
+    "status": {"type": "string", "index": true, "enum": ["active", "archived", "draft"]},
+    "count": {"type": "integer"},
+    "score": {"type": "float"},
+    "active": {"type": "boolean"},
+    "created": {"type": "date"},
+    "modified": {"type": "datetime"},
+    "metadata": {"type": "json"}
+  }
+}
