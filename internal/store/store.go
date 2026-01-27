@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -335,8 +336,8 @@ func (s *Store) insertRecord(db *sql.DB, record Record) error {
 
 	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		s.Schema.Name,
-		joinStrings(cols, ", "),
-		joinStrings(placeholders, ", "))
+		strings.Join(cols, ", "),
+		strings.Join(placeholders, ", "))
 
 	if _, err := db.Exec(sql, values...); err != nil {
 		return err
@@ -384,8 +385,8 @@ func (s *Store) insertFTSRecord(db *sql.DB, record Record) error {
 
 	sql := fmt.Sprintf("INSERT INTO %s_fts (%s) VALUES (%s)",
 		s.Schema.Name,
-		joinStrings(cols, ", "),
-		joinStrings(placeholders, ", "))
+		strings.Join(cols, ", "),
+		strings.Join(placeholders, ", "))
 
 	_, err := db.Exec(sql, values...)
 	return err
@@ -596,16 +597,4 @@ func convertValueForSQLite(value any, fieldType FieldType) any {
 	}
 
 	return value
-}
-
-// joinStrings joins strings with a separator (avoiding strings import).
-func joinStrings(strs []string, sep string) string {
-	if len(strs) == 0 {
-		return ""
-	}
-	result := strs[0]
-	for i := 1; i < len(strs); i++ {
-		result += sep + strs[i]
-	}
-	return result
 }
