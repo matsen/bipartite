@@ -227,6 +227,10 @@ func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge
 		if r.Project == "" {
 			continue
 		}
+		// Skip self-loops (repo ID same as project ID)
+		if r.ID == r.Project {
+			continue
+		}
 		// Only create edge if the parent project exists
 		if !projectIDs[r.Project] {
 			continue

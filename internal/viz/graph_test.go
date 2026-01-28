@@ -307,6 +307,14 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			wantEdges:     nil,
 		},
 		{
+			name: "repo with self-referential project creates no edge (avoid self-loop)",
+			repos: []repo.Repo{
+				{ID: "dasm", Project: "dasm"},
+			},
+			wantEdgeCount: 0,
+			wantEdges:     nil,
+		},
+		{
 			name: "multiple repos with different projects",
 			repos: []repo.Repo{
 				{ID: "repo1", Project: "dasm"},
