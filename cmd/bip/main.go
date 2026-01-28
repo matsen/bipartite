@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -20,6 +21,9 @@ var humanOutput bool
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
+		// Print the error since we have SilenceErrors: true
+		// This ensures Cobra errors (like missing required flags) are visible
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(ExitError)
 	}
 }
