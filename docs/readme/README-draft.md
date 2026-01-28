@@ -4,7 +4,7 @@
 
 Here is a picture of my world:
 
-![My digital world](docs/readme-prep/diagram1.svg)
+![My digital world](docs/readme/diagram1.svg)
 
 In 2025, I sent 8,077 Slack messages, mass commits reviews, and evaluated hundreds of papers for their relevance to our research. Agentic coding completely revolutionized my role as an individual contributor—it shortened the distance between idea and implementation. But it didn't really help my role as a research team lead, because agents don't have access to my knowledge graph.
 
@@ -16,7 +16,7 @@ For agents to help with coordination, they need to:
 
 Bipartite creates a context layer that both agents and humans can query.
 
-![Knowledge graph structure](docs/readme-prep/diagram2.svg)
+![Knowledge graph structure](docs/readme/diagram2.svg)
 
 The name refers to the graph at the core: one side is your world (projects, repos, concepts), the other is the literature (papers, citations, authors), with typed edges connecting them through shared concepts.
 
