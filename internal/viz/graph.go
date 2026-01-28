@@ -12,10 +12,11 @@ import (
 	"github.com/matsen/bipartite/internal/storage"
 )
 
-// ID prefixes used in edge source/target IDs.
+// ID prefixes used in node and edge IDs to avoid collisions.
 const (
 	conceptPrefix = "concept:"
 	projectPrefix = "project:"
+	repoPrefix    = "repo:"
 )
 
 // Relationship types for derived edges (not stored in database).
@@ -77,10 +78,7 @@ func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
 	repoNodes := buildRepoNodes(repos)
 
 	// Build repo→project edges (visual-only, derived from repo.Project field)
-	repoProjectEdges, err := buildRepoProjectEdges(repos, projectIDs)
-	if err != nil {
-		return nil, err
-	}
+	repoProjectEdges := buildRepoProjectEdges(repos, projectIDs)
 	vizEdges = append(vizEdges, repoProjectEdges...)
 
 	// Combine all nodes
@@ -223,32 +221,27 @@ func buildRepoNodes(repos []repo.Repo) []Node {
 
 // buildRepoProjectEdges creates visual edges from repos to their parent projects.
 // These are not stored in the edge data - they're derived from the repo's project field.
-// Returns an error if a repo has a self-referential project (id == project), which
-// indicates a data entry error.
-func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) ([]Edge, error) {
+// Uses repo: prefix for source to match repo node IDs and avoid collisions with project IDs.
+func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge {
 	var edges []Edge
 
 	for _, r := range repos {
 		if r.Project == "" {
 			continue
 		}
-		// Self-referential project is a data error
-		if r.ID == r.Project {
-			return nil, fmt.Errorf("repo %q has self-referential project field (id == project)", r.ID)
-		}
 		// Only create edge if the parent project exists
 		if !projectIDs[r.Project] {
 			continue
 		}
 		edges = append(edges, Edge{
-			Source:           r.ID,
+			Source:           repoPrefix + r.ID,
 			Target:           r.Project,
 			RelationshipType: RelationshipBelongsTo,
 			Summary:          "",
 		})
 	}
 
-	return edges, nil
+	return edges
 }
 
 // newPaperNode creates a visualization node from a paper reference.
@@ -289,9 +282,10 @@ func newProjectNode(p project.Project, connectionCount int) Node {
 }
 
 // newRepoNode creates a visualization node from a repo.
+// Uses repo: prefix to avoid ID collisions with projects.
 func newRepoNode(r repo.Repo) Node {
 	return Node{
-		ID:          r.ID,
+		ID:          repoPrefix + r.ID,
 		Type:        NodeTypeRepo,
 		Label:       r.Name,
 		Name:        r.Name,

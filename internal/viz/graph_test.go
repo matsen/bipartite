@@ -279,17 +279,15 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 		repos         []repo.Repo
 		wantEdgeCount int
 		wantEdges     []Edge
-		wantErr       bool
-		wantErrMsg    string
 	}{
 		{
-			name: "repo with valid project creates edge",
+			name: "repo with valid project creates edge with repo: prefix",
 			repos: []repo.Repo{
 				{ID: "bipartite", Project: "dasm"},
 			},
 			wantEdgeCount: 1,
 			wantEdges: []Edge{
-				{Source: "bipartite", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:bipartite", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
 			},
 		},
 		{
@@ -309,12 +307,14 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			wantEdges:     nil,
 		},
 		{
-			name: "repo with self-referential project returns error",
+			name: "repo with same id as project creates valid edge (no collision due to prefix)",
 			repos: []repo.Repo{
 				{ID: "dasm", Project: "dasm"},
 			},
-			wantErr:    true,
-			wantErrMsg: "self-referential project",
+			wantEdgeCount: 1,
+			wantEdges: []Edge{
+				{Source: "repo:dasm", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+			},
 		},
 		{
 			name: "multiple repos with different projects",
@@ -325,9 +325,9 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			},
 			wantEdgeCount: 3,
 			wantEdges: []Edge{
-				{Source: "repo1", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
-				{Source: "repo2", Target: "netam", RelationshipType: RelationshipBelongsTo, Summary: ""},
-				{Source: "repo3", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:repo1", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:repo2", Target: "netam", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:repo3", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
 			},
 		},
 		{
@@ -340,22 +340,7 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotEdges, err := buildRepoProjectEdges(tt.repos, projectIDs)
-
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("expected error containing %q, got nil", tt.wantErrMsg)
-					return
-				}
-				if !strings.Contains(err.Error(), tt.wantErrMsg) {
-					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %v", err)
-				return
-			}
+			gotEdges := buildRepoProjectEdges(tt.repos, projectIDs)
 
 			if len(gotEdges) != tt.wantEdgeCount {
 				t.Errorf("got %d edges, want %d", len(gotEdges), tt.wantEdgeCount)
