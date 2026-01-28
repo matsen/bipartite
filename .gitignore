@@ -5,6 +5,9 @@ _ignore/
 AGENTS.md
 .env
 
+site/
+ISSUE-*.md
+
 # Go build artifacts
 /bip
 build/
