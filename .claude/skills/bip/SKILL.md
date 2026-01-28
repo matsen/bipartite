@@ -73,6 +73,8 @@ Suggest creating concepts when you notice:
 | Link paper to concept | `bip edge add -s <paper> -t concept:<concept> -r <type> -m "summary"` |
 | Papers for concept | `bip concept papers <concept-id>` |
 | Concepts for paper | `bip paper concepts <paper-id>` |
+| Import projects from config | `bip project import <file>` |
+| Import with concept edges | `bip project import <file> --link-concepts` |
 
 ## Search Strategy
 
