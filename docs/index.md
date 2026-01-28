@@ -19,7 +19,7 @@ go install ./cmd/bip
 export PATH="$HOME/go/bin:$PATH"
 ```
 
-Requires Go 1.21+. For Claude Code skills:
+Requires Go 1.24+. For Claude Code skills:
 
 ```bash
 git clone https://github.com/matsen/bipartite

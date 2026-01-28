@@ -2,6 +2,8 @@
 
 The knowledge graph connects your internal world (projects, repos, concepts) to the external academic world (papers, citations, authors). Edges carry meaning: a paper *introduces* a concept, a project *implements* a method.
 
+![Knowledge graph structure](../images/knowledge-graph.svg)
+
 ## Structure
 
 The graph has three node types and directed edges between them:
