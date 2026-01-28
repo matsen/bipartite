@@ -58,7 +58,7 @@ site_dir: site
 
 nav:
   - Home: index.md
-  # Future docs pages:
-  # - Reference Management: guides/reference-management.md
-  # - Knowledge Graph: guides/knowledge-graph.md
-  # - Workflow Coordination: guides/workflow-coordination.md
+  - Guides:
+    - Reference Management: guides/reference-management.md
+    - Knowledge Graph: guides/knowledge-graph.md
+    - Workflow Coordination: guides/workflow-coordination.md
