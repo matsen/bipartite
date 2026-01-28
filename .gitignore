@@ -24,5 +24,8 @@ __pycache__/
 .idea/
 .vscode/
 
+# mkdocs
+site/
+
 # OS
 .DS_Store
