@@ -6,7 +6,8 @@ import (
 	"time"
 )
 
-// Edge represents a directed relationship between two papers.
+// Edge represents a directed relationship between entities in the knowledge graph.
+// Supported edge types include paper→concept, concept→project, and project→concept.
 type Edge struct {
 	// Identity: (SourceID, TargetID, RelationshipType) tuple
 	SourceID         string `json:"source_id"`
