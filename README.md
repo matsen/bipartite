@@ -225,6 +225,7 @@ bip search "phylogenetics"
 | `bip concept add <id> --name <name>` | Create concept |
 | `bip concept papers <id>` | Find linked papers |
 | `bip project add <id> --name <name>` | Create project |
+| `bip project import <file>` | Import projects/repos from config |
 | `bip viz` | Generate interactive graph visualization |
 
 ### Generic Store Management
