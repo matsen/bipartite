@@ -343,6 +343,18 @@ const htmlTemplate = `<!DOCTYPE html>
               'width': 2
             }
           },
+          // Repo→Project edges - dashed, lighter to distinguish from knowledge graph edges
+          {
+            selector: 'edge[relationshipType="belongs-to"]',
+            style: {
+              'line-color': '#BDC3C7',
+              'target-arrow-color': '#BDC3C7',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'line-style': 'dashed',
+              'width': 1
+            }
+          },
           {
             selector: 'edge',
             style: {

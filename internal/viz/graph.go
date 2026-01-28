@@ -71,6 +71,10 @@ func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
 	// Build repo nodes (grouped under their projects)
 	repoNodes := buildRepoNodes(repos)
 
+	// Build repo→project edges (visual-only, derived from repo.Project field)
+	repoProjectEdges := buildRepoProjectEdges(repos, projectIDs)
+	vizEdges = append(vizEdges, repoProjectEdges...)
+
 	// Combine all nodes
 	var allNodes []Node
 	allNodes = append(allNodes, paperNodes...)
@@ -207,6 +211,30 @@ func buildRepoNodes(repos []repo.Repo) []Node {
 	}
 
 	return nodes
+}
+
+// buildRepoProjectEdges creates visual edges from repos to their parent projects.
+// These are not stored in the edge data - they're derived from the repo's project field.
+func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge {
+	var edges []Edge
+
+	for _, r := range repos {
+		if r.Project == "" {
+			continue
+		}
+		// Only create edge if the parent project exists
+		if !projectIDs[r.Project] {
+			continue
+		}
+		edges = append(edges, Edge{
+			Source:           r.ID,
+			Target:           r.Project,
+			RelationshipType: "belongs-to",
+			Summary:          "",
+		})
+	}
+
+	return edges
 }
 
 // newPaperNode creates a visualization node from a paper reference.
