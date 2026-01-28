@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/matsen/bipartite/internal/edge"
+	"github.com/matsen/bipartite/internal/repo"
 )
 
 func TestProcessEdges_PaperToConcept(t *testing.T) {
@@ -261,6 +262,106 @@ func TestProcessEdges_ConceptToProject(t *testing.T) {
 				}
 				if strings.HasPrefix(e.Target, "concept:") || strings.HasPrefix(e.Target, "project:") {
 					t.Errorf("edge target should be unprefixed, got %q", e.Target)
+				}
+			}
+		})
+	}
+}
+
+func TestBuildRepoProjectEdges(t *testing.T) {
+	projectIDs := map[string]bool{
+		"dasm":  true,
+		"netam": true,
+	}
+
+	tests := []struct {
+		name          string
+		repos         []repo.Repo
+		wantEdgeCount int
+		wantEdges     []Edge
+	}{
+		{
+			name: "repo with valid project creates edge with repo: prefix",
+			repos: []repo.Repo{
+				{ID: "bipartite", Project: "dasm"},
+			},
+			wantEdgeCount: 1,
+			wantEdges: []Edge{
+				{Source: "repo:bipartite", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+			},
+		},
+		{
+			name: "repo without project creates no edge",
+			repos: []repo.Repo{
+				{ID: "orphan-repo", Project: ""},
+			},
+			wantEdgeCount: 0,
+			wantEdges:     nil,
+		},
+		{
+			name: "repo with non-existent project creates no edge",
+			repos: []repo.Repo{
+				{ID: "missing-project-repo", Project: "unknown-project"},
+			},
+			wantEdgeCount: 0,
+			wantEdges:     nil,
+		},
+		{
+			name: "repo with same id as project creates valid edge (no collision due to prefix)",
+			repos: []repo.Repo{
+				{ID: "dasm", Project: "dasm"},
+			},
+			wantEdgeCount: 1,
+			wantEdges: []Edge{
+				{Source: "repo:dasm", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+			},
+		},
+		{
+			name: "multiple repos with different projects",
+			repos: []repo.Repo{
+				{ID: "repo1", Project: "dasm"},
+				{ID: "repo2", Project: "netam"},
+				{ID: "repo3", Project: "dasm"},
+			},
+			wantEdgeCount: 3,
+			wantEdges: []Edge{
+				{Source: "repo:repo1", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:repo2", Target: "netam", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo:repo3", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+			},
+		},
+		{
+			name:          "empty repos list",
+			repos:         []repo.Repo{},
+			wantEdgeCount: 0,
+			wantEdges:     nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotEdges := buildRepoProjectEdges(tt.repos, projectIDs)
+
+			if len(gotEdges) != tt.wantEdgeCount {
+				t.Errorf("got %d edges, want %d", len(gotEdges), tt.wantEdgeCount)
+			}
+
+			for i, wantEdge := range tt.wantEdges {
+				if i >= len(gotEdges) {
+					break
+				}
+				gotEdge := gotEdges[i]
+				if gotEdge.Source != wantEdge.Source {
+					t.Errorf("edge %d: got source %q, want %q", i, gotEdge.Source, wantEdge.Source)
+				}
+				if gotEdge.Target != wantEdge.Target {
+					t.Errorf("edge %d: got target %q, want %q", i, gotEdge.Target, wantEdge.Target)
+				}
+				if gotEdge.RelationshipType != wantEdge.RelationshipType {
+					t.Errorf("edge %d: got relationshipType %q, want %q", i, gotEdge.RelationshipType, wantEdge.RelationshipType)
+				}
+				if gotEdge.Summary != wantEdge.Summary {
+					t.Errorf("edge %d: got summary %q, want %q", i, gotEdge.Summary, wantEdge.Summary)
 				}
 			}
 		})

@@ -12,10 +12,16 @@ import (
 	"github.com/matsen/bipartite/internal/storage"
 )
 
-// ID prefixes used in edge source/target IDs.
+// ID prefixes used in node and edge IDs to avoid collisions.
 const (
 	conceptPrefix = "concept:"
 	projectPrefix = "project:"
+	repoPrefix    = "repo:"
+)
+
+// Relationship types for derived edges (not stored in database).
+const (
+	RelationshipBelongsTo = "belongs-to" // Repo→Project structural relationship
 )
 
 // BuildGraphFromDatabase queries the database and constructs a complete GraphData
@@ -70,6 +76,10 @@ func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
 
 	// Build repo nodes (grouped under their projects)
 	repoNodes := buildRepoNodes(repos)
+
+	// Build repo→project edges (visual-only, derived from repo.Project field)
+	repoProjectEdges := buildRepoProjectEdges(repos, projectIDs)
+	vizEdges = append(vizEdges, repoProjectEdges...)
 
 	// Combine all nodes
 	var allNodes []Node
@@ -209,6 +219,31 @@ func buildRepoNodes(repos []repo.Repo) []Node {
 	return nodes
 }
 
+// buildRepoProjectEdges creates visual edges from repos to their parent projects.
+// These are not stored in the edge data - they're derived from the repo's project field.
+// Uses repo: prefix for source to match repo node IDs and avoid collisions with project IDs.
+func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge {
+	var edges []Edge
+
+	for _, r := range repos {
+		if r.Project == "" {
+			continue
+		}
+		// Only create edge if the parent project exists
+		if !projectIDs[r.Project] {
+			continue
+		}
+		edges = append(edges, Edge{
+			Source:           repoPrefix + r.ID,
+			Target:           r.Project,
+			RelationshipType: RelationshipBelongsTo,
+			Summary:          "",
+		})
+	}
+
+	return edges
+}
+
 // newPaperNode creates a visualization node from a paper reference.
 func newPaperNode(ref *reference.Reference) Node {
 	return Node{
@@ -247,9 +282,10 @@ func newProjectNode(p project.Project, connectionCount int) Node {
 }
 
 // newRepoNode creates a visualization node from a repo.
+// Uses repo: prefix to avoid ID collisions with projects.
 func newRepoNode(r repo.Repo) Node {
 	return Node{
-		ID:          r.ID,
+		ID:          repoPrefix + r.ID,
 		Type:        NodeTypeRepo,
 		Label:       r.Name,
 		Name:        r.Name,
