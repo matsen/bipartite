@@ -4,29 +4,35 @@
 
 Here is a picture of my world:
 
-![My digital world](docs/readme/diagram1.svg)
+![My digital world](diagram1.svg)
 
-In 2025, I sent 8,077 Slack messages, mass commits reviews, and evaluated hundreds of papers for their relevance to our research. Agentic coding completely revolutionized my role as an individual contributor—it shortened the distance between idea and implementation. But it didn't really help my role as a research team lead, because agents don't have access to my knowledge graph.
+In 2025, I sent 8,077 Slack messages and evaluated hundreds of papers for relevance to our research.
 
-For agents to help with coordination, they need to:
-1. Work with these services (Slack, GitHub, literature)
-2. Relate information between within-group activities and the external literature
+| Activity | Count |
+|----------|-------|
+| Commits | 1,607 |
+| PRs reviewed | 186 |
+| Issues created | 250 |
 
-## The Solution
+I'd like to get agentic help with this in 2026. In order to do so, an agent is going to need to:
+1. Work with these services
+2. Relate information between within-group activities and the literature
 
-Bipartite creates a context layer that both agents and humans can query.
+Here is a more detailed picture of my world:
 
-![Knowledge graph structure](docs/readme/diagram2.svg)
+![Knowledge graph structure](diagram2.svg)
 
-The name refers to the graph at the core: one side is your world (projects, repos, concepts), the other is the literature (papers, citations, authors), with typed edges connecting them through shared concepts.
+In 2025, agentic coding completely revolutionized my role as an individual researcher because it shortened the distance between idea and implementation. However, it didn't really help my role as a research team lead, because agents don't have all of my knowledge graph.
+
+Bipartite is a tool to give agents that knowledge graph.
 
 ## What Bipartite Is
 
-* **Agent-first**: A Go binary wrapped in Claude Code skills—agents call commands via bash, no MCP server needed
-* **Secure**: All of your knowledge lives in your private git repository
-* **Collaborative**: Data stores use JSONL, designed for merging across team members
+* **Agent-first**: A Go binary wrapped in Claude Code skills
+* **Secure**: All of your knowledge lives in your private repository
+* **Collaborative**: Data stores are designed for merging
 * **Comprehensive**: Draws from Slack, GitHub, and Paperpile
-* **Fast**: Local SQLite indexes reduce the need for frequent API calls
+* **Fast**: Local databases reduce the need for frequent API calls
 
 ## Installation
 
