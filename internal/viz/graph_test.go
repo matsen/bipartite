@@ -279,6 +279,8 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 		repos         []repo.Repo
 		wantEdgeCount int
 		wantEdges     []Edge
+		wantErr       bool
+		wantErrMsg    string
 	}{
 		{
 			name: "repo with valid project creates edge",
@@ -307,12 +309,12 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			wantEdges:     nil,
 		},
 		{
-			name: "repo with self-referential project creates no edge (avoid self-loop)",
+			name: "repo with self-referential project returns error",
 			repos: []repo.Repo{
 				{ID: "dasm", Project: "dasm"},
 			},
-			wantEdgeCount: 0,
-			wantEdges:     nil,
+			wantErr:    true,
+			wantErrMsg: "self-referential project",
 		},
 		{
 			name: "multiple repos with different projects",
@@ -338,7 +340,22 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotEdges := buildRepoProjectEdges(tt.repos, projectIDs)
+			gotEdges, err := buildRepoProjectEdges(tt.repos, projectIDs)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected error containing %q, got nil", tt.wantErrMsg)
+					return
+				}
+				if !strings.Contains(err.Error(), tt.wantErrMsg) {
+					t.Errorf("error %q does not contain %q", err.Error(), tt.wantErrMsg)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
 
 			if len(gotEdges) != tt.wantEdgeCount {
 				t.Errorf("got %d edges, want %d", len(gotEdges), tt.wantEdgeCount)

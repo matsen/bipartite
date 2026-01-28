@@ -77,7 +77,10 @@ func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
 	repoNodes := buildRepoNodes(repos)
 
 	// Build repo→project edges (visual-only, derived from repo.Project field)
-	repoProjectEdges := buildRepoProjectEdges(repos, projectIDs)
+	repoProjectEdges, err := buildRepoProjectEdges(repos, projectIDs)
+	if err != nil {
+		return nil, err
+	}
 	vizEdges = append(vizEdges, repoProjectEdges...)
 
 	// Combine all nodes
@@ -220,16 +223,18 @@ func buildRepoNodes(repos []repo.Repo) []Node {
 
 // buildRepoProjectEdges creates visual edges from repos to their parent projects.
 // These are not stored in the edge data - they're derived from the repo's project field.
-func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge {
+// Returns an error if a repo has a self-referential project (id == project), which
+// indicates a data entry error.
+func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) ([]Edge, error) {
 	var edges []Edge
 
 	for _, r := range repos {
 		if r.Project == "" {
 			continue
 		}
-		// Skip self-loops (repo ID same as project ID)
+		// Self-referential project is a data error
 		if r.ID == r.Project {
-			continue
+			return nil, fmt.Errorf("repo %q has self-referential project field (id == project)", r.ID)
 		}
 		// Only create edge if the parent project exists
 		if !projectIDs[r.Project] {
@@ -243,7 +248,7 @@ func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge
 		})
 	}
 
-	return edges
+	return edges, nil
 }
 
 // newPaperNode creates a visualization node from a paper reference.
