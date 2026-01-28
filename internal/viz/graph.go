@@ -18,6 +18,11 @@ const (
 	projectPrefix = "project:"
 )
 
+// Relationship types for derived edges (not stored in database).
+const (
+	RelationshipBelongsTo = "belongs-to" // Repo→Project structural relationship
+)
+
 // BuildGraphFromDatabase queries the database and constructs a complete GraphData
 // structure for visualization, including papers, concepts, projects, repos, and edges.
 func BuildGraphFromDatabase(db *storage.DB) (*GraphData, error) {
@@ -229,7 +234,7 @@ func buildRepoProjectEdges(repos []repo.Repo, projectIDs map[string]bool) []Edge
 		edges = append(edges, Edge{
 			Source:           r.ID,
 			Target:           r.Project,
-			RelationshipType: "belongs-to",
+			RelationshipType: RelationshipBelongsTo,
 			Summary:          "",
 		})
 	}

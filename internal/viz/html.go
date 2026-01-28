@@ -343,7 +343,9 @@ const htmlTemplate = `<!DOCTYPE html>
               'width': 2
             }
           },
-          // Repo→Project edges - dashed, lighter to distinguish from knowledge graph edges
+          // Repo→Project edges - dashed, lighter to distinguish from knowledge graph edges.
+          // These represent structural "belongs-to" relationships (derived from repo.Project),
+          // not semantic knowledge edges (stored in the edge database).
           {
             selector: 'edge[relationshipType="belongs-to"]',
             style: {

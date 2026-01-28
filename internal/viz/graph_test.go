@@ -287,7 +287,7 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			},
 			wantEdgeCount: 1,
 			wantEdges: []Edge{
-				{Source: "bipartite", Target: "dasm", RelationshipType: "belongs-to"},
+				{Source: "bipartite", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
 			},
 		},
 		{
@@ -315,9 +315,9 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 			},
 			wantEdgeCount: 3,
 			wantEdges: []Edge{
-				{Source: "repo1", Target: "dasm", RelationshipType: "belongs-to"},
-				{Source: "repo2", Target: "netam", RelationshipType: "belongs-to"},
-				{Source: "repo3", Target: "dasm", RelationshipType: "belongs-to"},
+				{Source: "repo1", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo2", Target: "netam", RelationshipType: RelationshipBelongsTo, Summary: ""},
+				{Source: "repo3", Target: "dasm", RelationshipType: RelationshipBelongsTo, Summary: ""},
 			},
 		},
 		{
@@ -349,6 +349,9 @@ func TestBuildRepoProjectEdges(t *testing.T) {
 				}
 				if gotEdge.RelationshipType != wantEdge.RelationshipType {
 					t.Errorf("edge %d: got relationshipType %q, want %q", i, gotEdge.RelationshipType, wantEdge.RelationshipType)
+				}
+				if gotEdge.Summary != wantEdge.Summary {
+					t.Errorf("edge %d: got summary %q, want %q", i, gotEdge.Summary, wantEdge.Summary)
 				}
 			}
 		})
