@@ -358,8 +358,11 @@ func processRepoImport(repoSpec, projectID, now string, ghClient *github.Client,
 		repoID = fmt.Sprintf("%s-%s", projectID, repoID)
 		// If still collision, use full org-repo format
 		if existingRepoIDs[repoID] {
+			// ParseGitHubURL won't fail here since NormalizeGitHubURL already succeeded
 			owner, repoName, _ := github.ParseGitHubURL(repoSpec)
-			repoID = strings.ToLower(fmt.Sprintf("%s-%s", owner, repoName))
+			if owner != "" && repoName != "" {
+				repoID = strings.ToLower(fmt.Sprintf("%s-%s", owner, repoName))
+			}
 		}
 	}
 
