@@ -90,7 +90,7 @@ func processEdges(allEdges []edge.Edge, conceptIDs, projectIDs map[string]bool) 
 	paperIDs := make(map[string]bool)
 	conceptConnectionCounts := make(map[string]int)
 	projectConnectionCounts := make(map[string]int)
-	var vizEdges []Edge
+	vizEdges := make([]Edge, 0, len(allEdges))
 
 	for _, e := range allEdges {
 		sourceID := normalizeID(e.SourceID)
@@ -168,7 +168,7 @@ func buildPaperNodes(db *storage.DB, paperIDs map[string]bool) ([]Node, error) {
 			return nil, fmt.Errorf("retrieving paper %s: %w", paperID, err)
 		}
 		if ref == nil {
-			return nil, fmt.Errorf("data integrity error: edge references non-existent paper %s", paperID)
+			return nil, fmt.Errorf("orphaned edge: references paper %s which does not exist", paperID)
 		}
 		nodes = append(nodes, newPaperNode(ref))
 	}
