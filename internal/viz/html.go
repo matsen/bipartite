@@ -250,6 +250,37 @@ const htmlTemplate = `<!DOCTYPE html>
               'height': 'mapData(connectionCount, 0, 10, 25, 50)'
             }
           },
+          // Project nodes - green hexagons
+          {
+            selector: 'node[type="project"]',
+            style: {
+              'background-color': '#27AE60',
+              'shape': 'hexagon',
+              'label': 'data(label)',
+              'color': '#333',
+              'font-size': '11px',
+              'font-weight': 'bold',
+              'text-valign': 'bottom',
+              'text-margin-y': '5px',
+              'width': 'mapData(connectionCount, 0, 10, 35, 60)',
+              'height': 'mapData(connectionCount, 0, 10, 35, 60)'
+            }
+          },
+          // Repo nodes - small gray squares
+          {
+            selector: 'node[type="repo"]',
+            style: {
+              'background-color': '#7F8C8D',
+              'shape': 'rectangle',
+              'label': 'data(label)',
+              'color': '#555',
+              'font-size': '8px',
+              'text-valign': 'bottom',
+              'text-margin-y': '3px',
+              'width': '20px',
+              'height': '20px'
+            }
+          },
           // Edge styling by relationship type
           {
             selector: 'edge[relationshipType="introduces"]',
@@ -276,6 +307,37 @@ const htmlTemplate = `<!DOCTYPE html>
             style: {
               'line-color': '#9B59B6',
               'target-arrow-color': '#9B59B6',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'width': 2
+            }
+          },
+          // Concept-project edges - teal
+          {
+            selector: 'edge[relationshipType="implemented-in"]',
+            style: {
+              'line-color': '#1ABC9C',
+              'target-arrow-color': '#1ABC9C',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'width': 2
+            }
+          },
+          {
+            selector: 'edge[relationshipType="applied-in"]',
+            style: {
+              'line-color': '#16A085',
+              'target-arrow-color': '#16A085',
+              'target-arrow-shape': 'triangle',
+              'curve-style': 'bezier',
+              'width': 2
+            }
+          },
+          {
+            selector: 'edge[relationshipType="studied-by"]',
+            style: {
+              'line-color': '#2ECC71',
+              'target-arrow-color': '#2ECC71',
               'target-arrow-shape': 'triangle',
               'curve-style': 'bezier',
               'width': 2
@@ -353,6 +415,17 @@ const htmlTemplate = `<!DOCTYPE html>
             html += '<div class="detail">Aliases: ' + data.aliases.map(escapeHtml).join(', ') + '</div>';
           }
           html += '<div class="detail">Connections: ' + data.connectionCount + '</div>';
+        } else if (data.type === 'project') {
+          if (data.description) html += '<div class="detail">' + escapeHtml(data.description) + '</div>';
+          html += '<div class="detail">Connections: ' + data.connectionCount + '</div>';
+        } else if (data.type === 'repo') {
+          if (data.description) html += '<div class="detail">' + escapeHtml(data.description) + '</div>';
+          if (data.projectId) html += '<div class="detail">Project: ' + escapeHtml(data.projectId) + '</div>';
+          if (data.language) html += '<div class="detail">Language: ' + escapeHtml(data.language) + '</div>';
+          if (data.topics && data.topics.length > 0) {
+            html += '<div class="detail">Topics: ' + data.topics.map(escapeHtml).join(', ') + '</div>';
+          }
+          if (data.githubUrl) html += '<div class="detail"><a href="' + escapeHtml(data.githubUrl) + '" target="_blank">GitHub</a></div>';
         }
 
         return html;
