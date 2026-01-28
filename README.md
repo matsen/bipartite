@@ -20,7 +20,7 @@ Bipartite is a tool to give agents that knowledge graph.
 
 ## What Bipartite Does
 
-- **[Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)** — An agent-first reference manager: JSON output, CLI interface, git-backed storage. No existing tool (Zotero, Mendeley, Paperpile) gives agents programmatic access to your library.
+- **[Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)** — An agent-first reference manager: JSON output, CLI interface, git-backed storage. Zotero MCP servers exist, but bipartite is built for agents from the ground up — no GUI database, just JSONL and git.
 - **[Knowledge Graph](https://matsen.github.io/bipartite/guides/knowledge-graph/)** — Unlike personal knowledge graphs (Obsidian, Roam), this one connects the literature to your group's projects and is designed for agents to traverse.
 - **[Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/)** — Themed digests, cross-repo check-ins, and Slack integration for group leaders. We don't know of another tool that synthesizes GitHub activity by research theme for a PI.
 
