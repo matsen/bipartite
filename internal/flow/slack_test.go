@@ -186,7 +186,7 @@ func TestParseSlackTimestamp(t *testing.T) {
 		wantYear int
 	}{
 		{"1737990123.000100", 2025},
-		{"1609459200.000000", 2020}, // Dec 31, 2020 (UTC)
+		{"1609459200.000000", 2021}, // Jan 1, 2021 00:00:00 UTC
 	}
 
 	for _, tt := range tests {
@@ -195,8 +195,9 @@ func TestParseSlackTimestamp(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			if parsed.Year() != tt.wantYear {
-				t.Errorf("expected year %d, got %d", tt.wantYear, parsed.Year())
+			// Check year in UTC to avoid timezone-dependent test failures
+			if parsed.UTC().Year() != tt.wantYear {
+				t.Errorf("expected year %d, got %d", tt.wantYear, parsed.UTC().Year())
 			}
 		})
 	}
