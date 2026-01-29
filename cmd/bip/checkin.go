@@ -133,6 +133,16 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			}
 		}
 
+		// Fetch PR reviews and include them as comments for ball-in-court filtering
+		if len(prs) > 0 {
+			var prNumbers []int
+			for _, pr := range prs {
+				prNumbers = append(prNumbers, pr.Number)
+			}
+			reviewComments := flow.FetchPRReviewsAsComments(repo, prNumbers, since)
+			allComments = append(allComments, reviewComments...)
+		}
+
 		// Apply ball-in-my-court filtering if enabled
 		if githubUser != "" {
 			issues = flow.FilterByBallInCourt(issues, allComments, githubUser)

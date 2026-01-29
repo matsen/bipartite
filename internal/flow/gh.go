@@ -3,6 +3,7 @@ package flow
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -295,22 +296,36 @@ func DetectItemType(repo string, number int) (string, error) {
 	return "issue", nil
 }
 
-// FetchPRReviewers fetches reviewers for a PR.
-func FetchPRReviewers(repo string, number int) ([]string, error) {
+// rawPRReview represents a single review from the GitHub API.
+type rawPRReview struct {
+	User        GitHubUser `json:"user"`
+	SubmittedAt time.Time  `json:"submitted_at"`
+	State       string     `json:"state"`
+	Body        string     `json:"body"`
+}
+
+// fetchPRReviews fetches all reviews for a single PR.
+func fetchPRReviews(repo string, number int) ([]rawPRReview, error) {
 	endpoint := fmt.Sprintf("/repos/%s/pulls/%d/reviews", repo, number)
 	data, err := GHAPI(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("fetching reviews for %s#%d: %w", repo, number, err)
+	}
+
+	var reviews []rawPRReview
+	if err := json.Unmarshal(data, &reviews); err != nil {
+		return nil, fmt.Errorf("parsing reviews for %s#%d: %w", repo, number, err)
+	}
+	return reviews, nil
+}
+
+// FetchPRReviewers fetches deduplicated reviewer logins for a PR.
+func FetchPRReviewers(repo string, number int) ([]string, error) {
+	reviews, err := fetchPRReviews(repo, number)
 	if err != nil {
 		return nil, err
 	}
 
-	var reviews []struct {
-		User GitHubUser `json:"user"`
-	}
-	if err := json.Unmarshal(data, &reviews); err != nil {
-		return nil, err
-	}
-
-	// Deduplicate reviewers
 	reviewerSet := make(map[string]bool)
 	for _, r := range reviews {
 		if r.User.Login != "" {
@@ -323,6 +338,156 @@ func FetchPRReviewers(repo string, number int) ([]string, error) {
 		reviewers = append(reviewers, login)
 	}
 	return reviewers, nil
+}
+
+// fetchPRReviewsBatch fetches reviews for multiple PRs in a single GraphQL call.
+// Returns a map from PR number to its reviews. PRs that fail to fetch are omitted.
+func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, error) {
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo format %q, expected owner/name", repo)
+	}
+	owner, name := parts[0], parts[1]
+
+	if len(prNumbers) > 50 {
+		fmt.Fprintf(os.Stderr, "Warning: batching %d PRs in a single GraphQL query; may hit node limits\n", len(prNumbers))
+	}
+
+	// Build aliased query: one pullRequest alias per PR number.
+	var fragments []string
+	for _, n := range prNumbers {
+		fragments = append(fragments, fmt.Sprintf(`pr_%d: pullRequest(number: %d) {
+      reviews(first: 100) {
+        nodes { author { login } submittedAt state body }
+      }
+    }`, n, n))
+	}
+
+	query := fmt.Sprintf(`query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    %s
+  }
+}`, strings.Join(fragments, "\n    "))
+
+	data, err := GHGraphQL(query, map[string]interface{}{
+		"owner": owner,
+		"name":  name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("batch fetching reviews for %s: %w", repo, err)
+	}
+
+	// Parse the dynamic response structure.
+	var top struct {
+		Data struct {
+			Repository json.RawMessage `json:"repository"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &top); err != nil {
+		return nil, fmt.Errorf("parsing batch review response: %w", err)
+	}
+
+	// Parse repository as map of aliases -> PR data.
+	var prMap map[string]json.RawMessage
+	if err := json.Unmarshal(top.Data.Repository, &prMap); err != nil {
+		return nil, fmt.Errorf("parsing repository aliases: %w", err)
+	}
+
+	result := make(map[int][]rawPRReview)
+	for _, n := range prNumbers {
+		alias := fmt.Sprintf("pr_%d", n)
+		raw, ok := prMap[alias]
+		if !ok {
+			continue
+		}
+
+		var prData struct {
+			Reviews struct {
+				Nodes []struct {
+					Author      struct{ Login string } `json:"author"`
+					SubmittedAt time.Time              `json:"submittedAt"`
+					State       string                 `json:"state"`
+					Body        string                 `json:"body"`
+				} `json:"nodes"`
+			} `json:"reviews"`
+		}
+		if err := json.Unmarshal(raw, &prData); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: parsing reviews for %s#%d: %v\n", repo, n, err)
+			continue
+		}
+
+		var reviews []rawPRReview
+		for _, node := range prData.Reviews.Nodes {
+			reviews = append(reviews, rawPRReview{
+				User:        GitHubUser{Login: node.Author.Login},
+				SubmittedAt: node.SubmittedAt,
+				State:       node.State,
+				Body:        node.Body,
+			})
+		}
+		if len(reviews) >= 100 {
+			fmt.Fprintf(os.Stderr, "Warning: %s#%d returned 100 reviews (GraphQL limit); some may be missing\n", repo, n)
+		}
+		result[n] = reviews
+	}
+
+	return result, nil
+}
+
+// FetchPRReviewsAsComments fetches PR reviews for a set of PRs and returns
+// them as GitHubComment entries so they participate in ball-in-court filtering.
+// Only reviews submitted since the given time are included.
+// Uses a single batched GraphQL call, falling back to per-PR REST calls on failure.
+//
+// All errors are logged to stderr (never silently swallowed). A nil return
+// means every API call failed; an empty slice means no matching reviews.
+//
+// Excluded review states:
+//   - PENDING: draft reviews not yet submitted (only visible to the author)
+//   - DISMISSED: reviews invalidated by the PR author or admin
+func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []GitHubComment {
+	reviewsByPR, err := fetchPRReviewsBatch(repo, prNumbers)
+	if err != nil {
+		// Fall back to sequential REST calls.
+		fmt.Fprintf(os.Stderr, "Warning: %v; falling back to per-PR fetching\n", err)
+		reviewsByPR = make(map[int][]rawPRReview)
+		var failures int
+		for _, number := range prNumbers {
+			reviews, err := fetchPRReviews(repo, number)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				failures++
+				continue
+			}
+			reviewsByPR[number] = reviews
+		}
+		if failures == len(prNumbers) {
+			fmt.Fprintf(os.Stderr, "Warning: all %d per-PR review fetches failed for %s; review data unavailable\n", failures, repo)
+		}
+	}
+
+	var comments []GitHubComment
+	for _, number := range prNumbers {
+		reviews := reviewsByPR[number]
+		issueURL := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d", repo, number)
+		for _, r := range reviews {
+			if r.SubmittedAt.Before(since) {
+				continue
+			}
+			if r.State == "PENDING" || r.State == "DISMISSED" {
+				continue
+			}
+			comments = append(comments, GitHubComment{
+				User:      r.User,
+				UpdatedAt: r.SubmittedAt,
+				CreatedAt: r.SubmittedAt,
+				IssueURL:  issueURL,
+				Body:      r.Body,
+			})
+		}
+	}
+	fmt.Fprintf(os.Stderr, "Fetched %d review comment(s) across %d PR(s) for %s\n", len(comments), len(prNumbers), repo)
+	return comments
 }
 
 // FetchItemCommenters fetches commenters for an issue or PR.
