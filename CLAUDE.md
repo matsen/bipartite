@@ -36,6 +36,8 @@ bd list                     # List all tasks
 - JSONL (source of truth) + SQLite (ephemeral index) (014-jsonl-sqlite-store)
 - Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (015-url-clipboard)
 - JSONL (source of truth) + ephemeral SQLite (rebuilt via `bip rebuild`) (015-url-clipboard)
+- Go 1.24.1 (from go.mod) + spf13/cobra (CLI), golang.org/x/crypto/ssh (native SSH), gopkg.in/yaml.v3 (config parsing) (016-bip-scout)
+- N/A — stateless command, no persistence (016-bip-scout)
 
 **Go version**: See `go.mod` for minimum version (no cutting-edge features required)
 
@@ -128,7 +130,7 @@ bip digest --channel foo --verbose  # Include PR/issue body summaries
 bip tree --open          # View beads hierarchy in browser
 ```
 
-**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`, `/bip.narrative`
+**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`, `/bip.narrative`, `/bip.scout`
 
 ### Narrative Digests
 
@@ -171,10 +173,14 @@ Before any pull request, ensure the following workflow is completed:
 7. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
 
 ### Documentation Sync
-8. **README and Skill Update**: If the feature adds new commands or changes user-facing behavior, update `README.md` and `.claude/skills/bip/` to document the changes
+8. **Documentation Update**: If the feature adds new commands or changes user-facing behavior:
+   - `README.md` — Keep short (overview, installation, environment variables only)
+   - `docs/guides/` — Detailed guides with examples, config reference, troubleshooting
+   - `.claude/skills/bip/` — Update skill docs for Claude Code integration
 
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes
+- 016-bip-scout: Added Go 1.24.1 (from go.mod) + spf13/cobra (CLI), golang.org/x/crypto/ssh (native SSH), gopkg.in/yaml.v3 (config parsing)
 - 015-url-clipboard: Added Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)
 - 014-jsonl-sqlite-store: Added Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)
