@@ -59,6 +59,7 @@ site_dir: site
 nav:
   - Home: index.md
   - Guides:
+    - How It Works: guides/architecture.md
     - Getting Started: guides/getting-started.md
     - Reference Management: guides/reference-management.md
     - Knowledge Graph: guides/knowledge-graph.md

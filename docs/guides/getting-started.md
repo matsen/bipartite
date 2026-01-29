@@ -1,6 +1,6 @@
 # Getting Started
 
-Bipartite operates on a **nexus** — a directory that serves as the central hub for your paper library, server configurations, and workflow coordination.
+Bipartite operates on a **[nexus](architecture.md)** — a directory that serves as the central hub for your paper library, server configurations, and workflow coordination. See [How It Works](architecture.md) for the full picture of how bipartite's pieces fit together.
 
 ## Creating a Nexus
 
