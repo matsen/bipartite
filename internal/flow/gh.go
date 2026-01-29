@@ -3,6 +3,7 @@ package flow
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -295,22 +296,36 @@ func DetectItemType(repo string, number int) (string, error) {
 	return "issue", nil
 }
 
-// FetchPRReviewers fetches reviewers for a PR.
-func FetchPRReviewers(repo string, number int) ([]string, error) {
+// rawPRReview represents a single review from the GitHub API.
+type rawPRReview struct {
+	User        GitHubUser `json:"user"`
+	SubmittedAt time.Time  `json:"submitted_at"`
+	State       string     `json:"state"`
+	Body        string     `json:"body"`
+}
+
+// fetchPRReviews fetches all reviews for a single PR.
+func fetchPRReviews(repo string, number int) ([]rawPRReview, error) {
 	endpoint := fmt.Sprintf("/repos/%s/pulls/%d/reviews", repo, number)
 	data, err := GHAPI(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("fetching reviews for %s#%d: %w", repo, number, err)
+	}
+
+	var reviews []rawPRReview
+	if err := json.Unmarshal(data, &reviews); err != nil {
+		return nil, fmt.Errorf("parsing reviews for %s#%d: %w", repo, number, err)
+	}
+	return reviews, nil
+}
+
+// FetchPRReviewers fetches deduplicated reviewer logins for a PR.
+func FetchPRReviewers(repo string, number int) ([]string, error) {
+	reviews, err := fetchPRReviews(repo, number)
 	if err != nil {
 		return nil, err
 	}
 
-	var reviews []struct {
-		User GitHubUser `json:"user"`
-	}
-	if err := json.Unmarshal(data, &reviews); err != nil {
-		return nil, err
-	}
-
-	// Deduplicate reviewers
 	reviewerSet := make(map[string]bool)
 	for _, r := range reviews {
 		if r.User.Login != "" {
@@ -328,28 +343,25 @@ func FetchPRReviewers(repo string, number int) ([]string, error) {
 // FetchPRReviewsAsComments fetches PR reviews for a set of PRs and returns
 // them as GitHubComment entries so they participate in ball-in-court filtering.
 // Only reviews submitted since the given time are included.
+//
+// Excluded review states:
+//   - PENDING: draft reviews not yet submitted (only visible to the author)
+//   - DISMISSED: reviews invalidated by the PR author or admin
 func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []GitHubComment {
 	var comments []GitHubComment
 	for _, number := range prNumbers {
-		endpoint := fmt.Sprintf("/repos/%s/pulls/%d/reviews", repo, number)
-		data, err := GHAPI(endpoint)
+		reviews, err := fetchPRReviews(repo, number)
 		if err != nil {
-			continue
-		}
-
-		var reviews []struct {
-			User        GitHubUser `json:"user"`
-			SubmittedAt time.Time  `json:"submitted_at"`
-			State       string     `json:"state"`
-			Body        string     `json:"body"`
-		}
-		if err := json.Unmarshal(data, &reviews); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
 			continue
 		}
 
 		issueURL := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d", repo, number)
 		for _, r := range reviews {
 			if r.SubmittedAt.Before(since) {
+				continue
+			}
+			if r.State == "PENDING" || r.State == "DISMISSED" {
 				continue
 			}
 			comments = append(comments, GitHubComment{
