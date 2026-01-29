@@ -17,6 +17,11 @@ var checkinCmd = &cobra.Command{
 By default, shows only items where the "ball is in your court" - items
 that need your attention or response. Use --all to see all activity.
 
+The activity window defaults to the timestamp in .last-checkin.json (falling
+back to 3 days if the file doesn't exist). Each run updates .last-checkin.json
+so the next run picks up where you left off. Using --since overrides this
+window and does NOT update .last-checkin.json.
+
 Requires sources.json in the current directory (run from nexus directory).`,
 	Run: runCheckin,
 }
@@ -32,7 +37,7 @@ var (
 func init() {
 	rootCmd.AddCommand(checkinCmd)
 
-	checkinCmd.Flags().StringVar(&checkinSince, "since", "3d", "Time period (e.g., 2d, 12h, 1w)")
+	checkinCmd.Flags().StringVar(&checkinSince, "since", "3d", "Time period (e.g., 2d, 12h, 1w); does not update .last-checkin.json")
 	checkinCmd.Flags().StringVar(&checkinRepo, "repo", "", "Check single repo only")
 	checkinCmd.Flags().StringVar(&checkinCategory, "category", "", "Check repos in category only (code, writing)")
 	checkinCmd.Flags().BoolVar(&checkinAll, "all", false, "Show all activity (disable ball-in-my-court filtering)")
@@ -182,9 +187,11 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		fmt.Println("No activity found.")
 	}
 
-	// Update state file with current timestamp
-	if err := flow.WriteLastCheckin(now); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: could not update %s: %v\n", flow.StateFile, err)
+	// Update state file with current timestamp (only when --since was not explicit)
+	if !cmd.Flags().Changed("since") {
+		if err := flow.WriteLastCheckin(now); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not update %s: %v\n", flow.StateFile, err)
+		}
 	}
 
 	// Generate take-home summaries if requested
