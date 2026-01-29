@@ -21,6 +21,7 @@ Bipartite is a tool to give agents knowledge and access to all the tools they ne
 - **[Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)** — An agent-first reference manager: JSON output, CLI interface, git-backed storage, Semantic Scholar and Asta search. JSONL means your library is mergeable across collaborators with standard git workflows.
 - **[Knowledge Graph](https://matsen.github.io/bipartite/guides/knowledge-graph/)** — This knowledge graph connects the literature to _your group's projects_ and is designed for agents to traverse.
 - **[Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/)** — Themed digests, cross-repo check-ins (spawn dedicated `tmux` windows!), and Slack integration for group leaders.
+- **[Server Scout](https://matsen.github.io/bipartite/guides/server-scout/)** — Check remote server CPU, memory, load, and GPU availability via native SSH.
 
 ## Installation
 
