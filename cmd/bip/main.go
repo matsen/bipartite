@@ -30,12 +30,18 @@ func main() {
 
 var rootCmd = &cobra.Command{
 	Use:   "bip",
-	Short: "Agent-first academic reference manager",
-	Long: `bip is an agent-first CLI for managing academic references.
+	Short: "Agent-first research workflow CLI",
+	Long: `bip is an agent-first CLI for research workflows.
 
-It stores references in git-versionable JSONL format with an ephemeral
-SQLite database for fast queries. All commands output JSON by default
-for easy integration with AI agents and other tools.`,
+Core features:
+  - Academic references with knowledge graph (papers, concepts, edges)
+  - Semantic search via embeddings
+  - GitHub project tracking (issues, PRs, boards, activity digests)
+  - Slack integration for team updates
+  - Remote server availability checking
+
+Data is stored in git-versionable JSONL with ephemeral SQLite for queries.
+All commands output JSON by default for AI agent integration.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
