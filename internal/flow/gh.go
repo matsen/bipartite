@@ -325,6 +325,45 @@ func FetchPRReviewers(repo string, number int) ([]string, error) {
 	return reviewers, nil
 }
 
+// FetchPRReviewsAsComments fetches PR reviews for a set of PRs and returns
+// them as GitHubComment entries so they participate in ball-in-court filtering.
+// Only reviews submitted since the given time are included.
+func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []GitHubComment {
+	var comments []GitHubComment
+	for _, number := range prNumbers {
+		endpoint := fmt.Sprintf("/repos/%s/pulls/%d/reviews", repo, number)
+		data, err := GHAPI(endpoint)
+		if err != nil {
+			continue
+		}
+
+		var reviews []struct {
+			User        GitHubUser `json:"user"`
+			SubmittedAt time.Time  `json:"submitted_at"`
+			State       string     `json:"state"`
+			Body        string     `json:"body"`
+		}
+		if err := json.Unmarshal(data, &reviews); err != nil {
+			continue
+		}
+
+		issueURL := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d", repo, number)
+		for _, r := range reviews {
+			if r.SubmittedAt.Before(since) {
+				continue
+			}
+			comments = append(comments, GitHubComment{
+				User:      r.User,
+				UpdatedAt: r.SubmittedAt,
+				CreatedAt: r.SubmittedAt,
+				IssueURL:  issueURL,
+				Body:      r.Body,
+			})
+		}
+	}
+	return comments
+}
+
 // FetchItemCommenters fetches commenters for an issue or PR.
 func FetchItemCommenters(repo string, number int) ([]string, error) {
 	endpoint := fmt.Sprintf("/repos/%s/issues/%d/comments", repo, number)

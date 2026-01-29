@@ -211,6 +211,98 @@ func TestBallInMyCourtScenarios(t *testing.T) {
 	})
 }
 
+func TestBallInMyCourtWithPRReviews(t *testing.T) {
+	me := "matsen"
+	now := time.Now()
+
+	// Helper: create a GitHubComment that mimics a PR review
+	// (same shape as what FetchPRReviewsAsComments returns)
+	makeReviewComment := func(author string, itemNumber int, when time.Time) GitHubComment {
+		return GitHubComment{
+			User:      GitHubUser{Login: author},
+			IssueURL:  "https://api.github.com/repos/org/repo/issues/" + itoa(itemNumber),
+			UpdatedAt: when,
+			CreatedAt: when,
+		}
+	}
+
+	// Scenario: Their PR, I submitted a review (approve/request-changes).
+	// No inline comments, just the review itself.
+	// -> Hide: I acted last via the review.
+	t.Run("their PR, I reviewed via approve", func(t *testing.T) {
+		item := GitHubItem{
+			Number:    107,
+			User:      GitHubUser{Login: "colleague"},
+			IsPR:      true,
+			UpdatedAt: now,
+		}
+		comments := []GitHubComment{
+			makeReviewComment(me, 107, now),
+		}
+		if BallInMyCourt(item, comments, me) {
+			t.Error("Expected false: I reviewed, waiting for them to address")
+		}
+	})
+
+	// Scenario: Their PR, I reviewed, then they pushed new commits
+	// and re-requested review (their comment is last).
+	// -> Show: they acted after my review.
+	t.Run("their PR, they responded after my review", func(t *testing.T) {
+		item := GitHubItem{
+			Number:    107,
+			User:      GitHubUser{Login: "colleague"},
+			IsPR:      true,
+			UpdatedAt: now,
+		}
+		comments := []GitHubComment{
+			makeReviewComment(me, 107, now.Add(-1*time.Hour)),
+			makeReviewComment("colleague", 107, now),
+		}
+		if !BallInMyCourt(item, comments, me) {
+			t.Error("Expected true: they responded after my review")
+		}
+	})
+
+	// Scenario: My PR, someone approved it.
+	// -> Show: they acted (approval is an action).
+	t.Run("my PR, someone approved", func(t *testing.T) {
+		item := GitHubItem{
+			Number:    50,
+			User:      GitHubUser{Login: me},
+			IsPR:      true,
+			UpdatedAt: now,
+		}
+		comments := []GitHubComment{
+			makeReviewComment("reviewer", 50, now),
+		}
+		if !BallInMyCourt(item, comments, me) {
+			t.Error("Expected true: reviewer approved my PR")
+		}
+	})
+
+	// Scenario: Their PR, I reviewed, then also left inline comments.
+	// Review and inline comments both by me — still hide.
+	t.Run("their PR, my review + inline comments", func(t *testing.T) {
+		item := GitHubItem{
+			Number:    200,
+			User:      GitHubUser{Login: "colleague"},
+			IsPR:      true,
+			UpdatedAt: now,
+		}
+		comments := []GitHubComment{
+			makeReviewComment(me, 200, now.Add(-5*time.Minute)),
+			{
+				User:      GitHubUser{Login: me},
+				PRURL:     "https://api.github.com/repos/org/repo/pulls/200",
+				UpdatedAt: now,
+			},
+		}
+		if BallInMyCourt(item, comments, me) {
+			t.Error("Expected false: all activity is mine (review + inline)")
+		}
+	})
+}
+
 func TestFilterByBallInCourt(t *testing.T) {
 	me := "me"
 	now := time.Now()
