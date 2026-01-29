@@ -29,14 +29,17 @@ bip rebuild
 bip search "phylogenetics"
 ```
 
-### Option 2: Initialize from Scratch
+### Option 2: Create Manually
 
-For an empty nexus in an existing directory:
+For an empty nexus without using the template:
 
 ```bash
 mkdir my-nexus && cd my-nexus
 git init
-bip init
+touch refs.jsonl edges.jsonl concepts.jsonl
+mkdir -p .bipartite/cache
+echo ".bipartite/" >> .gitignore
+bip rebuild
 ```
 
 This creates the minimal structure needed to start adding papers.

@@ -29,8 +29,9 @@ ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
 
 ## Quick Start
 
+Create your nexus from the [nexus-template](https://github.com/matsen/nexus-template), then:
+
 ```bash
-bip init
 bip config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
 bip import --format paperpile ~/Downloads/export.json
 bip rebuild
