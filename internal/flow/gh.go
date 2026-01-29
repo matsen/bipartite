@@ -340,22 +340,120 @@ func FetchPRReviewers(repo string, number int) ([]string, error) {
 	return reviewers, nil
 }
 
+// fetchPRReviewsBatch fetches reviews for multiple PRs in a single GraphQL call.
+// Returns a map from PR number to its reviews. PRs that fail to fetch are omitted.
+func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, error) {
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo format %q, expected owner/name", repo)
+	}
+	owner, name := parts[0], parts[1]
+
+	// Build aliased query: one pullRequest alias per PR number.
+	var fragments []string
+	for _, n := range prNumbers {
+		fragments = append(fragments, fmt.Sprintf(`pr_%d: pullRequest(number: %d) {
+      reviews(first: 100) {
+        nodes { author { login } submittedAt state body }
+      }
+    }`, n, n))
+	}
+
+	query := fmt.Sprintf(`query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    %s
+  }
+}`, strings.Join(fragments, "\n    "))
+
+	data, err := GHGraphQL(query, map[string]interface{}{
+		"owner": owner,
+		"name":  name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("batch fetching reviews for %s: %w", repo, err)
+	}
+
+	// Parse the dynamic response structure.
+	var top struct {
+		Data struct {
+			Repository json.RawMessage `json:"repository"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &top); err != nil {
+		return nil, fmt.Errorf("parsing batch review response: %w", err)
+	}
+
+	// Parse repository as map of aliases -> PR data.
+	var prMap map[string]json.RawMessage
+	if err := json.Unmarshal(top.Data.Repository, &prMap); err != nil {
+		return nil, fmt.Errorf("parsing repository aliases: %w", err)
+	}
+
+	result := make(map[int][]rawPRReview)
+	for _, n := range prNumbers {
+		alias := fmt.Sprintf("pr_%d", n)
+		raw, ok := prMap[alias]
+		if !ok {
+			continue
+		}
+
+		var prData struct {
+			Reviews struct {
+				Nodes []struct {
+					Author      struct{ Login string } `json:"author"`
+					SubmittedAt time.Time              `json:"submittedAt"`
+					State       string                 `json:"state"`
+					Body        string                 `json:"body"`
+				} `json:"nodes"`
+			} `json:"reviews"`
+		}
+		if err := json.Unmarshal(raw, &prData); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: parsing reviews for %s#%d: %v\n", repo, n, err)
+			continue
+		}
+
+		var reviews []rawPRReview
+		for _, node := range prData.Reviews.Nodes {
+			reviews = append(reviews, rawPRReview{
+				User:        GitHubUser{Login: node.Author.Login},
+				SubmittedAt: node.SubmittedAt,
+				State:       node.State,
+				Body:        node.Body,
+			})
+		}
+		result[n] = reviews
+	}
+
+	return result, nil
+}
+
 // FetchPRReviewsAsComments fetches PR reviews for a set of PRs and returns
 // them as GitHubComment entries so they participate in ball-in-court filtering.
 // Only reviews submitted since the given time are included.
+// Uses a single batched GraphQL call, falling back to per-PR REST calls on failure.
 //
 // Excluded review states:
 //   - PENDING: draft reviews not yet submitted (only visible to the author)
 //   - DISMISSED: reviews invalidated by the PR author or admin
 func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []GitHubComment {
+	reviewsByPR, err := fetchPRReviewsBatch(repo, prNumbers)
+	if err != nil {
+		// Fall back to sequential REST calls.
+		fmt.Fprintf(os.Stderr, "Warning: %v; falling back to per-PR fetching\n", err)
+		reviewsByPR = make(map[int][]rawPRReview)
+		for _, number := range prNumbers {
+			reviews, err := fetchPRReviews(repo, number)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				continue
+			}
+			reviewsByPR[number] = reviews
+		}
+	}
+
 	var comments []GitHubComment
 	for _, number := range prNumbers {
-		reviews, err := fetchPRReviews(repo, number)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
-			continue
-		}
-
+		reviews := reviewsByPR[number]
 		issueURL := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d", repo, number)
 		for _, r := range reviews {
 			if r.SubmittedAt.Before(since) {
