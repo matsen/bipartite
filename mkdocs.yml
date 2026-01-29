@@ -59,6 +59,8 @@ site_dir: site
 nav:
   - Home: index.md
   - Guides:
+    - Getting Started: guides/getting-started.md
     - Reference Management: guides/reference-management.md
     - Knowledge Graph: guides/knowledge-graph.md
     - Workflow Coordination: guides/workflow-coordination.md
+    - Server Scout: guides/server-scout.md
