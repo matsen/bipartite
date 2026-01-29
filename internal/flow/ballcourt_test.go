@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -23,7 +24,7 @@ func TestBallInMyCourt(t *testing.T) {
 	makeComment := func(author string, itemNumber int) GitHubComment {
 		return GitHubComment{
 			User:      GitHubUser{Login: author},
-			IssueURL:  "https://api.github.com/repos/org/repo/issues/" + itoa(itemNumber),
+			IssueURL:  "https://api.github.com/repos/org/repo/issues/" + strconv.Itoa(itemNumber),
 			UpdatedAt: now,
 		}
 	}
@@ -220,7 +221,7 @@ func TestBallInMyCourtWithPRReviews(t *testing.T) {
 	makeReviewComment := func(author string, itemNumber int, when time.Time) GitHubComment {
 		return GitHubComment{
 			User:      GitHubUser{Login: author},
-			IssueURL:  "https://api.github.com/repos/org/repo/issues/" + itoa(itemNumber),
+			IssueURL:  "https://api.github.com/repos/org/repo/issues/" + strconv.Itoa(itemNumber),
 			UpdatedAt: when,
 			CreatedAt: when,
 		}
@@ -327,17 +328,4 @@ func TestFilterByBallInCourt(t *testing.T) {
 	if filtered[0].Number != 1 {
 		t.Errorf("Expected item #1, got #%d", filtered[0].Number)
 	}
-}
-
-// Simple int to string for test URLs
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	result := ""
-	for n > 0 {
-		result = string(rune('0'+n%10)) + result
-		n /= 10
-	}
-	return result
 }

@@ -349,6 +349,10 @@ func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, e
 	}
 	owner, name := parts[0], parts[1]
 
+	if len(prNumbers) > 50 {
+		fmt.Fprintf(os.Stderr, "Warning: batching %d PRs in a single GraphQL query; may hit node limits\n", len(prNumbers))
+	}
+
 	// Build aliased query: one pullRequest alias per PR number.
 	var fragments []string
 	for _, n := range prNumbers {
@@ -421,6 +425,9 @@ func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, e
 				Body:        node.Body,
 			})
 		}
+		if len(reviews) >= 100 {
+			fmt.Fprintf(os.Stderr, "Warning: %s#%d returned 100 reviews (GraphQL limit); some may be missing\n", repo, n)
+		}
 		result[n] = reviews
 	}
 
@@ -432,6 +439,9 @@ func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, e
 // Only reviews submitted since the given time are included.
 // Uses a single batched GraphQL call, falling back to per-PR REST calls on failure.
 //
+// All errors are logged to stderr (never silently swallowed). A nil return
+// means every API call failed; an empty slice means no matching reviews.
+//
 // Excluded review states:
 //   - PENDING: draft reviews not yet submitted (only visible to the author)
 //   - DISMISSED: reviews invalidated by the PR author or admin
@@ -441,13 +451,18 @@ func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []G
 		// Fall back to sequential REST calls.
 		fmt.Fprintf(os.Stderr, "Warning: %v; falling back to per-PR fetching\n", err)
 		reviewsByPR = make(map[int][]rawPRReview)
+		var failures int
 		for _, number := range prNumbers {
 			reviews, err := fetchPRReviews(repo, number)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Warning: %v\n", err)
+				failures++
 				continue
 			}
 			reviewsByPR[number] = reviews
+		}
+		if failures == len(prNumbers) {
+			fmt.Fprintf(os.Stderr, "Warning: all %d per-PR review fetches failed for %s; review data unavailable\n", failures, repo)
 		}
 	}
 
@@ -471,6 +486,7 @@ func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []G
 			})
 		}
 	}
+	fmt.Fprintf(os.Stderr, "Fetched %d review comment(s) across %d PR(s) for %s\n", len(comments), len(prNumbers), repo)
 	return comments
 }
 

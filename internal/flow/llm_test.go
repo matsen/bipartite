@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -242,8 +243,8 @@ func TestBuildSummaryPrompt(t *testing.T) {
 		var comments []CommentSummary
 		for i := 0; i < 10; i++ {
 			comments = append(comments, CommentSummary{
-				Author: "user" + itoa(i),
-				Body:   "comment " + itoa(i),
+				Author: "user" + strconv.Itoa(i),
+				Body:   "comment " + strconv.Itoa(i),
 			})
 		}
 		items := []ItemDetails{
