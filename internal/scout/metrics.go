@@ -13,6 +13,17 @@ const delimiter = "___SCOUT_DELIM___"
 // maxConcurrent is the bounded semaphore size for parallel server checks.
 const maxConcurrent = 5
 
+// Section indices for ParseMetrics output splitting.
+// These must match the command order in BuildCommand.
+const (
+	sectionTopUsers = 0
+	sectionCPU      = 1
+	sectionMemory   = 2
+	sectionLoadAvg  = 3
+	sectionGPUUtil  = 4
+	sectionGPUMem   = 5
+)
+
 // BuildCommand constructs the combined command string for a server.
 // All metric commands are joined with delimiters for single-session execution.
 func BuildCommand(server Server) string {
@@ -47,6 +58,15 @@ func BuildCommand(server Server) string {
 	return strings.Join(parts, " ; ")
 }
 
+// parseFloatMetric parses a float value with a descriptive error message.
+func parseFloatMetric(value, metricName string) (float64, error) {
+	result, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("parsing %s: %w (raw: %q)", metricName, err, value)
+	}
+	return result, nil
+}
+
 // ParseMetrics parses the combined output of all metric commands for a server.
 func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 	sections := strings.Split(output, delimiter)
@@ -66,54 +86,54 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 
 	metrics := &ServerMetrics{}
 
-	// Parse top users — first section, non-fatal on failure
+	// Parse top users — non-fatal on failure
 	// (runs first on the server to avoid counting scout's own commands)
-	if users, err := parseTopUsers(sections[0]); err == nil {
+	if users, err := parseTopUsers(sections[sectionTopUsers]); err == nil {
 		metrics.TopUsers = users
 	}
 
 	// Parse CPU
-	cpu, err := strconv.ParseFloat(sections[1], 64)
+	cpu, err := parseFloatMetric(sections[sectionCPU], "CPU")
 	if err != nil {
-		return nil, fmt.Errorf("parsing CPU: %w (raw: %q)", err, sections[1])
+		return nil, err
 	}
 	metrics.CPUPercent = cpu
 
 	// Parse Memory
-	mem, err := strconv.ParseFloat(sections[2], 64)
+	mem, err := parseFloatMetric(sections[sectionMemory], "memory")
 	if err != nil {
-		return nil, fmt.Errorf("parsing memory: %w (raw: %q)", err, sections[2])
+		return nil, err
 	}
 	metrics.MemoryPercent = mem
 
 	// Parse Load Average (format: "0.52, 0.48, 0.41")
-	loadParts := strings.Split(sections[3], ",")
+	loadParts := strings.Split(sections[sectionLoadAvg], ",")
 	if len(loadParts) < 3 {
-		return nil, fmt.Errorf("parsing load average: expected 3 values, got %d (raw: %q)", len(loadParts), sections[3])
+		return nil, fmt.Errorf("parsing load average: expected 3 values, got %d (raw: %q)", len(loadParts), sections[sectionLoadAvg])
 	}
-	for i, part := range loadParts[:3] {
-		val, err := strconv.ParseFloat(strings.TrimSpace(part), 64)
-		if err != nil {
-			return nil, fmt.Errorf("parsing load average[%d]: %w (raw: %q)", i, err, part)
-		}
-		switch i {
-		case 0:
-			metrics.LoadAvg1 = val
-		case 1:
-			metrics.LoadAvg5 = val
-		case 2:
-			metrics.LoadAvg15 = val
-		}
+	metrics.LoadAvg1, err = parseFloatMetric(strings.TrimSpace(loadParts[0]), "load avg 1min")
+	if err != nil {
+		return nil, err
+	}
+	metrics.LoadAvg5, err = parseFloatMetric(strings.TrimSpace(loadParts[1]), "load avg 5min")
+	if err != nil {
+		return nil, err
+	}
+	metrics.LoadAvg15, err = parseFloatMetric(strings.TrimSpace(loadParts[2]), "load avg 15min")
+	if err != nil {
+		return nil, err
 	}
 
-	// Parse GPU metrics if applicable
+	// Parse GPU metrics if applicable.
+	// GPU parse failures are non-fatal per spec: "server should report as online
+	// but with null/error GPU metrics" when nvidia-smi is unavailable.
 	if hasGPU {
-		gpuUtils, err := parseGPUUtilization(sections[4])
+		gpuUtils, err := parseGPUUtilization(sections[sectionGPUUtil])
 		if err != nil {
-			// GPU parse failure is non-fatal — return metrics without GPU data
+			// Return metrics without GPU data
 			return metrics, nil
 		}
-		gpuMems, err := parseGPUMemory(sections[5])
+		gpuMems, err := parseGPUMemory(sections[sectionGPUMem])
 		if err != nil {
 			return metrics, nil
 		}

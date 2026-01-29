@@ -362,7 +362,7 @@ func TestFormatGPUMemory(t *testing.T) {
 			name:     "single GPU",
 			gpus:     []GPUInfo{{MemoryUsedMB: 8192, MemoryTotalMB: 16384}},
 			maxGPUs:  1,
-			subWidth: 4,
+			subWidth: 4, // "8/16" = 4 chars
 			expected: "8/16",
 		},
 		{
@@ -372,14 +372,14 @@ func TestFormatGPUMemory(t *testing.T) {
 				{MemoryUsedMB: 17706, MemoryTotalMB: 20480},
 			},
 			maxGPUs:  2,
-			subWidth: 5,
+			subWidth: 5, // "17/20" = 5 chars
 			expected: "17/20 17/20",
 		},
 		{
 			name:     "fewer GPUs than max pads with leading blanks",
 			gpus:     []GPUInfo{{MemoryUsedMB: 0, MemoryTotalMB: 45056}},
 			maxGPUs:  3,
-			subWidth: 5,
+			subWidth: 5, // 2 blank slots (5 each) + separators (2) + value "0/44" padded to 5
 			expected: "             0/44",
 		},
 	}

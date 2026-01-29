@@ -2,6 +2,7 @@ package scout
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -93,7 +94,9 @@ func gpuColumnParams(servers []ServerStatus) (int, int) {
 			maxGPUs = n
 		}
 		for _, g := range s.Metrics.GPUs {
-			w := len(fmt.Sprintf("%d/%d", g.MemoryUsedMB/1024, g.MemoryTotalMB/1024))
+			used := int(math.Round(float64(g.MemoryUsedMB) / 1024))
+			total := int(math.Round(float64(g.MemoryTotalMB) / 1024))
+			w := len(fmt.Sprintf("%d/%d", used, total))
 			if w > memSubWidth {
 				memSubWidth = w
 			}
@@ -160,8 +163,8 @@ func formatGPUMemory(gpus []GPUInfo, maxGPUs int, subWidth int) string {
 		if i < offset {
 			parts[i] = strings.Repeat(" ", subWidth)
 		} else {
-			used := gpus[i-offset].MemoryUsedMB / 1024
-			total := gpus[i-offset].MemoryTotalMB / 1024
+			used := int(math.Round(float64(gpus[i-offset].MemoryUsedMB) / 1024))
+			total := int(math.Round(float64(gpus[i-offset].MemoryTotalMB) / 1024))
 			parts[i] = padLeft(fmt.Sprintf("%d/%d", used, total), subWidth)
 		}
 	}
@@ -209,6 +212,9 @@ func sortByAvailability(servers []ServerStatus) {
 }
 
 // avgUtilization returns average utilization across CPU, memory, and GPUs.
+// Returns 100 for servers without metrics (e.g., parse errors) to sort them
+// toward the bottom, as they should be treated as "fully utilized" for
+// resource allocation purposes.
 func avgUtilization(s ServerStatus) float64 {
 	if s.Metrics == nil {
 		return 100
