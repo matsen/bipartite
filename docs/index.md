@@ -8,11 +8,11 @@ A context layer for research groups: connecting your internal world (projects, r
 
 ## Guides
 
-- **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code skills explained
 - **[Getting Started](guides/getting-started.md)** — Create your nexus and start adding papers
 - **[Reference Management](guides/reference-management.md)** — Search, import, cite, and collaborate on a git-backed paper library
 - **[Knowledge Graph](guides/knowledge-graph.md)** — Connect papers, concepts, and projects with typed edges
 - **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, boards, and Slack integration across repos
+- **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code skills explained
 
 ## Installation
 
@@ -39,6 +39,8 @@ bip import --format paperpile ~/Downloads/export.json
 bip rebuild
 bip search "phylogenetics"
 ```
+
+See [Getting Started](guides/getting-started.md) for full setup instructions.
 
 ## License
 
