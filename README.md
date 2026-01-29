@@ -23,6 +23,27 @@ Bipartite is a tool to give agents knowledge and access to all the tools they ne
 - **[Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/)** — Themed digests, cross-repo check-ins (spawn dedicated `tmux` windows!), and Slack integration for group leaders.
 - **[Server Scout](https://matsen.github.io/bipartite/guides/server-scout/)** — Check remote server CPU, memory, load, and GPU availability via native SSH.
 
+## Quick Start
+
+Bipartite operates on a **[nexus](https://matsen.github.io/bipartite/guides/architecture/)** — a git repository that serves as the central hub for your paper library, server configurations, and workflow coordination. The nexus contains:
+
+- **JSONL data files** — `refs.jsonl` (papers), `edges.jsonl` (knowledge graph), `concepts.jsonl` (topics)
+- **Configuration** — `servers.yml` (compute resources), `sources.json` (GitHub repos), `config.json` (local settings)
+- **Cache directory** — `.bipartite/` is gitignored and rebuilt via `bip rebuild`
+
+The [nexus-template](https://github.com/matsen/nexus-template) provides a ready-to-use starting point:
+
+1. Click **[Use this template](https://github.com/matsen/nexus-template/generate)** to create your nexus repo
+2. Clone it and run:
+
+```bash
+bip rebuild
+bip search "phylogenetics"
+bip s2 add DOI:10.1038/s41586-021-03819-2
+```
+
+See the [Getting Started guide](https://matsen.github.io/bipartite/guides/getting-started/) for full setup instructions.
+
 ## Installation
 
 ```bash

@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: go build -o bip ./cmd/bip
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Test against nexus-template
+        run: |
+          git clone https://github.com/matsen/nexus-template /tmp/test-nexus
+          cd /tmp/test-nexus
+          $GITHUB_WORKSPACE/bip rebuild
+          $GITHUB_WORKSPACE/bip search "phylogenetics"
+          $GITHUB_WORKSPACE/bip search "Felsenstein"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check formatting
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Code is not formatted. Run 'go fmt ./...'"
+            gofmt -d .
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...

@@ -4,14 +4,15 @@ Bipartite replaces GUI reference managers with a CLI that both humans and agents
 
 ## Getting Started
 
+Start from the [nexus-template](https://github.com/matsen/nexus-template), then configure and import:
+
 ```bash
-bip init
 bip config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
 bip import --format paperpile ~/Downloads/export.json
 bip rebuild
 ```
 
-`bip init` creates the `.bipartite/` directory. `bip rebuild` builds the SQLite query index from the JSONL source files. Run it after pulling changes or if the database gets corrupted.
+`bip rebuild` builds the SQLite query index from the JSONL source files. Run it after pulling changes or if the database gets corrupted.
 
 ## Searching
 
