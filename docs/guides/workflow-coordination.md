@@ -7,14 +7,16 @@ Bipartite provides visibility across your team's GitHub repositories, Slack chan
 `bip checkin` scans GitHub activity across all tracked repos:
 
 ```bash
-bip checkin                     # Items needing your attention (last 3 days)
-bip checkin --since 7d          # Last week
+bip checkin                     # Items needing your attention since last checkin
+bip checkin --since 7d          # Last week (does not update .last-checkin.json)
 bip checkin --since 12h         # Last 12 hours
 bip checkin --all               # All activity, not just action-needed
 bip checkin --category code     # Only repos in "code" category
 bip checkin --repo org/repo     # Single repo
 bip checkin --summarize         # Include LLM-generated summaries
 ```
+
+Each run saves the current timestamp to `.last-checkin.json`, so the next run picks up where you left off (falling back to 3 days if the file doesn't exist). Using `--since` overrides the window without updating the state file.
 
 By default, checkin filters to items where the "ball is in your court" — PRs awaiting your review, issues assigned to you, discussions needing your response. Use `--all` to see everything.
 

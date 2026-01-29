@@ -17,6 +17,11 @@ var checkinCmd = &cobra.Command{
 By default, shows only items where the "ball is in your court" - items
 that need your attention or response. Use --all to see all activity.
 
+The activity window defaults to the timestamp in .last-checkin.json (falling
+back to 3 days if the file doesn't exist). Each run updates .last-checkin.json
+so the next run picks up where you left off. Using --since overrides this
+window and does NOT update .last-checkin.json.
+
 Requires sources.json in the current directory (run from nexus directory).`,
 	Run: runCheckin,
 }
@@ -32,7 +37,7 @@ var (
 func init() {
 	rootCmd.AddCommand(checkinCmd)
 
-	checkinCmd.Flags().StringVar(&checkinSince, "since", "3d", "Time period (e.g., 2d, 12h, 1w)")
+	checkinCmd.Flags().StringVar(&checkinSince, "since", "3d", "Time period (e.g., 2d, 12h, 1w); does not update .last-checkin.json")
 	checkinCmd.Flags().StringVar(&checkinRepo, "repo", "", "Check single repo only")
 	checkinCmd.Flags().StringVar(&checkinCategory, "category", "", "Check repos in category only (code, writing)")
 	checkinCmd.Flags().BoolVar(&checkinAll, "all", false, "Show all activity (disable ball-in-my-court filtering)")
@@ -46,15 +51,31 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Parse duration
-	duration, err := flow.ParseDuration(checkinSince)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: invalid --since value: %v\n", err)
-		os.Exit(1)
+	now := time.Now()
+
+	// Determine the "since" time.
+	// If --since was explicitly provided, use it.
+	// Otherwise, read from .last-checkin.json, falling back to 3d.
+	var since time.Time
+	if cmd.Flags().Changed("since") {
+		duration, err := flow.ParseDuration(checkinSince)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid --since value: %v\n", err)
+			os.Exit(1)
+		}
+		since = now.Add(-duration)
+	} else {
+		lastCheckin := flow.ReadLastCheckin()
+		if lastCheckin.IsZero() {
+			duration, _ := flow.ParseDuration("3d")
+			since = now.Add(-duration)
+		} else {
+			since = lastCheckin
+		}
 	}
-	since := time.Now().Add(-duration)
 
 	// Get repos to check
+	var err error
 	var repos []string
 	if checkinRepo != "" {
 		repos = []string{checkinRepo}
@@ -164,6 +185,13 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		fmt.Printf("---\nTotal: %d issues, %d PRs, %d comments\n", totalIssues, totalPRs, totalComments)
 	} else {
 		fmt.Println("No activity found.")
+	}
+
+	// Update state file with current timestamp (only when --since was not explicit)
+	if !cmd.Flags().Changed("since") {
+		if err := flow.WriteLastCheckin(now); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not update %s: %v\n", flow.StateFile, err)
+		}
 	}
 
 	// Generate take-home summaries if requested

@@ -2,6 +2,7 @@
 _ignore/
 .bipartite/
 .beads/
+.last-checkin.json
 AGENTS.md
 .env
 
