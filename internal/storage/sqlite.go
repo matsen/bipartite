@@ -240,6 +240,110 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	return scanReferences(rows)
 }
 
+// SearchFilters contains optional filters for SearchWithFilters.
+//
+// MAINTAINER NOTE: This filter-based approach works well for ~6-8 filters.
+// Consider refactoring if:
+//   - This struct exceeds 10 fields
+//   - SearchWithFilters exceeds 80 lines
+//   - You need complex logic (OR between different field types, negation)
+//   - Filter interaction bugs become common
+//
+// The current approach mixes FTS5 (text search) and SQL WHERE (exact/range).
+// Both support OR natively, so adding same-type ORs is straightforward.
+type SearchFilters struct {
+	Keyword  string   // General keyword search across all fields
+	Authors  []string // Author names to search for (AND logic, fuzzy prefix matching)
+	YearFrom int      // Minimum publication year (0 = no minimum)
+	YearTo   int      // Maximum publication year (0 = no maximum)
+	Title    string   // Search in title only (FTS)
+	Venue    string   // Filter by venue (SQL LIKE, case-insensitive)
+	DOI      string   // Exact DOI match (SQL)
+}
+
+// SearchWithFilters performs a search with multiple optional filters.
+// Returns references matching ALL specified criteria (AND logic).
+func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Reference, error) {
+	var ftsTerms []string
+	var args []interface{}
+
+	// Build FTS query parts (text-based searches)
+	if filters.Keyword != "" {
+		ftsTerms = append(ftsTerms, prepareFTSQuery(filters.Keyword))
+	}
+	if filters.Title != "" {
+		ftsTerms = append(ftsTerms, "title:"+prepareFTSQuery(filters.Title))
+	}
+	for _, author := range filters.Authors {
+		if author != "" {
+			ftsTerms = append(ftsTerms, "authors_text:"+prepareAuthorQuery(author))
+		}
+	}
+
+	// Build the query
+	var query string
+	if len(ftsTerms) > 0 {
+		ftsQuery := strings.Join(ftsTerms, " AND ")
+		query = `SELECT ` + selectRefFields + `
+			FROM refs
+			WHERE id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)`
+		args = append(args, ftsQuery)
+	} else {
+		query = `SELECT ` + selectRefFields + ` FROM refs WHERE 1=1`
+	}
+
+	// SQL-based filters (exact/range matches)
+	if filters.YearFrom > 0 {
+		query += " AND pub_year >= ?"
+		args = append(args, filters.YearFrom)
+	}
+	if filters.YearTo > 0 {
+		query += " AND pub_year <= ?"
+		args = append(args, filters.YearTo)
+	}
+	if filters.Venue != "" {
+		query += " AND venue LIKE ?"
+		args = append(args, "%"+filters.Venue+"%")
+	}
+	if filters.DOI != "" {
+		query += " AND doi = ?"
+		args = append(args, filters.DOI)
+	}
+
+	query += " LIMIT ?"
+	args = append(args, limit)
+
+	rows, err := d.db.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("searching with filters: %w", err)
+	}
+	defer rows.Close()
+
+	return scanReferences(rows)
+}
+
+// prepareAuthorQuery prepares an author name for FTS5 search with prefix matching.
+// It adds a wildcard (*) to enable fuzzy matching (e.g., "Tim" matches "Timothy").
+func prepareAuthorQuery(author string) string {
+	author = strings.TrimSpace(author)
+	if author == "" {
+		return author
+	}
+
+	// Split into parts for multi-word names
+	parts := strings.Fields(author)
+	var terms []string
+	for _, part := range parts {
+		// Escape special characters and add prefix wildcard
+		escaped := strings.ReplaceAll(part, "\"", "\"\"")
+		// Add * for prefix matching
+		terms = append(terms, "\""+escaped+"\"*")
+	}
+
+	// Use OR for multi-word author queries (match any part)
+	return "(" + strings.Join(terms, " OR ") + ")"
+}
+
 // ListAll returns all references, optionally limited.
 func (d *DB) ListAll(limit int) ([]reference.Reference, error) {
 	query := `SELECT ` + selectRefFields + ` FROM refs ORDER BY id`

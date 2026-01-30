@@ -317,6 +317,168 @@ func TestDB_SearchField(t *testing.T) {
 	}
 }
 
+func TestDB_SearchWithFilters(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	tests := []struct {
+		name    string
+		filters SearchFilters
+		limit   int
+		wantIDs []string
+		wantMin int
+	}{
+		{
+			name:    "keyword only",
+			filters: SearchFilters{Keyword: "machine learning"},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "single author",
+			filters: SearchFilters{Authors: []string{"Smith"}},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "single author prefix matching",
+			filters: SearchFilters{Authors: []string{"Jo"}}, // Should match John and Jones
+			limit:   10,
+			wantMin: 2,
+		},
+		{
+			name:    "multiple authors (AND logic)",
+			filters: SearchFilters{Authors: []string{"Smith", "Doe"}},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "year exact",
+			filters: SearchFilters{YearFrom: 2025, YearTo: 2025},
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "year range",
+			filters: SearchFilters{YearFrom: 2024, YearTo: 2025},
+			limit:   10,
+			wantMin: 2,
+		},
+		{
+			name:    "year from only (open-ended)",
+			filters: SearchFilters{YearFrom: 2025},
+			limit:   10,
+			wantMin: 2, // 2025 and 2026
+		},
+		{
+			name:    "year to only (open-ended)",
+			filters: SearchFilters{YearTo: 2025},
+			limit:   10,
+			wantMin: 2, // 2024 and 2025
+		},
+		{
+			name:    "author and year combined",
+			filters: SearchFilters{Authors: []string{"Smith"}, YearFrom: 2026, YearTo: 2026},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "keyword and author combined",
+			filters: SearchFilters{Keyword: "deep learning", Authors: []string{"Jones"}},
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "all filters combined",
+			filters: SearchFilters{Keyword: "protein", Authors: []string{"Jones"}, YearFrom: 2025, YearTo: 2025},
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "no matches",
+			filters: SearchFilters{Authors: []string{"NonexistentAuthor"}},
+			limit:   10,
+			wantMin: 0,
+		},
+		{
+			name:    "year only - no keywords or authors",
+			filters: SearchFilters{YearFrom: 2026, YearTo: 2026},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "title search",
+			filters: SearchFilters{Title: "Machine Learning"},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "venue filter",
+			filters: SearchFilters{Venue: "Nature"},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "venue partial match",
+			filters: SearchFilters{Venue: "PLOS"},
+			limit:   10,
+			wantIDs: []string{"Brown2024-ef"},
+			wantMin: 1,
+		},
+		{
+			name:    "DOI exact match",
+			filters: SearchFilters{DOI: "10.1234/jones"},
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "DOI no match",
+			filters: SearchFilters{DOI: "10.1234/nonexistent"},
+			limit:   10,
+			wantMin: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refs, err := db.SearchWithFilters(tt.filters, tt.limit)
+			if err != nil {
+				t.Fatalf("SearchWithFilters() error = %v", err)
+			}
+
+			if len(refs) < tt.wantMin {
+				t.Errorf("SearchWithFilters() returned %d results, want at least %d", len(refs), tt.wantMin)
+			}
+
+			if tt.wantIDs != nil {
+				for _, wantID := range tt.wantIDs {
+					found := false
+					for _, ref := range refs {
+						if ref.ID == wantID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						t.Errorf("SearchWithFilters() missing expected ID %q", wantID)
+					}
+				}
+			}
+		})
+	}
+}
+
 func TestDB_ListAll(t *testing.T) {
 	db, _, cleanup := setupTestDB(t)
 	defer cleanup()

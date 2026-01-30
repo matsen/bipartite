@@ -62,6 +62,12 @@ Suggest creating concepts when you notice:
 | Task | Command |
 |------|---------|
 | Search local library | `bip search "query"` |
+| Search by author | `bip search -a "Name"` (repeatable, AND logic) |
+| Search by title | `bip search -t "keywords"` or `--title` |
+| Search by year | `bip search --year 2024` or `--year 2020:` |
+| Search by venue | `bip search --venue "Nature"` (partial match) |
+| Lookup by DOI | `bip search --doi "10.1234/..."` |
+| Combined search | `bip search "topic" -a "Author" --year 2020:` |
 | Semantic search | `bip semantic "query"` |
 | Get paper details | `bip get <id>` |
 | Add paper to collection | `bip s2 add DOI:10.1234/...` |
@@ -77,15 +83,36 @@ Suggest creating concepts when you notice:
 
 ## Search Strategy
 
+### Field-Specific Search Flags
+
+Use `--author` and `--year` flags for precise filtering:
+
+```bash
+# Search by author (supports fuzzy prefix matching: "Tim" matches "Timothy")
+bip search --author "Yu" --author "Bloom"
+bip search -a "Matsen" -a "Suchard"
+
+# Filter by year
+bip search --year 2024           # exact year
+bip search --year 2020:2024      # range (inclusive)
+bip search --year 2022:          # 2022 and later
+bip search --year :2020          # 2020 and earlier
+
+# Combine keyword + filters
+bip search "deep mutational scanning" --author "Bloom" --year 2023:
+```
+
+**Multiple authors use AND logic** - all must appear in the paper.
+
 ### Query Formulation Tips
 
 **Keep queries short and specific** - Long conceptual queries perform poorly:
 - Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
 - Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
 
-**Include author names when known** - Author + topic is highly effective:
-- `"Gascuel minimum evolution"` beats `"balanced minimum evolution statistical properties"`
-- `"Felsenstein distance methods"` beats `"distance-based phylogenetic inference justification"`
+**Use --author flag instead of embedding names in query** - More reliable matching:
+- Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (finds papers by Yu AND Bloom)
+- Less reliable: `bip search "Tim Yu Bloom"` (may miss "Timothy C Yu")
 
 **Use specific method/algorithm names**:
 - `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions
@@ -96,6 +123,11 @@ For finding a specific paper or result:
 
 1. **Local library first** (fastest, already curated):
    ```bash
+   # Use flags for author/year filtering (most reliable)
+   bip search -a "AuthorName" --year 2020:
+   bip search "topic" -a "Author"
+
+   # Or plain keyword search
    bip search "author topic"
    bip semantic "conceptual description"  # for topic-heavy queries
    ```
