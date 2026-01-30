@@ -8,7 +8,7 @@ Bipartite has three main pieces: a **nexus** (your data), the **bip CLI** (opera
 │                                                          │
 │  ┌────────────────┐    ┌─────────────────────────────┐   │
 │  │  Claude Code   │    │      Nexus Directory        │   │
-│  │                │    │    (e.g., ~/re/nexus)       │   │
+│  │                │    │   (configured via nexus_path) │   │
 │  │ ┌────────────┐ │    │                             │   │
 │  │ │  Skills    │─┼────┼─▶ refs.jsonl  (papers)      │   │
 │  │ │            │ │    │   edges.jsonl (graph)       │   │
@@ -62,10 +62,9 @@ The [nexus-template](https://github.com/matsen/nexus-template) provides a ready-
 
 ## The bip CLI
 
-`bip` is a standalone Go binary that operates on whichever nexus you're currently in:
+`bip` is a standalone Go binary. With `nexus_path` configured in `~/.config/bip/config.json`, commands work from any directory:
 
 ```bash
-cd ~/re/nexus
 bip search "phylogenetics"    # Search papers
 bip s2 add DOI:10.1038/...    # Add paper from Semantic Scholar
 bip digest --channel dasm     # Generate GitHub activity digest

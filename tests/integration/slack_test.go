@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 )
 
@@ -178,15 +179,15 @@ func TestSlackHistoryInvalidChannel(t *testing.T) {
 // getNexusDir returns the nexus directory for tests.
 func getNexusDir(t *testing.T) string {
 	t.Helper()
-	// Prefer NEXUS_DIR env var, fall back to ~/re/nexus
+	// Prefer NEXUS_DIR env var, fall back to global config nexus_path
 	if dir := os.Getenv("NEXUS_DIR"); dir != "" {
 		return dir
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("could not get home directory: %v", err)
+	if dir := config.GetNexusPath(); dir != "" {
+		return dir
 	}
-	return filepath.Join(home, "re", "nexus")
+	t.Fatal("NEXUS_DIR env var not set and nexus_path not configured in global config")
+	return ""
 }
 
 // filterEnv returns a copy of env with the given key removed.

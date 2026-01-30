@@ -102,7 +102,7 @@ When looking for papers or adding edges to the knowledge graph:
 
 1. **Search locally first** in nexus using grep on `.bipartite/refs.jsonl`:
    ```bash
-   grep -i "author_name\|keyword" ~/re/nexus/.bipartite/refs.jsonl | jq -r '.id + " - " + .title'
+   grep -i "author_name\|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
    ```
 
 2. **Ask before using ASTA MCP** - Always ask the user before making ASTA API calls. ASTA should only be used for:
@@ -116,10 +116,9 @@ The nexus library has ~6000 papers already imported - most relevant immunology/a
 
 ## GitHub Activity Commands (bip)
 
-bip includes built-in GitHub activity tracking and project board management. These commands must be run from the nexus directory:
+bip includes built-in GitHub activity tracking and project board management. These commands require `nexus_path` configured in `~/.config/bip/config.json`:
 
 ```bash
-cd ~/re/nexus
 bip checkin              # Check recent GitHub activity
 bip board list           # View project boards
 bip spawn org/repo#123   # Spawn tmux window for issue review

@@ -181,7 +181,7 @@ func HelpfulConfigMessage() string {
 
 Tip: Create %s to set a default nexus:
   mkdir -p %s
-  echo '{"nexus_path": "~/re/nexus"}' > %s
+  echo '{"nexus_path": "/path/to/your/nexus"}' > %s
 
 See https://matsen.github.io/bipartite/guides/getting-started/`,
 		configPath,

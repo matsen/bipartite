@@ -25,11 +25,11 @@ If no question is given, show a full summary of all servers.
 Run `bip scout` from the nexus directory to get JSON output:
 
 ```bash
-cd ~/re/nexus && bip scout
+bip scout
 ```
 
 **If the command fails**, check for common issues:
-- Missing `servers.yml`: "No servers.yml found. Create one in ~/re/nexus/ — see `bip scout --help`."
+- Missing `servers.yml`: "No servers.yml found. Create one in your nexus directory — see `bip scout --help`."
 - SSH authentication failure: Report the error and suggest checking SSH agent and `~/.ssh/config`.
 - All servers offline: Report that all servers are unreachable and suggest checking network/VPN.
 

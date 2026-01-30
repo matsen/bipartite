@@ -10,7 +10,7 @@ bip scout                  # JSON output (default)
 bip scout --server orca42  # Check single server
 ```
 
-Requires `servers.yml` in the current directory.
+Requires `nexus_path` configured in `~/.config/bip/config.json` and `servers.yml` in your nexus directory.
 
 ## Configuration
 
