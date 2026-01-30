@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/matsen/bipartite/internal/config"
 )
 
 // Client is a GitHub API client for fetching repository metadata.
@@ -41,13 +42,13 @@ var (
 )
 
 // NewClient creates a new GitHub API client.
-// It reads GITHUB_TOKEN from the environment for authenticated requests.
+// It reads GITHUB_TOKEN from the environment or global config for authenticated requests.
 func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		token: os.Getenv("GITHUB_TOKEN"),
+		token: config.GetGitHubToken(),
 	}
 }
 

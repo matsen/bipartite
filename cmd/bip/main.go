@@ -52,18 +52,16 @@ func init() {
 }
 
 // getStartingDirectory returns the directory to start searching for a repository.
-// It checks the BIP_ROOT environment variable first, then falls back to the current working directory.
+// Checks global config nexus_path first, then current working directory.
 func getStartingDirectory() (string, int) {
+	if root := config.GetNexusPath(); root != "" {
+		return root, 0
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", outputError(ExitError, "getting current directory: %v", err)
 	}
-
-	// Check BIP_ROOT environment variable first
-	if root := os.Getenv("BIP_ROOT"); root != "" {
-		return root, 0
-	}
-
 	return cwd, 0
 }
 
@@ -77,7 +75,9 @@ func mustFindRepository() string {
 
 	repoRoot, err := config.FindRepository(start)
 	if err != nil {
-		exitWithError(ExitConfigError, "%v", err)
+		// Show helpful message if no global config exists
+		fmt.Fprintln(os.Stderr, config.HelpfulConfigMessage())
+		os.Exit(ExitConfigError)
 	}
 	return repoRoot
 }

@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"golang.org/x/time/rate"
 )
 
@@ -84,8 +84,8 @@ func NewClient(opts ...ClientOption) *Client {
 		baseURL:    BaseURL,
 	}
 
-	// Check for API key in environment
-	if key := os.Getenv("ASTA_API_KEY"); key != "" {
+	// Check for API key in environment and global config
+	if key := config.GetASTAAPIKey(); key != "" {
 		c.apiKey = key
 	}
 

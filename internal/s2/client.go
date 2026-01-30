@@ -7,11 +7,11 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"golang.org/x/time/rate"
 )
 
@@ -71,8 +71,8 @@ func NewClient(opts ...ClientOption) *Client {
 		baseURL:    BaseURL,
 	}
 
-	// Check for API key in environment
-	if key := os.Getenv("S2_API_KEY"); key != "" {
+	// Check for API key in environment and global config
+	if key := config.GetS2APIKey(); key != "" {
 		c.apiKey = key
 	}
 

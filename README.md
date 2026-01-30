@@ -25,47 +25,50 @@ Bipartite is a tool to give agents knowledge and access to all the tools they ne
 
 ## Quick Start
 
-Bipartite operates on a **[nexus](https://matsen.github.io/bipartite/guides/architecture/)** — a git repository that serves as the central hub for your paper library, server configurations, and workflow coordination. The nexus contains:
+1. **Install bip** (requires Go 1.24+):
 
-- **JSONL data files** — `refs.jsonl` (papers), `edges.jsonl` (knowledge graph), `concepts.jsonl` (topics)
-- **Configuration** — `servers.yml` (compute resources), `sources.json` (GitHub repos), `config.json` (local settings)
-- **Cache directory** — `.bipartite/` is gitignored and rebuilt via `bip rebuild`
+```bash
+go install github.com/matsen/bipartite/cmd/bip@latest
+```
 
-The [nexus-template](https://github.com/matsen/nexus-template) provides a ready-to-use starting point:
+2. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
 
-1. Click **[Use this template](https://github.com/matsen/nexus-template/generate)** to create your nexus repo
-2. Clone it and run:
+```bash
+git clone https://github.com/YOUR_USERNAME/nexus ~/re/nexus
+```
+
+3. **Point bip to your nexus** (minimal config to get started):
+
+```bash
+mkdir -p ~/.config/bip
+echo '{"nexus_path": "~/re/nexus"}' > ~/.config/bip/config.json
+```
+
+4. **Build the index and try it out**:
 
 ```bash
 bip rebuild
-bip search "phylogenetics"
+bip search "phylogenetics" --human
 bip s2 add DOI:10.1038/s41586-021-03819-2
 ```
 
 See the [Getting Started guide](https://matsen.github.io/bipartite/guides/getting-started/) for full setup instructions.
 
-## Installation
+## Configuration
 
-```bash
-go install ./cmd/bip
-export PATH="$HOME/go/bin:$PATH"
+For full functionality, add API keys ([Semantic Scholar](https://www.semanticscholar.org/product/api#api-key), [Asta](https://allenai.org/asta/resources/mcp), [GitHub](https://github.com/settings/tokens), [Slack](https://api.slack.com/apps)) to your config:
+
+```json
+{
+  "nexus_path": "~/re/nexus",
+  "s2_api_key": "your-key",
+  "asta_api_key": "your-key",
+  "github_token": "ghp_...",
+  "slack_bot_token": "xoxb-..."
+}
 ```
 
-Requires Go 1.24+. For Claude Code skills:
-
-```bash
-git clone https://github.com/matsen/bipartite
-cd bipartite
-ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
-```
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `S2_API_KEY` | Optional | Semantic Scholar API key (higher rate limits for `bip s2` commands) |
-| `ASTA_API_KEY` | For `bip asta` | ASTA API key for academic search (`bip asta search`, `bip asta snippets`) |
-| `SLACK_BOT_TOKEN` | For Slack features | Slack bot token (`channels:history`, `channels:read`, `users:read` scopes) |
+See the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/) for all options.
 
 ## License
 

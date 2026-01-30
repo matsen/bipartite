@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/matsen/bipartite/internal/config"
 )
 
 // ErrSlackNotInChannel is returned when the bot is not a member of the channel.
@@ -31,11 +33,11 @@ type SlackClient struct {
 	userCache  map[string]string
 }
 
-// NewSlackClient creates a new SlackClient from SLACK_BOT_TOKEN environment variable.
+// NewSlackClient creates a new SlackClient from SLACK_BOT_TOKEN environment variable or global config.
 func NewSlackClient() (*SlackClient, error) {
-	token := os.Getenv("SLACK_BOT_TOKEN")
+	token := config.GetSlackBotToken()
 	if token == "" {
-		return nil, fmt.Errorf("SLACK_BOT_TOKEN environment variable not set; required for Slack API access")
+		return nil, fmt.Errorf("SLACK_BOT_TOKEN not configured; set environment variable or add to %s", config.GlobalConfigPath())
 	}
 
 	return &SlackClient{
@@ -91,10 +93,10 @@ func webhookEnvVar(channel string) string {
 	return "SLACK_WEBHOOK_" + strings.ToUpper(channel)
 }
 
-// GetWebhookURL returns the Slack webhook URL for a channel from environment.
-// Looks for SLACK_WEBHOOK_<CHANNEL> environment variable.
+// GetWebhookURL returns the Slack webhook URL for a channel.
+// Checks SLACK_WEBHOOK_<CHANNEL> environment variable first, then global config.
 func GetWebhookURL(channel string) string {
-	return os.Getenv(webhookEnvVar(channel))
+	return config.GetSlackWebhook(channel)
 }
 
 // PostToSlack posts a message to Slack via webhook.

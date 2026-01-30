@@ -30,6 +30,7 @@ jobs:
           $GITHUB_WORKSPACE/bip rebuild
           $GITHUB_WORKSPACE/bip search "phylogenetics"
           $GITHUB_WORKSPACE/bip search "Felsenstein"
+          $GITHUB_WORKSPACE/bip s2 add DOI:10.1038/s41586-021-03819-2
 
   lint:
     runs-on: ubuntu-latest
