@@ -3,6 +3,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -121,23 +122,44 @@ func GetNexusPath() string {
 	return cfg.NexusPath
 }
 
-// MustGetNexusPath returns the nexus path from global config.
-// Prints helpful message and exits if not configured or path doesn't exist.
-func MustGetNexusPath() string {
+// ErrNexusPathNotConfigured is returned when nexus_path is not set in config.
+var ErrNexusPathNotConfigured = errors.New("nexus_path not configured")
+
+// ErrNexusPathNotExist is returned when the configured nexus_path doesn't exist.
+var ErrNexusPathNotExist = errors.New("nexus_path does not exist")
+
+// ValidateNexusPath returns the nexus path from global config after validation.
+// Returns error if not configured or if the path doesn't exist.
+// This is the testable version - use MustGetNexusPath for CLI commands.
+func ValidateNexusPath() (string, error) {
 	path := GetNexusPath()
 	if path == "" {
-		fmt.Fprintln(os.Stderr, HelpfulConfigMessage())
-		os.Exit(2) // ExitConfigError
+		return "", ErrNexusPathNotConfigured
 	}
 	if _, err := os.Stat(path); err != nil {
-		fmt.Fprintf(os.Stderr, "Configured nexus_path does not exist: %s\n\n%s\n",
-			path, HelpfulConfigMessage())
+		return "", fmt.Errorf("%w: %s", ErrNexusPathNotExist, path)
+	}
+	return path, nil
+}
+
+// MustGetNexusPath returns the nexus path from global config.
+// Prints helpful message and exits if not configured or path doesn't exist.
+// For testable code, use ValidateNexusPath instead.
+func MustGetNexusPath() string {
+	path, err := ValidateNexusPath()
+	if err != nil {
+		if errors.Is(err, ErrNexusPathNotConfigured) {
+			fmt.Fprintln(os.Stderr, HelpfulConfigMessage())
+		} else {
+			fmt.Fprintf(os.Stderr, "Configured nexus_path does not exist: %s\n\n%s\n",
+				GetNexusPath(), HelpfulConfigMessage())
+		}
 		os.Exit(2)
 	}
 	return path
 }
 
-// HelpfulConfigMessage returns a helpful message when no repository is found.
+// HelpfulConfigMessage returns a helpful message when nexus_path is not configured.
 func HelpfulConfigMessage() string {
 	configPath := GlobalConfigPath()
 	return fmt.Sprintf(`No bipartite repository found.

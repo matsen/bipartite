@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -269,5 +270,83 @@ func TestGlobalConfigCache(t *testing.T) {
 	cfg3, _ := LoadGlobalConfig()
 	if cfg3.S2APIKey != "modified-key" {
 		t.Errorf("Third load: S2APIKey = %q, want modified-key", cfg3.S2APIKey)
+	}
+}
+
+func TestValidateNexusPath_NotConfigured(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Point to empty config directory
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	_, err := ValidateNexusPath()
+	if err == nil {
+		t.Error("ValidateNexusPath() should return error when not configured")
+	}
+	if err != ErrNexusPathNotConfigured {
+		t.Errorf("ValidateNexusPath() error = %v, want ErrNexusPathNotConfigured", err)
+	}
+}
+
+func TestValidateNexusPath_PathNotExist(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Create config with non-existent path
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "bip")
+	os.MkdirAll(configDir, 0755)
+	cfgData := GlobalConfig{NexusPath: "/nonexistent/path/that/does/not/exist"}
+	data, _ := json.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	_, err := ValidateNexusPath()
+	if err == nil {
+		t.Error("ValidateNexusPath() should return error when path doesn't exist")
+	}
+	if !errors.Is(err, ErrNexusPathNotExist) {
+		t.Errorf("ValidateNexusPath() error = %v, want ErrNexusPathNotExist", err)
+	}
+}
+
+func TestValidateNexusPath_Valid(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Create config with valid path
+	tmpDir := t.TempDir()
+	nexusDir := filepath.Join(tmpDir, "nexus")
+	os.MkdirAll(nexusDir, 0755)
+
+	configDir := filepath.Join(tmpDir, "bip")
+	os.MkdirAll(configDir, 0755)
+	cfgData := GlobalConfig{NexusPath: nexusDir}
+	data, _ := json.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	path, err := ValidateNexusPath()
+	if err != nil {
+		t.Errorf("ValidateNexusPath() error = %v, want nil", err)
+	}
+	if path != nexusDir {
+		t.Errorf("ValidateNexusPath() = %q, want %q", path, nexusDir)
 	}
 }
