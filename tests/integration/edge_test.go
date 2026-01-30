@@ -61,6 +61,7 @@ func (e *buildError) Error() string {
 }
 
 // setupTestRepo creates a minimal bipartite repo with test refs for edge testing.
+// Returns the repo directory and a config directory for XDG_CONFIG_HOME.
 func setupTestRepo(t *testing.T) string {
 	t.Helper()
 	tmpDir := t.TempDir()
@@ -86,16 +87,29 @@ func setupTestRepo(t *testing.T) string {
 		t.Fatal(err)
 	}
 
+	// Create global config directory with nexus_path pointing to test repo
+	configDir := filepath.Join(tmpDir, "config", "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	globalConfig := `{"nexus_path":"` + tmpDir + `"}`
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(globalConfig), 0644); err != nil {
+		t.Fatal(err)
+	}
+
 	return tmpDir
 }
 
 // runBP executes the bp command with given args and returns output.
+// Uses XDG_CONFIG_HOME to point to test-specific global config with nexus_path.
 func runBP(t *testing.T, repoDir string, args ...string) (string, error) {
 	t.Helper()
 	bp := getBPBinary(t)
 	cmd := exec.Command(bp, args...)
 	cmd.Dir = repoDir
-	cmd.Env = append(os.Environ(), "BIP_ROOT="+repoDir)
+	// Set XDG_CONFIG_HOME to the test config directory (parent of bip/)
+	configHome := filepath.Join(repoDir, "config")
+	cmd.Env = append(os.Environ(), "XDG_CONFIG_HOME="+configHome)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }

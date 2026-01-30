@@ -6,10 +6,12 @@
 
 ### 1. Configure API Key
 
-Add your ASTA API key to `.env`:
+Add your ASTA API key to `~/.config/bip/config.json`:
 
-```bash
-echo "ASTA_API_KEY=your-api-key-here" >> .env
+```json
+{
+  "asta_api_key": "your-api-key-here"
+}
 ```
 
 ### 2. Verify Installation
@@ -138,7 +140,7 @@ fi
 | Snippet search | No | Yes |
 | Add to collection | Yes | No |
 | Rate limit | 1 req/sec | 10 req/sec |
-| API key | `S2_API_KEY` | `ASTA_API_KEY` |
+| API key | `s2_api_key` | `asta_api_key` |
 
 Use ASTA for **exploration** (search, snippets, citations).
 Use S2 for **collection management** (add, update, link).

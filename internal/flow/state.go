@@ -12,10 +12,10 @@ type checkinState struct {
 	LastCheckin time.Time `json:"last_checkin"`
 }
 
-// ReadLastCheckin reads the last checkin timestamp from StateFile.
+// ReadLastCheckin reads the last checkin timestamp from StateFile in the given nexus directory.
 // Returns zero time if the file doesn't exist or can't be parsed.
-func ReadLastCheckin() time.Time {
-	data, err := os.ReadFile(StateFile)
+func ReadLastCheckin(nexusPath string) time.Time {
+	data, err := os.ReadFile(StatePath(nexusPath))
 	if err != nil {
 		return time.Time{}
 	}
@@ -28,8 +28,8 @@ func ReadLastCheckin() time.Time {
 	return state.LastCheckin
 }
 
-// WriteLastCheckin writes the given timestamp to StateFile.
-func WriteLastCheckin(t time.Time) error {
+// WriteLastCheckin writes the given timestamp to StateFile in the given nexus directory.
+func WriteLastCheckin(nexusPath string, t time.Time) error {
 	state := checkinState{LastCheckin: t}
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {
@@ -37,8 +37,9 @@ func WriteLastCheckin(t time.Time) error {
 	}
 	data = append(data, '\n')
 
-	if err := os.WriteFile(StateFile, data, 0644); err != nil {
-		return fmt.Errorf("writing %s: %w", StateFile, err)
+	statePath := StatePath(nexusPath)
+	if err := os.WriteFile(statePath, data, 0644); err != nil {
+		return fmt.Errorf("writing %s: %w", statePath, err)
 	}
 
 	return nil

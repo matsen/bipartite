@@ -3,6 +3,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -82,51 +83,32 @@ func ResetGlobalConfigCache() {
 	globalConfigCache = nil
 }
 
-// GetConfigValue returns the value for a config key, checking environment
-// variables first (for backwards compatibility), then the global config.
-func GetConfigValue(envKey string, configValue string) string {
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-	return configValue
-}
-
-// GetS2APIKey returns the Semantic Scholar API key.
-// Checks S2_API_KEY env var first, then global config.
+// GetS2APIKey returns the Semantic Scholar API key from global config.
 func GetS2APIKey() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("S2_API_KEY", cfg.S2APIKey)
+	return cfg.S2APIKey
 }
 
-// GetASTAAPIKey returns the ASTA API key.
-// Checks ASTA_API_KEY env var first, then global config.
+// GetASTAAPIKey returns the ASTA API key from global config.
 func GetASTAAPIKey() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("ASTA_API_KEY", cfg.ASTAAPIKey)
+	return cfg.ASTAAPIKey
 }
 
-// GetSlackBotToken returns the Slack bot token.
-// Checks SLACK_BOT_TOKEN env var first, then global config.
+// GetSlackBotToken returns the Slack bot token from global config.
 func GetSlackBotToken() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("SLACK_BOT_TOKEN", cfg.SlackBotToken)
+	return cfg.SlackBotToken
 }
 
-// GetGitHubToken returns the GitHub token.
-// Checks GITHUB_TOKEN env var first, then global config.
+// GetGitHubToken returns the GitHub token from global config.
 func GetGitHubToken() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("GITHUB_TOKEN", cfg.GitHubToken)
+	return cfg.GitHubToken
 }
 
-// GetSlackWebhook returns the Slack webhook URL for a channel.
-// Checks SLACK_WEBHOOK_<CHANNEL> env var first, then global config.
+// GetSlackWebhook returns the Slack webhook URL for a channel from global config.
 func GetSlackWebhook(channel string) string {
-	envKey := "SLACK_WEBHOOK_" + toUpperSnake(channel)
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-
 	cfg, _ := LoadGlobalConfig()
 	if cfg.SlackWebhooks != nil {
 		return cfg.SlackWebhooks[channel]
@@ -140,32 +122,51 @@ func GetNexusPath() string {
 	return cfg.NexusPath
 }
 
-// toUpperSnake converts a string to UPPER_SNAKE_CASE.
-func toUpperSnake(s string) string {
-	var result []byte
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'a' && c <= 'z' {
-			result = append(result, c-32) // to uppercase
-		} else if c >= 'A' && c <= 'Z' {
-			result = append(result, c)
-		} else if c >= '0' && c <= '9' {
-			result = append(result, c)
-		} else {
-			result = append(result, '_')
-		}
+// ErrNexusPathNotConfigured is returned when nexus_path is not set in config.
+var ErrNexusPathNotConfigured = errors.New("nexus_path not configured")
+
+// ErrNexusPathNotExist is returned when the configured nexus_path doesn't exist.
+var ErrNexusPathNotExist = errors.New("nexus_path does not exist")
+
+// ValidateNexusPath returns the nexus path from global config after validation.
+// Returns error if not configured or if the path doesn't exist.
+// This is the testable version - use MustGetNexusPath for CLI commands.
+func ValidateNexusPath() (string, error) {
+	path := GetNexusPath()
+	if path == "" {
+		return "", ErrNexusPathNotConfigured
 	}
-	return string(result)
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("%w: %s", ErrNexusPathNotExist, path)
+	}
+	return path, nil
 }
 
-// HelpfulConfigMessage returns a helpful message when no repository is found.
+// MustGetNexusPath returns the nexus path from global config.
+// Prints helpful message and exits if not configured or path doesn't exist.
+// For testable code, use ValidateNexusPath instead.
+func MustGetNexusPath() string {
+	path, err := ValidateNexusPath()
+	if err != nil {
+		if errors.Is(err, ErrNexusPathNotConfigured) {
+			fmt.Fprintln(os.Stderr, HelpfulConfigMessage())
+		} else {
+			fmt.Fprintf(os.Stderr, "Configured nexus_path does not exist: %s\n\n%s\n",
+				GetNexusPath(), HelpfulConfigMessage())
+		}
+		os.Exit(2)
+	}
+	return path
+}
+
+// HelpfulConfigMessage returns a helpful message when nexus_path is not configured.
 func HelpfulConfigMessage() string {
 	configPath := GlobalConfigPath()
 	return fmt.Sprintf(`No bipartite repository found.
 
 Tip: Create %s to set a default nexus:
   mkdir -p %s
-  echo '{"nexus_path": "~/re/nexus"}' > %s
+  echo '{"nexus_path": "/path/to/your/nexus"}' > %s
 
 See https://matsen.github.io/bipartite/guides/getting-started/`,
 		configPath,

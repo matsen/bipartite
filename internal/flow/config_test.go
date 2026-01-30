@@ -100,13 +100,8 @@ func TestLoadSourcesIntegration(t *testing.T) {
 		t.Fatalf("Failed to write test sources.json: %v", err)
 	}
 
-	// Change to temp dir
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(tmpDir)
-
-	// Test LoadSources
-	sources, err := LoadSources()
+	// Test LoadSources with explicit path
+	sources, err := LoadSources(tmpDir)
 	if err != nil {
 		t.Fatalf("LoadSources() error: %v", err)
 	}
@@ -156,12 +151,8 @@ func TestLoadReposByChannel(t *testing.T) {
 		t.Fatalf("Failed to write test sources.json: %v", err)
 	}
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(tmpDir)
-
 	// Test loading dasm2 channel
-	repos, err := LoadReposByChannel("dasm2")
+	repos, err := LoadReposByChannel(tmpDir, "dasm2")
 	if err != nil {
 		t.Fatalf("LoadReposByChannel() error: %v", err)
 	}
@@ -171,7 +162,7 @@ func TestLoadReposByChannel(t *testing.T) {
 	}
 
 	// Test unknown channel
-	repos, err = LoadReposByChannel("unknown")
+	repos, err = LoadReposByChannel(tmpDir, "unknown")
 	if err != nil {
 		t.Fatalf("LoadReposByChannel() error: %v", err)
 	}
@@ -200,11 +191,7 @@ func TestListChannels(t *testing.T) {
 		t.Fatalf("Failed to write test sources.json: %v", err)
 	}
 
-	oldDir, _ := os.Getwd()
-	defer os.Chdir(oldDir)
-	os.Chdir(tmpDir)
-
-	channels, err := ListChannels()
+	channels, err := ListChannels(tmpDir)
 	if err != nil {
 		t.Fatalf("ListChannels() error: %v", err)
 	}

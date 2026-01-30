@@ -207,8 +207,8 @@ COMMENTS:
 
 ## Slack Webhook (test_slack.py)
 
-- Lookup: `os.environ[f"SLACK_WEBHOOK_{channel.upper()}"]`
-- Channel name uppercased: "dasm2" → "SLACK_WEBHOOK_DASM2"
+- Lookup: `config.GetSlackWebhook(channel)`
+- Channel name as-is in config: `slack_webhooks.dasm2`
 - Returns None if not configured
 
 ## File Paths

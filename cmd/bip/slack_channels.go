@@ -7,6 +7,7 @@ import (
 	"sort"
 	"text/tabwriter"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +31,8 @@ func init() {
 }
 
 func runSlackChannels(cmd *cobra.Command, args []string) error {
-	channels, err := flow.LoadSlackChannels()
+	nexusPath := config.MustGetNexusPath()
+	channels, err := flow.LoadSlackChannels(nexusPath)
 	if err != nil {
 		return outputSlackError(1, "config_error", err.Error())
 	}

@@ -7,8 +7,7 @@ description: Unified guidance for using the bipartite reference library CLI. Use
 
 A CLI tool for managing academic references with local storage and external paper search.
 
-**Repository**: `~/re/nexus`
-**PDF Storage**: `/Users/matsen/Google Drive/My Drive/Paperpile`
+**Repository**: Configured via `nexus_path` in `~/.config/bip/config.json`
 
 ## ⚠️ CRITICAL: Local-First Search Policy
 
@@ -20,12 +19,12 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
 
 1. **Local search FIRST** (always do this):
    ```bash
-   cd ~/re/nexus && bip search "author keyword"
+   bip search "author keyword"
    ```
 
 2. **If `bip search` fails** (e.g., schema error), rebuild the database:
    ```bash
-   cd ~/re/nexus && rm .bipartite/cache/refs.db && bip rebuild
+   bip rebuild --force
    ```
    Then retry the search.
 
@@ -336,7 +335,7 @@ If `bip get <id>` or `bip asta paper <id>` fails:
 If you see errors like `no such column: pmid` or similar schema mismatches:
 
 ```bash
-cd ~/re/nexus && rm .bipartite/cache/refs.db && bip rebuild
+bip rebuild --force
 ```
 
 The SQLite database is ephemeral and rebuilt from the JSONL source of truth. Schema changes require deleting and rebuilding.

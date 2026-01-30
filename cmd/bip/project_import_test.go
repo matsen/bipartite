@@ -12,9 +12,49 @@ import (
 	"github.com/matsen/bipartite/internal/storage"
 )
 
+// setupTestEnvironment creates a test bipartite repository and sets up global config.
+// Returns cleanup function that must be deferred.
+func setupTestEnvironment(t *testing.T, tmpDir string) func() {
+	t.Helper()
+
+	// Create global config directory
+	configDir := filepath.Join(tmpDir, "config", "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("Failed to create config directory: %v", err)
+	}
+
+	// Create global config with nexus_path
+	globalConfig := `{"nexus_path":"` + tmpDir + `"}`
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(globalConfig), 0644); err != nil {
+		t.Fatalf("Failed to write global config: %v", err)
+	}
+
+	// Set XDG_CONFIG_HOME and save original
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	os.Setenv("XDG_CONFIG_HOME", filepath.Join(tmpDir, "config"))
+
+	// Reset global config cache to pick up new config
+	config.ResetGlobalConfigCache()
+
+	return func() {
+		// Restore original XDG_CONFIG_HOME
+		if origXDG == "" {
+			os.Unsetenv("XDG_CONFIG_HOME")
+		} else {
+			os.Setenv("XDG_CONFIG_HOME", origXDG)
+		}
+		// Reset cache again
+		config.ResetGlobalConfigCache()
+	}
+}
+
 func TestProjectImportCommand(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
+
+	// Set up test environment with global config
+	cleanup := setupTestEnvironment(t, tmpDir)
+	defer cleanup()
 
 	// Initialize bipartite structure
 	bipDir := filepath.Join(tmpDir, ".bipartite")
@@ -57,22 +97,10 @@ func TestProjectImportCommand(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Change to temp directory
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("Failed to chdir to temp dir: %v", err)
-	}
-
-	// Initialize git repo (required for repository detection)
-	if err := os.Mkdir(".git", 0755); err != nil {
-		t.Fatalf("Failed to create .git directory: %v", err)
-	}
-
 	// Execute import command with dry-run first
 	cmd := projectImportCmd
 	cmd.Flags().Set("dry-run", "true")
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Dry run failed: %v", err)
 	}
 
@@ -88,7 +116,7 @@ func TestProjectImportCommand(t *testing.T) {
 
 	// Now run actual import
 	cmd.Flags().Set("dry-run", "false")
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Import failed: %v", err)
 	}
 
@@ -120,7 +148,7 @@ func TestProjectImportCommand(t *testing.T) {
 	}
 
 	// Test idempotence - run import again
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Second import failed: %v", err)
 	}
 
@@ -137,6 +165,10 @@ func TestProjectImportCommand(t *testing.T) {
 func TestProjectImportWithRepos(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
+
+	// Set up test environment with global config
+	cleanup := setupTestEnvironment(t, tmpDir)
+	defer cleanup()
 
 	// Initialize bipartite structure
 	bipDir := filepath.Join(tmpDir, ".bipartite")
@@ -175,23 +207,11 @@ func TestProjectImportWithRepos(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Change to temp directory
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("Failed to chdir to temp dir: %v", err)
-	}
-
-	// Initialize git repo
-	if err := os.Mkdir(".git", 0755); err != nil {
-		t.Fatalf("Failed to create .git directory: %v", err)
-	}
-
 	// Execute import with --no-fetch to avoid GitHub API calls
 	cmd := projectImportCmd
 	cmd.Flags().Set("no-fetch", "true")
 	cmd.Flags().Set("dry-run", "false")
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Import failed: %v", err)
 	}
 
@@ -226,6 +246,10 @@ func TestProjectImportWithRepos(t *testing.T) {
 func TestProjectImportWithConcepts(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
+
+	// Set up test environment with global config
+	cleanup := setupTestEnvironment(t, tmpDir)
+	defer cleanup()
 
 	// Initialize bipartite structure
 	bipDir := filepath.Join(tmpDir, ".bipartite")
@@ -272,23 +296,11 @@ func TestProjectImportWithConcepts(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Change to temp directory
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("Failed to chdir to temp dir: %v", err)
-	}
-
-	// Initialize git repo
-	if err := os.Mkdir(".git", 0755); err != nil {
-		t.Fatalf("Failed to create .git directory: %v", err)
-	}
-
 	// Execute import with --link-concepts
 	cmd := projectImportCmd
 	cmd.Flags().Set("link-concepts", "true")
 	cmd.Flags().Set("dry-run", "false")
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Import failed: %v", err)
 	}
 
@@ -314,6 +326,10 @@ func TestProjectImportWithConcepts(t *testing.T) {
 func TestProjectImportRepoIDCollision(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
+
+	// Set up test environment with global config
+	cleanup := setupTestEnvironment(t, tmpDir)
+	defer cleanup()
 
 	// Initialize bipartite structure
 	bipDir := filepath.Join(tmpDir, ".bipartite")
@@ -354,23 +370,11 @@ func TestProjectImportRepoIDCollision(t *testing.T) {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
 
-	// Change to temp directory
-	origDir, _ := os.Getwd()
-	defer os.Chdir(origDir)
-	if err := os.Chdir(tmpDir); err != nil {
-		t.Fatalf("Failed to chdir to temp dir: %v", err)
-	}
-
-	// Initialize git repo
-	if err := os.Mkdir(".git", 0755); err != nil {
-		t.Fatalf("Failed to create .git directory: %v", err)
-	}
-
 	// Execute import with --no-fetch
 	cmd := projectImportCmd
 	cmd.Flags().Set("no-fetch", "true")
 	cmd.Flags().Set("dry-run", "false")
-	if err := cmd.RunE(cmd, []string{"test-projects.json"}); err != nil {
+	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
 		t.Fatalf("Import failed: %v", err)
 	}
 

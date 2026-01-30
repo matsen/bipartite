@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
@@ -44,10 +45,11 @@ func init() {
 }
 
 func runSlackHistory(cmd *cobra.Command, args []string) error {
+	nexusPath := config.MustGetNexusPath()
 	channelName := args[0]
 
 	// Get channel configuration
-	channelConfig, err := flow.GetSlackChannel(channelName)
+	channelConfig, err := flow.GetSlackChannel(nexusPath, channelName)
 	if err != nil {
 		return outputSlackError(ExitSlackChannelNotFound, "channel_not_found", err.Error())
 	}
@@ -153,7 +155,7 @@ func outputSlackError(exitCode int, errorCode, message string) error {
 	suggestion := ""
 	switch errorCode {
 	case "missing_token":
-		suggestion = "Set SLACK_BOT_TOKEN environment variable with a bot token that has channels:history, channels:read, and users:read scopes"
+		suggestion = "Add slack_bot_token to ~/.config/bip/config.json with a bot token that has channels:history, channels:read, and users:read scopes"
 	case "channel_not_found":
 		suggestion = "Check that the channel is configured in sources.json under slack.channels"
 	case "not_member":

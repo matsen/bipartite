@@ -18,6 +18,10 @@ Generate a themed narrative digest for a Slack channel.
 - `--since <period>` — Time period to cover (default: `1w`). Examples: `1w`, `2d`, `3d`
 - `--verbose` — Include PR/issue body summaries in the raw activity
 
+## Setup
+
+The nexus path is configured in `~/.config/bip/config.json`. For the commands below, use the configured path (e.g., if `nexus_path` is `~/re/nexus`, substitute that).
+
 ## Workflow
 
 Execute these steps in order:
@@ -27,7 +31,7 @@ Execute these steps in order:
 Run the bip digest command to get GitHub activity:
 
 ```bash
-cd ~/re/nexus && bip digest --channel {{channel}} --since {{since}} {{verbose_flag}}
+bip digest --channel {{channel}} --since {{since}} {{verbose_flag}}
 ```
 
 Where:
@@ -42,22 +46,22 @@ Where:
 Read the shared preferences file:
 
 ```bash
-cat ~/re/nexus/narrative/preferences.md
+cat <nexus>/narrative/preferences.md
 ```
 
 **If the file doesn't exist**, stop and report:
-"Missing shared preferences file: ~/re/nexus/narrative/preferences.md"
+"Missing shared preferences file: <nexus>/narrative/preferences.md"
 
 ### Step 3: Read Channel Configuration
 
 Read the channel-specific config:
 
 ```bash
-cat ~/re/nexus/narrative/{{channel}}.md
+cat <nexus>/narrative/{{channel}}.md
 ```
 
 **If the file doesn't exist**, stop and report:
-"Missing channel config: ~/re/nexus/narrative/{{channel}}.md
+"Missing channel config: <nexus>/narrative/{{channel}}.md
 Create this file with Themes and Repo Context sections."
 
 ### Step 4: Generate Narrative
@@ -113,14 +117,14 @@ Using the raw activity from Step 1, the preferences from Step 2, and the channel
 
 Determine output path:
 ```
-~/re/nexus/narrative/{{channel}}/{{YYYY-MM-DD}}.md
+<nexus>/narrative/{{channel}}/{{YYYY-MM-DD}}.md
 ```
 
 Where `{{YYYY-MM-DD}}` is today's date.
 
-1. Create the directory if needed: `mkdir -p ~/re/nexus/narrative/{{channel}}`
+1. Create the directory if needed: `mkdir -p <nexus>/narrative/{{channel}}`
 2. Write the generated narrative to the file
-3. Open the file for review: `zed ~/re/nexus/narrative/{{channel}}/{{YYYY-MM-DD}}.md`
+3. Open the file for review: `zed <nexus>/narrative/{{channel}}/{{YYYY-MM-DD}}.md`
 4. Report success: "Narrative digest written to: narrative/{{channel}}/{{YYYY-MM-DD}}.md"
 
 ### Step 6: Ask About Posting to Slack
@@ -131,23 +135,18 @@ After the user has reviewed the narrative, ask if they want to post it to Slack.
 
 1. Commit and push the narrative:
    ```bash
-   cd ~/re/nexus
+   cd <nexus>
    git add narrative/{{channel}}/{{YYYY-MM-DD}}.md
    git commit -m "Add {{channel}} narrative digest for {{date_range}}"
    git push
    ```
 
-2. Post to Slack with a link to the GitHub file:
+2. Post to Slack using `bip digest --post`:
    ```bash
-   # Get webhook from .env
-   WEBHOOK=$(grep SLACK_WEBHOOK_{{CHANNEL_UPPER}} ~/re/nexus/.env | cut -d= -f2)
-
-   curl -X POST -H 'Content-type: application/json' \
-     --data '{"text":"*Weekly Narrative Digest* ({{date_range}})\n\nA themed summary of this week'\''s {{channel}} activity:\n\nhttps://github.com/matsengrp/nexus/blob/main/narrative/{{channel}}/{{YYYY-MM-DD}}.md"}' \
-     "$WEBHOOK"
+   bip digest --channel {{channel}} --post
    ```
 
-   Note: Using raw URL format (cleaner than Slack's `<url|label>` syntax).
+   The webhook URL comes from `slack_webhooks` in `~/.config/bip/config.json` or `SLACK_WEBHOOK_{{CHANNEL_UPPER}}` env var.
 
 3. Report: "Posted to #{{channel}} with link to narrative."
 

@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -148,54 +149,26 @@ func TestLoadGlobalConfig_InvalidJSON(t *testing.T) {
 	}
 }
 
-func TestGetConfigValue(t *testing.T) {
-	// Save and restore env
-	orig := os.Getenv("TEST_CONFIG_KEY")
-	defer os.Setenv("TEST_CONFIG_KEY", orig)
-
-	// Env var takes priority
-	os.Setenv("TEST_CONFIG_KEY", "from-env")
-	got := GetConfigValue("TEST_CONFIG_KEY", "from-config")
-	if got != "from-env" {
-		t.Errorf("GetConfigValue() = %q, want from-env", got)
-	}
-
-	// Fall back to config value
-	os.Setenv("TEST_CONFIG_KEY", "")
-	got = GetConfigValue("TEST_CONFIG_KEY", "from-config")
-	if got != "from-config" {
-		t.Errorf("GetConfigValue() = %q, want from-config", got)
-	}
-}
-
 func TestGetS2APIKey(t *testing.T) {
 	ResetGlobalConfigCache()
 	defer ResetGlobalConfigCache()
 
-	// Save and restore env
-	orig := os.Getenv("S2_API_KEY")
+	// Save and restore XDG
 	origXDG := os.Getenv("XDG_CONFIG_HOME")
-	defer func() {
-		os.Setenv("S2_API_KEY", orig)
-		os.Setenv("XDG_CONFIG_HOME", origXDG)
-	}()
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
 
-	// Point to empty config
+	// Point to empty config first
 	tmpDir := t.TempDir()
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
-	// Env var takes priority
-	os.Setenv("S2_API_KEY", "env-s2-key")
+	// Without config, returns empty
 	got := GetS2APIKey()
-	if got != "env-s2-key" {
-		t.Errorf("GetS2APIKey() = %q, want env-s2-key", got)
+	if got != "" {
+		t.Errorf("GetS2APIKey() = %q, want empty", got)
 	}
 
-	// Without env var, falls back to config
-	os.Setenv("S2_API_KEY", "")
+	// Create config with key
 	ResetGlobalConfigCache()
-
-	// Create config
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{S2APIKey: "config-s2-key"}
@@ -212,30 +185,22 @@ func TestGetSlackWebhook(t *testing.T) {
 	ResetGlobalConfigCache()
 	defer ResetGlobalConfigCache()
 
-	// Save and restore env
-	orig := os.Getenv("SLACK_WEBHOOK_DASM2")
+	// Save and restore XDG
 	origXDG := os.Getenv("XDG_CONFIG_HOME")
-	defer func() {
-		os.Setenv("SLACK_WEBHOOK_DASM2", orig)
-		os.Setenv("XDG_CONFIG_HOME", origXDG)
-	}()
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
 
 	// Point to empty config
 	tmpDir := t.TempDir()
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
-	// Env var takes priority
-	os.Setenv("SLACK_WEBHOOK_DASM2", "https://env-webhook")
+	// Without config, returns empty
 	got := GetSlackWebhook("dasm2")
-	if got != "https://env-webhook" {
-		t.Errorf("GetSlackWebhook() = %q, want https://env-webhook", got)
+	if got != "" {
+		t.Errorf("GetSlackWebhook() = %q, want empty", got)
 	}
 
-	// Without env var, falls back to config
-	os.Setenv("SLACK_WEBHOOK_DASM2", "")
+	// Create config with webhook
 	ResetGlobalConfigCache()
-
-	// Create config
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{
@@ -247,28 +212,6 @@ func TestGetSlackWebhook(t *testing.T) {
 	got = GetSlackWebhook("dasm2")
 	if got != "https://config-webhook" {
 		t.Errorf("GetSlackWebhook() = %q, want https://config-webhook", got)
-	}
-}
-
-func TestToUpperSnake(t *testing.T) {
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{"dasm2", "DASM2"},
-		{"my-channel", "MY_CHANNEL"},
-		{"MyChannel", "MYCHANNEL"},
-		{"foo_bar", "FOO_BAR"},
-		{"test123", "TEST123"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.input, func(t *testing.T) {
-			got := toUpperSnake(tt.input)
-			if got != tt.want {
-				t.Errorf("toUpperSnake(%q) = %q, want %q", tt.input, got, tt.want)
-			}
-		})
 	}
 }
 
@@ -327,5 +270,83 @@ func TestGlobalConfigCache(t *testing.T) {
 	cfg3, _ := LoadGlobalConfig()
 	if cfg3.S2APIKey != "modified-key" {
 		t.Errorf("Third load: S2APIKey = %q, want modified-key", cfg3.S2APIKey)
+	}
+}
+
+func TestValidateNexusPath_NotConfigured(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Point to empty config directory
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	_, err := ValidateNexusPath()
+	if err == nil {
+		t.Error("ValidateNexusPath() should return error when not configured")
+	}
+	if err != ErrNexusPathNotConfigured {
+		t.Errorf("ValidateNexusPath() error = %v, want ErrNexusPathNotConfigured", err)
+	}
+}
+
+func TestValidateNexusPath_PathNotExist(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Create config with non-existent path
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "bip")
+	os.MkdirAll(configDir, 0755)
+	cfgData := GlobalConfig{NexusPath: "/nonexistent/path/that/does/not/exist"}
+	data, _ := json.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	_, err := ValidateNexusPath()
+	if err == nil {
+		t.Error("ValidateNexusPath() should return error when path doesn't exist")
+	}
+	if !errors.Is(err, ErrNexusPathNotExist) {
+		t.Errorf("ValidateNexusPath() error = %v, want ErrNexusPathNotExist", err)
+	}
+}
+
+func TestValidateNexusPath_Valid(t *testing.T) {
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+
+	// Save and restore XDG_CONFIG_HOME
+	orig := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", orig)
+
+	// Create config with valid path
+	tmpDir := t.TempDir()
+	nexusDir := filepath.Join(tmpDir, "nexus")
+	os.MkdirAll(nexusDir, 0755)
+
+	configDir := filepath.Join(tmpDir, "bip")
+	os.MkdirAll(configDir, 0755)
+	cfgData := GlobalConfig{NexusPath: nexusDir}
+	data, _ := json.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+
+	path, err := ValidateNexusPath()
+	if err != nil {
+		t.Errorf("ValidateNexusPath() error = %v, want nil", err)
+	}
+	if path != nexusDir {
+		t.Errorf("ValidateNexusPath() = %q, want %q", path, nexusDir)
 	}
 }

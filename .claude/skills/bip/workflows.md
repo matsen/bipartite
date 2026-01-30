@@ -18,7 +18,6 @@ Parse user queries to identify:
 
 1. **Search the local library**:
    ```bash
-   cd ~/re/nexus
    bip search "<constructed query>"
    ```
 
@@ -133,7 +132,6 @@ Import references from a Paperpile export.
 
 3. **Run the import**:
    ```bash
-   cd ~/re/nexus
    bip import --format paperpile "<path>"
    ```
 

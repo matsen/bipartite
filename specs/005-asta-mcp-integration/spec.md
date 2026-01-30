@@ -23,7 +23,7 @@ This complements the existing `bip s2` commands (Semantic Scholar REST API) by p
 
 - Q: How does ASTA differ from S2? → A: ASTA uses MCP protocol, has snippet search, 10 req/sec rate limit
 - Q: Should ASTA commands add papers to collection? → A: No, ASTA is read-only exploration. Use `bip s2 add` to add papers.
-- Q: How to authenticate? → A: ASTA_API_KEY in .env, passed via x-api-key header
+- Q: How to authenticate? → A: asta_api_key in global config, passed via x-api-key header
 
 ## ASTA MCP Endpoint
 
@@ -134,19 +134,19 @@ A researcher wants to find an author and their publications.
 ### Non-Functional Requirements
 
 - **NFR-001**: System MUST respect ASTA rate limits (10 req/sec)
-- **NFR-002**: System MUST read ASTA_API_KEY from .env
+- **NFR-002**: System MUST read asta_api_key from global config (~/.config/bip/config.json)
 - **NFR-003**: System MUST provide clear error messages for auth failures
 
 ## Key Entities
 
-- **ASTA API Key**: Stored in .env as `ASTA_API_KEY`
+- **ASTA API Key**: Stored in global config as `asta_api_key`
 - **MCP Request**: JSON-RPC style request to ASTA endpoint
 - **Paper ID formats**: DOI:, ARXIV:, PMID:, CorpusId:, raw S2 ID
 
 ## Technical Decisions
 
 - **HTTP Client**: Direct HTTP to MCP endpoint (not using MCP client library)
-- **Auth**: x-api-key header from ASTA_API_KEY env var
+- **Auth**: x-api-key header from asta_api_key config
 - **Rate Limiting**: 10 req/sec using golang.org/x/time/rate
 
 ## Commands Summary
@@ -169,7 +169,7 @@ A researcher wants to find an author and their publications.
 | Rate limit | 1 req/sec | 10 req/sec |
 | Snippet search | No | Yes |
 | Add to collection | Yes | No (read-only) |
-| Auth | S2_API_KEY | ASTA_API_KEY |
+| Auth | s2_api_key | asta_api_key |
 
 ## Out of Scope
 

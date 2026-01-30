@@ -415,4 +415,4 @@ All commands support:
 - `--human`: Human-readable output (default: JSON)
 
 Commands that modify data also respect:
-- Repository discovery: Walk up from CWD or use `BIP_ROOT` env var
+- Repository discovery: Uses `nexus_path` from `~/.config/bip/config.json`

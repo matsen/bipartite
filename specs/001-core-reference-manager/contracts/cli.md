@@ -432,5 +432,17 @@ Available on all commands:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `BIP_ROOT` | Override repository location | Current directory |
+| `XDG_CONFIG_HOME` | Override config directory | `~/.config` |
 | `NO_COLOR` | Disable colored output | (unset) |
+
+## Global Configuration
+
+Repository location is configured in `~/.config/bip/config.json`:
+
+```json
+{
+  "nexus_path": "~/re/nexus"
+}
+```
+
+The `nexus_path` setting is required and specifies the bipartite repository location.

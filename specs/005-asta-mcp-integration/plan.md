@@ -27,7 +27,7 @@ Implement CLI wrappers for Allen AI's ASTA (Academic Search Tool API) MCP servic
 |-----------|--------|-------|
 | I. Agent-First Design | ✓ PASS | JSON default output, --human flag, bash-composable CLI |
 | II. Git-Versionable Architecture | ✓ PASS | No local state; ASTA is read-only external API |
-| III. Fail-Fast Philosophy | ✓ PASS | Clear errors for missing ASTA_API_KEY, API failures |
+| III. Fail-Fast Philosophy | ✓ PASS | Clear errors for missing asta_api_key, API failures |
 | IV. Real Testing | ✓ PASS | Will use real ASTA API calls with test queries |
 | V. Clean Architecture | ✓ PASS | internal/asta package with clear separation |
 | VI. Simplicity | ✓ PASS | Direct HTTP calls, no MCP client library overhead |

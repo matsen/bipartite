@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +23,7 @@ back to 3 days if the file doesn't exist). Each run updates .last-checkin.json
 so the next run picks up where you left off. Using --since overrides this
 window and does NOT update .last-checkin.json.
 
-Requires sources.json in the current directory (run from nexus directory).`,
+Requires nexus_path configured in ~/.config/bip/config.json.`,
 	Run: runCheckin,
 }
 
@@ -45,11 +46,7 @@ func init() {
 }
 
 func runCheckin(cmd *cobra.Command, args []string) {
-	// Validate nexus directory
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	nexusPath := config.MustGetNexusPath()
 
 	now := time.Now()
 
@@ -65,7 +62,7 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		}
 		since = now.Add(-duration)
 	} else {
-		lastCheckin := flow.ReadLastCheckin()
+		lastCheckin := flow.ReadLastCheckin(nexusPath)
 		if lastCheckin.IsZero() {
 			duration, _ := flow.ParseDuration("3d")
 			since = now.Add(-duration)
@@ -80,13 +77,13 @@ func runCheckin(cmd *cobra.Command, args []string) {
 	if checkinRepo != "" {
 		repos = []string{checkinRepo}
 	} else if checkinCategory != "" {
-		repos, err = flow.LoadReposByCategory(checkinCategory)
+		repos, err = flow.LoadReposByCategory(nexusPath, checkinCategory)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
-		repos, err = flow.LoadAllRepos()
+		repos, err = flow.LoadAllRepos(nexusPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
@@ -199,8 +196,8 @@ func runCheckin(cmd *cobra.Command, args []string) {
 
 	// Update state file with current timestamp (only when --since was not explicit)
 	if !cmd.Flags().Changed("since") {
-		if err := flow.WriteLastCheckin(now); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: could not update %s: %v\n", flow.StateFile, err)
+		if err := flow.WriteLastCheckin(nexusPath, now); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: could not update %s: %v\n", flow.StatePath(nexusPath), err)
 		}
 	}
 
