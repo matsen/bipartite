@@ -82,51 +82,32 @@ func ResetGlobalConfigCache() {
 	globalConfigCache = nil
 }
 
-// GetConfigValue returns the value for a config key, checking environment
-// variables first (for backwards compatibility), then the global config.
-func GetConfigValue(envKey string, configValue string) string {
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-	return configValue
-}
-
-// GetS2APIKey returns the Semantic Scholar API key.
-// Checks S2_API_KEY env var first, then global config.
+// GetS2APIKey returns the Semantic Scholar API key from global config.
 func GetS2APIKey() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("S2_API_KEY", cfg.S2APIKey)
+	return cfg.S2APIKey
 }
 
-// GetASTAAPIKey returns the ASTA API key.
-// Checks ASTA_API_KEY env var first, then global config.
+// GetASTAAPIKey returns the ASTA API key from global config.
 func GetASTAAPIKey() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("ASTA_API_KEY", cfg.ASTAAPIKey)
+	return cfg.ASTAAPIKey
 }
 
-// GetSlackBotToken returns the Slack bot token.
-// Checks SLACK_BOT_TOKEN env var first, then global config.
+// GetSlackBotToken returns the Slack bot token from global config.
 func GetSlackBotToken() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("SLACK_BOT_TOKEN", cfg.SlackBotToken)
+	return cfg.SlackBotToken
 }
 
-// GetGitHubToken returns the GitHub token.
-// Checks GITHUB_TOKEN env var first, then global config.
+// GetGitHubToken returns the GitHub token from global config.
 func GetGitHubToken() string {
 	cfg, _ := LoadGlobalConfig()
-	return GetConfigValue("GITHUB_TOKEN", cfg.GitHubToken)
+	return cfg.GitHubToken
 }
 
-// GetSlackWebhook returns the Slack webhook URL for a channel.
-// Checks SLACK_WEBHOOK_<CHANNEL> env var first, then global config.
+// GetSlackWebhook returns the Slack webhook URL for a channel from global config.
 func GetSlackWebhook(channel string) string {
-	envKey := "SLACK_WEBHOOK_" + toUpperSnake(channel)
-	if v := os.Getenv(envKey); v != "" {
-		return v
-	}
-
 	cfg, _ := LoadGlobalConfig()
 	if cfg.SlackWebhooks != nil {
 		return cfg.SlackWebhooks[channel]
@@ -154,24 +135,6 @@ func MustGetNexusPath() string {
 		os.Exit(2)
 	}
 	return path
-}
-
-// toUpperSnake converts a string to UPPER_SNAKE_CASE.
-func toUpperSnake(s string) string {
-	var result []byte
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'a' && c <= 'z' {
-			result = append(result, c-32) // to uppercase
-		} else if c >= 'A' && c <= 'Z' {
-			result = append(result, c)
-		} else if c >= '0' && c <= '9' {
-			result = append(result, c)
-		} else {
-			result = append(result, '_')
-		}
-	}
-	return string(result)
 }
 
 // HelpfulConfigMessage returns a helpful message when no repository is found.

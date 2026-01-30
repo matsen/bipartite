@@ -90,7 +90,7 @@ As an AI agent running a goal-tracking skill, I want to programmatically fetch g
 ### Edge Cases
 
 - What happens when the channel name doesn't exist in configuration? → Clear error with list of valid channels.
-- What happens when SLACK_BOT_TOKEN is not set? → Clear error explaining the required environment variable.
+- What happens when slack_bot_token is not configured? → Clear error explaining the required config setting.
 - What happens when the token lacks required permissions? → Error explaining which scopes are needed.
 - What happens when --days and --since are both specified? → --since takes precedence (document this behavior).
 - What happens when --limit is reached? → Messages are truncated with indication that more exist.
@@ -110,7 +110,7 @@ As an AI agent running a goal-tracking skill, I want to programmatically fetch g
 - **FR-005**: System MUST support both JSON (default) and human-readable output formats.
 - **FR-006**: System MUST provide a command to list all configured channels.
 - **FR-007**: System MUST read channel configuration from the existing sources.json file.
-- **FR-008**: System MUST authenticate using the SLACK_BOT_TOKEN environment variable.
+- **FR-008**: System MUST authenticate using the slack_bot_token from global config.
 - **FR-009**: System MUST provide clear error messages when channels are inaccessible due to bot membership.
 - **FR-010**: System MUST include message timestamp, user name, date, and text in output.
 - **FR-011**: System MUST provide a command to ingest messages directly into a store.
@@ -162,7 +162,7 @@ As an AI agent running a goal-tracking skill, I want to programmatically fetch g
 
 ## Assumptions
 
-- The SLACK_BOT_TOKEN environment variable is already set up by users (same as existing posting functionality).
+- The slack_bot_token in global config is already set up by users (same as existing posting functionality).
 - Channel configuration already exists in sources.json for posting; this feature reuses that configuration.
 - Bot has already been invited to channels of interest (this is a one-time setup step users must perform).
 - The Slack API rate limits are sufficient for typical usage patterns (occasional queries, not continuous polling).

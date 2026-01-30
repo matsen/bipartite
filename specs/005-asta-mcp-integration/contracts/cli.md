@@ -293,6 +293,6 @@ Error: Paper not found
 
 **Error Codes**:
 - `not_found`: Resource not found
-- `auth_error`: Missing or invalid ASTA_API_KEY
+- `auth_error`: Missing or invalid asta_api_key
 - `rate_limited`: Rate limit exceeded
 - `api_error`: Other API errors

@@ -6,7 +6,7 @@
 ## Prerequisites
 
 - Bipartite repo initialized (`bip init`)
-- Optional: S2 API key in `.env` as `S2_API_KEY` (higher rate limits)
+- Optional: S2 API key in global config as `s2_api_key` (higher rate limits)
 
 ## Basic Usage
 
@@ -151,11 +151,12 @@ bp s2 gaps --min-citations 2 --human
 
 ### API Key (Optional)
 
-For higher rate limits (1 req/sec vs 100 req/5min):
+For higher rate limits (1 req/sec vs 100 req/5min), add to `~/.config/bip/config.json`:
 
-```bash
-# Add to .env (already gitignored)
-echo "S2_API_KEY=your_key_here" >> .env
+```json
+{
+  "s2_api_key": "your_key_here"
+}
 ```
 
 ### Rate Limiting
@@ -179,7 +180,7 @@ bp s2 lookup PMID:19872477            # PubMed
 
 ### "Rate limited"
 
-Wait a few minutes or add an API key to `.env`.
+Wait a few minutes or add an API key to global config.
 
 ### PDF DOI extraction fails
 

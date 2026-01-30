@@ -49,9 +49,9 @@ All endpoints accept these ID formats:
 | Tier | Limit | Notes |
 |------|-------|-------|
 | Unauthenticated | 100 requests / 5 minutes | Fallback if no key |
-| API Key | 1 request / second sustained | **Available in .env** |
+| API Key | 1 request / second sustained | **Available in config** |
 
-**Implementation**: Use token bucket rate limiter. With API key, can sustain 1 req/sec. Key stored in `.env` as `S2_API_KEY`.
+**Implementation**: Use token bucket rate limiter. With API key, can sustain 1 req/sec. Key stored in global config as `s2_api_key`.
 
 ### Response Fields
 

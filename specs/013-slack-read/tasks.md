@@ -65,7 +65,7 @@ This project uses:
 - [x] T015 [US1] Implement human-readable markdown output with headers per user/date in cmd/bip/slack_history.go
 - [x] T016 [US1] Add error handling for channel not in configuration (exit code 2) in cmd/bip/slack_history.go
 - [x] T017 [US1] Add error handling for bot not member of channel (exit code 3) in cmd/bip/slack_history.go
-- [x] T018 [US1] Add error handling for missing SLACK_BOT_TOKEN (exit code 1) in cmd/bip/slack_history.go
+- [x] T018 [US1] Add error handling for missing slack_bot_token (exit code 1) in cmd/bip/slack_history.go
 
 **Checkpoint**: User Story 1 should be fully functional - can fetch history from configured channels
 

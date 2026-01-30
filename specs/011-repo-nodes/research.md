@@ -12,7 +12,7 @@
 - Single endpoint needed: `GET /repos/{owner}/{repo}`
 - No OAuth required for public repos (simplicity principle)
 - Standard library `net/http` sufficient; avoid dependency bloat
-- Support `GITHUB_TOKEN` env var for private repos and higher rate limits
+- Support `github_token` env var for private repos and higher rate limits
 
 **Alternatives Considered**:
 - `google/go-github` library: Rejected (overkill for one endpoint, adds dependency)

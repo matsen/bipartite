@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/matsen/bipartite/internal/config"
 )
 
 // withTempWorkDir creates a temp directory and changes to it for the test.
@@ -26,54 +28,54 @@ func withTempWorkDir(t *testing.T) func() {
 }
 
 func TestGetWebhookURL(t *testing.T) {
-	// Save and restore original env
-	origEnv := os.Getenv("SLACK_WEBHOOK_DASM2")
-	defer func() {
-		if origEnv != "" {
-			os.Setenv("SLACK_WEBHOOK_DASM2", origEnv)
-		} else {
-			os.Unsetenv("SLACK_WEBHOOK_DASM2")
-		}
-	}()
+	// Tests use global config, so we need to set up a temp config
+	config.ResetGlobalConfigCache()
+	defer config.ResetGlobalConfigCache()
 
-	t.Run("returns URL from env", func(t *testing.T) {
-		os.Setenv("SLACK_WEBHOOK_DASM2", "https://hooks.slack.com/test")
-		url := GetWebhookURL("dasm2")
-		if url != "https://hooks.slack.com/test" {
-			t.Errorf("GetWebhookURL() = %q, want %q", url, "https://hooks.slack.com/test")
-		}
-	})
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
 
-	t.Run("uppercases channel name", func(t *testing.T) {
-		os.Setenv("SLACK_WEBHOOK_DASM2", "https://hooks.slack.com/test")
-		url := GetWebhookURL("DASM2")
-		if url != "https://hooks.slack.com/test" {
-			t.Errorf("GetWebhookURL() = %q, want %q", url, "https://hooks.slack.com/test")
-		}
-	})
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	t.Run("returns empty when not configured", func(t *testing.T) {
-		os.Unsetenv("SLACK_WEBHOOK_UNCONFIGURED")
+		config.ResetGlobalConfigCache()
 		url := GetWebhookURL("unconfigured")
 		if url != "" {
 			t.Errorf("GetWebhookURL() = %q, want empty string", url)
 		}
 	})
 
-	t.Run("works for scratch channel", func(t *testing.T) {
-		os.Setenv("SLACK_WEBHOOK_SCRATCH", "https://hooks.slack.com/scratch")
-		defer os.Unsetenv("SLACK_WEBHOOK_SCRATCH")
+	t.Run("returns URL from config", func(t *testing.T) {
+		config.ResetGlobalConfigCache()
+		configDir := filepath.Join(tmpDir, "bip")
+		os.MkdirAll(configDir, 0755)
+		cfgData := map[string]interface{}{
+			"slack_webhooks": map[string]string{
+				"dasm2": "https://hooks.slack.com/test",
+			},
+		}
+		data, _ := json.Marshal(cfgData)
+		os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
 
-		url := GetWebhookURL("scratch")
-		if url != "https://hooks.slack.com/scratch" {
-			t.Errorf("GetWebhookURL() = %q, want %q", url, "https://hooks.slack.com/scratch")
+		url := GetWebhookURL("dasm2")
+		if url != "https://hooks.slack.com/test" {
+			t.Errorf("GetWebhookURL() = %q, want %q", url, "https://hooks.slack.com/test")
 		}
 	})
 }
 
 func TestSendDigestError(t *testing.T) {
 	// Test that SendDigest returns error when no webhook configured
-	os.Unsetenv("SLACK_WEBHOOK_UNCONFIGURED")
+	config.ResetGlobalConfigCache()
+	defer config.ResetGlobalConfigCache()
+
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
+
+	// Point to empty config
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	err := SendDigest("unconfigured", "test message")
 	if err == nil {
@@ -84,14 +86,15 @@ func TestSendDigestError(t *testing.T) {
 // Tests for Slack reading functionality
 
 func TestNewSlackClient_MissingToken(t *testing.T) {
-	// Temporarily unset token
-	oldToken := os.Getenv("SLACK_BOT_TOKEN")
-	os.Unsetenv("SLACK_BOT_TOKEN")
-	defer func() {
-		if oldToken != "" {
-			os.Setenv("SLACK_BOT_TOKEN", oldToken)
-		}
-	}()
+	config.ResetGlobalConfigCache()
+	defer config.ResetGlobalConfigCache()
+
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
+
+	// Point to empty config
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
 	_, err := NewSlackClient()
 	if err == nil {
@@ -100,16 +103,22 @@ func TestNewSlackClient_MissingToken(t *testing.T) {
 }
 
 func TestNewSlackClient_WithToken(t *testing.T) {
-	// Temporarily set token
-	oldToken := os.Getenv("SLACK_BOT_TOKEN")
-	os.Setenv("SLACK_BOT_TOKEN", "xoxb-test-token")
-	defer func() {
-		if oldToken != "" {
-			os.Setenv("SLACK_BOT_TOKEN", oldToken)
-		} else {
-			os.Unsetenv("SLACK_BOT_TOKEN")
-		}
-	}()
+	config.ResetGlobalConfigCache()
+	defer config.ResetGlobalConfigCache()
+
+	origXDG := os.Getenv("XDG_CONFIG_HOME")
+	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
+
+	// Create config with token
+	tmpDir := t.TempDir()
+	os.Setenv("XDG_CONFIG_HOME", tmpDir)
+	configDir := filepath.Join(tmpDir, "bip")
+	os.MkdirAll(configDir, 0755)
+	cfgData := map[string]interface{}{
+		"slack_bot_token": "xoxb-test-token",
+	}
+	data, _ := json.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
 
 	client, err := NewSlackClient()
 	if err != nil {

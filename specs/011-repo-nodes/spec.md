@@ -384,7 +384,7 @@ GET https://api.github.com/repos/{owner}/{repo}
 
 Returns: name, description, topics, language, html_url, created_at, updated_at, etc.
 
-For authenticated access (private repos, higher rate limits), support `GITHUB_TOKEN` environment variable.
+For authenticated access (private repos, higher rate limits), support `github_token` in global config.
 
 ### Migration Path
 

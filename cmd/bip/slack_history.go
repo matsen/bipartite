@@ -155,7 +155,7 @@ func outputSlackError(exitCode int, errorCode, message string) error {
 	suggestion := ""
 	switch errorCode {
 	case "missing_token":
-		suggestion = "Set SLACK_BOT_TOKEN environment variable with a bot token that has channels:history, channels:read, and users:read scopes"
+		suggestion = "Add slack_bot_token to ~/.config/bip/config.json with a bot token that has channels:history, channels:read, and users:read scopes"
 	case "channel_not_found":
 		suggestion = "Check that the channel is configured in sources.json under slack.channels"
 	case "not_member":

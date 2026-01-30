@@ -68,9 +68,9 @@ Based on the MCP tools available from ASTA, the following tools map to our CLI c
 
 ## Authentication
 
-### Decision: x-api-key header from ASTA_API_KEY env var
+### Decision: x-api-key header from asta_api_key env var
 
-**Rationale**: ASTA uses API key authentication via the `x-api-key` HTTP header. Following existing patterns (`S2_API_KEY`), we use `ASTA_API_KEY` in `.env`.
+**Rationale**: ASTA uses API key authentication via the `x-api-key` HTTP header. Following existing patterns, we use `asta_api_key` in global config.
 
 **Implementation**: Load via `godotenv.Load()` in the asta parent command init, same as s2 commands.
 

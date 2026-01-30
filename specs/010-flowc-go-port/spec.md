@@ -172,7 +172,7 @@ A researcher wants to add, move, or remove issues from their GitHub project boar
 - **FR-030**: System MUST support `--since` duration (default 1w)
 - **FR-031**: System MUST generate LLM summary in Slack mrkdwn format
 - **FR-032**: System MUST postprocess digest to add repo names and contributor @mentions
-- **FR-033**: System MUST post to Slack if webhook configured (env: `SLACK_WEBHOOK_{CHANNEL}`)
+- **FR-033**: System MUST post to Slack if webhook configured (config: `slack_webhooks.{channel}`)
 - **FR-034**: System MUST support `--post-to` to override destination channel
 
 #### Tree Command

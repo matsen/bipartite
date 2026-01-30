@@ -6,7 +6,7 @@
 
 ## Summary
 
-Add read capabilities to the existing Slack integration. Two new commands: `bip slack history <channel>` fetches messages from configured channels where the bot is a member, and `bip slack channels` lists configured channels. Extends the existing `internal/flow/slack.go` which handles posting. Uses SLACK_BOT_TOKEN (different from webhooks) for API access with `channels:history`, `channels:read`, and `users:read` scopes.
+Add read capabilities to the existing Slack integration. Two new commands: `bip slack history <channel>` fetches messages from configured channels where the bot is a member, and `bip slack channels` lists configured channels. Extends the existing `internal/flow/slack.go` which handles posting. Uses slack_bot_token (different from webhooks) for API access with `channels:history`, `channels:read`, and `users:read` scopes.
 
 ## Technical Context
 
@@ -81,7 +81,7 @@ tests/
 
 ### R1: Slack API Authentication
 
-**Decision**: Use SLACK_BOT_TOKEN environment variable (xoxb-... format)
+**Decision**: Use slack_bot_token environment variable (xoxb-... format)
 
 **Rationale**:
 - Bot tokens are the standard for app-to-Slack communication

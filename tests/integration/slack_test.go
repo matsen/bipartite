@@ -3,6 +3,7 @@ package integration
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,11 +16,11 @@ import (
 )
 
 // TestSlackHistoryJSONFormat verifies the JSON output format meets US3 requirements.
-// This test requires SLACK_BOT_TOKEN to be set and a configured channel.
+// This test requires slack_bot_token in global config and a configured channel.
 func TestSlackHistoryJSONFormat(t *testing.T) {
-	// Skip if no token is set (not in CI with credentials)
-	if os.Getenv("SLACK_BOT_TOKEN") == "" {
-		t.Skip("SLACK_BOT_TOKEN not set, skipping Slack integration test")
+	// Skip if no token is configured
+	if config.GetSlackBotToken() == "" {
+		t.Skip("slack_bot_token not configured, skipping Slack integration test")
 	}
 
 	bp := getBPBinary(t)
@@ -118,8 +119,7 @@ func TestSlackChannelsJSONFormat(t *testing.T) {
 }
 
 // TestSlackHistoryMissingToken verifies proper error handling for missing token.
-// Note: This test is skipped if a .env file exists in the nexus directory,
-// because godotenv.Load() will read the token from disk regardless of env vars.
+// This test creates a temp config without slack_bot_token to verify error handling.
 func TestSlackHistoryMissingToken(t *testing.T) {
 	bp := getBPBinary(t)
 	nexusDir := getNexusDir(t)
@@ -129,15 +129,22 @@ func TestSlackHistoryMissingToken(t *testing.T) {
 		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
 	}
 
-	// Skip if .env exists (godotenv loads from disk, bypassing env filter)
-	if _, err := os.Stat(filepath.Join(nexusDir, ".env")); err == nil {
-		t.Skip(".env file exists in nexus directory, cannot test missing token scenario")
+	// Create a temp config directory without slack_bot_token but WITH nexus_path
+	tmpConfigDir := t.TempDir()
+	configDir := filepath.Join(tmpConfigDir, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create config dir: %v", err)
+	}
+	// Write config with nexus_path but no slack_bot_token
+	cfgJSON := fmt.Sprintf(`{"nexus_path": %q}`, nexusDir)
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(cfgJSON), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
 	}
 
-	// Run command without token - using a channel that exists in config
+	// Run command with XDG_CONFIG_HOME pointing to our config
 	cmd := exec.Command(bp, "slack", "history", "fortnight-goals")
 	cmd.Dir = nexusDir
-	cmd.Env = filterEnv(os.Environ(), "SLACK_BOT_TOKEN")
+	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+tmpConfigDir)
 
 	err := cmd.Run()
 	if err == nil {
@@ -153,8 +160,8 @@ func TestSlackHistoryMissingToken(t *testing.T) {
 
 // TestSlackHistoryInvalidChannel verifies error handling for unknown channel.
 func TestSlackHistoryInvalidChannel(t *testing.T) {
-	if os.Getenv("SLACK_BOT_TOKEN") == "" {
-		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	if config.GetSlackBotToken() == "" {
+		t.Skip("slack_bot_token not configured, skipping test")
 	}
 
 	bp := getBPBinary(t)
@@ -179,14 +186,10 @@ func TestSlackHistoryInvalidChannel(t *testing.T) {
 // getNexusDir returns the nexus directory for tests.
 func getNexusDir(t *testing.T) string {
 	t.Helper()
-	// Prefer NEXUS_DIR env var, fall back to global config nexus_path
-	if dir := os.Getenv("NEXUS_DIR"); dir != "" {
-		return dir
-	}
 	if dir := config.GetNexusPath(); dir != "" {
 		return dir
 	}
-	t.Fatal("NEXUS_DIR env var not set and nexus_path not configured in global config")
+	t.Fatal("nexus_path not configured in global config")
 	return ""
 }
 
@@ -233,8 +236,8 @@ func hasSlackConfig(nexusDir string) bool {
 
 // TestSlackIngestMissingStore verifies error when store doesn't exist.
 func TestSlackIngestMissingStore(t *testing.T) {
-	if os.Getenv("SLACK_BOT_TOKEN") == "" {
-		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	if config.GetSlackBotToken() == "" {
+		t.Skip("slack_bot_token not configured, skipping test")
 	}
 
 	bp := getBPBinary(t)
@@ -265,17 +268,19 @@ func TestSlackIngestMissingStore(t *testing.T) {
 // TestSlackIngestJSONFormat verifies the JSON output format for successful ingest.
 // This test creates a temporary store and ingests messages into it.
 func TestSlackIngestJSONFormat(t *testing.T) {
-	if os.Getenv("SLACK_BOT_TOKEN") == "" {
-		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	if config.GetSlackBotToken() == "" {
+		t.Skip("slack_bot_token not configured, skipping test")
 	}
 
 	bp := getBPBinary(t)
-	tmpDir := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(tmpDir)
+	setup := setupTempDirWithSlackConfig(t)
+	defer os.RemoveAll(setup.TmpDir)
+	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// Run ingest with --create-store to create a new store
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "test_slack_msgs", "--create-store", "--limit", "5", "--days", "7")
-	cmd.Dir = tmpDir
+	cmd.Dir = setup.TmpDir
+	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+setup.TmpConfigDir)
 	output, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -308,13 +313,13 @@ func TestSlackIngestJSONFormat(t *testing.T) {
 	}
 
 	// Verify store was actually created
-	storePath := filepath.Join(tmpDir, ".bipartite", "test_slack_msgs.jsonl")
+	storePath := filepath.Join(setup.TmpDir, ".bipartite", "test_slack_msgs.jsonl")
 	if _, err := os.Stat(storePath); os.IsNotExist(err) {
 		t.Error("store JSONL file was not created")
 	}
 
 	// Verify schema was created
-	schemaPath := filepath.Join(tmpDir, ".bipartite", "schemas", "test_slack_msgs.json")
+	schemaPath := filepath.Join(setup.TmpDir, ".bipartite", "schemas", "test_slack_msgs.json")
 	if _, err := os.Stat(schemaPath); os.IsNotExist(err) {
 		t.Error("store schema file was not created")
 	}
@@ -322,17 +327,19 @@ func TestSlackIngestJSONFormat(t *testing.T) {
 
 // TestSlackIngestIdempotency verifies running ingest twice skips duplicates.
 func TestSlackIngestIdempotency(t *testing.T) {
-	if os.Getenv("SLACK_BOT_TOKEN") == "" {
-		t.Skip("SLACK_BOT_TOKEN not set, skipping test")
+	if config.GetSlackBotToken() == "" {
+		t.Skip("slack_bot_token not configured, skipping test")
 	}
 
 	bp := getBPBinary(t)
-	tmpDir := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(tmpDir)
+	setup := setupTempDirWithSlackConfig(t)
+	defer os.RemoveAll(setup.TmpDir)
+	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// First ingest - creates store and ingests messages
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--create-store", "--limit", "3", "--days", "7")
-	cmd.Dir = tmpDir
+	cmd.Dir = setup.TmpDir
+	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+setup.TmpConfigDir)
 	output1, err := cmd.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -351,7 +358,8 @@ func TestSlackIngestIdempotency(t *testing.T) {
 
 	// Second ingest - should skip duplicates
 	cmd2 := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--limit", "3", "--days", "7")
-	cmd2.Dir = tmpDir
+	cmd2.Dir = setup.TmpDir
+	cmd2.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+setup.TmpConfigDir)
 	output2, err := cmd2.Output()
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -380,12 +388,19 @@ func TestSlackIngestIdempotency(t *testing.T) {
 // Ensure we import runtime (used by getBPBinary in edge_test.go)
 var _ = runtime.GOOS
 
-// setupTempDirWithSlackConfig creates a temp directory and copies sources.json from nexus.
-// Returns the temp dir path. The caller is responsible for cleanup with os.RemoveAll.
-func setupTempDirWithSlackConfig(t *testing.T) string {
+// testEnvSetup holds paths for integration test environment setup.
+type testEnvSetup struct {
+	TmpDir       string // Temp directory for test nexus
+	TmpConfigDir string // Temp XDG_CONFIG_HOME directory
+}
+
+// setupTempDirWithSlackConfig creates a temp directory with sources.json and a temp global config.
+// Returns paths for cleanup. The caller is responsible for cleanup with os.RemoveAll.
+func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 	t.Helper()
 
-	tmpDir, err := os.MkdirTemp("", "slack-test-*")
+	// Create temp nexus directory
+	tmpDir, err := os.MkdirTemp("", "slack-test-nexus-*")
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
@@ -396,6 +411,14 @@ func setupTempDirWithSlackConfig(t *testing.T) string {
 		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
 	}
 
+	// Create .bipartite directory structure (required for FindRepository)
+	bipartiteDir := filepath.Join(tmpDir, ".bipartite")
+	if err := os.MkdirAll(bipartiteDir, 0755); err != nil {
+		os.RemoveAll(tmpDir)
+		t.Fatalf("failed to create .bipartite dir: %v", err)
+	}
+
+	// Copy sources.json
 	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
 	if err != nil {
 		os.RemoveAll(tmpDir)
@@ -406,5 +429,30 @@ func setupTempDirWithSlackConfig(t *testing.T) string {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	return tmpDir
+	// Create temp config directory with nexus_path and slack_bot_token
+	tmpConfigDir, err := os.MkdirTemp("", "slack-test-config-*")
+	if err != nil {
+		os.RemoveAll(tmpDir)
+		t.Fatalf("failed to create temp config dir: %v", err)
+	}
+	configDir := filepath.Join(tmpConfigDir, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		os.RemoveAll(tmpDir)
+		os.RemoveAll(tmpConfigDir)
+		t.Fatalf("failed to create bip config dir: %v", err)
+	}
+
+	// Get slack_bot_token from current config
+	slackToken := config.GetSlackBotToken()
+	cfgJSON := fmt.Sprintf(`{"nexus_path": %q, "slack_bot_token": %q}`, tmpDir, slackToken)
+	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(cfgJSON), 0644); err != nil {
+		os.RemoveAll(tmpDir)
+		os.RemoveAll(tmpConfigDir)
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	return &testEnvSetup{
+		TmpDir:       tmpDir,
+		TmpConfigDir: tmpConfigDir,
+	}
 }
