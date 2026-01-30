@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/scout"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +17,7 @@ var scoutCmd = &cobra.Command{
 	Short: "Check remote server availability via SSH",
 	Long: `Check CPU, memory, load, and GPU availability on remote servers.
 
-Reads server definitions from servers.yml in the current directory,
+Reads server definitions from servers.yml in the nexus directory,
 connects via SSH in parallel, and outputs JSON (default) or a
 human-readable table (--human).`,
 	RunE: runScout,
@@ -28,13 +29,14 @@ func init() {
 }
 
 func runScout(cmd *cobra.Command, args []string) error {
-	// Find servers.yml in CWD
-	cwd, err := os.Getwd()
-	if err != nil {
-		exitWithError(ExitError, "getting current directory: %v", err)
+	// Find servers.yml in nexus directory
+	nexusDir := config.GetNexusPath()
+	if nexusDir == "" {
+		fmt.Fprintln(os.Stderr, config.HelpfulConfigMessage())
+		os.Exit(ExitConfigError)
 	}
 
-	configPath := filepath.Join(cwd, "servers.yml")
+	configPath := filepath.Join(nexusDir, "servers.yml")
 	cfg, err := scout.LoadConfig(configPath)
 	if err != nil {
 		exitWithError(ExitConfigError, "%v", err)
