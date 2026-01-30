@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/flow/board"
 	"github.com/spf13/cobra"
@@ -16,7 +17,7 @@ var boardCmd = &cobra.Command{
 	Long: `Manage GitHub project boards.
 
 Boards are configured in sources.json under the "boards" key.
-Requires sources.json in the current directory (run from nexus directory).`,
+Requires nexus_path configured in ~/.config/bip/config.json.`,
 }
 
 // Shared flags
@@ -57,12 +58,8 @@ func init() {
 }
 
 func runBoardList(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	key := resolveBoardKey()
+	nexusPath := config.MustGetNexusPath()
+	key := resolveBoardKey(nexusPath)
 
 	items, err := board.ListBoardItems(key)
 	if err != nil {
@@ -130,13 +127,9 @@ func init() {
 }
 
 func runBoardAdd(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
+	nexusPath := config.MustGetNexusPath()
 	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey()
+	key := resolveBoardKey(nexusPath)
 
 	err := board.AddIssueToBoard(key, issueNum, boardAddRepo, boardAddStatus)
 	if err != nil {
@@ -172,13 +165,9 @@ func init() {
 }
 
 func runBoardMove(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
+	nexusPath := config.MustGetNexusPath()
 	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey()
+	key := resolveBoardKey(nexusPath)
 
 	err := board.MoveItem(key, issueNum, boardMoveStatus, boardMoveRepo)
 	if err != nil {
@@ -205,13 +194,9 @@ func init() {
 }
 
 func runBoardRemove(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
+	nexusPath := config.MustGetNexusPath()
 	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey()
+	key := resolveBoardKey(nexusPath)
 
 	err := board.RemoveIssueFromBoard(key, issueNum, boardRemoveRepo)
 	if err != nil {
@@ -236,12 +221,8 @@ func init() {
 }
 
 func runBoardSync(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	key := resolveBoardKey()
+	nexusPath := config.MustGetNexusPath()
+	key := resolveBoardKey(nexusPath)
 
 	result, err := board.SyncBoardWithBeads(key, boardSyncFix)
 	if err != nil {
@@ -260,12 +241,8 @@ var boardRefreshCmd = &cobra.Command{
 }
 
 func runBoardRefresh(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	key := resolveBoardKey()
+	nexusPath := config.MustGetNexusPath()
+	key := resolveBoardKey(nexusPath)
 	owner, projectNum, err := board.ParseBoardKey(key)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -289,12 +266,12 @@ func runBoardRefresh(cmd *cobra.Command, args []string) {
 
 // Helper functions
 
-func resolveBoardKey() string {
+func resolveBoardKey(nexusPath string) string {
 	if boardKey != "" {
 		return boardKey
 	}
 
-	defaultBoard, err := flow.GetDefaultBoard()
+	defaultBoard, err := flow.GetDefaultBoard(nexusPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)

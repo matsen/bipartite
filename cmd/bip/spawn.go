@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/flow/spawn"
 	"github.com/spf13/cobra"
@@ -52,11 +53,8 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Validate nexus directory (required for issue/PR lookups)
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	// Get nexus path (required for issue/PR lookups)
+	nexusPath := config.MustGetNexusPath()
 
 	// Parse GitHub reference
 	ref := flow.ParseGitHubRef(args[0])
@@ -66,7 +64,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	}
 
 	// Validate repo is in sources.json and has local clone
-	repoPath, found := flow.GetRepoLocalPath(ref.Repo)
+	repoPath, found := flow.GetRepoLocalPath(nexusPath, ref.Repo)
 	if !found {
 		fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.json\n", ref.Repo)
 		fmt.Fprintf(os.Stderr, "Add it to sources.json under 'code' or 'writing' category\n")
@@ -124,7 +122,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	}
 
 	// Add project context if available
-	contextPath := flow.GetRepoContextPath(ref.Repo)
+	contextPath := flow.GetRepoContextPath(nexusPath, ref.Repo)
 	if contextPath != "" {
 		fmt.Printf("Context: %s\n", contextPath)
 		if contextData, err := os.ReadFile(contextPath); err == nil {

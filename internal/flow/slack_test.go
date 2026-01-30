@@ -224,24 +224,22 @@ func TestParseSlackTimestamp_Errors(t *testing.T) {
 }
 
 func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
-	cleanup := withTempWorkDir(t)
-	defer cleanup()
+	tmpDir := t.TempDir()
 
 	// Write invalid sources.json (missing slack section)
 	sourcesContent := `{"boards": {}}`
-	if err := os.WriteFile("sources.json", []byte(sourcesContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	_, err := LoadSlackChannels()
+	_, err := LoadSlackChannels(tmpDir)
 	if err == nil {
 		t.Error("expected error for missing slack section")
 	}
 }
 
 func TestLoadSlackChannels_Valid(t *testing.T) {
-	cleanup := withTempWorkDir(t)
-	defer cleanup()
+	tmpDir := t.TempDir()
 
 	// Write valid sources.json
 	sourcesContent := `{
@@ -252,11 +250,11 @@ func TestLoadSlackChannels_Valid(t *testing.T) {
 			}
 		}
 	}`
-	if err := os.WriteFile("sources.json", []byte(sourcesContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	channels, err := LoadSlackChannels()
+	channels, err := LoadSlackChannels(tmpDir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -271,8 +269,7 @@ func TestLoadSlackChannels_Valid(t *testing.T) {
 }
 
 func TestGetSlackChannel_NotFound(t *testing.T) {
-	cleanup := withTempWorkDir(t)
-	defer cleanup()
+	tmpDir := t.TempDir()
 
 	// Write valid sources.json with different channels
 	sourcesContent := `{
@@ -282,11 +279,11 @@ func TestGetSlackChannel_NotFound(t *testing.T) {
 			}
 		}
 	}`
-	if err := os.WriteFile("sources.json", []byte(sourcesContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
 		t.Fatalf("failed to write sources.json: %v", err)
 	}
 
-	_, err := GetSlackChannel("nonexistent")
+	_, err := GetSlackChannel(tmpDir, "nonexistent")
 	if err == nil {
 		t.Error("expected error for nonexistent channel")
 	}

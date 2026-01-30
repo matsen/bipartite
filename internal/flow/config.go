@@ -28,21 +28,27 @@ const (
 
 // Errors.
 var (
-	ErrNotNexusDir = errors.New("sources.json not found in current directory; run from nexus directory")
-	ErrNoRepos     = errors.New("no repos found in sources.json")
+	ErrNoRepos = errors.New("no repos found in sources.json")
 )
 
-// ValidateNexusDirectory checks that sources.json exists in the current directory.
-func ValidateNexusDirectory() error {
-	if _, err := os.Stat(SourcesFile); os.IsNotExist(err) {
-		return ErrNotNexusDir
-	}
-	return nil
+// SourcesPath returns the path to sources.json in the given nexus directory.
+func SourcesPath(nexusPath string) string {
+	return filepath.Join(nexusPath, SourcesFile)
 }
 
-// LoadSources loads and parses sources.json from the current directory.
-func LoadSources() (*Sources, error) {
-	data, err := os.ReadFile(SourcesFile)
+// ConfigPath returns the path to config.json in the given nexus directory.
+func ConfigPath(nexusPath string) string {
+	return filepath.Join(nexusPath, ConfigFile)
+}
+
+// StatePath returns the path to .last-checkin.json in the given nexus directory.
+func StatePath(nexusPath string) string {
+	return filepath.Join(nexusPath, StateFile)
+}
+
+// LoadSources loads and parses sources.json from the given nexus directory.
+func LoadSources(nexusPath string) (*Sources, error) {
+	data, err := os.ReadFile(SourcesPath(nexusPath))
 	if err != nil {
 		return nil, fmt.Errorf("reading sources.json: %w", err)
 	}
@@ -120,9 +126,9 @@ func parseRepoEntries(data json.RawMessage) ([]RepoEntry, error) {
 	return entries, nil
 }
 
-// LoadAllRepos returns all repos from sources.json.
-func LoadAllRepos() ([]string, error) {
-	sources, err := LoadSources()
+// LoadAllRepos returns all repos from sources.json in the given nexus directory.
+func LoadAllRepos(nexusPath string) ([]string, error) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return nil, err
 	}
@@ -143,8 +149,8 @@ func LoadAllRepos() ([]string, error) {
 }
 
 // LoadReposByCategory returns repos for a specific category.
-func LoadReposByCategory(category string) ([]string, error) {
-	sources, err := LoadSources()
+func LoadReposByCategory(nexusPath, category string) ([]string, error) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return nil, err
 	}
@@ -167,8 +173,8 @@ func LoadReposByCategory(category string) ([]string, error) {
 }
 
 // LoadReposByChannel returns repos that belong to a specific channel.
-func LoadReposByChannel(channel string) ([]string, error) {
-	sources, err := LoadSources()
+func LoadReposByChannel(nexusPath, channel string) ([]string, error) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return nil, err
 	}
@@ -188,8 +194,8 @@ func LoadReposByChannel(channel string) ([]string, error) {
 }
 
 // ListChannels returns all unique channel names from sources.json.
-func ListChannels() ([]string, error) {
-	sources, err := LoadSources()
+func ListChannels(nexusPath string) ([]string, error) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return nil, err
 	}
@@ -215,8 +221,8 @@ func ListChannels() ([]string, error) {
 }
 
 // GetDefaultBoard returns the first board from sources.json.
-func GetDefaultBoard() (string, error) {
-	sources, err := LoadSources()
+func GetDefaultBoard(nexusPath string) (string, error) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return "", err
 	}
@@ -227,9 +233,9 @@ func GetDefaultBoard() (string, error) {
 	return "", errors.New("no boards configured in sources.json")
 }
 
-// LoadConfig loads config.json from the current directory.
+// LoadConfig loads config.json from the given nexus directory.
 // Returns defaults if config.json doesn't exist.
-func LoadConfig() (*Config, error) {
+func LoadConfig(nexusPath string) (*Config, error) {
 	cfg := &Config{
 		Paths: ConfigPaths{
 			Code:    DefaultCodePath,
@@ -237,7 +243,7 @@ func LoadConfig() (*Config, error) {
 		},
 	}
 
-	data, err := os.ReadFile(ConfigFile)
+	data, err := os.ReadFile(ConfigPath(nexusPath))
 	if os.IsNotExist(err) {
 		return cfg, nil
 	}
@@ -263,13 +269,13 @@ func ExtractRepoName(orgRepo string) string {
 
 // GetRepoLocalPath maps a GitHub repo (org/name) to its local path.
 // Returns the path and whether the repo was found in sources.json.
-func GetRepoLocalPath(orgRepo string) (string, bool) {
-	sources, err := LoadSources()
+func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return "", false
 	}
 
-	cfg, err := LoadConfig()
+	cfg, err := LoadConfig(nexusPath)
 	if err != nil {
 		return "", false
 	}
@@ -298,15 +304,14 @@ func GetRepoLocalPath(orgRepo string) (string, bool) {
 // GetRepoContextPath returns the context file path for a repo if defined.
 // Returns empty string if no context is defined for the repo or if sources.json
 // cannot be loaded.
-func GetRepoContextPath(orgRepo string) string {
-	sources, err := LoadSources()
+func GetRepoContextPath(nexusPath, orgRepo string) string {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
-		return "" // Caller should have validated nexus directory first
+		return ""
 	}
 
 	if relPath, ok := sources.Context[orgRepo]; ok {
-		cwd, _ := os.Getwd()
-		return filepath.Join(cwd, relPath)
+		return filepath.Join(nexusPath, relPath)
 	}
 	return ""
 }
@@ -326,10 +331,10 @@ func expandPath(path string) string {
 // RepoInCategory checks if a repo is in a specific category (code or writing).
 // Returns false if the repo is not in the category, if the category is invalid,
 // or if sources.json cannot be loaded.
-func RepoInCategory(repo, category string) bool {
-	sources, err := LoadSources()
+func RepoInCategory(nexusPath, repo, category string) bool {
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
-		return false // Caller should have validated nexus directory first
+		return false
 	}
 
 	var entries []RepoEntry

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
@@ -44,10 +45,11 @@ func init() {
 }
 
 func runSlackHistory(cmd *cobra.Command, args []string) error {
+	nexusPath := config.MustGetNexusPath()
 	channelName := args[0]
 
 	// Get channel configuration
-	channelConfig, err := flow.GetSlackChannel(channelName)
+	channelConfig, err := flow.GetSlackChannel(nexusPath, channelName)
 	if err != nil {
 		return outputSlackError(ExitSlackChannelNotFound, "channel_not_found", err.Error())
 	}

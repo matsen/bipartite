@@ -140,6 +140,22 @@ func GetNexusPath() string {
 	return cfg.NexusPath
 }
 
+// MustGetNexusPath returns the nexus path from global config.
+// Prints helpful message and exits if not configured or path doesn't exist.
+func MustGetNexusPath() string {
+	path := GetNexusPath()
+	if path == "" {
+		fmt.Fprintln(os.Stderr, HelpfulConfigMessage())
+		os.Exit(2) // ExitConfigError
+	}
+	if _, err := os.Stat(path); err != nil {
+		fmt.Fprintf(os.Stderr, "Configured nexus_path does not exist: %s\n\n%s\n",
+			path, HelpfulConfigMessage())
+		os.Exit(2)
+	}
+	return path
+}
+
 // toUpperSnake converts a string to UPPER_SNAKE_CASE.
 func toUpperSnake(s string) string {
 	var result []byte

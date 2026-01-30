@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/store"
 	"github.com/spf13/cobra"
@@ -66,9 +67,10 @@ type SlackIngestResult struct {
 func runSlackIngest(cmd *cobra.Command, args []string) error {
 	channelName := args[0]
 	repoRoot := mustFindRepository()
+	nexusPath := config.MustGetNexusPath()
 
 	// Get channel configuration
-	channelConfig, err := flow.GetSlackChannel(channelName)
+	channelConfig, err := flow.GetSlackChannel(nexusPath, channelName)
 	if err != nil {
 		return outputSlackError(ExitSlackChannelNotFound, "channel_not_found", err.Error())
 	}

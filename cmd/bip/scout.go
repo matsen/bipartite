@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -30,12 +29,7 @@ func init() {
 
 func runScout(cmd *cobra.Command, args []string) error {
 	// Find servers.yml in nexus directory
-	nexusDir := config.GetNexusPath()
-	if nexusDir == "" {
-		fmt.Fprintln(os.Stderr, config.HelpfulConfigMessage())
-		os.Exit(ExitConfigError)
-	}
-
+	nexusDir := config.MustGetNexusPath()
 	configPath := filepath.Join(nexusDir, "servers.yml")
 	cfg, err := scout.LoadConfig(configPath)
 	if err != nil {

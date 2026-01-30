@@ -10,13 +10,10 @@ import (
 func TestWriteAndReadLastCheckin(t *testing.T) {
 	// Work in a temp directory so we don't clobber real state
 	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(origDir)
 
 	now := time.Now().Truncate(time.Millisecond) // JSON loses sub-ms precision
 
-	if err := WriteLastCheckin(now); err != nil {
+	if err := WriteLastCheckin(dir, now); err != nil {
 		t.Fatalf("WriteLastCheckin: %v", err)
 	}
 
@@ -25,7 +22,7 @@ func TestWriteAndReadLastCheckin(t *testing.T) {
 		t.Fatalf("state file not created: %v", err)
 	}
 
-	got := ReadLastCheckin()
+	got := ReadLastCheckin(dir)
 	if !got.Equal(now) {
 		t.Errorf("ReadLastCheckin = %v, want %v", got, now)
 	}
@@ -33,11 +30,8 @@ func TestWriteAndReadLastCheckin(t *testing.T) {
 
 func TestReadLastCheckinMissingFile(t *testing.T) {
 	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(origDir)
 
-	got := ReadLastCheckin()
+	got := ReadLastCheckin(dir)
 	if !got.IsZero() {
 		t.Errorf("ReadLastCheckin with no file = %v, want zero time", got)
 	}
@@ -45,13 +39,10 @@ func TestReadLastCheckinMissingFile(t *testing.T) {
 
 func TestReadLastCheckinInvalidJSON(t *testing.T) {
 	dir := t.TempDir()
-	origDir, _ := os.Getwd()
-	os.Chdir(dir)
-	defer os.Chdir(origDir)
 
-	os.WriteFile(StateFile, []byte("not json"), 0644)
+	os.WriteFile(filepath.Join(dir, StateFile), []byte("not json"), 0644)
 
-	got := ReadLastCheckin()
+	got := ReadLastCheckin(dir)
 	if !got.IsZero() {
 		t.Errorf("ReadLastCheckin with invalid JSON = %v, want zero time", got)
 	}

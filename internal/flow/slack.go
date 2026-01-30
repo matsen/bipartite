@@ -468,9 +468,9 @@ func parseSlackTimestamp(ts string) (time.Time, error) {
 	return time.Unix(sec, 0), nil
 }
 
-// LoadSlackChannels loads Slack channel configuration from sources.json.
-func LoadSlackChannels() (map[string]SlackChannelConfig, error) {
-	data, err := os.ReadFile(SourcesFile)
+// LoadSlackChannels loads Slack channel configuration from sources.json in the given nexus directory.
+func LoadSlackChannels(nexusPath string) (map[string]SlackChannelConfig, error) {
+	data, err := os.ReadFile(SourcesPath(nexusPath))
 	if err != nil {
 		return nil, fmt.Errorf("reading sources.json: %w", err)
 	}
@@ -500,9 +500,9 @@ func LoadSlackChannels() (map[string]SlackChannelConfig, error) {
 	return slackConfig.Channels, nil
 }
 
-// GetSlackChannel returns the configuration for a specific channel.
-func GetSlackChannel(channelName string) (*SlackChannelConfig, error) {
-	channels, err := LoadSlackChannels()
+// GetSlackChannel returns the configuration for a specific channel from the given nexus directory.
+func GetSlackChannel(nexusPath, channelName string) (*SlackChannelConfig, error) {
+	channels, err := LoadSlackChannels(nexusPath)
 	if err != nil {
 		return nil, err
 	}

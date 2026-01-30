@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
@@ -43,10 +44,7 @@ func init() {
 }
 
 func runDigest(cmd *cobra.Command, args []string) {
-	if err := flow.ValidateNexusDirectory(); err != nil {
-		fmt.Fprintf(os.Stderr, "error: validating nexus directory: %v\n", err)
-		os.Exit(1)
-	}
+	nexusPath := config.MustGetNexusPath()
 
 	postTo := digestPostTo
 	if postTo == "" {
@@ -61,7 +59,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 			repos = append(repos, strings.TrimSpace(r))
 		}
 	} else {
-		repos, err = flow.LoadReposByChannel(digestChannel)
+		repos, err = flow.LoadReposByChannel(nexusPath, digestChannel)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: loading repos for channel %s: %v\n", digestChannel, err)
 			os.Exit(1)
@@ -70,7 +68,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 
 	// Validate we have repos
 	if len(repos) == 0 {
-		channels, _ := flow.ListChannels()
+		channels, _ := flow.ListChannels(nexusPath)
 		if len(channels) == 0 {
 			fmt.Println("No channels configured in sources.json.")
 			fmt.Println("Add 'channel' field to repos in the 'code' section.")
