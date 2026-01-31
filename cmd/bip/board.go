@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
@@ -40,7 +42,6 @@ func init() {
 // board list
 var (
 	boardListStatus string
-	boardListLabel  string
 	boardListJSON   bool
 )
 
@@ -61,7 +62,6 @@ Examples:
 
 func init() {
 	boardListCmd.Flags().StringVar(&boardListStatus, "status", "", "Filter by status")
-	boardListCmd.Flags().StringVar(&boardListLabel, "label", "", "Filter by label")
 	boardListCmd.Flags().BoolVar(&boardListJSON, "json", false, "Output as JSON")
 }
 
@@ -160,7 +160,6 @@ func runBoardList(cmd *cobra.Command, args []string) {
 // board add
 var (
 	boardAddStatus string
-	boardAddLabel  string
 	boardAddTo     string // explicit board override
 )
 
@@ -183,7 +182,6 @@ Examples:
 
 func init() {
 	boardAddCmd.Flags().StringVar(&boardAddStatus, "status", "", "Initial status")
-	boardAddCmd.Flags().StringVar(&boardAddLabel, "label", "", "Label to apply")
 	boardAddCmd.Flags().StringVar(&boardAddTo, "to", "", "Explicit board (owner/number), overrides channel resolution")
 }
 
@@ -372,31 +370,11 @@ func resolveBoardKey(nexusPath string) string {
 	return defaultBoard
 }
 
-func parseIssueNumber(s string) int {
-	var n int
-	for _, c := range s {
-		if c >= '0' && c <= '9' {
-			n = n*10 + int(c-'0')
-		}
-	}
-	if n == 0 {
-		fmt.Fprintf(os.Stderr, "Error: invalid issue number: %s\n", s)
-		os.Exit(1)
-	}
-	return n
-}
-
 // parseRepoIssue parses "repo#N" or "org/repo#N" format.
 // For short names like "dasm2-experiments#207", it expands to "matsengrp/dasm2-experiments".
 func parseRepoIssue(s string) (repo string, number int, err error) {
-	// Find the # separator
-	idx := -1
-	for i := len(s) - 1; i >= 0; i-- {
-		if s[i] == '#' {
-			idx = i
-			break
-		}
-	}
+	// Find the # separator (search from end to handle edge cases)
+	idx := strings.LastIndex(s, "#")
 	if idx == -1 || idx == 0 || idx == len(s)-1 {
 		return "", 0, fmt.Errorf("invalid format %q: expected repo#number (e.g., dasm2-experiments#207)", s)
 	}
@@ -405,29 +383,15 @@ func parseRepoIssue(s string) (repo string, number int, err error) {
 	numStr := s[idx+1:]
 
 	// Parse number
-	for _, c := range numStr {
-		if c < '0' || c > '9' {
-			return "", 0, fmt.Errorf("invalid issue number in %q", s)
-		}
-		number = number*10 + int(c-'0')
-	}
-	if number == 0 {
+	number, err = strconv.Atoi(numStr)
+	if err != nil || number <= 0 {
 		return "", 0, fmt.Errorf("invalid issue number in %q", s)
 	}
 
 	// If repo doesn't contain '/', assume matsengrp
-	if !containsSlash(repo) {
+	if !strings.Contains(repo, "/") {
 		repo = "matsengrp/" + repo
 	}
 
 	return repo, number, nil
-}
-
-func containsSlash(s string) bool {
-	for _, c := range s {
-		if c == '/' {
-			return true
-		}
-	}
-	return false
 }
