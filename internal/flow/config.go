@@ -221,16 +221,87 @@ func ListChannels(nexusPath string) ([]string, error) {
 }
 
 // GetDefaultBoard returns the first board from sources.json.
+// Deprecated: Use GetAllBoards or GetBoardForRepo instead.
 func GetDefaultBoard(nexusPath string) (string, error) {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {
 		return "", err
 	}
 
-	for key := range sources.Boards {
-		return key, nil
+	for _, boardKey := range sources.Boards {
+		return boardKey, nil
 	}
 	return "", errors.New("no boards configured in sources.json")
+}
+
+// GetAllBoards returns all unique board keys from sources.json.
+func GetAllBoards(nexusPath string) ([]string, error) {
+	sources, err := LoadSources(nexusPath)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := make(map[string]bool)
+	var boards []string
+	for _, boardKey := range sources.Boards {
+		if !seen[boardKey] {
+			seen[boardKey] = true
+			boards = append(boards, boardKey)
+		}
+	}
+
+	if len(boards) == 0 {
+		return nil, errors.New("no boards configured in sources.json")
+	}
+
+	return boards, nil
+}
+
+// GetBoardForRepo returns the board key for a repo by looking up its channel.
+// Returns an error if the repo has no channel or the channel has no board mapping.
+func GetBoardForRepo(nexusPath, repo string) (string, error) {
+	sources, err := LoadSources(nexusPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Find the repo's channel
+	channel := ""
+	for _, entry := range sources.Code {
+		if entry.Repo == repo {
+			channel = entry.Channel
+			break
+		}
+	}
+	if channel == "" {
+		for _, entry := range sources.Writing {
+			if entry.Repo == repo {
+				channel = entry.Channel
+				break
+			}
+		}
+	}
+
+	if channel == "" {
+		return "", fmt.Errorf("repo %s has no channel configured in sources.json", repo)
+	}
+
+	// Look up the channel's board
+	boardKey, ok := sources.Boards[channel]
+	if !ok {
+		return "", fmt.Errorf("channel %q has no board mapping in sources.json", channel)
+	}
+
+	return boardKey, nil
+}
+
+// GetBoardsMapping returns the full channel → board mapping.
+func GetBoardsMapping(nexusPath string) (map[string]string, error) {
+	sources, err := LoadSources(nexusPath)
+	if err != nil {
+		return nil, err
+	}
+	return sources.Boards, nil
 }
 
 // LoadConfig loads config.json from the given nexus directory.

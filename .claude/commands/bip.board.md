@@ -1,51 +1,79 @@
 # /bip.board
 
-Manage GitHub project boards.
+Manage GitHub project boards. Boards are resolved automatically from repo → channel → board mappings in sources.json.
 
-## Instructions
+## Quick Reference
 
 ```bash
-bip board list                              # List items by status
-bip board list --status blocked             # Filter by status
-bip board add 123 --repo org/repo           # Add issue to board
-bip board move 123 --repo org/repo --status done  # Move item
-bip board remove 123 --repo org/repo        # Remove from board
-bip board sync                              # Check beads sync
-bip board sync --fix                        # Auto-add missing P0 beads
+bip board list                              # List ALL boards by status
+bip board list matsengrp/30                 # List specific board
+bip board add dasm2-experiments#207         # Add issue (board auto-resolved)
+bip board add netam#171 --status "Next"     # Add with initial status
+bip board move dasm2-experiments#207 --status done  # Move item
+bip board remove netam#171                  # Remove from board
+```
+
+## Board Resolution
+
+The board is automatically resolved via channel mappings:
+1. Look up repo's channel from `code`/`writing` array in sources.json
+2. Look up channel's board from `boards` mapping
+
+Example sources.json:
+```json
+{
+  "boards": {
+    "dasm2": "matsengrp/30",
+    "loris": "matsengrp/29"
+  },
+  "code": [
+    {"repo": "matsengrp/dasm2-experiments", "channel": "dasm2"},
+    {"repo": "matsengrp/loris-experiments", "channel": "loris"}
+  ]
+}
 ```
 
 ## Subcommands
 
 ### list
-Show board items grouped by status (blocked, next, active, done).
+Show board items grouped by status. Shows ALL boards by default.
 
-Options:
-- `--status STATUS` — Filter by status
-- `--json` — Output as JSON
-- `--board owner/number` — Specify board
+```bash
+bip board list                  # All boards
+bip board list matsengrp/30     # Specific board
+bip board list --status "In Progress"  # Filter by status
+bip board list --json           # JSON output
+```
 
 ### add
-Add an issue to the board.
+Add an issue or PR to a board.
 
-Options:
-- `--repo org/repo` — Repository (required)
-- `--status STATUS` — Initial status
+```bash
+bip board add dasm2-experiments#207    # Auto-resolve board from channel
+bip board add repo#123 --to matsengrp/30  # Explicit board
+bip board add repo#123 --status "Next"    # Set initial status
+```
 
 ### move
 Move an item to a different status.
 
-Options:
-- `--repo org/repo` — Repository (required)
-- `--status STATUS` — New status (required)
+```bash
+bip board move dasm2-experiments#207 --status done
+bip board move repo#123 --status "In Progress" --to matsengrp/30
+```
 
 ### remove
-Remove an issue from the board.
+Remove an issue/PR from a board.
 
-Options:
-- `--repo org/repo` — Repository (required)
+```bash
+bip board remove dasm2-experiments#207
+bip board remove repo#123 --to matsengrp/30  # Explicit board
+```
 
-### sync
-Compare board state with P0 beads and report mismatches.
+### refresh-cache
+Refresh cached board metadata (status options, field IDs).
 
-Options:
-- `--fix` — Auto-fix mismatches (adds missing P0 beads to board)
+```bash
+bip board refresh-cache
+bip board refresh-cache --board matsengrp/30
+```

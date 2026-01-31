@@ -7,7 +7,7 @@ import "time"
 
 // Sources represents the sources.json configuration file.
 type Sources struct {
-	Boards  map[string]string `json:"boards"`  // "owner/N" -> bead_id
+	Boards  map[string]string `json:"boards"`  // "channel" -> "owner/N" board key
 	Context map[string]string `json:"context"` // repo -> context file path
 	Code    []RepoEntry       `json:"code"`
 	Writing []RepoEntry       `json:"writing"`

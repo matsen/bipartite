@@ -59,43 +59,6 @@ func LoadP0Beads() ([]Bead, error) {
 	return p0, nil
 }
 
-// BeadGitHubRef represents a bead with its extracted GitHub reference.
-type BeadGitHubRef struct {
-	BeadID      string
-	Title       string
-	Repo        string
-	IssueNumber int
-}
-
-// GetP0BeadsWithGitHubRefs returns P0 beads that have GitHub issue references.
-func GetP0BeadsWithGitHubRefs() ([]BeadGitHubRef, error) {
-	beads, err := LoadP0Beads()
-	if err != nil {
-		return nil, err
-	}
-
-	var refs []BeadGitHubRef
-	for _, b := range beads {
-		matches := gitHubRefPattern.FindStringSubmatch(b.Description)
-		if matches == nil {
-			continue
-		}
-
-		var issueNum int
-		if _, err := parsePositiveInt(matches[2]); err == nil {
-			issueNum = mustParseInt(matches[2])
-		}
-
-		refs = append(refs, BeadGitHubRef{
-			BeadID:      b.ID,
-			Title:       b.Title,
-			Repo:        matches[1],
-			IssueNumber: issueNum,
-		})
-	}
-	return refs, nil
-}
-
 // ExtractGitHubRefsFromDescription extracts all GitHub references from a description.
 func ExtractGitHubRefsFromDescription(desc string) []string {
 	matches := gitHubRefPattern.FindAllStringSubmatch(desc, -1)
