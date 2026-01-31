@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/matsen/bipartite/internal/author"
 	"github.com/matsen/bipartite/internal/reference"
 	_ "modernc.org/sqlite"
 )
@@ -253,7 +254,7 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 // Both support OR natively, so adding same-type ORs is straightforward.
 type SearchFilters struct {
 	Keyword  string   // General keyword search across all fields
-	Authors  []string // Author names to search for (AND logic, prefix matching)
+	Authors  []string // Author names to search for (AND logic, exact last name match)
 	YearFrom int      // Minimum publication year (0 = no minimum)
 	YearTo   int      // Maximum publication year (0 = no maximum)
 	Title    string   // Search in title only (FTS)
@@ -263,9 +264,20 @@ type SearchFilters struct {
 
 // SearchWithFilters performs a search with multiple optional filters.
 // Returns references matching ALL specified criteria (AND logic).
+//
+// Author filtering uses exact last name matching to avoid false positives.
+// For example, -a "Yu" matches "Timothy Yu" but not "Yujia Chan".
 func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Reference, error) {
 	var ftsTerms []string
 	var args []interface{}
+
+	// Parse author queries upfront for post-filtering
+	var authorQueries []author.Query
+	for _, a := range filters.Authors {
+		if a != "" {
+			authorQueries = append(authorQueries, author.ParseQuery(a))
+		}
+	}
 
 	// Build FTS query parts (text-based searches)
 	if filters.Keyword != "" {
@@ -274,11 +286,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	if filters.Title != "" {
 		ftsTerms = append(ftsTerms, "title:"+prepareFTSQuery(filters.Title))
 	}
-	for _, author := range filters.Authors {
-		if author != "" {
-			ftsTerms = append(ftsTerms, "authors_text:"+authorNameToFTSPrefixQuery(author))
-		}
-	}
+	// Note: Author filtering moved to post-processing for exact last name matching
 
 	// Build the query
 	var query string
@@ -310,8 +318,17 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		args = append(args, filters.DOI)
 	}
 
+	// If filtering by authors, fetch more results since we'll post-filter
+	dbLimit := limit
+	if len(authorQueries) > 0 {
+		dbLimit = limit * 10 // Fetch 10x to allow for filtering
+		if dbLimit < 100 {
+			dbLimit = 100
+		}
+	}
+
 	query += " LIMIT ?"
-	args = append(args, limit)
+	args = append(args, dbLimit)
 
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
@@ -319,7 +336,31 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	}
 	defer rows.Close()
 
-	return scanReferences(rows)
+	refs, err := scanReferences(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	// Post-filter by authors if specified
+	if len(authorQueries) > 0 {
+		refs = filterByAuthors(refs, authorQueries, limit)
+	}
+
+	return refs, nil
+}
+
+// filterByAuthors filters references to those matching all author queries.
+func filterByAuthors(refs []reference.Reference, queries []author.Query, limit int) []reference.Reference {
+	var result []reference.Reference
+	for _, ref := range refs {
+		if author.AllMatch(queries, ref.Authors) {
+			result = append(result, ref)
+			if len(result) >= limit {
+				break
+			}
+		}
+	}
+	return result
 }
 
 // authorNameToFTSPrefixQuery converts an author name to an FTS5 query with prefix matching.
