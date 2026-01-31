@@ -52,14 +52,20 @@ func init() {
 }
 
 // getStartingDirectory returns the directory to start searching for a repository.
-// Uses nexus_path from global config (~/.config/bip/config.json).
+// Prefers nexus_path from global config, falls back to current working directory.
 func getStartingDirectory() (string, int) {
-	root := config.GetNexusPath()
-	if root == "" {
-		fmt.Fprintln(os.Stderr, config.HelpfulConfigMessage())
-		return "", ExitConfigError
+	// Try global config first
+	if root := config.GetNexusPath(); root != "" {
+		return root, 0
 	}
-	return root, 0
+
+	// Fall back to current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting current directory: %v\n", err)
+		return "", ExitError
+	}
+	return cwd, 0
 }
 
 // mustFindRepository finds and validates the repository, exits on error.
@@ -72,7 +78,7 @@ func mustFindRepository() string {
 
 	repoRoot, err := config.FindRepository(start)
 	if err != nil {
-		// Show helpful message if no global config exists
+		// Show helpful message with tip about global config
 		fmt.Fprintln(os.Stderr, config.HelpfulConfigMessage())
 		os.Exit(ExitConfigError)
 	}

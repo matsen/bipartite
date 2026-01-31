@@ -189,7 +189,7 @@ func getNexusDir(t *testing.T) string {
 	if dir := config.GetNexusPath(); dir != "" {
 		return dir
 	}
-	t.Fatal("nexus_path not configured in global config")
+	t.Skip("nexus_path not configured in global config")
 	return ""
 }
 
