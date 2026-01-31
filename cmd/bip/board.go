@@ -31,7 +31,6 @@ func init() {
 	boardCmd.AddCommand(boardAddCmd)
 	boardCmd.AddCommand(boardMoveCmd)
 	boardCmd.AddCommand(boardRemoveCmd)
-	boardCmd.AddCommand(boardSyncCmd)
 	boardCmd.AddCommand(boardRefreshCmd)
 
 	// Shared flags
@@ -46,9 +45,18 @@ var (
 )
 
 var boardListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   "list [board]",
 	Short: "List board items by status",
-	Run:   runBoardList,
+	Long: `List items on project boards grouped by status.
+
+By default, shows all configured boards. Provide a board key to show only that board.
+
+Examples:
+  bip board list                     # Show all boards
+  bip board list matsengrp/30        # Show only board 30
+  bip board list --status "In Progress"  # Filter by status`,
+	Args: cobra.MaximumNArgs(1),
+	Run:  runBoardList,
 }
 
 func init() {
@@ -59,49 +67,93 @@ func init() {
 
 func runBoardList(cmd *cobra.Command, args []string) {
 	nexusPath := config.MustGetNexusPath()
-	key := resolveBoardKey(nexusPath)
 
-	items, err := board.ListBoardItems(key)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	var boards []string
+	if len(args) > 0 {
+		// Single board specified
+		boards = []string{args[0]}
+	} else {
+		// All boards
+		var err error
+		boards, err = flow.GetAllBoards(nexusPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	}
 
-	// Filter by status
-	if boardListStatus != "" {
-		var filtered []flow.BoardItem
-		for _, item := range items {
-			if item.Status == boardListStatus {
-				filtered = append(filtered, item)
-			}
+	// Get channel names for boards (for display)
+	boardsMapping, _ := flow.GetBoardsMapping(nexusPath)
+	channelForBoard := make(map[string]string)
+	for channel, boardKey := range boardsMapping {
+		channelForBoard[boardKey] = channel
+	}
+
+	allItems := make(map[string][]flow.BoardItem)
+	for _, key := range boards {
+		items, err := board.ListBoardItems(key)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to list board %s: %v\n", key, err)
+			continue
 		}
-		items = filtered
+
+		// Filter by status if specified
+		if boardListStatus != "" {
+			var filtered []flow.BoardItem
+			for _, item := range items {
+				if item.Status == boardListStatus {
+					filtered = append(filtered, item)
+				}
+			}
+			items = filtered
+		}
+
+		allItems[key] = items
 	}
 
 	// Output
 	if boardListJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		enc.Encode(items)
+		enc.Encode(allItems)
 		return
 	}
 
-	// Group by status
-	byStatus := make(map[string][]flow.BoardItem)
-	for _, item := range items {
-		byStatus[item.Status] = append(byStatus[item.Status], item)
-	}
+	// Print each board
+	for _, key := range boards {
+		items := allItems[key]
 
-	for status, statusItems := range byStatus {
-		fmt.Printf("## %s (%d)\n", status, len(statusItems))
-		for _, item := range statusItems {
-			fmt.Printf("  - %s#%d: %s\n", item.Content.Repository, item.Content.Number, item.Title)
+		// Board header with channel name if available
+		header := key
+		if channel, ok := channelForBoard[key]; ok {
+			header = fmt.Sprintf("%s (%s)", key, channel)
 		}
-		fmt.Println()
-	}
+		fmt.Printf("## %s\n\n", header)
 
-	if len(items) == 0 {
-		fmt.Println("No items on board.")
+		if len(items) == 0 {
+			fmt.Println("No items on board.")
+			fmt.Println()
+			continue
+		}
+
+		// Group by status
+		byStatus := make(map[string][]flow.BoardItem)
+		statusOrder := []string{}
+		for _, item := range items {
+			if _, seen := byStatus[item.Status]; !seen {
+				statusOrder = append(statusOrder, item.Status)
+			}
+			byStatus[item.Status] = append(byStatus[item.Status], item)
+		}
+
+		for _, status := range statusOrder {
+			statusItems := byStatus[status]
+			fmt.Printf("### %s\n", status)
+			for _, item := range statusItems {
+				fmt.Printf("- %s#%d: %s\n", item.Content.Repository, item.Content.Number, item.Title)
+			}
+			fmt.Println()
+		}
 	}
 }
 
@@ -109,35 +161,62 @@ func runBoardList(cmd *cobra.Command, args []string) {
 var (
 	boardAddStatus string
 	boardAddLabel  string
-	boardAddRepo   string
+	boardAddTo     string // explicit board override
 )
 
 var boardAddCmd = &cobra.Command{
-	Use:   "add <issue-number>",
-	Short: "Add issue to board",
-	Args:  cobra.ExactArgs(1),
-	Run:   runBoardAdd,
+	Use:   "add <repo#number>",
+	Short: "Add issue/PR to board",
+	Long: `Add an issue or pull request to a project board.
+
+The board is automatically resolved from the repo's channel mapping in sources.json.
+Use --to to specify a board explicitly.
+
+Examples:
+  bip board add dasm2-experiments#207    # Resolves board from dasm2 channel
+  bip board add netam#171                # Same board (both in dasm2 channel)
+  bip board add loris-experiments#15     # Different board (loris channel)
+  bip board add myrepo#42 --to matsengrp/30  # Explicit board`,
+	Args: cobra.ExactArgs(1),
+	Run:  runBoardAdd,
 }
 
 func init() {
 	boardAddCmd.Flags().StringVar(&boardAddStatus, "status", "", "Initial status")
 	boardAddCmd.Flags().StringVar(&boardAddLabel, "label", "", "Label to apply")
-	boardAddCmd.Flags().StringVar(&boardAddRepo, "repo", "", "Repository (org/repo format, required)")
-	boardAddCmd.MarkFlagRequired("repo")
+	boardAddCmd.Flags().StringVar(&boardAddTo, "to", "", "Explicit board (owner/number), overrides channel resolution")
 }
 
 func runBoardAdd(cmd *cobra.Command, args []string) {
 	nexusPath := config.MustGetNexusPath()
-	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey(nexusPath)
 
-	err := board.AddIssueToBoard(key, issueNum, boardAddRepo, boardAddStatus)
+	// Parse repo#number format
+	repo, issueNum, err := parseRepoIssue(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	msg := fmt.Sprintf("Added #%d to board", issueNum)
+	// Resolve board key
+	var key string
+	if boardAddTo != "" {
+		key = boardAddTo
+	} else {
+		key, err = flow.GetBoardForRepo(nexusPath, repo)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Hint: Use --to to specify a board explicitly\n")
+			os.Exit(1)
+		}
+	}
+
+	err = board.AddIssueToBoard(key, issueNum, repo, boardAddStatus)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	msg := fmt.Sprintf("Added %s#%d to board %s", repo, issueNum, key)
 	if boardAddStatus != "" {
 		msg += fmt.Sprintf(" with status '%s'", boardAddStatus)
 	}
@@ -147,90 +226,104 @@ func runBoardAdd(cmd *cobra.Command, args []string) {
 // board move
 var (
 	boardMoveStatus string
-	boardMoveRepo   string
+	boardMoveTo     string
 )
 
 var boardMoveCmd = &cobra.Command{
-	Use:   "move <issue-number>",
+	Use:   "move <repo#number> --status <status>",
 	Short: "Move item to different status",
-	Args:  cobra.ExactArgs(1),
-	Run:   runBoardMove,
+	Long: `Move a board item to a different status.
+
+Examples:
+  bip board move dasm2-experiments#207 --status done
+  bip board move netam#171 --status "in progress"`,
+	Args: cobra.ExactArgs(1),
+	Run:  runBoardMove,
 }
 
 func init() {
 	boardMoveCmd.Flags().StringVar(&boardMoveStatus, "status", "", "New status (required)")
-	boardMoveCmd.Flags().StringVar(&boardMoveRepo, "repo", "", "Repository (org/repo format, required)")
+	boardMoveCmd.Flags().StringVar(&boardMoveTo, "to", "", "Explicit board (owner/number), overrides channel resolution")
 	boardMoveCmd.MarkFlagRequired("status")
-	boardMoveCmd.MarkFlagRequired("repo")
 }
 
 func runBoardMove(cmd *cobra.Command, args []string) {
 	nexusPath := config.MustGetNexusPath()
-	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey(nexusPath)
 
-	err := board.MoveItem(key, issueNum, boardMoveStatus, boardMoveRepo)
+	repo, issueNum, err := parseRepoIssue(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Moved #%d to '%s'\n", issueNum, boardMoveStatus)
+	var key string
+	if boardMoveTo != "" {
+		key = boardMoveTo
+	} else {
+		key, err = flow.GetBoardForRepo(nexusPath, repo)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Hint: Use --to to specify a board explicitly\n")
+			os.Exit(1)
+		}
+	}
+
+	err = board.MoveItem(key, issueNum, boardMoveStatus, repo)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Moved %s#%d to '%s'\n", repo, issueNum, boardMoveStatus)
 }
 
 // board remove
-var boardRemoveRepo string
+var boardRemoveTo string
 
 var boardRemoveCmd = &cobra.Command{
-	Use:   "remove <issue-number>",
-	Short: "Remove issue from board",
-	Args:  cobra.ExactArgs(1),
-	Run:   runBoardRemove,
+	Use:   "remove <repo#number>",
+	Short: "Remove issue/PR from board",
+	Long: `Remove an issue or pull request from its project board.
+
+Examples:
+  bip board remove dasm2-experiments#207
+  bip board remove netam#171`,
+	Args: cobra.ExactArgs(1),
+	Run:  runBoardRemove,
 }
 
 func init() {
-	boardRemoveCmd.Flags().StringVar(&boardRemoveRepo, "repo", "", "Repository (org/repo format, required)")
-	boardRemoveCmd.MarkFlagRequired("repo")
+	boardRemoveCmd.Flags().StringVar(&boardRemoveTo, "to", "", "Explicit board (owner/number), overrides channel resolution")
 }
 
 func runBoardRemove(cmd *cobra.Command, args []string) {
 	nexusPath := config.MustGetNexusPath()
-	issueNum := parseIssueNumber(args[0])
-	key := resolveBoardKey(nexusPath)
 
-	err := board.RemoveIssueFromBoard(key, issueNum, boardRemoveRepo)
+	repo, issueNum, err := parseRepoIssue(args[0])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Removed #%d from board\n", issueNum)
-}
+	var key string
+	if boardRemoveTo != "" {
+		key = boardRemoveTo
+	} else {
+		key, err = flow.GetBoardForRepo(nexusPath, repo)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Hint: Use --to to specify a board explicitly\n")
+			os.Exit(1)
+		}
+	}
 
-// board sync
-var boardSyncFix bool
-
-var boardSyncCmd = &cobra.Command{
-	Use:   "sync",
-	Short: "Sync board with beads (report mismatches)",
-	Run:   runBoardSync,
-}
-
-func init() {
-	boardSyncCmd.Flags().BoolVar(&boardSyncFix, "fix", false, "Auto-fix mismatches")
-}
-
-func runBoardSync(cmd *cobra.Command, args []string) {
-	nexusPath := config.MustGetNexusPath()
-	key := resolveBoardKey(nexusPath)
-
-	result, err := board.SyncBoardWithBeads(key, boardSyncFix)
+	err = board.RemoveIssueFromBoard(key, issueNum, repo)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 
-	board.PrintSyncReport(result, key)
+	fmt.Printf("Removed %s#%d from board %s\n", repo, issueNum, key)
 }
 
 // board refresh-cache
@@ -291,4 +384,50 @@ func parseIssueNumber(s string) int {
 		os.Exit(1)
 	}
 	return n
+}
+
+// parseRepoIssue parses "repo#N" or "org/repo#N" format.
+// For short names like "dasm2-experiments#207", it expands to "matsengrp/dasm2-experiments".
+func parseRepoIssue(s string) (repo string, number int, err error) {
+	// Find the # separator
+	idx := -1
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '#' {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 || idx == 0 || idx == len(s)-1 {
+		return "", 0, fmt.Errorf("invalid format %q: expected repo#number (e.g., dasm2-experiments#207)", s)
+	}
+
+	repo = s[:idx]
+	numStr := s[idx+1:]
+
+	// Parse number
+	for _, c := range numStr {
+		if c < '0' || c > '9' {
+			return "", 0, fmt.Errorf("invalid issue number in %q", s)
+		}
+		number = number*10 + int(c-'0')
+	}
+	if number == 0 {
+		return "", 0, fmt.Errorf("invalid issue number in %q", s)
+	}
+
+	// If repo doesn't contain '/', assume matsengrp
+	if !containsSlash(repo) {
+		repo = "matsengrp/" + repo
+	}
+
+	return repo, number, nil
+}
+
+func containsSlash(s string) bool {
+	for _, c := range s {
+		if c == '/' {
+			return true
+		}
+	}
+	return false
 }
