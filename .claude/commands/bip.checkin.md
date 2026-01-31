@@ -58,6 +58,32 @@ Each window:
 
 Tmux window existence = item under review. Close the window when done.
 
+## Board triage
+
+After reviewing checkin activity, check if any new issues should be added to project boards:
+
+1. **Get current board state**:
+   ```bash
+   bip board list --json
+   ```
+
+2. **Compare with checkin issues**: Look for issues that:
+   - Are newly opened (not just updated)
+   - Have active discussion suggesting work is planned
+   - Are assigned or have milestone set
+   - Are NOT already on a board
+
+3. **Propose additions**: For each candidate, suggest:
+   ```
+   bip board add <repo>#<number>    # <one-line reason>
+   ```
+
+Skip issues that are:
+- Already on a board
+- Stale (no recent activity beyond the update that triggered checkin)
+- Pure questions/discussions without actionable work
+- Already closed
+
 ## Output guidelines
 
 When summarizing checkin results:
