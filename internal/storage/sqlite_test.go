@@ -343,10 +343,31 @@ func TestDB_SearchWithFilters(t *testing.T) {
 			wantMin: 1,
 		},
 		{
-			name:    "single author prefix matching",
-			filters: SearchFilters{Authors: []string{"Jo"}}, // Should match John and Jones
+			name:    "author last name exact match",
+			filters: SearchFilters{Authors: []string{"Jones"}}, // Exact last name match
 			limit:   10,
-			wantMin: 2,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "author first+last name",
+			filters: SearchFilters{Authors: []string{"John Smith"}}, // First Last format
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "author first name prefix match",
+			filters: SearchFilters{Authors: []string{"Al Jones"}}, // "Al" prefix matches "Alice"
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "partial last name no match",
+			filters: SearchFilters{Authors: []string{"Jo"}}, // "Jo" is not an exact last name
+			limit:   10,
+			wantMin: 0,
 		},
 		{
 			name:    "multiple authors (AND logic)",

@@ -50,13 +50,17 @@ Query Syntax (positional argument):
   title:text     - Search title only
 
 Flags:
-  --author, -a   - Search by author (repeatable, AND logic, prefix matching)
+  --author, -a   - Search by author (repeatable, AND logic, exact last name)
   --title, -t    - Search in title only
   --year         - Filter by year (exact, range, or open-ended)
   --venue        - Filter by venue/journal (partial match)
   --doi          - Lookup by exact DOI
 
-Author matching supports prefix matching, so "Tim" matches "Timothy".
+Author matching uses exact last name matching to avoid false positives:
+  -a "Yu"           - Matches last name "Yu" exactly (not "Yujia")
+  -a "Timothy Yu"   - Last name "Yu" + first name starts with "Timothy"
+  -a "Yu, Timothy"  - Same as above (Last, First format)
+
 When multiple authors are specified, all must match (AND logic).
 
 Year syntax:

@@ -62,7 +62,7 @@ Suggest creating concepts when you notice:
 | Task | Command |
 |------|---------|
 | Search local library | `bip search "query"` |
-| Search by author | `bip search -a "Name"` (repeatable, AND logic) |
+| Search by author | `bip search -a "LastName"` (exact last name, AND logic) |
 | Search by title | `bip search -t "keywords"` or `--title` |
 | Search by year | `bip search --year 2024` or `--year 2020:` |
 | Search by venue | `bip search --venue "Nature"` (partial match) |
@@ -88,9 +88,10 @@ Suggest creating concepts when you notice:
 Use `--author` and `--year` flags for precise filtering:
 
 ```bash
-# Search by author (supports prefix matching: "Tim" matches "Timothy")
-bip search --author "Yu" --author "Bloom"
-bip search -a "Matsen" -a "Suchard"
+# Search by author (exact last name matching to avoid false positives)
+bip search --author "Yu" --author "Bloom"    # Last names only
+bip search -a "Tim Yu" -a "Bloom"            # First + last name
+bip search -a "Yu, Timothy"                  # Last, First format
 
 # Filter by year
 bip search --year 2024           # exact year
@@ -104,15 +105,21 @@ bip search "deep mutational scanning" --author "Bloom" --year 2023:
 
 **Multiple authors use AND logic** - all must appear in the paper.
 
+**Author matching rules:**
+- Single word (e.g., `-a "Yu"`) → exact last name match (won't match "Yujia")
+- Two+ words (e.g., `-a "Tim Yu"`) → exact last name + first name prefix
+- Comma format (e.g., `-a "Yu, Tim"`) → same as above
+
 ### Query Formulation Tips
 
 **Keep queries short and specific** - Long conceptual queries perform poorly:
 - Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
 - Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
 
-**Use --author flag instead of embedding names in query** - More reliable matching:
-- Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (finds papers by Yu AND Bloom)
-- Less reliable: `bip search "Tim Yu Bloom"` (may miss "Timothy C Yu")
+**Use --author flag instead of embedding names in query** - Precise last name matching:
+- Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (exact last name match)
+- Good: `bip search -a "Tim Yu" -a "Bloom"` (first prefix + exact last name)
+- Bad: `bip search "Tim Yu Bloom"` (keyword search is substring-based)
 
 **Use specific method/algorithm names**:
 - `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions
