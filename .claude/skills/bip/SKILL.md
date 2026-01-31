@@ -88,7 +88,7 @@ Suggest creating concepts when you notice:
 Use `--author` and `--year` flags for precise filtering:
 
 ```bash
-# Search by author (supports fuzzy prefix matching: "Tim" matches "Timothy")
+# Search by author (supports prefix matching: "Tim" matches "Timothy")
 bip search --author "Yu" --author "Bloom"
 bip search -a "Matsen" -a "Suchard"
 

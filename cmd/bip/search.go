@@ -19,6 +19,16 @@ var (
 	searchDOI     string
 )
 
+// hasAnyFilterFlags returns true if any field-specific search flags were provided.
+// This determines whether to use the new flag-based search or legacy positional query.
+func hasAnyFilterFlags() bool {
+	return len(searchAuthors) > 0 ||
+		searchYear != "" ||
+		searchTitle != "" ||
+		searchVenue != "" ||
+		searchDOI != ""
+}
+
 func init() {
 	searchCmd.Flags().IntVar(&searchLimit, "limit", DefaultSearchLimit, "Maximum results to return")
 	searchCmd.Flags().StringArrayVarP(&searchAuthors, "author", "a", nil, "Search by author name (can be repeated, uses AND logic)")
@@ -40,13 +50,13 @@ Query Syntax (positional argument):
   title:text     - Search title only
 
 Flags:
-  --author, -a   - Search by author (repeatable, AND logic, fuzzy prefix)
+  --author, -a   - Search by author (repeatable, AND logic, prefix matching)
   --title, -t    - Search in title only
   --year         - Filter by year (exact, range, or open-ended)
   --venue        - Filter by venue/journal (partial match)
   --doi          - Lookup by exact DOI
 
-Author matching supports fuzzy prefix matching, so "Tim" matches "Timothy".
+Author matching supports prefix matching, so "Tim" matches "Timothy".
 When multiple authors are specified, all must match (AND logic).
 
 Year syntax:
@@ -74,9 +84,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	var err error
 
 	// Check if using flag-based search
-	useFilters := len(searchAuthors) > 0 || searchYear != "" || searchTitle != "" || searchVenue != "" || searchDOI != ""
+	hasFilterFlags := hasAnyFilterFlags()
 
-	if useFilters {
+	if hasFilterFlags {
 		filters := storage.SearchFilters{
 			Authors: searchAuthors,
 			Title:   searchTitle,

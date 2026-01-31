@@ -253,7 +253,7 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 // Both support OR natively, so adding same-type ORs is straightforward.
 type SearchFilters struct {
 	Keyword  string   // General keyword search across all fields
-	Authors  []string // Author names to search for (AND logic, fuzzy prefix matching)
+	Authors  []string // Author names to search for (AND logic, prefix matching)
 	YearFrom int      // Minimum publication year (0 = no minimum)
 	YearTo   int      // Maximum publication year (0 = no maximum)
 	Title    string   // Search in title only (FTS)
@@ -276,7 +276,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	}
 	for _, author := range filters.Authors {
 		if author != "" {
-			ftsTerms = append(ftsTerms, "authors_text:"+prepareAuthorQuery(author))
+			ftsTerms = append(ftsTerms, "authors_text:"+authorNameToFTSPrefixQuery(author))
 		}
 	}
 
@@ -322,9 +322,11 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	return scanReferences(rows)
 }
 
-// prepareAuthorQuery prepares an author name for FTS5 search with prefix matching.
-// It adds a wildcard (*) to enable fuzzy matching (e.g., "Tim" matches "Timothy").
-func prepareAuthorQuery(author string) string {
+// authorNameToFTSPrefixQuery converts an author name to an FTS5 query with prefix matching.
+// Each word in the name gets a wildcard suffix, enabling matches like "Tim" -> "Timothy".
+// Multi-word names use OR logic (match any part), e.g., "John Smith" matches papers
+// by anyone named John OR anyone named Smith.
+func authorNameToFTSPrefixQuery(author string) string {
 	author = strings.TrimSpace(author)
 	if author == "" {
 		return author
