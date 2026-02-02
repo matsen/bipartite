@@ -217,6 +217,10 @@ func reportImportResults(stats importStats, errStrs []string) {
 				fmt.Printf("  - %s\n", e)
 			}
 		}
+		// Remind user to rebuild the search index
+		if stats.newCount > 0 || stats.updated > 0 {
+			fmt.Println("\nRun 'bip rebuild' to update the search index.")
+		}
 	} else {
 		outputJSON(ImportResult{
 			New:     stats.newCount,

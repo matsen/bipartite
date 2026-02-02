@@ -9,6 +9,8 @@ A CLI tool for managing academic references with local storage and external pape
 
 **Repository**: Configured via `nexus_path` in `~/.config/bip/config.yml`
 
+**Issues**: https://github.com/matsen/bipartite/issues
+
 ## ⚠️ CRITICAL: Local-First Search Policy
 
 **ALWAYS search locally before using external APIs. NEVER call ASTA without explicit user permission.**
@@ -24,7 +26,7 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
 
 2. **If `bip search` fails** (e.g., schema error), rebuild the database:
    ```bash
-   bip rebuild --force
+   bip rebuild
    ```
    Then retry the search.
 
@@ -70,6 +72,8 @@ Suggest creating concepts when you notice:
 | Combined search | `bip search "topic" -a "Author" --year 2020:` |
 | Semantic search | `bip semantic "query"` |
 | Get paper details | `bip get <id>` |
+| Export to BibTeX | `bip export --bibtex <id>...` |
+| Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
 | Add paper to collection | `bip s2 add DOI:10.1234/...` |
 | Find literature gaps | `bip s2 gaps` |
 | Fast paper search (external) | `bip asta search "query"` |
@@ -218,7 +222,11 @@ See [api-guide.md](api-guide.md) for detailed comparison.
    ```bash
    bip import --format paperpile "<path>"
    ```
-4. Optionally delete the export file after confirming success
+4. Rebuild the search index:
+   ```bash
+   bip rebuild
+   ```
+5. Optionally delete the export file after confirming success
 
 ### Explore Literature
 
@@ -374,7 +382,7 @@ If `bip get <id>` or `bip asta paper <id>` fails:
 If you see errors like `no such column: pmid` or similar schema mismatches:
 
 ```bash
-bip rebuild --force
+bip rebuild
 ```
 
 The SQLite database is ephemeral and rebuilt from the JSONL source of truth. Schema changes require deleting and rebuilding.

@@ -177,6 +177,12 @@ Before any pull request, ensure the following workflow is completed:
    - `docs/guides/` — Detailed guides with examples, config reference, troubleshooting
    - `.claude/skills/bip/` — Update skill docs for Claude Code integration
 
+### Skill Documentation Accuracy
+9. **Verify Skill Docs Match CLI**: Run `./bip <command> --help` to confirm skill documentation accurately reflects:
+   - Command flags and their syntax (no non-existent flags like `--force`)
+   - Workflow steps (e.g., rebuild after import)
+   - Quick reference table entries match actual command signatures
+
 <!-- MANUAL ADDITIONS END -->
 
 ## Recent Changes

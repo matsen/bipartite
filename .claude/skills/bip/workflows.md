@@ -135,9 +135,14 @@ Import references from a Paperpile export.
    bip import --format paperpile "<path>"
    ```
 
-4. **Report results**: Show new/updated/unchanged counts.
+4. **Rebuild the search index**:
+   ```bash
+   bip rebuild
+   ```
 
-5. **Ask about cleanup**: Offer to remove the import file from Downloads if user wants.
+5. **Report results**: Show new/updated/unchanged counts.
+
+6. **Ask about cleanup**: Offer to remove the import file from Downloads if user wants.
 
 ---
 
