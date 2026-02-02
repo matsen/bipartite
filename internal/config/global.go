@@ -2,28 +2,29 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// GlobalConfig represents configuration stored in ~/.config/bip/config.json.
+// GlobalConfig represents configuration stored in ~/.config/bip/config.yml.
 type GlobalConfig struct {
-	NexusPath     string            `json:"nexus_path,omitempty"`
-	S2APIKey      string            `json:"s2_api_key,omitempty"`
-	ASTAAPIKey    string            `json:"asta_api_key,omitempty"`
-	SlackBotToken string            `json:"slack_bot_token,omitempty"`
-	GitHubToken   string            `json:"github_token,omitempty"`
-	SlackWebhooks map[string]string `json:"slack_webhooks,omitempty"`
+	NexusPath     string            `yaml:"nexus_path,omitempty"`
+	S2APIKey      string            `yaml:"s2_api_key,omitempty"`
+	ASTAAPIKey    string            `yaml:"asta_api_key,omitempty"`
+	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
+	GitHubToken   string            `yaml:"github_token,omitempty"`
+	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
 }
 
 const (
 	// GlobalConfigDir is the directory name under XDG_CONFIG_HOME.
 	GlobalConfigDir = "bip"
 	// GlobalConfigFile is the config file name.
-	GlobalConfigFile = "config.json"
+	GlobalConfigFile = "config.yml"
 )
 
 // globalConfigCache caches the loaded global config.
@@ -64,7 +65,7 @@ func LoadGlobalConfig() (*GlobalConfig, error) {
 	}
 
 	var cfg GlobalConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing global config: %w", err)
 	}
 
@@ -166,7 +167,7 @@ func HelpfulConfigMessage() string {
 
 Tip: Create %s to set a default nexus:
   mkdir -p %s
-  echo '{"nexus_path": "/path/to/your/nexus"}' > %s
+  echo 'nexus_path: /path/to/your/nexus' > %s
 
 See https://matsen.github.io/bipartite/guides/getting-started/`,
 		configPath,

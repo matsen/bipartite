@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 // ErrSlackNotInChannel is returned when the bot is not a member of the channel.
@@ -70,10 +71,10 @@ type Period struct {
 	End   string `json:"end"`
 }
 
-// SlackChannelConfig is a configured Slack channel from sources.json.
+// SlackChannelConfig is a configured Slack channel from sources.yml.
 type SlackChannelConfig struct {
-	ID      string `json:"id"`
-	Purpose string `json:"purpose"`
+	ID      string `json:"id" yaml:"id"`
+	Purpose string `json:"purpose" yaml:"purpose"`
 }
 
 // ChannelsResponse is the JSON output for bip slack channels.
@@ -468,36 +469,28 @@ func parseSlackTimestamp(ts string) (time.Time, error) {
 	return time.Unix(sec, 0), nil
 }
 
-// LoadSlackChannels loads Slack channel configuration from sources.json in the given nexus directory.
+// LoadSlackChannels loads Slack channel configuration from sources.yml in the given nexus directory.
 func LoadSlackChannels(nexusPath string) (map[string]SlackChannelConfig, error) {
 	data, err := os.ReadFile(SourcesPath(nexusPath))
 	if err != nil {
-		return nil, fmt.Errorf("reading sources.json: %w", err)
+		return nil, fmt.Errorf("reading sources.yml: %w", err)
 	}
 
-	// Parse into a map to extract the slack section
-	var sourcesConfig map[string]json.RawMessage
-	if err := json.Unmarshal(data, &sourcesConfig); err != nil {
-		return nil, fmt.Errorf("parsing sources.json: %w", err)
+	// Parse into a struct to extract the slack section
+	var sourcesConfig struct {
+		Slack struct {
+			Channels map[string]SlackChannelConfig `yaml:"channels"`
+		} `yaml:"slack"`
+	}
+	if err := yaml.Unmarshal(data, &sourcesConfig); err != nil {
+		return nil, fmt.Errorf("parsing sources.yml: %w", err)
 	}
 
-	slackSection, ok := sourcesConfig["slack"]
-	if !ok {
-		return nil, fmt.Errorf("no 'slack' section in sources.json")
+	if len(sourcesConfig.Slack.Channels) == 0 {
+		return nil, fmt.Errorf("no 'slack.channels' section in sources.yml")
 	}
 
-	var slackConfig struct {
-		Channels map[string]SlackChannelConfig `json:"channels"`
-	}
-	if err := json.Unmarshal(slackSection, &slackConfig); err != nil {
-		return nil, fmt.Errorf("parsing slack config: %w", err)
-	}
-
-	if len(slackConfig.Channels) == 0 {
-		return nil, fmt.Errorf("no channels configured in sources.json slack.channels")
-	}
-
-	return slackConfig.Channels, nil
+	return sourcesConfig.Slack.Channels, nil
 }
 
 // GetSlackChannel returns the configuration for a specific channel from the given nexus directory.

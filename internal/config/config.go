@@ -2,22 +2,23 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
-// Config represents repository configuration stored in .bipartite/config.json.
+// Config represents repository configuration stored in .bipartite/config.yml.
 type Config struct {
-	PDFRoot    string `json:"pdf_root"`              // Absolute path to PDF folder
-	PDFReader  string `json:"pdf_reader"`            // Reader preference: system, skim, zathura, etc.
-	PapersRepo string `json:"papers_repo,omitempty"` // Path to bip-papers repository
+	PDFRoot    string `yaml:"pdf_root"`              // Absolute path to PDF folder
+	PDFReader  string `yaml:"pdf_reader"`            // Reader preference: system, skim, zathura, etc.
+	PapersRepo string `yaml:"papers_repo,omitempty"` // Path to bip-papers repository
 }
 
 const (
 	BipartiteDir = ".bipartite"
-	ConfigFile   = "config.json"
+	ConfigFile   = "config.yml"
 	RefsFile     = "refs.jsonl"
 	EdgesFile    = "edges.jsonl"
 	ConceptsFile = "concepts.jsonl"
@@ -103,14 +104,18 @@ func FindRepository(start string) (string, error) {
 }
 
 // Load reads configuration from the repository at the given root.
+// Returns an empty config (not an error) if the file doesn't exist.
 func Load(root string) (*Config, error) {
 	data, err := os.ReadFile(ConfigPath(root))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return &Config{}, nil
+		}
 		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
 	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parsing config: %w", err)
 	}
 
@@ -119,7 +124,7 @@ func Load(root string) (*Config, error) {
 
 // Save writes configuration to the repository at the given root.
 func (c *Config) Save(root string) error {
-	data, err := json.MarshalIndent(c, "", "  ")
+	data, err := yaml.Marshal(c)
 	if err != nil {
 		return fmt.Errorf("encoding config: %w", err)
 	}

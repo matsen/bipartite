@@ -1,36 +1,40 @@
 package flow
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
-func TestParseRepoEntries(t *testing.T) {
+func TestParseRepoEntriesYAML(t *testing.T) {
 	tests := []struct {
 		name     string
-		input    string
+		input    []interface{}
 		expected []RepoEntry
 	}{
 		{
 			name:  "string entries",
-			input: `["matsengrp/repo1", "matsengrp/repo2"]`,
+			input: []interface{}{"matsengrp/repo1", "matsengrp/repo2"},
 			expected: []RepoEntry{
 				{Repo: "matsengrp/repo1"},
 				{Repo: "matsengrp/repo2"},
 			},
 		},
 		{
-			name:  "object entries",
-			input: `[{"repo": "matsengrp/repo1", "channel": "dasm2"}]`,
+			name: "object entries",
+			input: []interface{}{
+				map[string]interface{}{"repo": "matsengrp/repo1", "channel": "dasm2"},
+			},
 			expected: []RepoEntry{
 				{Repo: "matsengrp/repo1", Channel: "dasm2"},
 			},
 		},
 		{
-			name:  "mixed entries",
-			input: `["matsengrp/repo1", {"repo": "matsengrp/repo2", "channel": "test"}]`,
+			name: "mixed entries",
+			input: []interface{}{
+				"matsengrp/repo1",
+				map[string]interface{}{"repo": "matsengrp/repo2", "channel": "test"},
+			},
 			expected: []RepoEntry{
 				{Repo: "matsengrp/repo1"},
 				{Repo: "matsengrp/repo2", Channel: "test"},
@@ -40,13 +44,13 @@ func TestParseRepoEntries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseRepoEntries(json.RawMessage(tt.input))
+			got, err := parseRepoEntriesYAML(tt.input)
 			if err != nil {
-				t.Fatalf("parseRepoEntries() error: %v", err)
+				t.Fatalf("parseRepoEntriesYAML() error: %v", err)
 			}
 
 			if len(got) != len(tt.expected) {
-				t.Fatalf("parseRepoEntries() got %d entries, want %d", len(got), len(tt.expected))
+				t.Fatalf("parseRepoEntriesYAML() got %d entries, want %d", len(got), len(tt.expected))
 			}
 
 			for i, entry := range got {
@@ -82,22 +86,24 @@ func TestExtractRepoName(t *testing.T) {
 }
 
 func TestLoadSourcesIntegration(t *testing.T) {
-	// Create a temp directory with a test sources.json
+	// Create a temp directory with a test sources.yml
 	tmpDir := t.TempDir()
-	sourcesPath := filepath.Join(tmpDir, "sources.json")
+	sourcesPath := filepath.Join(tmpDir, "sources.yml")
 
-	sourcesContent := `{
-		"boards": {"matsengrp/30": "test-bead"},
-		"context": {"matsengrp/repo": "context/test.md"},
-		"code": [
-			"matsengrp/repo1",
-			{"repo": "matsengrp/repo2", "channel": "dasm2"}
-		],
-		"writing": ["matsengrp/paper1"]
-	}`
+	sourcesContent := `boards:
+  matsengrp/30: test-bead
+context:
+  matsengrp/repo: context/test.md
+code:
+  - matsengrp/repo1
+  - repo: matsengrp/repo2
+    channel: dasm2
+writing:
+  - matsengrp/paper1
+`
 
 	if err := os.WriteFile(sourcesPath, []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("Failed to write test sources.json: %v", err)
+		t.Fatalf("Failed to write test sources.yml: %v", err)
 	}
 
 	// Test LoadSources with explicit path
@@ -134,21 +140,22 @@ func TestLoadSourcesIntegration(t *testing.T) {
 }
 
 func TestLoadReposByChannel(t *testing.T) {
-	// Create a temp directory with a test sources.json
+	// Create a temp directory with a test sources.yml
 	tmpDir := t.TempDir()
-	sourcesPath := filepath.Join(tmpDir, "sources.json")
+	sourcesPath := filepath.Join(tmpDir, "sources.yml")
 
-	sourcesContent := `{
-		"code": [
-			"matsengrp/repo1",
-			{"repo": "matsengrp/repo2", "channel": "dasm2"},
-			{"repo": "matsengrp/repo3", "channel": "test"},
-			{"repo": "matsengrp/repo4", "channel": "dasm2"}
-		]
-	}`
+	sourcesContent := `code:
+  - matsengrp/repo1
+  - repo: matsengrp/repo2
+    channel: dasm2
+  - repo: matsengrp/repo3
+    channel: test
+  - repo: matsengrp/repo4
+    channel: dasm2
+`
 
 	if err := os.WriteFile(sourcesPath, []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("Failed to write test sources.json: %v", err)
+		t.Fatalf("Failed to write test sources.yml: %v", err)
 	}
 
 	// Test loading dasm2 channel
@@ -173,22 +180,23 @@ func TestLoadReposByChannel(t *testing.T) {
 
 func TestListChannels(t *testing.T) {
 	tmpDir := t.TempDir()
-	sourcesPath := filepath.Join(tmpDir, "sources.json")
+	sourcesPath := filepath.Join(tmpDir, "sources.yml")
 
-	sourcesContent := `{
-		"code": [
-			"matsengrp/repo1",
-			{"repo": "matsengrp/repo2", "channel": "dasm2"},
-			{"repo": "matsengrp/repo3", "channel": "test"},
-			{"repo": "matsengrp/repo4", "channel": "dasm2"}
-		],
-		"writing": [
-			{"repo": "matsengrp/paper1", "channel": "test"}
-		]
-	}`
+	sourcesContent := `code:
+  - matsengrp/repo1
+  - repo: matsengrp/repo2
+    channel: dasm2
+  - repo: matsengrp/repo3
+    channel: test
+  - repo: matsengrp/repo4
+    channel: dasm2
+writing:
+  - repo: matsengrp/paper1
+    channel: test
+`
 
 	if err := os.WriteFile(sourcesPath, []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("Failed to write test sources.json: %v", err)
+		t.Fatalf("Failed to write test sources.yml: %v", err)
 	}
 
 	channels, err := ListChannels(tmpDir)

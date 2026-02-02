@@ -1,23 +1,24 @@
 package flow
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // File paths relative to the nexus directory.
 const (
-	SourcesFile = "sources.json"
+	SourcesFile = "sources.yml"
 	BeadsDir    = ".beads"
 	BeadsFile   = "issues.jsonl"
 	StateFile   = ".last-checkin.json"
 	CacheFile   = ".flow-cache.json"
-	ConfigFile  = "config.json"
+	ConfigFile  = "config.yml"
 )
 
 // Default paths when config.json doesn't exist.
@@ -28,7 +29,7 @@ const (
 
 // Errors.
 var (
-	ErrNoRepos = errors.New("no repos found in sources.json")
+	ErrNoRepos = errors.New("no repos found in sources.yml")
 )
 
 // SourcesPath returns the path to sources.json in the given nexus directory.
@@ -46,81 +47,82 @@ func StatePath(nexusPath string) string {
 	return filepath.Join(nexusPath, StateFile)
 }
 
-// LoadSources loads and parses sources.json from the given nexus directory.
+// sourcesYAML is the intermediate struct for parsing sources.yml.
+// It handles the mixed array format where entries can be strings or objects.
+type sourcesYAML struct {
+	Slack    interface{}       `yaml:"slack"`
+	Boards   map[string]string `yaml:"boards"`
+	Context  map[string]string `yaml:"context"`
+	Code     []interface{}     `yaml:"code"`
+	Writing  []interface{}     `yaml:"writing"`
+	Archived []interface{}     `yaml:"archived"`
+}
+
+// LoadSources loads and parses sources.yml from the given nexus directory.
 func LoadSources(nexusPath string) (*Sources, error) {
 	data, err := os.ReadFile(SourcesPath(nexusPath))
 	if err != nil {
-		return nil, fmt.Errorf("reading sources.json: %w", err)
+		return nil, fmt.Errorf("reading sources.yml: %w", err)
 	}
 
-	// First, unmarshal into a raw map to handle mixed types
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parsing sources.json: %w", err)
+	var raw sourcesYAML
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parsing sources.yml: %w", err)
 	}
 
 	sources := &Sources{
-		Boards:  make(map[string]string),
-		Context: make(map[string]string),
+		Boards:  raw.Boards,
+		Context: raw.Context,
 	}
 
-	// Parse boards if present
-	if boardsRaw, ok := raw["boards"]; ok {
-		if err := json.Unmarshal(boardsRaw, &sources.Boards); err != nil {
-			return nil, fmt.Errorf("parsing boards: %w", err)
-		}
+	// Initialize maps if nil
+	if sources.Boards == nil {
+		sources.Boards = make(map[string]string)
+	}
+	if sources.Context == nil {
+		sources.Context = make(map[string]string)
 	}
 
-	// Parse context if present
-	if contextRaw, ok := raw["context"]; ok {
-		if err := json.Unmarshal(contextRaw, &sources.Context); err != nil {
-			return nil, fmt.Errorf("parsing context: %w", err)
-		}
+	// Parse code repos (mixed string/object format)
+	sources.Code, err = parseRepoEntriesYAML(raw.Code)
+	if err != nil {
+		return nil, fmt.Errorf("parsing code repos: %w", err)
 	}
 
-	// Parse code repos
-	if codeRaw, ok := raw["code"]; ok {
-		sources.Code, err = parseRepoEntries(codeRaw)
-		if err != nil {
-			return nil, fmt.Errorf("parsing code repos: %w", err)
-		}
-	}
-
-	// Parse writing repos
-	if writingRaw, ok := raw["writing"]; ok {
-		sources.Writing, err = parseRepoEntries(writingRaw)
-		if err != nil {
-			return nil, fmt.Errorf("parsing writing repos: %w", err)
-		}
+	// Parse writing repos (mixed string/object format)
+	sources.Writing, err = parseRepoEntriesYAML(raw.Writing)
+	if err != nil {
+		return nil, fmt.Errorf("parsing writing repos: %w", err)
 	}
 
 	return sources, nil
 }
 
-// parseRepoEntries parses a JSON array that can contain strings or objects.
-func parseRepoEntries(data json.RawMessage) ([]RepoEntry, error) {
+// parseRepoEntriesYAML parses a YAML array that can contain strings or objects.
+func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 	var entries []RepoEntry
 
-	// Try to unmarshal as array of interfaces first
-	var raw []json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
-	for _, item := range raw {
-		// Try string first
-		var str string
-		if err := json.Unmarshal(item, &str); err == nil {
-			entries = append(entries, RepoEntry{Repo: str})
-			continue
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			// Simple string entry: "matsengrp/repo"
+			entries = append(entries, RepoEntry{Repo: v})
+		case map[string]interface{}:
+			// Object entry: {repo: "...", channel: "..."}
+			entry := RepoEntry{}
+			if repo, ok := v["repo"].(string); ok {
+				entry.Repo = repo
+			}
+			if channel, ok := v["channel"].(string); ok {
+				entry.Channel = channel
+			}
+			if entry.Repo == "" {
+				return nil, fmt.Errorf("invalid repo entry: missing 'repo' field")
+			}
+			entries = append(entries, entry)
+		default:
+			return nil, fmt.Errorf("invalid repo entry type: %T", item)
 		}
-
-		// Try object
-		var entry RepoEntry
-		if err := json.Unmarshal(item, &entry); err != nil {
-			return nil, fmt.Errorf("invalid repo entry: %s", string(item))
-		}
-		entries = append(entries, entry)
 	}
 
 	return entries, nil
@@ -304,8 +306,8 @@ func GetBoardsMapping(nexusPath string) (map[string]string, error) {
 	return sources.Boards, nil
 }
 
-// LoadConfig loads config.json from the given nexus directory.
-// Returns defaults if config.json doesn't exist.
+// LoadConfig loads config.yml from the given nexus directory.
+// Returns defaults if config.yml doesn't exist.
 func LoadConfig(nexusPath string) (*Config, error) {
 	cfg := &Config{
 		Paths: ConfigPaths{
@@ -319,11 +321,11 @@ func LoadConfig(nexusPath string) (*Config, error) {
 		return cfg, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("reading config.json: %w", err)
+		return nil, fmt.Errorf("reading config.yml: %w", err)
 	}
 
-	if err := json.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parsing config.json: %w", err)
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parsing config.yml: %w", err)
 	}
 
 	return cfg, nil

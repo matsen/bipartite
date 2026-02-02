@@ -58,8 +58,8 @@ my-nexus/
 ├── concepts.jsonl        # Concept/topic definitions
 │
 ├── servers.yml           # (optional) Remote servers for bip scout
-├── sources.json          # (optional) GitHub repos for activity tracking
-├── config.json           # (optional) Local paths, API keys
+├── sources.yml           # (optional) GitHub repos for activity tracking
+├── config.yml            # (optional) Local paths, API keys
 │
 ├── context/              # (optional) Project context files
 └── narrative/            # (optional) Generated digest output
@@ -84,9 +84,9 @@ This directory is gitignored because it's rebuilt from source files via `bip reb
 
 ### Configuration Files (Optional)
 
-- **config.json** — Local paths (PDF root), Ollama settings
+- **config.yml** — Local paths (PDF root), Ollama settings
 - **servers.yml** — Remote servers for `bip scout`
-- **sources.json** — GitHub repos and boards for `bip checkin`, `bip digest`
+- **sources.yml** — GitHub repos and boards for `bip checkin`, `bip digest`
 
 ## Adding Your First Paper
 

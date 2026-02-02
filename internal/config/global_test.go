@@ -1,11 +1,12 @@
 package config
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestGlobalConfigPath(t *testing.T) {
@@ -16,7 +17,7 @@ func TestGlobalConfigPath(t *testing.T) {
 	// Test with custom XDG_CONFIG_HOME
 	os.Setenv("XDG_CONFIG_HOME", "/custom/config")
 	path := GlobalConfigPath()
-	want := "/custom/config/bip/config.json"
+	want := "/custom/config/bip/config.yml"
 	if path != want {
 		t.Errorf("GlobalConfigPath() = %q, want %q", path, want)
 	}
@@ -28,7 +29,7 @@ func TestGlobalConfigPath(t *testing.T) {
 		t.Skip("Cannot get home directory")
 	}
 	path = GlobalConfigPath()
-	want = filepath.Join(home, ".config", "bip", "config.json")
+	want = filepath.Join(home, ".config", "bip", "config.yml")
 	if path != want {
 		t.Errorf("GlobalConfigPath() = %q, want %q", path, want)
 	}
@@ -85,8 +86,8 @@ func TestLoadGlobalConfig_Valid(t *testing.T) {
 			"dasm2": "https://hooks.slack.com/test",
 		},
 	}
-	data, _ := json.Marshal(cfgData)
-	configFile := filepath.Join(configDir, "config.json")
+	data, _ := yaml.Marshal(cfgData)
+	configFile := filepath.Join(configDir, "config.yml")
 	if err := os.WriteFile(configFile, data, 0644); err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +123,7 @@ func TestLoadGlobalConfig_Valid(t *testing.T) {
 	}
 }
 
-func TestLoadGlobalConfig_InvalidJSON(t *testing.T) {
+func TestLoadGlobalConfig_InvalidYAML(t *testing.T) {
 	ResetGlobalConfigCache()
 	defer ResetGlobalConfigCache()
 
@@ -130,14 +131,14 @@ func TestLoadGlobalConfig_InvalidJSON(t *testing.T) {
 	orig := os.Getenv("XDG_CONFIG_HOME")
 	defer os.Setenv("XDG_CONFIG_HOME", orig)
 
-	// Create invalid config file
+	// Create invalid config file (tabs are not allowed in YAML indentation)
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, "bip")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	configFile := filepath.Join(configDir, "config.json")
-	if err := os.WriteFile(configFile, []byte("not json"), 0644); err != nil {
+	configFile := filepath.Join(configDir, "config.yml")
+	if err := os.WriteFile(configFile, []byte("key:\n\t- bad"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -145,7 +146,7 @@ func TestLoadGlobalConfig_InvalidJSON(t *testing.T) {
 
 	_, err := LoadGlobalConfig()
 	if err == nil {
-		t.Error("LoadGlobalConfig() should return error for invalid JSON")
+		t.Error("LoadGlobalConfig() should return error for invalid YAML")
 	}
 }
 
@@ -172,8 +173,8 @@ func TestGetS2APIKey(t *testing.T) {
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{S2APIKey: "config-s2-key"}
-	data, _ := json.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+	data, _ := yaml.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 	got = GetS2APIKey()
 	if got != "config-s2-key" {
@@ -206,8 +207,8 @@ func TestGetSlackWebhook(t *testing.T) {
 	cfgData := GlobalConfig{
 		SlackWebhooks: map[string]string{"dasm2": "https://config-webhook"},
 	}
-	data, _ := json.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+	data, _ := yaml.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 	got = GetSlackWebhook("dasm2")
 	if got != "https://config-webhook" {
@@ -240,8 +241,8 @@ func TestGlobalConfigCache(t *testing.T) {
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{S2APIKey: "cached-key"}
-	data, _ := json.Marshal(cfgData)
-	configFile := filepath.Join(configDir, "config.json")
+	data, _ := yaml.Marshal(cfgData)
+	configFile := filepath.Join(configDir, "config.yml")
 	os.WriteFile(configFile, data, 0644)
 
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
@@ -254,7 +255,7 @@ func TestGlobalConfigCache(t *testing.T) {
 
 	// Modify file
 	cfgData.S2APIKey = "modified-key"
-	data, _ = json.Marshal(cfgData)
+	data, _ = yaml.Marshal(cfgData)
 	os.WriteFile(configFile, data, 0644)
 
 	// Second load should return cached value
@@ -307,8 +308,8 @@ func TestValidateNexusPath_PathNotExist(t *testing.T) {
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{NexusPath: "/nonexistent/path/that/does/not/exist"}
-	data, _ := json.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+	data, _ := yaml.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 
@@ -337,8 +338,8 @@ func TestValidateNexusPath_Valid(t *testing.T) {
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
 	cfgData := GlobalConfig{NexusPath: nexusDir}
-	data, _ := json.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+	data, _ := yaml.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 	os.Setenv("XDG_CONFIG_HOME", tmpDir)
 

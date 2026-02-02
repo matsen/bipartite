@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +9,7 @@ import (
 	"github.com/matsen/bipartite/internal/project"
 	"github.com/matsen/bipartite/internal/repo"
 	"github.com/matsen/bipartite/internal/storage"
+	"gopkg.in/yaml.v3"
 )
 
 // setupTestEnvironment creates a test bipartite repository and sets up global config.
@@ -23,9 +23,9 @@ func setupTestEnvironment(t *testing.T, tmpDir string) func() {
 		t.Fatalf("Failed to create config directory: %v", err)
 	}
 
-	// Create global config with nexus_path
-	globalConfig := `{"nexus_path":"` + tmpDir + `"}`
-	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(globalConfig), 0644); err != nil {
+	// Create global config with nexus_path (YAML format)
+	globalConfig := "nexus_path: " + tmpDir + "\n"
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(globalConfig), 0644); err != nil {
 		t.Fatalf("Failed to write global config: %v", err)
 	}
 
@@ -87,12 +87,12 @@ func TestProjectImportCommand(t *testing.T) {
 		},
 	}
 
-	configBytes, err := json.MarshalIndent(configData, "", "  ")
+	configBytes, err := yaml.Marshal(configData)
 	if err != nil {
 		t.Fatalf("Failed to marshal config: %v", err)
 	}
 
-	configPath := filepath.Join(tmpDir, "test-projects.json")
+	configPath := filepath.Join(tmpDir, "test-projects.yml")
 	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
@@ -197,12 +197,12 @@ func TestProjectImportWithRepos(t *testing.T) {
 		},
 	}
 
-	configBytes, err := json.MarshalIndent(configData, "", "  ")
+	configBytes, err := yaml.Marshal(configData)
 	if err != nil {
 		t.Fatalf("Failed to marshal config: %v", err)
 	}
 
-	configPath := filepath.Join(tmpDir, "test-projects.json")
+	configPath := filepath.Join(tmpDir, "test-projects.yml")
 	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
@@ -286,12 +286,12 @@ func TestProjectImportWithConcepts(t *testing.T) {
 		},
 	}
 
-	configBytes, err := json.MarshalIndent(configData, "", "  ")
+	configBytes, err := yaml.Marshal(configData)
 	if err != nil {
 		t.Fatalf("Failed to marshal config: %v", err)
 	}
 
-	configPath := filepath.Join(tmpDir, "test-projects.json")
+	configPath := filepath.Join(tmpDir, "test-projects.yml")
 	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
@@ -360,12 +360,12 @@ func TestProjectImportRepoIDCollision(t *testing.T) {
 		},
 	}
 
-	configBytes, err := json.MarshalIndent(configData, "", "  ")
+	configBytes, err := yaml.Marshal(configData)
 	if err != nil {
 		t.Fatalf("Failed to marshal config: %v", err)
 	}
 
-	configPath := filepath.Join(tmpDir, "test-projects.json")
+	configPath := filepath.Join(tmpDir, "test-projects.yml")
 	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
