@@ -30,7 +30,16 @@ jobs:
           $GITHUB_WORKSPACE/bip rebuild
           $GITHUB_WORKSPACE/bip search "phylogenetics"
           $GITHUB_WORKSPACE/bip search "Felsenstein"
+          # S2 API may be rate-limited without key; exit code 3 = rate limit
+          set +e
           $GITHUB_WORKSPACE/bip s2 add DOI:10.1038/s41586-021-03819-2
+          s2_exit=$?
+          set -e
+          if [ $s2_exit -eq 3 ]; then
+            echo "Skipping s2 add test (rate limited)"
+          elif [ $s2_exit -ne 0 ]; then
+            exit $s2_exit
+          fi
 
   lint:
     runs-on: ubuntu-latest
