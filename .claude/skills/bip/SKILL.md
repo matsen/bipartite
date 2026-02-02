@@ -222,7 +222,11 @@ See [api-guide.md](api-guide.md) for detailed comparison.
    ```bash
    bip import --format paperpile "<path>"
    ```
-4. Optionally delete the export file after confirming success
+4. Rebuild the search index:
+   ```bash
+   bip rebuild
+   ```
+5. Optionally delete the export file after confirming success
 
 ### Explore Literature
 
