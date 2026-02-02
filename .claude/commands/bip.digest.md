@@ -21,7 +21,7 @@ bip digest --channel dasm2 --post-to scratch --post  # Post to scratch channel
 
 ## What it does
 
-1. Scans repos associated with the channel (from sources.json)
+1. Scans repos associated with the channel (from sources.yml)
 2. Fetches merged PRs, new issues, active discussions
 3. Uses LLM to generate summary
 4. Shows preview (default) or posts to Slack (if --post)

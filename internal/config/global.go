@@ -31,7 +31,7 @@ const (
 var globalConfigCache *GlobalConfig
 
 // GlobalConfigPath returns the path to the global config file.
-// Respects XDG_CONFIG_HOME, defaults to ~/.config/bip/config.json.
+// Respects XDG_CONFIG_HOME, defaults to ~/.config/bip/config.yml.
 func GlobalConfigPath() string {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if configHome == "" {

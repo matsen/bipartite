@@ -17,10 +17,10 @@ func TestResolveCmd_NoConflicts(t *testing.T) {
 		t.Fatalf("creating .bipartite dir: %v", err)
 	}
 
-	// Create config.json
-	configContent := `{"pdf_root": ""}`
-	if err := os.WriteFile(filepath.Join(bipDir, "config.json"), []byte(configContent), 0644); err != nil {
-		t.Fatalf("writing config.json: %v", err)
+	// Create config.yml
+	configContent := "pdf_root: \"\"\n"
+	if err := os.WriteFile(filepath.Join(bipDir, "config.yml"), []byte(configContent), 0644); err != nil {
+		t.Fatalf("writing config.yml: %v", err)
 	}
 
 	// Create refs.jsonl without conflicts

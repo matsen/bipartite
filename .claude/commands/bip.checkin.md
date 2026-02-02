@@ -11,7 +11,7 @@ bip checkin
 ```
 
 This will:
-1. Read repos from `sources.json`
+1. Read repos from `sources.yml`
 2. Fetch issues, PRs, and comments updated since last check-in
 3. **Filter to items needing your action** (ball-in-my-court logic)
 4. Display activity grouped by repo with GitHub refs (e.g., `matsengrp/repo#123`)

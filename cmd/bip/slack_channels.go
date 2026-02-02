@@ -15,7 +15,7 @@ import (
 var slackChannelsCmd = &cobra.Command{
 	Use:   "channels",
 	Short: "List configured Slack channels",
-	Long: `List all Slack channels configured in sources.json.
+	Long: `List all Slack channels configured in sources.yml.
 
 Shows channel name, ID, and purpose for each configured channel.
 

@@ -73,8 +73,8 @@ func setupTestRepo(t *testing.T) string {
 	}
 
 	// Create minimal config
-	configContent := `{"pdf_root":"","pdf_reader":"system"}`
-	if err := os.WriteFile(filepath.Join(bpDir, "config.json"), []byte(configContent), 0644); err != nil {
+	configContent := "pdf_root: \"\"\npdf_reader: system\n"
+	if err := os.WriteFile(filepath.Join(bpDir, "config.yml"), []byte(configContent), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -92,8 +92,8 @@ func setupTestRepo(t *testing.T) string {
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	globalConfig := `{"nexus_path":"` + tmpDir + `"}`
-	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(globalConfig), 0644); err != nil {
+	globalConfig := "nexus_path: " + tmpDir + "\n"
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(globalConfig), 0644); err != nil {
 		t.Fatal(err)
 	}
 

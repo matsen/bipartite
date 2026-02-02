@@ -7,7 +7,7 @@ description: Unified guidance for using the bipartite reference library CLI. Use
 
 A CLI tool for managing academic references with local storage and external paper search.
 
-**Repository**: Configured via `nexus_path` in `~/.config/bip/config.json`
+**Repository**: Configured via `nexus_path` in `~/.config/bip/config.yml`
 
 ## ⚠️ CRITICAL: Local-First Search Policy
 

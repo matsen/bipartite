@@ -1,6 +1,6 @@
 # /bip.board
 
-Manage GitHub project boards. Boards are resolved automatically from repo → channel → board mappings in sources.json.
+Manage GitHub project boards. Boards are resolved automatically from repo → channel → board mappings in sources.yml.
 
 ## Quick Reference
 
@@ -16,10 +16,10 @@ bip board remove netam#171                  # Remove from board
 ## Board Resolution
 
 The board is automatically resolved via channel mappings:
-1. Look up repo's channel from `code`/`writing` array in sources.json
+1. Look up repo's channel from `code`/`writing` array in sources.yml
 2. Look up channel's board from `boards` mapping
 
-Example sources.json:
+Example sources.yml:
 ```json
 {
   "boards": {

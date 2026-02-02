@@ -20,7 +20,7 @@ Each run saves the current timestamp to `.last-checkin.json`, so the next run pi
 
 By default, checkin filters to items where the "ball is in your court" — PRs awaiting your review, issues assigned to you, discussions needing your response. Use `--all` to see everything.
 
-Requires `sources.json` in the working directory (typically your nexus repo).
+Requires `sources.yml` in the working directory (typically your nexus repo).
 
 ## Digests
 
@@ -35,7 +35,7 @@ bip digest --channel dasm2 --post-to other  # Override destination channel
 bip digest --repos org/a,org/b --channel x  # Override repos to scan
 ```
 
-Channels are defined in `sources.json` via the `"channel"` field on repos. The digest organizes work by research theme rather than by repository.
+Channels are defined in `sources.yml` via the `"channel"` field on repos. The digest organizes work by research theme rather than by repository.
 
 ### Narrative Digests
 
@@ -61,7 +61,7 @@ bip board sync                    # Report mismatches with beads
 bip board refresh-cache           # Refresh cached board metadata
 ```
 
-Boards are configured in `sources.json` under the `"boards"` key. Use `--board owner/number` to target a specific board if you have multiple.
+Boards are configured in `sources.yml` under the `"boards"` key. Use `--board owner/number` to target a specific board if you have multiple.
 
 ## Spawning Sessions
 
@@ -128,8 +128,8 @@ ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
 
 Coordination commands read from files in your nexus repo:
 
-- `sources.json` — Repository list, channel mappings, and board config
-- `config.json` — Local path configuration
+- `sources.yml` — Repository list, channel mappings, and board config
+- `config.yml` — Local path configuration
 - `context/` — Project context files for narrative generation
 - `narrative/preferences.md` — Shared formatting rules for narrative digests
 - `narrative/{channel}.md` — Per-channel themes and repo context

@@ -29,7 +29,7 @@ Or use --prompt without a ref for adhoc sessions:
 
 Requires:
   - Running inside tmux
-  - Repository defined in sources.json (unless using --prompt alone)
+  - Repository defined in sources.yml (unless using --prompt alone)
   - Local clone of the repository (unless using --prompt alone)`,
 	Args: cobra.MaximumNArgs(1),
 	Run:  runSpawn,
@@ -63,11 +63,11 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Validate repo is in sources.json and has local clone
+	// Validate repo is in sources.yml and has local clone
 	repoPath, found := flow.GetRepoLocalPath(nexusPath, ref.Repo)
 	if !found {
-		fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.json\n", ref.Repo)
-		fmt.Fprintf(os.Stderr, "Add it to sources.json under 'code' or 'writing' category\n")
+		fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
+		fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
 		os.Exit(1)
 	}
 

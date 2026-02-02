@@ -36,7 +36,7 @@ func BipartitePath(root string) string {
 	return filepath.Join(root, BipartiteDir)
 }
 
-// ConfigPath returns the path to config.json from a root path.
+// ConfigPath returns the path to config.yml from a root path.
 func ConfigPath(root string) string {
 	return filepath.Join(root, BipartiteDir, ConfigFile)
 }

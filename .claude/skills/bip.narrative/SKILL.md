@@ -20,7 +20,7 @@ Generate a themed narrative digest for a Slack channel.
 
 ## Setup
 
-The nexus path is configured in `~/.config/bip/config.json`. For the commands below, use the configured path (e.g., if `nexus_path` is `~/re/nexus`, substitute that).
+The nexus path is configured in `~/.config/bip/config.yml`. For the commands below, use the configured path (e.g., if `nexus_path` is `~/re/nexus`, substitute that).
 
 ## Workflow
 
@@ -146,7 +146,7 @@ After the user has reviewed the narrative, ask if they want to post it to Slack.
    bip digest --channel {{channel}} --post
    ```
 
-   The webhook URL comes from `slack_webhooks` in `~/.config/bip/config.json` or `SLACK_WEBHOOK_{{CHANNEL_UPPER}}` env var.
+   The webhook URL comes from `slack_webhooks` in `~/.config/bip/config.yml` or `SLACK_WEBHOOK_{{CHANNEL_UPPER}}` env var.
 
 3. Report: "Posted to #{{channel}} with link to narrative."
 

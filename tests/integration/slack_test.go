@@ -13,6 +13,7 @@ import (
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
+	"gopkg.in/yaml.v3"
 )
 
 // TestSlackHistoryJSONFormat verifies the JSON output format meets US3 requirements.
@@ -82,7 +83,7 @@ func TestSlackChannelsJSONFormat(t *testing.T) {
 
 	// Check if nexus has Slack config
 	if !hasSlackConfig(nexusDir) {
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
 	}
 
 	// Run bip slack channels command
@@ -104,7 +105,7 @@ func TestSlackChannelsJSONFormat(t *testing.T) {
 
 	// Verify we have channels
 	if len(response.Channels) == 0 {
-		t.Skip("No channels configured in nexus sources.json")
+		t.Skip("No channels configured in nexus sources.yml")
 	}
 
 	// Verify channel structure
@@ -126,7 +127,7 @@ func TestSlackHistoryMissingToken(t *testing.T) {
 
 	// Check if nexus has Slack config
 	if !hasSlackConfig(nexusDir) {
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
 	}
 
 	// Create a temp config directory without slack_bot_token but WITH nexus_path
@@ -136,8 +137,8 @@ func TestSlackHistoryMissingToken(t *testing.T) {
 		t.Fatalf("failed to create config dir: %v", err)
 	}
 	// Write config with nexus_path but no slack_bot_token
-	cfgJSON := fmt.Sprintf(`{"nexus_path": %q}`, nexusDir)
-	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(cfgJSON), 0644); err != nil {
+	cfgYAML := fmt.Sprintf("nexus_path: %s\n", nexusDir)
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
@@ -208,30 +209,22 @@ func filterEnv(env []string, key string) []string {
 
 // hasSlackConfig checks if the nexus directory has Slack channels configured.
 func hasSlackConfig(nexusDir string) bool {
-	sourcesPath := filepath.Join(nexusDir, "sources.json")
+	sourcesPath := filepath.Join(nexusDir, "sources.yml")
 	data, err := os.ReadFile(sourcesPath)
 	if err != nil {
 		return false
 	}
 
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var raw struct {
+		Slack struct {
+			Channels map[string]interface{} `yaml:"channels"`
+		} `yaml:"slack"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return false
 	}
 
-	slackRaw, ok := raw["slack"]
-	if !ok {
-		return false
-	}
-
-	var slackConfig struct {
-		Channels map[string]interface{} `json:"channels"`
-	}
-	if err := json.Unmarshal(slackRaw, &slackConfig); err != nil {
-		return false
-	}
-
-	return len(slackConfig.Channels) > 0
+	return len(raw.Slack.Channels) > 0
 }
 
 // TestSlackIngestMissingStore verifies error when store doesn't exist.
@@ -245,7 +238,7 @@ func TestSlackIngestMissingStore(t *testing.T) {
 
 	// Check if nexus has Slack config
 	if !hasSlackConfig(nexusDir) {
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
 	}
 
 	// Run ingest with nonexistent store
@@ -394,7 +387,7 @@ type testEnvSetup struct {
 	TmpConfigDir string // Temp XDG_CONFIG_HOME directory
 }
 
-// setupTempDirWithSlackConfig creates a temp directory with sources.json and a temp global config.
+// setupTempDirWithSlackConfig creates a temp directory with sources.yml and a temp global config.
 // Returns paths for cleanup. The caller is responsible for cleanup with os.RemoveAll.
 func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 	t.Helper()
@@ -408,7 +401,7 @@ func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 	nexusDir := getNexusDir(t)
 	if !hasSlackConfig(nexusDir) {
 		os.RemoveAll(tmpDir)
-		t.Skip("No slack.channels configured in nexus sources.json, skipping test")
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
 	}
 
 	// Create .bipartite directory structure (required for FindRepository)
@@ -418,15 +411,15 @@ func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 		t.Fatalf("failed to create .bipartite dir: %v", err)
 	}
 
-	// Copy sources.json
-	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.json"))
+	// Copy sources.yml
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.yml"))
 	if err != nil {
 		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to read sources.json: %v", err)
+		t.Fatalf("failed to read sources.yml: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), sourcesData, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), sourcesData, 0644); err != nil {
 		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to write sources.json: %v", err)
+		t.Fatalf("failed to write sources.yml: %v", err)
 	}
 
 	// Create temp config directory with nexus_path and slack_bot_token
@@ -444,8 +437,8 @@ func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 
 	// Get slack_bot_token from current config
 	slackToken := config.GetSlackBotToken()
-	cfgJSON := fmt.Sprintf(`{"nexus_path": %q, "slack_bot_token": %q}`, tmpDir, slackToken)
-	if err := os.WriteFile(filepath.Join(configDir, "config.json"), []byte(cfgJSON), 0644); err != nil {
+	cfgYAML := fmt.Sprintf("nexus_path: %s\nslack_bot_token: %s\n", tmpDir, slackToken)
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
 		os.RemoveAll(tmpDir)
 		os.RemoveAll(tmpConfigDir)
 		t.Fatalf("failed to write config: %v", err)
