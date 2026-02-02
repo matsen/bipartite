@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/matsen/bipartite/internal/config"
 	"gopkg.in/yaml.v3"
 )
 
@@ -50,7 +51,7 @@ func StatePath(nexusPath string) string {
 // sourcesYAML is the intermediate struct for parsing sources.yml.
 // It handles the mixed array format where entries can be strings or objects.
 type sourcesYAML struct {
-	Slack    interface{}       `yaml:"slack"`
+	Slack    SlackConfig       `yaml:"slack"`
 	Boards   map[string]string `yaml:"boards"`
 	Context  map[string]string `yaml:"context"`
 	Code     []interface{}     `yaml:"code"`
@@ -71,11 +72,15 @@ func LoadSources(nexusPath string) (*Sources, error) {
 	}
 
 	sources := &Sources{
+		Slack:   raw.Slack,
 		Boards:  raw.Boards,
 		Context: raw.Context,
 	}
 
 	// Initialize maps if nil
+	if sources.Slack.Channels == nil {
+		sources.Slack.Channels = make(map[string]SlackChannelConfig)
+	}
 	if sources.Boards == nil {
 		sources.Boards = make(map[string]string)
 	}
@@ -358,7 +363,7 @@ func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 	// Check writing repos first
 	for _, entry := range sources.Writing {
 		if entry.Repo == orgRepo {
-			writingPath := expandPath(cfg.Paths.Writing)
+			writingPath := config.ExpandTilde(cfg.Paths.Writing)
 			return filepath.Join(writingPath, repoName), true
 		}
 	}
@@ -366,7 +371,7 @@ func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 	// Check code repos
 	for _, entry := range sources.Code {
 		if entry.Repo == orgRepo {
-			codePath := expandPath(cfg.Paths.Code)
+			codePath := config.ExpandTilde(cfg.Paths.Code)
 			return filepath.Join(codePath, repoName), true
 		}
 	}
@@ -387,18 +392,6 @@ func GetRepoContextPath(nexusPath, orgRepo string) string {
 		return filepath.Join(nexusPath, relPath)
 	}
 	return ""
-}
-
-// expandPath expands ~ to home directory.
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[2:])
-	}
-	return path
 }
 
 // RepoInCategory checks if a repo is in a specific category (code or writing).

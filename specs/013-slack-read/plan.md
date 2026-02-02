@@ -107,14 +107,14 @@ tests/
 
 ### R3: Channel Configuration
 
-**Decision**: Add `slack.channels` section to sources.json
+**Decision**: Add `slack.channels` section to sources.yml
 
 **Rationale**:
-- Follows existing pattern of configuring repos, boards, context in sources.json
+- Follows existing pattern of configuring repos, boards, context in sources.yml
 - Allows specifying channel name, ID, and purpose
 - IDs required because Slack API uses IDs, not names
 
-**Configuration format** (add to sources.json):
+**Configuration format** (add to sources.yml):
 ```json
 {
   "slack": {

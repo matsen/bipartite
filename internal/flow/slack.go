@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/config"
-	"gopkg.in/yaml.v3"
 )
 
 // ErrSlackNotInChannel is returned when the bot is not a member of the channel.
@@ -69,12 +68,6 @@ type HistoryResponse struct {
 type Period struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
-}
-
-// SlackChannelConfig is a configured Slack channel from sources.yml.
-type SlackChannelConfig struct {
-	ID      string `json:"id" yaml:"id"`
-	Purpose string `json:"purpose" yaml:"purpose"`
 }
 
 // ChannelsResponse is the JSON output for bip slack channels.
@@ -471,26 +464,16 @@ func parseSlackTimestamp(ts string) (time.Time, error) {
 
 // LoadSlackChannels loads Slack channel configuration from sources.yml in the given nexus directory.
 func LoadSlackChannels(nexusPath string) (map[string]SlackChannelConfig, error) {
-	data, err := os.ReadFile(SourcesPath(nexusPath))
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading sources.yml: %w", err)
+		return nil, err
 	}
 
-	// Parse into a struct to extract the slack section
-	var sourcesConfig struct {
-		Slack struct {
-			Channels map[string]SlackChannelConfig `yaml:"channels"`
-		} `yaml:"slack"`
-	}
-	if err := yaml.Unmarshal(data, &sourcesConfig); err != nil {
-		return nil, fmt.Errorf("parsing sources.yml: %w", err)
-	}
-
-	if len(sourcesConfig.Slack.Channels) == 0 {
+	if len(sources.Slack.Channels) == 0 {
 		return nil, fmt.Errorf("no 'slack.channels' section in sources.yml")
 	}
 
-	return sourcesConfig.Slack.Channels, nil
+	return sources.Slack.Channels, nil
 }
 
 // GetSlackChannel returns the configuration for a specific channel from the given nexus directory.

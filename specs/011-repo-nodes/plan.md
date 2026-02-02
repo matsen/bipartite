@@ -42,7 +42,7 @@ Extend the bipartite knowledge graph to include **projects** (first-class nodes 
 **Clarifications Applied** (from user):
 - All 3 phases in scope
 - No `bip migrate` command; existing edges updated manually in nexus
-- Use separate `projects.jsonl`/`repos.jsonl` (simpler than sources.json integration)
+- Use separate `projects.jsonl`/`repos.jsonl` (simpler than sources.yml integration)
 - ID collision → error (no auto-suffix)
 
 ## Project Structure

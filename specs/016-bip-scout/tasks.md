@@ -190,5 +190,5 @@ T009 (US1 test) | T013 (US4 config integration tests) | T014 (US2 format tests) 
 - All SSH connections route through optional ProxyJump host
 - Bounded semaphore (5) prevents connection flooding
 - Single SSH session per server (FR-009)
-- `servers.yml` lives in nexus directory (CWD), discovered same as `sources.json`
+- `servers.yml` lives in nexus directory (CWD), discovered same as `sources.yml`
 - Exit codes: 0 (success), 1 (system error), 2 (config error) per cli.md contract

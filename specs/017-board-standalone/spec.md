@@ -17,7 +17,7 @@ Many board items are tactical (bug fixes, refactors, active PRs) and don't need 
 
 ## Changes
 
-### 1. New boards mapping format in sources.json
+### 1. New boards mapping format in sources.yml
 
 **Before** (board → bead_id):
 ```json
@@ -71,7 +71,7 @@ A user wants to add a GitHub issue to a project board without specifying which b
 
 **Acceptance Scenarios**:
 
-1. **Given** a repo with a channel configured in sources.json, **When** the user runs `bip board add dasm2-experiments#207`, **Then** the issue is added to the board mapped to that channel.
+1. **Given** a repo with a channel configured in sources.yml, **When** the user runs `bip board add dasm2-experiments#207`, **Then** the issue is added to the board mapped to that channel.
 2. **Given** a repo without a channel, **When** the user runs `bip board add myrepo#42`, **Then** an error is shown suggesting `--to` flag.
 3. **Given** any repo, **When** the user runs `bip board add myrepo#42 --to matsengrp/30`, **Then** the issue is added to the explicit board.
 
@@ -98,7 +98,7 @@ A user wants cross-board visibility of all active work.
 
 ### Configuration Requirements
 
-- **CR-001**: sources.json `boards` field MUST map channel names to board keys.
+- **CR-001**: sources.yml `boards` field MUST map channel names to board keys.
 - **CR-002**: Repos MUST have `channel` field in code/writing arrays to use auto-resolution.
 
 ## Success Criteria

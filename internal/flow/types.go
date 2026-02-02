@@ -7,10 +7,22 @@ import "time"
 
 // Sources represents the sources.yml configuration file.
 type Sources struct {
+	Slack   SlackConfig       `yaml:"slack"`   // Slack channel configuration
 	Boards  map[string]string `yaml:"boards"`  // "channel" -> "owner/N" board key
 	Context map[string]string `yaml:"context"` // repo -> context file path
 	Code    []RepoEntry       `yaml:"code"`
 	Writing []RepoEntry       `yaml:"writing"`
+}
+
+// SlackConfig represents the slack section of sources.yml.
+type SlackConfig struct {
+	Channels map[string]SlackChannelConfig `yaml:"channels"`
+}
+
+// SlackChannelConfig is a configured Slack channel from sources.yml.
+type SlackChannelConfig struct {
+	ID      string `json:"id" yaml:"id"`
+	Purpose string `json:"purpose" yaml:"purpose"`
 }
 
 // RepoEntry represents a repository entry in sources.yml.

@@ -45,7 +45,7 @@ As a user, I want to see which Slack channels are configured and accessible so I
 
 **Acceptance Scenarios**:
 
-1. **Given** channels configured in sources.json, **When** user runs `bip slack channels`, **Then** all configured channels are listed in JSON format with name, ID, and purpose.
+1. **Given** channels configured in sources.yml, **When** user runs `bip slack channels`, **Then** all configured channels are listed in JSON format with name, ID, and purpose.
 
 2. **Given** channels configured, **When** user runs `bip slack channels --human`, **Then** channels are displayed in a human-readable table format.
 
@@ -109,7 +109,7 @@ As an AI agent running a goal-tracking skill, I want to programmatically fetch g
 - **FR-004**: System MUST resolve user IDs to display names in the output, using a persistent .gitignored file cache (team membership is stable; no TTL required).
 - **FR-005**: System MUST support both JSON (default) and human-readable output formats.
 - **FR-006**: System MUST provide a command to list all configured channels.
-- **FR-007**: System MUST read channel configuration from the existing sources.json file.
+- **FR-007**: System MUST read channel configuration from the existing sources.yml file.
 - **FR-008**: System MUST authenticate using the slack_bot_token from global config.
 - **FR-009**: System MUST provide clear error messages when channels are inaccessible due to bot membership.
 - **FR-010**: System MUST include message timestamp, user name, date, and text in output.
@@ -163,6 +163,6 @@ As an AI agent running a goal-tracking skill, I want to programmatically fetch g
 ## Assumptions
 
 - The slack_bot_token in global config is already set up by users (same as existing posting functionality).
-- Channel configuration already exists in sources.json for posting; this feature reuses that configuration.
+- Channel configuration already exists in sources.yml for posting; this feature reuses that configuration.
 - Bot has already been invited to channels of interest (this is a one-time setup step users must perform).
 - The Slack API rate limits are sufficient for typical usage patterns (occasional queries, not continuous polling).

@@ -139,6 +139,6 @@ WHERE target_id = 'concept:X';
 | Question | Resolution |
 |----------|------------|
 | ID collision handling | Fail with error; no auto-suffix |
-| sources.json integration | Deferred; use separate JSONL files |
+| sources.yml integration | Deferred; use separate JSONL files |
 | Migration script | Not needed; user handles manually |
 | Bulk import | Out of scope for this PR |

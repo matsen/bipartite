@@ -151,7 +151,7 @@ bp s2 gaps --min-citations 2 --human
 
 ### API Key (Optional)
 
-For higher rate limits (1 req/sec vs 100 req/5min), add to `~/.config/bip/config.json`:
+For higher rate limits (1 req/sec vs 100 req/5min), add to `~/.config/bip/config.yml`:
 
 ```json
 {

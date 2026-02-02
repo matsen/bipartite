@@ -134,7 +134,7 @@ A researcher wants to find an author and their publications.
 ### Non-Functional Requirements
 
 - **NFR-001**: System MUST respect ASTA rate limits (10 req/sec)
-- **NFR-002**: System MUST read asta_api_key from global config (~/.config/bip/config.json)
+- **NFR-002**: System MUST read asta_api_key from global config (~/.config/bip/config.yml)
 - **NFR-003**: System MUST provide clear error messages for auth failures
 
 ## Key Entities

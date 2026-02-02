@@ -8,9 +8,9 @@
 ## Overview
 
 flowc is a CLI for managing GitHub activity and project boards, centered around a "nexus" directory containing:
-- `sources.json` - Repository list, board mappings, and channel configuration
+- `sources.yml` - Repository list, board mappings, and channel configuration
 - `.beads/issues.jsonl` - Local issue tracker (beads) with priorities and GitHub references
-- `config.json` - Local path configuration (code directory, writing directory)
+- `config.yml` - Local path configuration (code directory, writing directory)
 - `context/` - Project context files for issue review
 
 The port will add these commands directly to bip (e.g., `bip checkin`, `bip board`, `bip spawn`).
@@ -65,7 +65,7 @@ A researcher wants to review a specific GitHub issue or PR with full context. Th
 
 1. **Given** a valid issue reference `org/repo#123`, **When** user runs spawn, **Then** a tmux window is created with the issue context
 2. **Given** a GitHub URL, **When** user runs spawn, **Then** URL is parsed and tmux window is created
-3. **Given** a repo with context defined in sources.json, **When** user runs spawn, **Then** project context is prepended to the prompt
+3. **Given** a repo with context defined in sources.yml, **When** user runs spawn, **Then** project context is prepended to the prompt
 4. **Given** `--prompt` without issue reference, **When** user runs spawn, **Then** an adhoc tmux window is created with the prompt as context
 
 ---
@@ -122,13 +122,13 @@ A researcher wants to add, move, or remove issues from their GitHub project boar
 
 ### Functional Requirements
 
-#### Configuration (sources.json)
+#### Configuration (sources.yml)
 
-- **FR-001**: System MUST read repository list from `sources.json` in current directory
+- **FR-001**: System MUST read repository list from `sources.yml` in current directory
 - **FR-002**: System MUST support repos as either strings (`"org/repo"`) or objects (`{"repo": "org/repo", "channel": "dasm2"}`)
-- **FR-003**: System MUST read board mappings from `sources.json` `boards` key
-- **FR-004**: System MUST read project context paths from `sources.json` `context` key
-- **FR-005**: System MUST validate nexus directory (error if sources.json not found)
+- **FR-003**: System MUST read board mappings from `sources.yml` `boards` key
+- **FR-004**: System MUST read project context paths from `sources.yml` `context` key
+- **FR-005**: System MUST validate nexus directory (error if sources.yml not found)
 
 #### Beads Integration
 
@@ -142,7 +142,7 @@ A researcher wants to add, move, or remove issues from their GitHub project boar
 - **FR-010**: System MUST implement ball-in-my-court filtering (see Ball-in-Court Logic below)
 - **FR-011**: System MUST support `--since` flag for time-based filtering (e.g., 2d, 12h, 1w)
 - **FR-012**: System MUST support `--repo` flag to filter to single repo
-- **FR-013**: System MUST support `--category` flag to filter by sources.json category
+- **FR-013**: System MUST support `--category` flag to filter by sources.yml category
 - **FR-014**: System MUST support `--all` flag to disable ball-in-my-court filtering
 - **FR-015**: System MUST support `--summarize` flag to generate LLM summaries
 
@@ -262,7 +262,7 @@ internal/flow/
   spawn/            # spawn command
   digest/           # digest command
   tree/             # tree command
-  config/           # sources.json, beads loading
+  config/           # sources.yml, beads loading
   github/           # GitHub API interactions
   llm/              # LLM prompt building and response parsing
 ```
@@ -270,7 +270,7 @@ internal/flow/
 ### Key Data Structures
 
 ```go
-// From sources.json
+// From sources.yml
 type Sources struct {
     Boards  map[string]string `json:"boards"`  // "org/N" -> bead_id
     Context map[string]string `json:"context"` // repo -> context file path
@@ -297,7 +297,7 @@ type Bead struct {
 
 ## Migration Strategy
 
-1. Implement core data loading (sources.json, beads) first
+1. Implement core data loading (sources.yml, beads) first
 2. Port ball-in-my-court logic with comprehensive tests
 3. Implement commands in priority order: checkin, board sync, spawn, digest, tree
 4. Run Python and Go implementations side-by-side for validation

@@ -32,7 +32,7 @@ bp init
 ```
 .bipartite/
 ├── refs.jsonl      # Empty file
-├── config.json     # Default config
+├── config.yml     # Default config
 └── cache/          # Empty directory (gitignored)
 ```
 
@@ -437,7 +437,7 @@ Available on all commands:
 
 ## Global Configuration
 
-Repository location is configured in `~/.config/bip/config.json`:
+Repository location is configured in `~/.config/bip/config.yml`:
 
 ```json
 {

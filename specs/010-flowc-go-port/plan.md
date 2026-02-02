@@ -11,7 +11,7 @@ Port the flowc Python CLI to Go, integrating it directly into the bip CLI (e.g.,
 
 **Language/Version**: Go 1.25.5
 **Primary Dependencies**: spf13/cobra (CLI), existing bip infrastructure
-**Storage**: JSONL (sources.json, .beads/issues.jsonl) - read-only for this feature
+**Storage**: JSONL (sources.yml, .beads/issues.jsonl) - read-only for this feature
 **Testing**: go test with table-driven tests, porting all 110 Python tests
 **Target Platform**: macOS and Linux
 **Project Type**: Single project (extends existing bip CLI)
@@ -27,7 +27,7 @@ Port the flowc Python CLI to Go, integrating it directly into the bip CLI (e.g.,
 |-----------|--------|-------|
 | I. Agent-First Design | ✅ PASS | CLI-first, JSON output supported |
 | II. Git-Versionable | ✅ PASS | Reads existing JSONL files, no new persistent state |
-| III. Fail-Fast | ✅ PASS | Clear errors for missing sources.json, invalid refs |
+| III. Fail-Fast | ✅ PASS | Clear errors for missing sources.yml, invalid refs |
 | IV. Real Testing | ✅ PASS | Porting real Python tests with real fixture data |
 | V. Clean Architecture | ✅ PASS | Follows existing bip patterns |
 | VI. Simplicity | ✅ PASS | Uses gh CLI wrapper (existing), minimal deps |
@@ -63,7 +63,7 @@ cmd/bip/
 
 internal/flow/
 ├── types.go             # Shared types (Sources, Bead, RepoEntry)
-├── config.go            # sources.json parsing
+├── config.go            # sources.yml parsing
 ├── config_test.go       # Config tests (12 from Python)
 ├── beads.go             # .beads/issues.jsonl loading
 ├── duration.go          # Duration parsing (2d, 12h, 1w)

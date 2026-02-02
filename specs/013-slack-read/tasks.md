@@ -41,7 +41,7 @@ This project uses:
 
 - [x] T005 Implement GetUsers() API call for user ID to name mapping in internal/flow/slack.go
 - [x] T006 Implement GetChannelHistory() API call for message fetching in internal/flow/slack.go
-- [x] T007 [P] Add LoadChannelConfig() to read channels from sources.json in internal/flow/slack.go
+- [x] T007 [P] Add LoadChannelConfig() to read channels from sources.yml in internal/flow/slack.go
 - [x] T008 Create parent `bip slack` command in cmd/bip/slack.go (following s2.go pattern)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
