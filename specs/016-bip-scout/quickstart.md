@@ -85,4 +85,4 @@ beetle01    online  0.1%    0.9%    0.00, 0.14, 0.09   0% (avg of 4)     0% (16/
 - **"SSH agent not running"**: Run `eval $(ssh-agent) && ssh-add`
 - **"Cannot reach proxy"**: Check VPN connection and that the proxy host is accessible
 - **Server shows "offline"**: Verify `ssh <servername>` works from your terminal
-- **"servers.yml not found"**: Run from your nexus directory (contains `sources.json`)
+- **"servers.yml not found"**: Run from your nexus directory (contains `sources.yml`)

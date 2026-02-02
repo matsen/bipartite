@@ -1,11 +1,11 @@
 # Configuration Guide
 
-bip uses a global config file and per-repository config files.
+bip uses a global config file and per-repository config files, all in YAML format.
 
 ## Configuration Files
 
-1. **Global config file** - `~/.config/bip/config.json`
-2. **Per-repository config** - `.bipartite/config.json` (for repo-specific settings)
+1. **Global config file** - `~/.config/bip/config.yml`
+2. **Per-repository config** - `.bipartite/config.yml` (for repo-specific settings)
 
 ## Global Configuration
 
@@ -14,24 +14,21 @@ The global config file stores settings that apply across all bip commands, regar
 ### Location
 
 The config file follows the XDG Base Directory specification:
-- Default: `~/.config/bip/config.json`
+- Default: `~/.config/bip/config.yml`
 - Custom: Set `XDG_CONFIG_HOME` to change the base directory
 
 ### Creating the Config File
 
 ```bash
 mkdir -p ~/.config/bip
-cat > ~/.config/bip/config.json << 'EOF'
-{
-  "nexus_path": "~/re/nexus",
-  "s2_api_key": "your-semantic-scholar-key",
-  "asta_api_key": "your-asta-key",
-  "github_token": "ghp_your-github-token",
-  "slack_bot_token": "xoxb-your-slack-bot-token",
-  "slack_webhooks": {
-    "channel-name": "https://hooks.slack.com/services/..."
-  }
-}
+cat > ~/.config/bip/config.yml << 'EOF'
+nexus_path: ~/re/nexus
+s2_api_key: your-semantic-scholar-key
+asta_api_key: your-asta-key
+github_token: ghp_your-github-token
+slack_bot_token: xoxb-your-slack-bot-token
+slack_webhooks:
+  channel-name: https://hooks.slack.com/services/...
 EOF
 ```
 
@@ -62,16 +59,14 @@ bip search "phylogenetics"  # Uses nexus_path from config
 
 ## Per-Repository Configuration
 
-Each bipartite repository has its own config file at `.bipartite/config.json`. This file stores repository-specific settings that don't belong in the global config.
+Each bipartite repository has its own config file at `.bipartite/config.yml`. This file stores repository-specific settings that don't belong in the global config.
 
 ### Example
 
-```json
-{
-  "pdf_root": "~/papers",
-  "pdf_reader": "skim",
-  "papers_repo": "~/re/bip-papers"
-}
+```yaml
+pdf_root: ~/papers
+pdf_reader: skim
+papers_repo: ~/re/bip-papers
 ```
 
 ### Options
@@ -86,7 +81,7 @@ Each bipartite repository has its own config file at `.bipartite/config.json`. T
 
 - The config file may contain API keys - ensure proper file permissions:
   ```bash
-  chmod 600 ~/.config/bip/config.json
+  chmod 600 ~/.config/bip/config.yml
   ```
 - Never commit API keys to version control
 
@@ -99,9 +94,9 @@ If you see this message, bip couldn't find a repository. The message includes se
 ```
 No bipartite repository found.
 
-Tip: Create ~/.config/bip/config.json to set a default nexus:
+Tip: Create ~/.config/bip/config.yml to set a default nexus:
   mkdir -p ~/.config/bip
-  echo '{"nexus_path": "~/re/nexus"}' > ~/.config/bip/config.json
+  echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
 ```
 
 ### Checking Current Configuration
@@ -110,7 +105,7 @@ To verify your config is being read correctly:
 
 ```bash
 # Check if config file exists
-cat ~/.config/bip/config.json
+cat ~/.config/bip/config.yml
 
 # Test by running a simple command
 bip --version
@@ -120,10 +115,8 @@ bip --version
 
 The `~` character is automatically expanded to your home directory in the config file:
 
-```json
-{
-  "nexus_path": "~/re/nexus"
-}
+```yaml
+nexus_path: ~/re/nexus
 ```
 
 This is equivalent to `/Users/yourname/re/nexus` (or `/home/yourname/re/nexus` on Linux).

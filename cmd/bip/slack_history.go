@@ -24,7 +24,7 @@ var slackHistoryCmd = &cobra.Command{
 	Short: "Fetch message history from a Slack channel",
 	Long: `Fetch recent messages from a configured Slack channel.
 
-The channel must be configured in sources.json under slack.channels.
+The channel must be configured in sources.yml under slack.channels.
 The bot must be a member of the channel to read messages.
 
 Examples:
@@ -155,9 +155,9 @@ func outputSlackError(exitCode int, errorCode, message string) error {
 	suggestion := ""
 	switch errorCode {
 	case "missing_token":
-		suggestion = "Add slack_bot_token to ~/.config/bip/config.json with a bot token that has channels:history, channels:read, and users:read scopes"
+		suggestion = "Add slack_bot_token to ~/.config/bip/config.yml with a bot token that has channels:history, channels:read, and users:read scopes"
 	case "channel_not_found":
-		suggestion = "Check that the channel is configured in sources.json under slack.channels"
+		suggestion = "Check that the channel is configured in sources.yml under slack.channels"
 	case "not_member":
 		suggestion = "Invite the bot to the channel with /invite @bot-name"
 	}

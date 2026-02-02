@@ -106,7 +106,7 @@ Create `narrative/{channel}.md` following the template above.
 
 ### "No repos configured for channel"
 
-Add `"channel": "{channel}"` to repos in `sources.json`.
+Add `"channel": "{channel}"` to repos in `sources.yml`.
 
 ### Empty output
 

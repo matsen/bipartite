@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/matsen/bipartite/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 // withTempWorkDir creates a temp directory and changes to it for the test.
@@ -55,8 +56,8 @@ func TestGetWebhookURL(t *testing.T) {
 				"dasm2": "https://hooks.slack.com/test",
 			},
 		}
-		data, _ := json.Marshal(cfgData)
-		os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+		data, _ := yaml.Marshal(cfgData)
+		os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 		url := GetWebhookURL("dasm2")
 		if url != "https://hooks.slack.com/test" {
@@ -117,8 +118,8 @@ func TestNewSlackClient_WithToken(t *testing.T) {
 	cfgData := map[string]interface{}{
 		"slack_bot_token": "xoxb-test-token",
 	}
-	data, _ := json.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.json"), data, 0644)
+	data, _ := yaml.Marshal(cfgData)
+	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
 
 	client, err := NewSlackClient()
 	if err != nil {
@@ -235,10 +236,10 @@ func TestParseSlackTimestamp_Errors(t *testing.T) {
 func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Write invalid sources.json (missing slack section)
-	sourcesContent := `{"boards": {}}`
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("failed to write sources.json: %v", err)
+	// Write invalid sources.yml (missing slack section)
+	sourcesContent := `boards: {}`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
 	}
 
 	_, err := LoadSlackChannels(tmpDir)
@@ -250,17 +251,18 @@ func TestLoadSlackChannels_InvalidFormat(t *testing.T) {
 func TestLoadSlackChannels_Valid(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Write valid sources.json
-	sourcesContent := `{
-		"slack": {
-			"channels": {
-				"fortnight-goals": {"id": "C123", "purpose": "goals"},
-				"fortnight-feats": {"id": "C456", "purpose": "retrospectives"}
-			}
-		}
-	}`
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("failed to write sources.json: %v", err)
+	// Write valid sources.yml
+	sourcesContent := `slack:
+  channels:
+    fortnight-goals:
+      id: C123
+      purpose: goals
+    fortnight-feats:
+      id: C456
+      purpose: retrospectives
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
 	}
 
 	channels, err := LoadSlackChannels(tmpDir)
@@ -280,16 +282,15 @@ func TestLoadSlackChannels_Valid(t *testing.T) {
 func TestGetSlackChannel_NotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Write valid sources.json with different channels
-	sourcesContent := `{
-		"slack": {
-			"channels": {
-				"existing-channel": {"id": "C123", "purpose": "test"}
-			}
-		}
-	}`
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.json"), []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("failed to write sources.json: %v", err)
+	// Write valid sources.yml with different channels
+	sourcesContent := `slack:
+  channels:
+    existing-channel:
+      id: C123
+      purpose: test
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
 	}
 
 	_, err := GetSlackChannel(tmpDir, "nonexistent")

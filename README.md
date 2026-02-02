@@ -41,7 +41,7 @@ git clone https://github.com/YOUR_USERNAME/nexus ~/re/nexus
 
 ```bash
 mkdir -p ~/.config/bip
-echo '{"nexus_path": "~/re/nexus"}' > ~/.config/bip/config.json
+echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
 ```
 
 4. **Build the index and try it out**:
@@ -58,14 +58,12 @@ See the [Getting Started guide](https://matsen.github.io/bipartite/guides/gettin
 
 For full functionality, add API keys ([Semantic Scholar](https://www.semanticscholar.org/product/api#api-key), [Asta](https://allenai.org/asta/resources/mcp), [GitHub](https://github.com/settings/tokens), [Slack](https://api.slack.com/apps)) to your config:
 
-```json
-{
-  "nexus_path": "~/re/nexus",
-  "s2_api_key": "your-key",
-  "asta_api_key": "your-key",
-  "github_token": "ghp_...",
-  "slack_bot_token": "xoxb-..."
-}
+```yaml
+nexus_path: ~/re/nexus
+s2_api_key: your-key
+asta_api_key: your-key
+github_token: ghp_...
+slack_bot_token: xoxb-...
 ```
 
 See the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/) for all options.

@@ -312,7 +312,7 @@ bip scout --server beetle01  # Single server
 
 4. **Per-GPU detail in JSON, aggregated in human table**: JSON preserves per-GPU granularity (array of GPUInfo). The human table aggregates (average utilization, summed memory) for readability.
 
-5. **`servers.yml` in nexus directory**: The config lives alongside `sources.json`, `config.json`, and other nexus-level configuration. Discovered via the same nexus directory validation pattern used by `checkin`, `board`, etc.
+5. **`servers.yml` in nexus directory**: The config lives alongside `sources.yml`, `config.yml`, and other nexus-level configuration. Discovered via the same nexus directory validation pattern used by `checkin`, `board`, etc.
 
 6. **SSH agent only — no key_file config**: The spec and clarifications say to use standard SSH agent + `~/.ssh/config`. We don't add `username`, `key_file`, or `options` fields to `servers.yml` (simplification from the Python version). The native Go SSH client connects to the SSH agent via `SSH_AUTH_SOCK`.
 

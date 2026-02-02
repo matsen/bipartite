@@ -14,7 +14,7 @@ Bipartite has three main pieces: a **nexus** (your data), the **bip CLI** (opera
 │  │ │            │ │    │   edges.jsonl (graph)       │   │
 │  │ │ /bip       │ │    │   concepts.jsonl            │   │
 │  │ │ /bip.digest│ │    │   servers.yml (scout)       │   │
-│  │ │ /bip.spawn │ │    │   sources.json (GitHub)     │   │
+│  │ │ /bip.spawn │ │    │   sources.yml (GitHub)     │   │
 │  │ └─────┬──────┘ │    │                             │   │
 │  └───────┼────────┘    │   .bipartite/ (gitignored)  │   │
 │          │             │   └── cache/refs.db         │   │
@@ -45,8 +45,8 @@ my-nexus/
 ├── concepts.jsonl        # Topic definitions
 │
 ├── servers.yml           # Remote servers for bip scout
-├── sources.json          # GitHub repos for activity tracking
-├── config.json           # Local settings (PDF paths, etc.)
+├── sources.yml          # GitHub repos for activity tracking
+├── config.yml           # Local settings (PDF paths, etc.)
 │
 ├── context/              # Project context files
 ├── narrative/            # Generated digest output
@@ -62,7 +62,7 @@ The [nexus-template](https://github.com/matsen/nexus-template) provides a ready-
 
 ## The bip CLI
 
-`bip` is a standalone Go binary. With `nexus_path` configured in `~/.config/bip/config.json`, commands work from any directory:
+`bip` is a standalone Go binary. With `nexus_path` configured in `~/.config/bip/config.yml`, commands work from any directory:
 
 ```bash
 bip search "phylogenetics"    # Search papers
@@ -164,7 +164,7 @@ User: /bip.digest dasm
          │
          ▼
 ┌─────────────────┐     ┌─────────────────┐
-│  Claude Code    │────▶│  sources.json   │
+│  Claude Code    │────▶│  sources.yml   │
 │  (skill loads   │     │  (repo list)    │
 │   context)      │     └─────────────────┘
 └─────────────────┘

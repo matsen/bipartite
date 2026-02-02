@@ -5,19 +5,31 @@ package flow
 
 import "time"
 
-// Sources represents the sources.json configuration file.
+// Sources represents the sources.yml configuration file.
 type Sources struct {
-	Boards  map[string]string `json:"boards"`  // "channel" -> "owner/N" board key
-	Context map[string]string `json:"context"` // repo -> context file path
-	Code    []RepoEntry       `json:"code"`
-	Writing []RepoEntry       `json:"writing"`
+	Slack   SlackConfig       `yaml:"slack"`   // Slack channel configuration
+	Boards  map[string]string `yaml:"boards"`  // "channel" -> "owner/N" board key
+	Context map[string]string `yaml:"context"` // repo -> context file path
+	Code    []RepoEntry       `yaml:"code"`
+	Writing []RepoEntry       `yaml:"writing"`
 }
 
-// RepoEntry represents a repository entry in sources.json.
+// SlackConfig represents the slack section of sources.yml.
+type SlackConfig struct {
+	Channels map[string]SlackChannelConfig `yaml:"channels"`
+}
+
+// SlackChannelConfig is a configured Slack channel from sources.yml.
+type SlackChannelConfig struct {
+	ID      string `json:"id" yaml:"id"`
+	Purpose string `json:"purpose" yaml:"purpose"`
+}
+
+// RepoEntry represents a repository entry in sources.yml.
 // It can be either a string (repo name only) or an object with channel info.
 type RepoEntry struct {
-	Repo    string `json:"repo"`
-	Channel string `json:"channel,omitempty"`
+	Repo    string `yaml:"repo"`
+	Channel string `yaml:"channel,omitempty"`
 }
 
 // Bead represents an issue in .beads/issues.jsonl.
@@ -151,13 +163,13 @@ type DigestItem struct {
 // TakehomeSummary maps GitHub refs to their take-home summaries.
 type TakehomeSummary map[string]string
 
-// Config represents config.json settings.
+// Config represents config.yml settings.
 type Config struct {
-	Paths ConfigPaths `json:"paths"`
+	Paths ConfigPaths `yaml:"paths"`
 }
 
-// ConfigPaths contains path settings from config.json.
+// ConfigPaths contains path settings from config.yml.
 type ConfigPaths struct {
-	Code    string `json:"code"`
-	Writing string `json:"writing"`
+	Code    string `yaml:"code"`
+	Writing string `yaml:"writing"`
 }

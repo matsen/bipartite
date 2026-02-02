@@ -1,26 +1,28 @@
 package flow
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/matsen/bipartite/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 // File paths relative to the nexus directory.
 const (
-	SourcesFile = "sources.json"
+	SourcesFile = "sources.yml"
 	BeadsDir    = ".beads"
 	BeadsFile   = "issues.jsonl"
 	StateFile   = ".last-checkin.json"
 	CacheFile   = ".flow-cache.json"
-	ConfigFile  = "config.json"
+	ConfigFile  = "config.yml"
 )
 
-// Default paths when config.json doesn't exist.
+// Default paths when config.yml doesn't exist.
 const (
 	DefaultCodePath    = "~/re"
 	DefaultWritingPath = "~/writing"
@@ -28,15 +30,15 @@ const (
 
 // Errors.
 var (
-	ErrNoRepos = errors.New("no repos found in sources.json")
+	ErrNoRepos = errors.New("no repos found in sources.yml")
 )
 
-// SourcesPath returns the path to sources.json in the given nexus directory.
+// SourcesPath returns the path to sources.yml in the given nexus directory.
 func SourcesPath(nexusPath string) string {
 	return filepath.Join(nexusPath, SourcesFile)
 }
 
-// ConfigPath returns the path to config.json in the given nexus directory.
+// ConfigPath returns the path to config.yml in the given nexus directory.
 func ConfigPath(nexusPath string) string {
 	return filepath.Join(nexusPath, ConfigFile)
 }
@@ -46,87 +48,92 @@ func StatePath(nexusPath string) string {
 	return filepath.Join(nexusPath, StateFile)
 }
 
-// LoadSources loads and parses sources.json from the given nexus directory.
+// sourcesYAML is the intermediate struct for parsing sources.yml.
+// It handles the mixed array format where entries can be strings or objects.
+type sourcesYAML struct {
+	Slack    SlackConfig       `yaml:"slack"`
+	Boards   map[string]string `yaml:"boards"`
+	Context  map[string]string `yaml:"context"`
+	Code     []interface{}     `yaml:"code"`
+	Writing  []interface{}     `yaml:"writing"`
+	Archived []interface{}     `yaml:"archived"`
+}
+
+// LoadSources loads and parses sources.yml from the given nexus directory.
 func LoadSources(nexusPath string) (*Sources, error) {
 	data, err := os.ReadFile(SourcesPath(nexusPath))
 	if err != nil {
-		return nil, fmt.Errorf("reading sources.json: %w", err)
+		return nil, fmt.Errorf("reading sources.yml: %w", err)
 	}
 
-	// First, unmarshal into a raw map to handle mixed types
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parsing sources.json: %w", err)
+	var raw sourcesYAML
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parsing sources.yml: %w", err)
 	}
 
 	sources := &Sources{
-		Boards:  make(map[string]string),
-		Context: make(map[string]string),
+		Slack:   raw.Slack,
+		Boards:  raw.Boards,
+		Context: raw.Context,
 	}
 
-	// Parse boards if present
-	if boardsRaw, ok := raw["boards"]; ok {
-		if err := json.Unmarshal(boardsRaw, &sources.Boards); err != nil {
-			return nil, fmt.Errorf("parsing boards: %w", err)
-		}
+	// Initialize maps if nil
+	if sources.Slack.Channels == nil {
+		sources.Slack.Channels = make(map[string]SlackChannelConfig)
+	}
+	if sources.Boards == nil {
+		sources.Boards = make(map[string]string)
+	}
+	if sources.Context == nil {
+		sources.Context = make(map[string]string)
 	}
 
-	// Parse context if present
-	if contextRaw, ok := raw["context"]; ok {
-		if err := json.Unmarshal(contextRaw, &sources.Context); err != nil {
-			return nil, fmt.Errorf("parsing context: %w", err)
-		}
+	// Parse code repos (mixed string/object format)
+	sources.Code, err = parseRepoEntriesYAML(raw.Code)
+	if err != nil {
+		return nil, fmt.Errorf("parsing code repos: %w", err)
 	}
 
-	// Parse code repos
-	if codeRaw, ok := raw["code"]; ok {
-		sources.Code, err = parseRepoEntries(codeRaw)
-		if err != nil {
-			return nil, fmt.Errorf("parsing code repos: %w", err)
-		}
-	}
-
-	// Parse writing repos
-	if writingRaw, ok := raw["writing"]; ok {
-		sources.Writing, err = parseRepoEntries(writingRaw)
-		if err != nil {
-			return nil, fmt.Errorf("parsing writing repos: %w", err)
-		}
+	// Parse writing repos (mixed string/object format)
+	sources.Writing, err = parseRepoEntriesYAML(raw.Writing)
+	if err != nil {
+		return nil, fmt.Errorf("parsing writing repos: %w", err)
 	}
 
 	return sources, nil
 }
 
-// parseRepoEntries parses a JSON array that can contain strings or objects.
-func parseRepoEntries(data json.RawMessage) ([]RepoEntry, error) {
+// parseRepoEntriesYAML parses a YAML array that can contain strings or objects.
+func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 	var entries []RepoEntry
 
-	// Try to unmarshal as array of interfaces first
-	var raw []json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, err
-	}
-
-	for _, item := range raw {
-		// Try string first
-		var str string
-		if err := json.Unmarshal(item, &str); err == nil {
-			entries = append(entries, RepoEntry{Repo: str})
-			continue
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			// Simple string entry: "matsengrp/repo"
+			entries = append(entries, RepoEntry{Repo: v})
+		case map[string]interface{}:
+			// Object entry: {repo: "...", channel: "..."}
+			entry := RepoEntry{}
+			if repo, ok := v["repo"].(string); ok {
+				entry.Repo = repo
+			}
+			if channel, ok := v["channel"].(string); ok {
+				entry.Channel = channel
+			}
+			if entry.Repo == "" {
+				return nil, fmt.Errorf("invalid repo entry: missing 'repo' field")
+			}
+			entries = append(entries, entry)
+		default:
+			return nil, fmt.Errorf("invalid repo entry type: %T", item)
 		}
-
-		// Try object
-		var entry RepoEntry
-		if err := json.Unmarshal(item, &entry); err != nil {
-			return nil, fmt.Errorf("invalid repo entry: %s", string(item))
-		}
-		entries = append(entries, entry)
 	}
 
 	return entries, nil
 }
 
-// LoadAllRepos returns all repos from sources.json in the given nexus directory.
+// LoadAllRepos returns all repos from sources.yml in the given nexus directory.
 func LoadAllRepos(nexusPath string) ([]string, error) {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {
@@ -193,7 +200,7 @@ func LoadReposByChannel(nexusPath, channel string) ([]string, error) {
 	return repos, nil
 }
 
-// ListChannels returns all unique channel names from sources.json.
+// ListChannels returns all unique channel names from sources.yml.
 func ListChannels(nexusPath string) ([]string, error) {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {
@@ -220,7 +227,7 @@ func ListChannels(nexusPath string) ([]string, error) {
 	return channels, nil
 }
 
-// GetDefaultBoard returns the first board from sources.json.
+// GetDefaultBoard returns the first board from sources.yml.
 // Deprecated: Use GetAllBoards or GetBoardForRepo instead.
 func GetDefaultBoard(nexusPath string) (string, error) {
 	sources, err := LoadSources(nexusPath)
@@ -231,10 +238,10 @@ func GetDefaultBoard(nexusPath string) (string, error) {
 	for _, boardKey := range sources.Boards {
 		return boardKey, nil
 	}
-	return "", errors.New("no boards configured in sources.json")
+	return "", errors.New("no boards configured in sources.yml")
 }
 
-// GetAllBoards returns all unique board keys from sources.json.
+// GetAllBoards returns all unique board keys from sources.yml.
 func GetAllBoards(nexusPath string) ([]string, error) {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {
@@ -251,7 +258,7 @@ func GetAllBoards(nexusPath string) ([]string, error) {
 	}
 
 	if len(boards) == 0 {
-		return nil, errors.New("no boards configured in sources.json")
+		return nil, errors.New("no boards configured in sources.yml")
 	}
 
 	return boards, nil
@@ -283,13 +290,13 @@ func GetBoardForRepo(nexusPath, repo string) (string, error) {
 	}
 
 	if channel == "" {
-		return "", fmt.Errorf("repo %s has no channel configured in sources.json", repo)
+		return "", fmt.Errorf("repo %s has no channel configured in sources.yml", repo)
 	}
 
 	// Look up the channel's board
 	boardKey, ok := sources.Boards[channel]
 	if !ok {
-		return "", fmt.Errorf("channel %q has no board mapping in sources.json", channel)
+		return "", fmt.Errorf("channel %q has no board mapping in sources.yml", channel)
 	}
 
 	return boardKey, nil
@@ -304,8 +311,8 @@ func GetBoardsMapping(nexusPath string) (map[string]string, error) {
 	return sources.Boards, nil
 }
 
-// LoadConfig loads config.json from the given nexus directory.
-// Returns defaults if config.json doesn't exist.
+// LoadConfig loads config.yml from the given nexus directory.
+// Returns defaults if config.yml doesn't exist.
 func LoadConfig(nexusPath string) (*Config, error) {
 	cfg := &Config{
 		Paths: ConfigPaths{
@@ -319,11 +326,11 @@ func LoadConfig(nexusPath string) (*Config, error) {
 		return cfg, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("reading config.json: %w", err)
+		return nil, fmt.Errorf("reading config.yml: %w", err)
 	}
 
-	if err := json.Unmarshal(data, cfg); err != nil {
-		return nil, fmt.Errorf("parsing config.json: %w", err)
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("parsing config.yml: %w", err)
 	}
 
 	return cfg, nil
@@ -339,7 +346,7 @@ func ExtractRepoName(orgRepo string) string {
 }
 
 // GetRepoLocalPath maps a GitHub repo (org/name) to its local path.
-// Returns the path and whether the repo was found in sources.json.
+// Returns the path and whether the repo was found in sources.yml.
 func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {
@@ -356,7 +363,7 @@ func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 	// Check writing repos first
 	for _, entry := range sources.Writing {
 		if entry.Repo == orgRepo {
-			writingPath := expandPath(cfg.Paths.Writing)
+			writingPath := config.ExpandTilde(cfg.Paths.Writing)
 			return filepath.Join(writingPath, repoName), true
 		}
 	}
@@ -364,7 +371,7 @@ func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 	// Check code repos
 	for _, entry := range sources.Code {
 		if entry.Repo == orgRepo {
-			codePath := expandPath(cfg.Paths.Code)
+			codePath := config.ExpandTilde(cfg.Paths.Code)
 			return filepath.Join(codePath, repoName), true
 		}
 	}
@@ -373,7 +380,7 @@ func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
 }
 
 // GetRepoContextPath returns the context file path for a repo if defined.
-// Returns empty string if no context is defined for the repo or if sources.json
+// Returns empty string if no context is defined for the repo or if sources.yml
 // cannot be loaded.
 func GetRepoContextPath(nexusPath, orgRepo string) string {
 	sources, err := LoadSources(nexusPath)
@@ -387,21 +394,9 @@ func GetRepoContextPath(nexusPath, orgRepo string) string {
 	return ""
 }
 
-// expandPath expands ~ to home directory.
-func expandPath(path string) string {
-	if strings.HasPrefix(path, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return path
-		}
-		return filepath.Join(home, path[2:])
-	}
-	return path
-}
-
 // RepoInCategory checks if a repo is in a specific category (code or writing).
 // Returns false if the repo is not in the category, if the category is invalid,
-// or if sources.json cannot be loaded.
+// or if sources.yml cannot be loaded.
 func RepoInCategory(nexusPath, repo, category string) bool {
 	sources, err := LoadSources(nexusPath)
 	if err != nil {

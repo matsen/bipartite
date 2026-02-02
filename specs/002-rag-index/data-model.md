@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS embedding_metadata (
 ```
 .bipartite/
 ├── refs.jsonl           # Source of truth (Phase I, unchanged)
-├── config.json          # Configuration (Phase I, unchanged)
+├── config.yml          # Configuration (Phase I, unchanged)
 └── cache/
     ├── refs.db          # Query cache (Phase I) + embedding_metadata table
     └── semantic.gob     # NEW: Vector index (Phase II, GOB-encoded)

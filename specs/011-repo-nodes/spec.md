@@ -441,7 +441,7 @@ The existing `bip viz` command (spec 007) should be extended to:
 
 2. **Bulk import**: ✅ Out of scope for initial implementation.
 
-3. **flowc integration**: ✅ Use separate `projects.jsonl` and `repos.jsonl` files for simplicity. Integration with `sources.json` deferred to issue #30.
+3. **flowc integration**: ✅ Use separate `projects.jsonl` and `repos.jsonl` files for simplicity. Integration with `sources.yml` deferred to issue #30.
 
 4. **Concept auto-suggestion**: ✅ Not needed - AI agents will suggest concepts based on graph queries.
 

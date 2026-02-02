@@ -17,7 +17,7 @@ var digestCmd = &cobra.Command{
 	Short: "Generate activity digest (preview only by default)",
 	Long: `Generate an LLM-summarized digest of GitHub activity for a channel.
 
-Channels are defined in sources.json via the "channel" field on repos.
+Channels are defined in sources.yml via the "channel" field on repos.
 By default, shows a preview only. Use --post to actually send to Slack.`,
 	Run: runDigest,
 }
@@ -70,7 +70,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 	if len(repos) == 0 {
 		channels, _ := flow.ListChannels(nexusPath)
 		if len(channels) == 0 {
-			fmt.Println("No channels configured in sources.json.")
+			fmt.Println("No channels configured in sources.yml.")
 			fmt.Println("Add 'channel' field to repos in the 'code' section.")
 			os.Exit(1)
 		}
@@ -85,7 +85,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 		webhookURL := flow.GetWebhookURL(postTo)
 		if webhookURL == "" {
 			fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
-			fmt.Printf("Add to ~/.config/bip/config.json: \"slack_webhooks\": {\"%s\": \"https://...\"}\n", postTo)
+			fmt.Printf("Add to ~/.config/bip/config.yml: \"slack_webhooks\": {\"%s\": \"https://...\"}\n", postTo)
 			fmt.Printf("Or set SLACK_WEBHOOK_%s environment variable.\n", strings.ToUpper(postTo))
 			os.Exit(1)
 		}

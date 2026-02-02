@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -15,6 +14,7 @@ import (
 	"github.com/matsen/bipartite/internal/repo"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -27,10 +27,10 @@ func init() {
 
 // ProjectConfig represents a project entry in the config file.
 type ProjectConfig struct {
-	Name     string   `json:"name,omitempty"`     // Optional: display name (defaults to key)
-	Repos    []string `json:"repos,omitempty"`    // GitHub org/repo entries
-	Concepts []string `json:"concepts,omitempty"` // Concept IDs for edge creation
-	Context  string   `json:"context,omitempty"`  // Path to context markdown file
+	Name     string   `yaml:"name,omitempty"`     // Optional: display name (defaults to key)
+	Repos    []string `yaml:"repos,omitempty"`    // GitHub org/repo entries
+	Concepts []string `yaml:"concepts,omitempty"` // Concept IDs for edge creation
+	Context  string   `yaml:"context,omitempty"`  // Path to context markdown file
 }
 
 // ProjectImportResult is the response for the project import command.
@@ -81,23 +81,24 @@ type EdgeImportAction struct {
 var projectImportCmd = &cobra.Command{
 	Use:   "import <file>",
 	Short: "Import projects from a config file",
-	Long: `Import projects and repos from a JSON config file.
+	Long: `Import projects and repos from a YAML config file.
 
 The config file should have project IDs as keys with optional name, repos, and concepts:
 
-{
-  "dasm": {
-    "name": "DASM",
-    "repos": ["matsengrp/netam", "matsengrp/dasm2-experiments"],
-    "concepts": ["somatic-hypermutation", "antibody-fitness-prediction"],
-    "context": "context/dasm.md"
-  }
-}
+dasm:
+  name: DASM
+  repos:
+    - matsengrp/netam
+    - matsengrp/dasm2-experiments
+  concepts:
+    - somatic-hypermutation
+    - antibody-fitness-prediction
+  context: context/dasm.md
 
 Examples:
-  bip project import projects.json
-  bip project import projects.json --link-concepts
-  bip project import projects.json --dry-run`,
+  bip project import projects.yml
+  bip project import projects.yml --link-concepts
+  bip project import projects.yml --dry-run`,
 	Args: cobra.ExactArgs(1),
 	RunE: runProjectImport,
 }
@@ -117,7 +118,7 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 	}
 
 	var projectConfigs map[string]ProjectConfig
-	if err := json.Unmarshal(data, &projectConfigs); err != nil {
+	if err := yaml.Unmarshal(data, &projectConfigs); err != nil {
 		exitWithError(ExitDataError, "parsing config file: %v", err)
 	}
 

@@ -6,7 +6,7 @@
 
 ### 1. Configure API Key
 
-Add your ASTA API key to `~/.config/bip/config.json`:
+Add your ASTA API key to `~/.config/bip/config.yml`:
 
 ```json
 {

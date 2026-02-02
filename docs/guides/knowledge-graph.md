@@ -23,7 +23,7 @@ Edges link nodes with typed relationships and optional summary text.
 ├── concepts.jsonl   # Concept nodes
 ├── projects.jsonl   # Project nodes
 ├── repos.jsonl      # Repository nodes
-├── config.json      # Local config
+├── config.yml      # Local config
 └── cache/
     └── refs.db      # SQLite index (ephemeral, gitignored)
 ```
@@ -53,7 +53,7 @@ bip project list
 bip project concepts dasm2      # Concepts linked to this project
 bip project papers dasm2        # Papers relevant (via linked concepts)
 bip project repos dasm2         # Repos belonging to this project
-bip project import config.json  # Bulk import from config file
+bip project import config.yml  # Bulk import from config file
 ```
 
 `bip project papers` traverses the graph: project → concepts → papers. This lets an agent find all literature relevant to a project without manual curation of paper lists.

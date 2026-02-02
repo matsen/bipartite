@@ -70,12 +70,6 @@ type Period struct {
 	End   string `json:"end"`
 }
 
-// SlackChannelConfig is a configured Slack channel from sources.json.
-type SlackChannelConfig struct {
-	ID      string `json:"id"`
-	Purpose string `json:"purpose"`
-}
-
 // ChannelsResponse is the JSON output for bip slack channels.
 type ChannelsResponse struct {
 	Channels []ChannelInfo `json:"channels"`
@@ -468,36 +462,18 @@ func parseSlackTimestamp(ts string) (time.Time, error) {
 	return time.Unix(sec, 0), nil
 }
 
-// LoadSlackChannels loads Slack channel configuration from sources.json in the given nexus directory.
+// LoadSlackChannels loads Slack channel configuration from sources.yml in the given nexus directory.
 func LoadSlackChannels(nexusPath string) (map[string]SlackChannelConfig, error) {
-	data, err := os.ReadFile(SourcesPath(nexusPath))
+	sources, err := LoadSources(nexusPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading sources.json: %w", err)
+		return nil, err
 	}
 
-	// Parse into a map to extract the slack section
-	var sourcesConfig map[string]json.RawMessage
-	if err := json.Unmarshal(data, &sourcesConfig); err != nil {
-		return nil, fmt.Errorf("parsing sources.json: %w", err)
+	if len(sources.Slack.Channels) == 0 {
+		return nil, fmt.Errorf("no 'slack.channels' section in sources.yml")
 	}
 
-	slackSection, ok := sourcesConfig["slack"]
-	if !ok {
-		return nil, fmt.Errorf("no 'slack' section in sources.json")
-	}
-
-	var slackConfig struct {
-		Channels map[string]SlackChannelConfig `json:"channels"`
-	}
-	if err := json.Unmarshal(slackSection, &slackConfig); err != nil {
-		return nil, fmt.Errorf("parsing slack config: %w", err)
-	}
-
-	if len(slackConfig.Channels) == 0 {
-		return nil, fmt.Errorf("no channels configured in sources.json slack.channels")
-	}
-
-	return slackConfig.Channels, nil
+	return sources.Slack.Channels, nil
 }
 
 // GetSlackChannel returns the configuration for a specific channel from the given nexus directory.

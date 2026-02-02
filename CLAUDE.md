@@ -116,7 +116,7 @@ The nexus library has ~6000 papers already imported - most relevant immunology/a
 
 ## GitHub Activity Commands (bip)
 
-bip includes built-in GitHub activity tracking and project board management. These commands require `nexus_path` configured in `~/.config/bip/config.json`:
+bip includes built-in GitHub activity tracking and project board management. These commands require `nexus_path` configured in `~/.config/bip/config.yml`:
 
 ```bash
 bip checkin              # Check recent GitHub activity
@@ -146,8 +146,8 @@ Output is written to `narrative/{channel}/{YYYY-MM-DD}.md`. Requires config file
 - `narrative/{channel}.md` - Channel themes and repo context
 
 These commands read configuration from:
-- `sources.json` - Repository list and board mappings
-- `config.json` - Local path configuration
+- `sources.yml` - Repository list and board mappings
+- `config.yml` - Local path configuration
 - `context/` - Project context files
 
 ## Pre-PR Quality Checklist

@@ -23,7 +23,7 @@ back to 3 days if the file doesn't exist). Each run updates .last-checkin.json
 so the next run picks up where you left off. Using --since overrides this
 window and does NOT update .last-checkin.json.
 
-Requires nexus_path configured in ~/.config/bip/config.json.`,
+Requires nexus_path configured in ~/.config/bip/config.yml.`,
 	Run: runCheckin,
 }
 

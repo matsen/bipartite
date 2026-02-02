@@ -6,7 +6,7 @@
 ## Phase 1: Setup & Core Infrastructure
 
 - [X] T001 Create internal/flow/ package structure with shared types in internal/flow/types.go
-- [X] T002 Implement sources.json parsing in internal/flow/config.go (FR-001 to FR-005)
+- [X] T002 Implement sources.yml parsing in internal/flow/config.go (FR-001 to FR-005)
 - [X] T003 Implement beads.jsonl loading in internal/flow/beads.go (FR-006 to FR-008)
 - [X] T004 Implement duration parsing in internal/flow/duration.go (FR-045, FR-046)
 - [X] T005 Implement GitHub reference parsing in internal/flow/ghref.go (FR-047 to FR-050)
@@ -43,7 +43,7 @@
 - [X] T024 [US3] Create cmd/bip/spawn.go with cobra command structure
 - [X] T025 [US3] Implement tmux utilities in internal/flow/spawn/tmux.go (FR-026)
 - [X] T026 [US3] Implement issue/PR fetching and type detection (FR-023 to FR-025)
-- [X] T027 [US3] Implement context loading from sources.json (FR-027)
+- [X] T027 [US3] Implement context loading from sources.yml (FR-027)
 - [X] T028 [US3] Implement --prompt flag (FR-028)
 - [X] T029 [US3] Implement prompt building for issues and PRs
 

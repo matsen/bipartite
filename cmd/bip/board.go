@@ -18,8 +18,8 @@ var boardCmd = &cobra.Command{
 	Short: "Manage GitHub project boards",
 	Long: `Manage GitHub project boards.
 
-Boards are configured in sources.json under the "boards" key.
-Requires nexus_path configured in ~/.config/bip/config.json.`,
+Boards are configured in sources.yml under the "boards" key.
+Requires nexus_path configured in ~/.config/bip/config.yml.`,
 }
 
 // Shared flags
@@ -36,7 +36,7 @@ func init() {
 	boardCmd.AddCommand(boardRefreshCmd)
 
 	// Shared flags
-	boardCmd.PersistentFlags().StringVar(&boardKey, "board", "", "Board to use (owner/number). Defaults to first in sources.json")
+	boardCmd.PersistentFlags().StringVar(&boardKey, "board", "", "Board to use (owner/number). Defaults to first in sources.yml")
 }
 
 // board list
@@ -168,7 +168,7 @@ var boardAddCmd = &cobra.Command{
 	Short: "Add issue/PR to board",
 	Long: `Add an issue or pull request to a project board.
 
-The board is automatically resolved from the repo's channel mapping in sources.json.
+The board is automatically resolved from the repo's channel mapping in sources.yml.
 Use --to to specify a board explicitly.
 
 Examples:

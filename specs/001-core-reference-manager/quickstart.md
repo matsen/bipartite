@@ -132,7 +132,7 @@ When extracting fixtures:
    - Replace reference in file (for updates)
 
 3. **Configuration** (`internal/config/`)
-   - Load/save config.json
+   - Load/save config.yml
    - Validate paths exist
 
 ### Phase 2: Import (Week 2)

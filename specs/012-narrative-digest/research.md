@@ -81,7 +81,7 @@
 
 **Alternatives considered**:
 - YAML/JSON config: Rejected (markdown more human-editable)
-- Embedded config in sources.json: Rejected (harder to edit, less flexible)
+- Embedded config in sources.yml: Rejected (harder to edit, less flexible)
 
 ---
 

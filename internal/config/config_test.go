@@ -15,7 +15,7 @@ func TestPathFunctions(t *testing.T) {
 		want string
 	}{
 		{"BipartitePath", BipartitePath, "/test/repo/.bipartite"},
-		{"ConfigPath", ConfigPath, "/test/repo/.bipartite/config.json"},
+		{"ConfigPath", ConfigPath, "/test/repo/.bipartite/config.yml"},
 		{"RefsPath", RefsPath, "/test/repo/.bipartite/refs.jsonl"},
 		{"CachePath", CachePath, "/test/repo/.bipartite/cache"},
 		{"DBPath", DBPath, "/test/repo/.bipartite/cache/refs.db"},
@@ -148,13 +148,17 @@ func TestLoad_NotFound(t *testing.T) {
 		t.Fatalf("Failed to create .bipartite: %v", err)
 	}
 
-	_, err := Load(tmpDir)
-	if err == nil {
-		t.Error("Load() should return error when config not found")
+	// Load should return empty config when file doesn't exist
+	cfg, err := Load(tmpDir)
+	if err != nil {
+		t.Errorf("Load() should not return error when config not found, got: %v", err)
+	}
+	if cfg == nil {
+		t.Error("Load() should return non-nil config")
 	}
 }
 
-func TestLoad_InvalidJSON(t *testing.T) {
+func TestLoad_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	// Create .bipartite directory
@@ -163,14 +167,14 @@ func TestLoad_InvalidJSON(t *testing.T) {
 		t.Fatalf("Failed to create .bipartite: %v", err)
 	}
 
-	// Write invalid JSON
-	if err := os.WriteFile(ConfigPath(tmpDir), []byte("not json"), 0644); err != nil {
+	// Write invalid YAML (tab character in wrong place)
+	if err := os.WriteFile(ConfigPath(tmpDir), []byte("key:\n\t- bad indent"), 0644); err != nil {
 		t.Fatalf("Failed to write invalid config: %v", err)
 	}
 
 	_, err := Load(tmpDir)
 	if err == nil {
-		t.Error("Load() should return error for invalid JSON")
+		t.Error("Load() should return error for invalid YAML")
 	}
 }
 
@@ -276,8 +280,8 @@ func TestConstants(t *testing.T) {
 	if BipartiteDir != ".bipartite" {
 		t.Errorf("BipartiteDir = %q, want .bipartite", BipartiteDir)
 	}
-	if ConfigFile != "config.json" {
-		t.Errorf("ConfigFile = %q, want config.json", ConfigFile)
+	if ConfigFile != "config.yml" {
+		t.Errorf("ConfigFile = %q, want config.yml", ConfigFile)
 	}
 	if RefsFile != "refs.jsonl" {
 		t.Errorf("RefsFile = %q, want refs.jsonl", RefsFile)
