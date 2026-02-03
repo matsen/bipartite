@@ -1,7 +1,6 @@
 package flow
 
 import (
-	"strconv"
 	"testing"
 	"time"
 )
@@ -528,6 +527,3 @@ func TestFilterByBallInCourt(t *testing.T) {
 		t.Errorf("Expected item #1, got #%d", filtered[0].Number)
 	}
 }
-
-// Keep strconv import for potential future use
-var _ = strconv.Itoa

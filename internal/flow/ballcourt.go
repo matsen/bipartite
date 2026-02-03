@@ -36,6 +36,10 @@ func CommentsToActions(comments []GitHubComment) []ItemAction {
 
 // EventsToActions converts GitHubEvents to ItemActions.
 // Skips malformed entries (missing item number or actor).
+//
+// Note: We use CreatedAt (not UpdatedAt) because GitHub events are immutable.
+// Unlike comments which can be edited, a close or merge event represents a
+// single point-in-time action that cannot be modified after the fact.
 func EventsToActions(events []GitHubEvent) []ItemAction {
 	actions := make([]ItemAction, 0, len(events))
 	for _, e := range events {

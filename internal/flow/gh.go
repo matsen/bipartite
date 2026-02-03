@@ -9,22 +9,8 @@ import (
 	"time"
 )
 
-// Event type constants for type safety
-const (
-	EventClosed = "closed"
-	EventMerged = "merged"
-)
-
-// GitHubEvent represents an issue/PR event from the GitHub API.
-// Note: GitHub's API treats PRs as issues for event purposes.
-type GitHubEvent struct {
-	Event     string     `json:"event"`
-	Actor     GitHubUser `json:"actor"`
-	CreatedAt time.Time  `json:"created_at"`
-	Issue     struct {
-		Number int `json:"number"`
-	} `json:"issue"`
-}
+// githubAPIPageSize is the default page size for GitHub API requests.
+const githubAPIPageSize = 100
 
 // GHAPI calls the GitHub API via the gh CLI.
 // Returns the parsed JSON response.
@@ -122,7 +108,7 @@ func GetGitHubUser() (string, error) {
 // FetchIssues fetches issues updated since the given time.
 func FetchIssues(repo string, since time.Time) ([]GitHubItem, error) {
 	sinceStr := since.UTC().Format(time.RFC3339)
-	endpoint := fmt.Sprintf("/repos/%s/issues?state=all&since=%s&sort=updated&direction=desc&per_page=100", repo, sinceStr)
+	endpoint := fmt.Sprintf("/repos/%s/issues?state=all&since=%s&sort=updated&direction=desc&per_page=%d", repo, sinceStr, githubAPIPageSize)
 
 	data, err := GHAPI(endpoint)
 	if err != nil {
@@ -168,7 +154,7 @@ func FetchIssues(repo string, since time.Time) ([]GitHubItem, error) {
 // FetchIssueComments fetches issue comments since the given time.
 func FetchIssueComments(repo string, since time.Time) ([]GitHubComment, error) {
 	sinceStr := since.UTC().Format(time.RFC3339)
-	endpoint := fmt.Sprintf("/repos/%s/issues/comments?since=%s&sort=updated&direction=desc&per_page=100", repo, sinceStr)
+	endpoint := fmt.Sprintf("/repos/%s/issues/comments?since=%s&sort=updated&direction=desc&per_page=%d", repo, sinceStr, githubAPIPageSize)
 
 	data, err := GHAPI(endpoint)
 	if err != nil {
@@ -186,7 +172,7 @@ func FetchIssueComments(repo string, since time.Time) ([]GitHubComment, error) {
 // FetchPRComments fetches PR review comments since the given time.
 func FetchPRComments(repo string, since time.Time) ([]GitHubComment, error) {
 	sinceStr := since.UTC().Format(time.RFC3339)
-	endpoint := fmt.Sprintf("/repos/%s/pulls/comments?since=%s&sort=updated&direction=desc&per_page=100", repo, sinceStr)
+	endpoint := fmt.Sprintf("/repos/%s/pulls/comments?since=%s&sort=updated&direction=desc&per_page=%d", repo, sinceStr, githubAPIPageSize)
 
 	data, err := GHAPI(endpoint)
 	if err != nil {
@@ -550,7 +536,7 @@ func FetchItemCommenters(repo string, number int) ([]string, error) {
 // typical checkin windows (e.g., 24h). If we observe missing recent events in active
 // repos, implement pagination here.
 func FetchIssueEvents(repo string, since time.Time) ([]GitHubEvent, error) {
-	endpoint := fmt.Sprintf("/repos/%s/issues/events?per_page=100", repo)
+	endpoint := fmt.Sprintf("/repos/%s/issues/events?per_page=%d", repo, githubAPIPageSize)
 
 	data, err := GHAPI(endpoint)
 	if err != nil {
@@ -563,14 +549,14 @@ func FetchIssueEvents(repo string, since time.Time) ([]GitHubEvent, error) {
 	}
 
 	// Filter to close/merge events after `since`
-	var filtered []GitHubEvent
+	var closeMergeEvents []GitHubEvent
 	for _, e := range events {
 		if e.CreatedAt.Before(since) {
 			continue
 		}
 		if e.Event == EventClosed || e.Event == EventMerged {
-			filtered = append(filtered, e)
+			closeMergeEvents = append(closeMergeEvents, e)
 		}
 	}
-	return filtered, nil
+	return closeMergeEvents, nil
 }
