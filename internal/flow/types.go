@@ -163,6 +163,18 @@ type DigestItem struct {
 // TakehomeSummary maps GitHub refs to their take-home summaries.
 type TakehomeSummary map[string]string
 
+// ItemAction represents a single action (comment, close, merge) on a GitHub issue or PR.
+// Used by ball-in-court logic to determine who acted last on an item.
+//
+// ItemAction unifies comments and events into a single type, allowing
+// BallInMyCourt to consider both "X commented" and "Y closed/merged" when
+// determining if an item requires attention.
+type ItemAction struct {
+	ItemNumber int       // Issue or PR number
+	Actor      string    // GitHub username who performed the action
+	Timestamp  time.Time // When the action occurred
+}
+
 // Config represents config.yml settings.
 type Config struct {
 	Paths ConfigPaths `yaml:"paths"`

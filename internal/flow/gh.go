@@ -9,6 +9,23 @@ import (
 	"time"
 )
 
+// Event type constants for type safety
+const (
+	EventClosed = "closed"
+	EventMerged = "merged"
+)
+
+// GitHubEvent represents an issue/PR event from the GitHub API.
+// Note: GitHub's API treats PRs as issues for event purposes.
+type GitHubEvent struct {
+	Event     string     `json:"event"`
+	Actor     GitHubUser `json:"actor"`
+	CreatedAt time.Time  `json:"created_at"`
+	Issue     struct {
+		Number int `json:"number"`
+	} `json:"issue"`
+}
+
 // GHAPI calls the GitHub API via the gh CLI.
 // Returns the parsed JSON response.
 func GHAPI(endpoint string) (json.RawMessage, error) {
@@ -518,4 +535,42 @@ func FetchItemCommenters(repo string, number int) ([]string, error) {
 		commenters = append(commenters, login)
 	}
 	return commenters, nil
+}
+
+// FetchIssueEvents fetches close/merge events for issues and PRs since the given time.
+// Note: GitHub's API treats PRs as issues for event purposes, so this covers both.
+//
+// Only returns 'closed' and 'merged' events. Other event types (labeled, assigned,
+// referenced, etc.) are excluded because they don't indicate the ball is back in
+// the other person's court - they're usually automated or administrative.
+//
+// Implementation note: The /repos/{owner}/{repo}/issues/events endpoint returns ALL
+// events for the repo and doesn't support a ?since parameter. We fetch the first
+// 100 and filter client-side, which is acceptable for moderate-activity repos during
+// typical checkin windows (e.g., 24h). If we observe missing recent events in active
+// repos, implement pagination here.
+func FetchIssueEvents(repo string, since time.Time) ([]GitHubEvent, error) {
+	endpoint := fmt.Sprintf("/repos/%s/issues/events?per_page=100", repo)
+
+	data, err := GHAPI(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	var events []GitHubEvent
+	if err := json.Unmarshal(data, &events); err != nil {
+		return nil, err
+	}
+
+	// Filter to close/merge events after `since`
+	var filtered []GitHubEvent
+	for _, e := range events {
+		if e.CreatedAt.Before(since) {
+			continue
+		}
+		if e.Event == EventClosed || e.Event == EventMerged {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered, nil
 }
