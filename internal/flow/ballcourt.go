@@ -6,41 +6,97 @@ import (
 	"strings"
 )
 
+// CommentsToActions converts GitHubComments to ItemActions.
+// Skips malformed entries (missing item number or actor).
+//
+// Note: We use UpdatedAt instead of CreatedAt because substantive comment edits
+// (adding information, answering questions) should count as new actions. This
+// means cosmetic edits (typo fixes) may incorrectly flip ball-in-court status,
+// but this is preferable to ignoring real follow-up information.
+func CommentsToActions(comments []GitHubComment) []ItemAction {
+	actions := make([]ItemAction, 0, len(comments))
+	for _, c := range comments {
+		itemNum := getCommentItemNumber(c)
+		if itemNum == 0 {
+			// Skip malformed comment (no item URL)
+			continue
+		}
+		if c.User.Login == "" {
+			// Skip comments from deleted users
+			continue
+		}
+		actions = append(actions, ItemAction{
+			ItemNumber: itemNum,
+			Actor:      c.User.Login,
+			Timestamp:  c.UpdatedAt,
+		})
+	}
+	return actions
+}
+
+// EventsToActions converts GitHubEvents to ItemActions.
+// Skips malformed entries (missing item number or actor).
+//
+// Note: We use CreatedAt (not UpdatedAt) because GitHub events are immutable.
+// Unlike comments which can be edited, a close or merge event represents a
+// single point-in-time action that cannot be modified after the fact.
+func EventsToActions(events []GitHubEvent) []ItemAction {
+	actions := make([]ItemAction, 0, len(events))
+	for _, e := range events {
+		if e.Issue.Number == 0 {
+			// Skip malformed event
+			continue
+		}
+		if e.Actor.Login == "" {
+			// Skip events from deleted users
+			continue
+		}
+		actions = append(actions, ItemAction{
+			ItemNumber: e.Issue.Number,
+			Actor:      e.Actor.Login,
+			Timestamp:  e.CreatedAt,
+		})
+	}
+	return actions
+}
+
 // BallInMyCourt determines if the user needs to act on an item.
 //
 // Truth table:
 //
-//	Their item, no comments       -> true  (need to review)
-//	Their item, they commented    -> true  (they pinged again)
-//	Their item, I commented last  -> false (waiting for their reply)
-//	My item, no comments          -> false (waiting for feedback)
-//	My item, they commented last  -> true  (they replied)
-//	My item, I commented last     -> false (waiting for their reply)
-func BallInMyCourt(item GitHubItem, comments []GitHubComment, githubUser string) bool {
+//	Their item, no actions        -> true  (need to review)
+//	Their item, they acted last   -> true  (they pinged again)
+//	Their item, I acted last      -> false (waiting for their reply)
+//	My item, no actions           -> false (waiting for feedback)
+//	My item, they acted last      -> true  (they replied)
+//	My item, I acted last         -> false (waiting for their reply)
+//
+// Actions include comments, close events, and merge events.
+func BallInMyCourt(item GitHubItem, actions []ItemAction, githubUser string) bool {
 	author := item.User.Login
 	isMyItem := author == githubUser
 
-	// Filter comments to only those on this item
-	itemComments := filterCommentsForItem(comments, item.Number)
+	// Filter actions to only those on this item
+	itemActions := filterActionsForItem(actions, item.Number)
 
-	if len(itemComments) == 0 {
-		// No comments: show their items (need review), hide mine (waiting for feedback)
+	if len(itemActions) == 0 {
+		// No actions: show their items (need review), hide mine (waiting for feedback)
 		return !isMyItem
 	}
 
-	// Has comments: show if last commenter is not me (they're waiting for my response)
-	sortCommentsByTime(itemComments)
-	lastCommenter := itemComments[len(itemComments)-1].User.Login
+	// Has actions: show if last actor is not me (they're waiting for my response)
+	sortActionsByTime(itemActions)
+	lastActor := itemActions[len(itemActions)-1].Actor
 
-	return lastCommenter != "" && lastCommenter != githubUser
+	return lastActor != "" && lastActor != githubUser
 }
 
-// filterCommentsForItem returns comments that belong to the given item number.
-func filterCommentsForItem(comments []GitHubComment, itemNumber int) []GitHubComment {
-	var filtered []GitHubComment
-	for _, c := range comments {
-		if getCommentItemNumber(c) == itemNumber {
-			filtered = append(filtered, c)
+// filterActionsForItem returns actions that belong to the given item number.
+func filterActionsForItem(actions []ItemAction, itemNumber int) []ItemAction {
+	var filtered []ItemAction
+	for _, a := range actions {
+		if a.ItemNumber == itemNumber {
+			filtered = append(filtered, a)
 		}
 	}
 	return filtered
@@ -66,18 +122,18 @@ func getCommentItemNumber(comment GitHubComment) int {
 	return n
 }
 
-// sortCommentsByTime sorts comments by updated_at time.
-func sortCommentsByTime(comments []GitHubComment) {
-	sort.Slice(comments, func(i, j int) bool {
-		return comments[i].UpdatedAt.Before(comments[j].UpdatedAt)
+// sortActionsByTime sorts actions by timestamp.
+func sortActionsByTime(actions []ItemAction) {
+	sort.Slice(actions, func(i, j int) bool {
+		return actions[i].Timestamp.Before(actions[j].Timestamp)
 	})
 }
 
 // FilterByBallInCourt filters items to only those where ball is in user's court.
-func FilterByBallInCourt(items []GitHubItem, comments []GitHubComment, githubUser string) []GitHubItem {
+func FilterByBallInCourt(items []GitHubItem, actions []ItemAction, githubUser string) []GitHubItem {
 	var filtered []GitHubItem
 	for _, item := range items {
-		if BallInMyCourt(item, comments, githubUser) {
+		if BallInMyCourt(item, actions, githubUser) {
 			filtered = append(filtered, item)
 		}
 	}

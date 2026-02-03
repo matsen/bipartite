@@ -11,9 +11,11 @@ A CLI tool for managing academic references with local storage and external pape
 
 **Issues**: https://github.com/matsen/bipartite/issues
 
-## ⚠️ CRITICAL: Local-First Search Policy
+## ⚠️ CRITICAL: Local-First, Paper-First Policy
 
 **ALWAYS search locally before using external APIs. NEVER call ASTA without explicit user permission.**
+
+**When answering questions about papers, READ THE ACTUAL PAPER PDF.** Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library. Use the pdf-navigator MCP tools to search and read the PDF directly.
 
 The nexus library has ~6000 papers. Most relevant papers are already there.
 
@@ -30,12 +32,20 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
    ```
    Then retry the search.
 
-3. **Only if not found locally AND user confirms**, use ASTA:
+3. **If found locally, READ THE PAPER** to answer the question:
+   ```bash
+   bip get <id> --human   # Get PDF path
+   ```
+   Then use `mcp__pdf-navigator__search_pdf_text` or `mcp__pdf-navigator__read_pdf_page` to find the answer directly in the paper. The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
+
+4. **Only if not found locally AND user confirms**, use ASTA:
    ```
    "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
    ```
 
 **DO NOT** call `bip asta`, `mcp__asta__*`, or any external API without asking first.
+
+**DO NOT** rely on abstracts or S2 metadata when you have access to the actual paper PDF.
 
 ## Argument Handling
 
@@ -43,8 +53,9 @@ When invoked with arguments like `/bip find <query>` or `/bip <query>`:
 
 1. **Always search local library first** with `bip search "<query>"`
 2. If local search fails with an error, rebuild the database and retry
-3. **Only after exhausting local options**, ask user if they want to search externally
-4. For title searches, use the full title; for topic searches, use key terms
+3. **If found locally and answering a question, read the paper PDF** using pdf-navigator tools
+4. **Only after exhausting local options**, ask user if they want to search externally
+5. For title searches, use the full title; for topic searches, use key terms
 
 ## Proactive Concept Discovery
 
@@ -143,23 +154,29 @@ For finding a specific paper or result:
    bip semantic "conceptual description"  # for topic-heavy queries
    ```
 
-2. **External keyword search** with author names:
+2. **If found, read the paper** to get authoritative answers:
+   ```bash
+   bip get <id> --human  # Get PDF path
+   # Then use pdf-navigator to search/read the PDF
+   ```
+
+3. **External keyword search** (only if not found locally, with permission):
    ```bash
    bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
    ```
 
-3. **Broaden if needed** - remove author, try synonyms:
+4. **Broaden if needed** - remove author, try synonyms:
    ```bash
    bip asta search "minimum evolution likelihood" --human
    bip asta search "distance method maximum likelihood phylogeny" --human
    ```
 
-4. **Citation tracing** - if you find a related paper, check what cites it:
+5. **Citation tracing** - if you find a related paper, check what cites it:
    ```bash
    bip asta citations DOI:10.xxxx/yyyy --limit 50 --human
    ```
 
-5. **MCP tools directly** - for more control over fields and filters:
+6. **MCP tools directly** - for more control over fields and filters:
    ```
    mcp__asta__search_papers_by_relevance with specific date ranges
    mcp__asta__get_citations with publication_date_range filter
@@ -191,7 +208,7 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 ## Common Workflows
 
-### Find a Paper
+### Find a Paper / Answer a Question About a Paper
 
 1. **Search local library first**:
    ```bash
@@ -202,11 +219,20 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 2. **Get PDF path** for a result:
    ```bash
-   bip get <id>
+   bip get <id> --human
    # pdf_path field + "/Users/matsen/Google Drive/My Drive/Paperpile"
    ```
 
-3. **If not in library**, search externally:
+3. **Read the actual paper** to answer questions:
+   ```bash
+   # Search for specific text in the PDF
+   mcp__pdf-navigator__search_pdf_text(file_path, "phage display")
+   # Or read specific pages
+   mcp__pdf-navigator__read_pdf_page(file_path, 2)
+   ```
+   **Always prefer reading the paper over relying on abstracts or external metadata.**
+
+4. **Only if not in library**, search externally (with user permission):
    ```bash
    bip asta search "phylogenetic inference"
    ```
