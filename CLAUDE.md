@@ -82,12 +82,25 @@ Follow standard Go conventions (`go fmt`, `go vet`)
 - **Repository owner**: This repo is `matsen/bipartite`, NOT `matsengrp/bipartite`. Use `matsen` when constructing GitHub URLs or API calls.
 - **PR merge strategy**: Always use squash and merge (`gh pr merge --squash`)
 
+## Database Location
+
+The bip database path is determined by `nexus_path` in `~/.config/bip/config.yml`, NOT `~/.bipartite`. The actual database is at:
+```
+$NEXUS_PATH/.bipartite/cache/refs.db
+```
+
+To find the database location:
+```bash
+cat ~/.config/bip/config.yml | grep nexus_path  # e.g., ~/re/nexus
+ls ~/re/nexus/.bipartite/cache/refs.db          # actual database file
+```
+
 ## SQLite Schema Changes
 
 When modifying SQLite schema (e.g., adding columns to FTS5 tables):
 
 1. **Rebuild the binary**: `go build -o bip ./cmd/bip`
-2. **Delete the old database**: `rm .bipartite/cache/refs.db`
+2. **Delete the old database**: `rm $NEXUS_PATH/.bipartite/cache/refs.db`
 3. **Rebuild the index**: `./bip rebuild`
 
 Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you must delete the database file for schema changes to take effect.
