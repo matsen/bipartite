@@ -269,6 +269,7 @@ type SearchFilters struct {
 // For example, -a "Yu" matches "Timothy Yu" but not "Yujia Chan".
 func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Reference, error) {
 	var ftsTerms []string
+	var sqlConditions []string
 	var args []interface{}
 
 	// Parse author queries upfront for post-filtering
@@ -279,19 +280,22 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		}
 	}
 
-	// Build FTS query parts (text-based searches)
+	// Build FTS query parts (keyword and title searches)
 	if filters.Keyword != "" {
 		ftsTerms = append(ftsTerms, prepareFTSQuery(filters.Keyword))
 	}
 	if filters.Title != "" {
 		ftsTerms = append(ftsTerms, "title:"+prepareFTSQuery(filters.Title))
 	}
-	// Add FTS pre-filter for author last names to narrow candidate set.
-	// Exact matching is done in post-processing, but FTS helps avoid scanning
-	// the entire table when only author filters are specified.
+
+	// Build SQL conditions for authors using LIKE on authors_json.
+	// This directly queries the JSON field for exact last name matches.
+	// Post-filtering handles case-insensitive matching and first name prefixes.
 	for _, q := range authorQueries {
 		if q.Last != "" {
-			ftsTerms = append(ftsTerms, "authors_text:"+prepareFTSQuery(q.Last))
+			// Match the JSON structure: "last":"LastName"
+			sqlConditions = append(sqlConditions, "authors_json LIKE ?")
+			args = append(args, `%"last":"`+q.Last+`"%`)
 		}
 	}
 
@@ -302,9 +306,14 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		query = `SELECT ` + selectRefFields + `
 			FROM refs
 			WHERE id IN (SELECT id FROM refs_fts WHERE refs_fts MATCH ?)`
-		args = append(args, ftsQuery)
+		args = append([]interface{}{ftsQuery}, args...) // FTS arg must be first
 	} else {
 		query = `SELECT ` + selectRefFields + ` FROM refs WHERE 1=1`
+	}
+
+	// Add author SQL conditions
+	for _, cond := range sqlConditions {
+		query += " AND " + cond
 	}
 
 	// SQL-based filters (exact/range matches)
@@ -325,17 +334,8 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		args = append(args, filters.DOI)
 	}
 
-	// If filtering by authors, fetch more results since we'll post-filter
-	dbLimit := limit
-	if len(authorQueries) > 0 {
-		dbLimit = limit * 10 // Fetch 10x to allow for filtering
-		if dbLimit < 100 {
-			dbLimit = 100
-		}
-	}
-
 	query += " LIMIT ?"
-	args = append(args, dbLimit)
+	args = append(args, limit)
 
 	rows, err := d.db.Query(query, args...)
 	if err != nil {
@@ -348,7 +348,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		return nil, err
 	}
 
-	// Post-filter by authors if specified
+	// Post-filter by authors for case-insensitive matching and first name prefixes
 	if len(authorQueries) > 0 {
 		refs = filterByAuthors(refs, authorQueries, limit)
 	}
