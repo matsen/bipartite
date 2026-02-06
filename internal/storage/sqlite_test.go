@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -497,6 +498,69 @@ func TestDB_SearchWithFilters(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestDB_SearchWithFilters_LargeDB tests that author-only searches work correctly
+// with a large database. This test was added to prevent regression of a bug where
+// author-only searches would miss results because the query used an arbitrary
+// LIMIT before filtering by author.
+func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
+
+	// Create 150 refs with common authors, plus a few with a rare author
+	var refs []reference.Reference
+	for i := 0; i < 150; i++ {
+		refs = append(refs, reference.Reference{
+			ID:        fmt.Sprintf("Common%03d", i),
+			Title:     fmt.Sprintf("Paper %d about common topics", i),
+			Authors:   []reference.Author{{First: "John", Last: "Common"}},
+			Published: reference.PublicationDate{Year: 2020},
+			Source:    reference.ImportSource{Type: "test"},
+		})
+	}
+	// Add rare author papers at the end (would be missed by old LIMIT 100 approach)
+	for i := 0; i < 5; i++ {
+		refs = append(refs, reference.Reference{
+			ID:        fmt.Sprintf("Rare%03d", i),
+			Title:     fmt.Sprintf("Paper %d by rare author", i),
+			Authors:   []reference.Author{{First: "Alice", Last: "Rareauthor"}},
+			Published: reference.PublicationDate{Year: 2021},
+			Source:    reference.ImportSource{Type: "test"},
+		})
+	}
+
+	if err := WriteAll(jsonlPath, refs); err != nil {
+		t.Fatalf("WriteAll() error = %v", err)
+	}
+
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB() error = %v", err)
+	}
+	defer db.Close()
+
+	if _, err := db.RebuildFromJSONL(jsonlPath); err != nil {
+		t.Fatalf("RebuildFromJSONL() error = %v", err)
+	}
+
+	// Search for rare author - should find all 5 papers
+	results, err := db.SearchWithFilters(SearchFilters{Authors: []string{"Rareauthor"}}, 50)
+	if err != nil {
+		t.Fatalf("SearchWithFilters() error = %v", err)
+	}
+
+	if len(results) != 5 {
+		t.Errorf("SearchWithFilters(Rareauthor) returned %d results, want 5", len(results))
+	}
+
+	// Verify all results have the correct author
+	for _, ref := range results {
+		if len(ref.Authors) == 0 || ref.Authors[0].Last != "Rareauthor" {
+			t.Errorf("Result %s has wrong author: %+v", ref.ID, ref.Authors)
+		}
 	}
 }
 
