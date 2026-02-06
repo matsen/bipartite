@@ -286,7 +286,14 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	if filters.Title != "" {
 		ftsTerms = append(ftsTerms, "title:"+prepareFTSQuery(filters.Title))
 	}
-	// Note: Author filtering moved to post-processing for exact last name matching
+	// Add FTS pre-filter for author last names to narrow candidate set.
+	// Exact matching is done in post-processing, but FTS helps avoid scanning
+	// the entire table when only author filters are specified.
+	for _, q := range authorQueries {
+		if q.Last != "" {
+			ftsTerms = append(ftsTerms, "authors_text:"+prepareFTSQuery(q.Last))
+		}
+	}
 
 	// Build the query
 	var query string
