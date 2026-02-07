@@ -15,6 +15,10 @@ Run a comprehensive quality checklist before merging a PR. Automatically detects
 
 ## Workflow
 
+### Step 0: Check for Project-Specific Checklist
+
+First, read the project's `CLAUDE.md` and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section. **If found, follow those steps exactly** instead of the generic workflow below.
+
 ### Step 1: Detect Project Type
 
 Examine the repository to determine what checks apply:
@@ -24,7 +28,6 @@ Examine the repository to determine what checks apply:
 | `workflow/*.smk` or `Snakefile` | Snakemake pipeline | `snakemake-pipeline-expert` |
 | `*.py` files in `src/` or project root | Python project | `clean-code-reviewer` |
 | `go.mod` | Go project | `clean-code-reviewer` |
-| `Cargo.toml` | Rust project | `clean-code-reviewer` |
 | `package.json` | Node.js project | `clean-code-reviewer` |
 
 Multiple types can apply (e.g., Snakemake + Python).
