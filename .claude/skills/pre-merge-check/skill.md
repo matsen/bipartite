@@ -119,20 +119,18 @@ Report findings with severity (blocking vs advisory).
 - Scientific computation (matrix operations, probability distributions, statistical models)
 - Algorithm implementations with mathematical foundations
 
-**If mathematical**, check the linked issue for an existing mathematical specification comment:
+**If mathematical**, check the PR for an existing mathematical specification comment:
 
-1. **Find the linked issue**: Look for "Closes #N" or "Fixes #N" in the PR description, or check the branch name for issue numbers (e.g., `264-feature-name` → issue #264)
+1. **Check for existing math comment on the PR**: Use `gh pr view` and look for comments containing LaTeX code blocks or mathematical notation
 
-2. **Check for existing math comment**: Use `gh issue view <N>` and look for comments containing LaTeX code blocks or mathematical notation
-
-3. **If no math comment exists**:
+2. **If no math comment exists**:
    - Back-translate the implementation directly into mathematical notation
    - Use LaTeX code blocks for formulas
    - Document the actual computation, not perceived intent
-   - Post as a comment on the issue with 🤖 prefix
-   - Include in report: "Posted mathematical specification to issue #N"
+   - Post as a comment on the PR with 🤖 prefix
+   - Include in report: "Posted mathematical specification to PR"
 
-4. **If math comment already exists**:
+3. **If math comment already exists**:
    - Re-read the implementation carefully
    - Compare against the existing mathematical specification
    - Check for discrepancies (formula errors, missing steps, outdated notation)
@@ -179,7 +177,7 @@ Present a checklist summary:
 - [x] No forbidden mocks found
 
 ### Mathematical Documentation (if applicable)
-- [x] Mathematical specification posted to issue #N
+- [x] Mathematical specification posted to PR
 - [x] Existing specification verified against implementation
 
 ### Action Items
