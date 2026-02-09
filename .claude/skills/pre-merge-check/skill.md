@@ -137,6 +137,14 @@ Report findings with severity (blocking vs advisory).
    - If discrepancies found: post a correction comment and flag in report
    - If accurate: note "Mathematical specification verified" in report
 
+4. **Literature verification for pre-existing formulas**:
+   - If the implementation uses formulas from established literature (standard models, known algorithms, published methods), verify against the source paper
+   - **Search local bip library first**: `bip search "method name"` or `bip search -a "Author"`
+   - The reference paper should already be in our library; if not found locally, ask user before searching externally
+   - Use pdf-navigator tools to read the actual paper and verify the implementation matches the published definition
+   - Include the bip paper ID in the math comment to demonstrate correctness
+   - Flag any discrepancies between implementation and literature as blocking issues
+
 **Mathematical comment format**:
 ```markdown
 🤖 Mathematical specification back-translated from the implementation in PR #XXX:
@@ -179,6 +187,7 @@ Present a checklist summary:
 ### Mathematical Documentation (if applicable)
 - [x] Mathematical specification posted to PR
 - [x] Existing specification verified against implementation
+- [x] Literature references provided for pre-existing formulas
 
 ### Action Items
 1. Fix formatting in `src/foo.py`
