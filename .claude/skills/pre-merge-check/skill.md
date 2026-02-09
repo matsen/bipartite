@@ -40,7 +40,30 @@ git diff main...HEAD --name-only
 
 Focus review on changed files, not the entire codebase.
 
-### Step 3: Run Agent Reviews (in parallel when possible)
+### Step 3: Check for Large Files and Cruft
+
+Scan changed files for artifacts that typically shouldn't be committed:
+
+**Suspicious file types** (flag for user review):
+- HTML files from notebook execution (`.html` in output directories)
+- Image files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.pdf`) unless in expected locations like `docs/` or `assets/`
+- Binary files and archives (`.zip`, `.tar`, `.gz`, `.pkl`, `.pickle`, `.npy`, `.npz`)
+- Large data files (`.csv`, `.tsv`, `.parquet`) over 100KB
+- Cache/build artifacts (`__pycache__/`, `.pyc`, `node_modules/`, `dist/`, `build/`)
+
+**Acceptable** (don't flag):
+- Small JSON result files (< 100KB)
+- Config files (`.json`, `.yml`, `.yaml` in root or config directories)
+- Test fixtures in `testdata/` or `tests/fixtures/`
+
+**Check file sizes:**
+```bash
+git diff main...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && stat -f "%z %N" "{}" 2>/dev/null || stat --format="%s %n" "{}" 2>/dev/null' | awk '$1 > 102400 {print}'
+```
+
+Flag anything suspicious for user confirmation before proceeding.
+
+### Step 4: Run Agent Reviews (in parallel when possible)
 
 **For Snakemake projects:**
 - Launch `snakemake-pipeline-expert` agent to review workflow structure, rule organization, and best practices
@@ -48,7 +71,7 @@ Focus review on changed files, not the entire codebase.
 **For all projects with code changes:**
 - Launch `clean-code-reviewer` agent on modified source files (not tests)
 
-### Step 4: Run Automated Checks
+### Step 5: Run Automated Checks
 
 Detect and run available quality tools:
 
@@ -61,21 +84,77 @@ Detect and run available quality tools:
 | `Snakefile` | `snakemake --lint` |
 | `tests/` directory | `pytest` (or project-specific test command) |
 
-### Step 5: Test Audit
+### Step 6: Test Audit
 
-Search for problematic test patterns:
+Run a thorough test quality review using an agent. Grepping alone is insufficient—tests need semantic analysis to detect:
 
-```bash
-# Look for placeholder tests
-grep -r "pytest.skip\|pytest.mark.skip\|pass$" tests/ --include="*.py"
+- Placeholder tests (empty bodies, just `pass`, meaningless assertions)
+- Inappropriate use of mocks (if project forbids mocking)
+- Tests that don't actually test anything (`assert True`, trivial assertions)
+- Tests with `pytest.skip` that should have real implementations
+- Tests that silently catch exceptions instead of letting them propagate
 
-# Look for mock usage (if project forbids it)
-grep -r "Mock()\|@patch\|MagicMock" tests/ --include="*.py"
+**Launch a `clean-code-reviewer` agent specifically for test files:**
+
+```
+Review the test files in tests/ for test quality issues:
+1. Placeholder tests (empty or pass-only test bodies)
+2. Mock usage (if project constitution forbids mocks)
+3. Trivial assertions (assert True, assert 1==1)
+4. Unconditional pytest.skip() that should be real tests
+5. Tests that catch and swallow exceptions
+6. Tests without meaningful assertions
+
+Focus on tests for changed code. Report specific file:line references.
 ```
 
-Report any findings as warnings.
+Report findings with severity (blocking vs advisory).
 
-### Step 6: Generate Report
+### Step 7: Mathematical Documentation (for mathematical PRs)
+
+**Skip this step** if the PR doesn't involve mathematical/statistical computation.
+
+**Detect mathematical PR**: Check if the changed source files contain:
+- Mathematical formulas in docstrings (Greek letters, summations, matrix notation)
+- Scientific computation (matrix operations, probability distributions, statistical models)
+- Algorithm implementations with mathematical foundations
+
+**If mathematical**, check the linked issue for an existing mathematical specification comment:
+
+1. **Find the linked issue**: Look for "Closes #N" or "Fixes #N" in the PR description, or check the branch name for issue numbers (e.g., `264-feature-name` → issue #264)
+
+2. **Check for existing math comment**: Use `gh issue view <N>` and look for comments containing LaTeX code blocks or mathematical notation
+
+3. **If no math comment exists**:
+   - Back-translate the implementation directly into mathematical notation
+   - Use LaTeX code blocks for formulas
+   - Document the actual computation, not perceived intent
+   - Post as a comment on the issue with 🤖 prefix
+   - Include in report: "Posted mathematical specification to issue #N"
+
+4. **If math comment already exists**:
+   - Re-read the implementation carefully
+   - Compare against the existing mathematical specification
+   - Check for discrepancies (formula errors, missing steps, outdated notation)
+   - If discrepancies found: post a correction comment and flag in report
+   - If accurate: note "Mathematical specification verified" in report
+
+**Mathematical comment format**:
+```markdown
+🤖 Mathematical specification back-translated from the implementation in PR #XXX:
+
+## [Section Name]
+
+[Description of what this computes]
+
+```latex
+[Formula in LaTeX]
+```
+
+[Continue for each major mathematical component...]
+```
+
+### Step 8: Generate Report
 
 Present a checklist summary:
 
@@ -86,6 +165,10 @@ Present a checklist summary:
 - [ ] Snakemake review: [findings or ✓]
 - [ ] Code review: [findings or ✓]
 
+### Large Files / Cruft
+- [x] No suspicious files found
+- [ ] ⚠️ Flagged for review: `output/results.html` (notebook output?)
+
 ### Automated Checks
 - [x] Linting: passed
 - [x] Tests: 124 passed
@@ -94,6 +177,10 @@ Present a checklist summary:
 ### Test Audit
 - [x] No placeholder tests found
 - [x] No forbidden mocks found
+
+### Mathematical Documentation (if applicable)
+- [x] Mathematical specification posted to issue #N
+- [x] Existing specification verified against implementation
 
 ### Action Items
 1. Fix formatting in `src/foo.py`
