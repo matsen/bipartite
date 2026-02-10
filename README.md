@@ -23,28 +23,48 @@ Bipartite is a tool to give agents knowledge and access to all the tools they ne
 - **[Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/)** — Themed digests, cross-repo check-ins (spawn dedicated `tmux` windows!), and Slack integration for group leaders.
 - **[Server Scout](https://matsen.github.io/bipartite/guides/server-scout/)** — Check remote server CPU, memory, load, and GPU availability via native SSH.
 
-## Quick Start
+## Installation
 
-1. **Install bip** (requires Go 1.24+):
+### Full Installation (recommended)
+
+This installs the `bip` CLI plus Claude Code agents and skills:
+
+```bash
+git clone https://github.com/matsen/bipartite
+cd bipartite
+make install
+```
+
+Prerequisites:
+- Go 1.24+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
+
+Verify with `bip --help`.
+
+### CLI Only
+
+If you just want the `bip` CLI without agents/skills:
 
 ```bash
 go install github.com/matsen/bipartite/cmd/bip@latest
 ```
 
-2. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
+## Quick Start
+
+1. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/nexus ~/re/nexus
 ```
 
-3. **Point bip to your nexus** (minimal config to get started):
+2. **Point bip to your nexus** (minimal config to get started):
 
 ```bash
 mkdir -p ~/.config/bip
 echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
 ```
 
-4. **Build the index and try it out**:
+3. **Build the index and try it out**:
 
 ```bash
 bip rebuild
