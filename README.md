@@ -51,20 +51,20 @@ go install github.com/matsen/bipartite/cmd/bip@latest
 
 ## Quick Start
 
-2. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
+1. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/nexus ~/re/nexus
 ```
 
-3. **Point bip to your nexus** (minimal config to get started):
+2. **Point bip to your nexus** (minimal config to get started):
 
 ```bash
 mkdir -p ~/.config/bip
 echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
 ```
 
-4. **Build the index and try it out**:
+3. **Build the index and try it out**:
 
 ```bash
 bip rebuild
