@@ -1,5 +1,5 @@
 ---
-name: bip-extract-refs
+name: bip.extract-refs
 description: Extract paper references and concepts from a LaTeX repository for the bipartite knowledge graph.
 ---
 
@@ -10,7 +10,7 @@ Analyze a LaTeX repository to extract papers and concepts for the bipartite know
 ## Usage
 
 ```
-/bip-extract-refs <path-to-tex-repo>
+/bip.extract-refs <path-to-tex-repo>
 ```
 
 ## What This Skill Does
@@ -108,7 +108,7 @@ bip edge add -s Smith2026-ab -t x-model -r introduces -m "Foundational paper"
 ## Example Session
 
 ```
-User: /bip-extract-refs ../dasm-tex-1
+User: /bip.extract-refs ../dasm-tex-1
 
 Claude: I'll analyze the LaTeX repository to extract references and concepts.
 
