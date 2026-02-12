@@ -65,7 +65,12 @@ func OpenStore(repoRoot, name string) (*Store, error) {
 	}
 
 	// Load schema
-	schemaPath := filepath.Join(repoRoot, config.SchemaPath)
+	var schemaPath string
+	if filepath.IsAbs(config.SchemaPath) {
+		schemaPath = config.SchemaPath
+	} else {
+		schemaPath = filepath.Join(repoRoot, config.SchemaPath)
+	}
 	schema, err := ParseSchema(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("loading schema: %w", err)
