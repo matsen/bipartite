@@ -78,7 +78,7 @@ See the [Getting Started guide](https://matsen.github.io/bipartite/guides/gettin
 
 ## Configuration
 
-For full functionality, add API keys ([Semantic Scholar](https://www.semanticscholar.org/product/api#api-key), [Asta](https://allenai.org/asta/resources/mcp), [GitHub](https://github.com/settings/tokens), [Slack](https://api.slack.com/apps)) to your config:
+For full functionality, add API keys ([Semantic Scholar](https://www.semanticscholar.org/product/api#api-key), [Asta](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) to your config:
 
 ```yaml
 nexus_path: ~/re/nexus

@@ -39,7 +39,7 @@ EOF
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
 | `s2_api_key` | Semantic Scholar API key for higher rate limits |
 | `asta_api_key` | ASTA MCP API key |
-| `github_token` | GitHub personal access token for API calls |
+| `github_token` | GitHub personal access token ([setup guide](#github-authentication)) |
 | `slack_bot_token` | Slack bot token for reading channel history |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |
 
@@ -56,6 +56,92 @@ bip search "phylogenetics"
 cd /tmp
 bip search "phylogenetics"  # Uses nexus_path from config
 ```
+
+## GitHub Authentication
+
+bip uses GitHub through two independent authentication paths. You need **both** configured for full functionality.
+
+### Step 1: Authenticate the `gh` CLI
+
+Most bip commands (`checkin`, `board`, `spawn`, `digest`) call the GitHub API through the [`gh` CLI](https://cli.github.com/). You must authenticate it first:
+
+```bash
+gh auth login
+```
+
+Follow the interactive prompts. When asked about scopes, the defaults (`repo`, `read:org`) cover most bip features. However, for **project board** commands (`bip board list/add/move/remove`), you also need the `project` scope:
+
+```bash
+gh auth refresh --scopes project
+```
+
+Verify your authentication:
+
+```bash
+gh auth status
+```
+
+### Step 2: Add a Personal Access Token to bip config
+
+bip's Go HTTP client uses a separate token from its config file for repository metadata fetching and higher rate limits. To create one:
+
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) (Profile photo → Settings → Developer settings → Personal access tokens)
+2. Choose **Fine-grained tokens** (recommended) or **Tokens (classic)**
+
+#### Fine-grained token (recommended)
+
+Fine-grained tokens are more secure because you scope them to specific repositories and permissions:
+
+1. Click **Generate new token**
+2. Set a descriptive name (e.g., "bip CLI")
+3. Set expiration (90 days or custom)
+4. Under **Repository access**, choose "All repositories" or select specific repos you track with bip
+5. Under **Permissions → Repository permissions**, enable:
+   - **Issues**: Read-only
+   - **Pull requests**: Read-only
+   - **Metadata**: Read-only (automatically selected)
+6. Under **Permissions → Organization permissions** (if you use org project boards):
+   - **Projects**: Read and write
+7. Click **Generate token** and copy the value
+
+#### Classic token
+
+If you prefer classic tokens or need compatibility with older GitHub Enterprise versions:
+
+1. Click **Generate new token (classic)**
+2. Set a descriptive name and expiration
+3. Select these scopes:
+   - **`repo`** — Read access to repositories (issues, PRs, comments)
+   - **`read:org`** — Read organization membership (needed for org project boards)
+   - **`project`** — Read/write GitHub project boards
+4. Click **Generate token** and copy the value
+
+#### Add the token to config
+
+```yaml
+# ~/.config/bip/config.yml
+github_token: ghp_your-token-here   # classic token
+# or
+github_token: github_pat_your-token-here  # fine-grained token
+```
+
+### Which commands need what
+
+| Command | Auth method | What it does |
+|---------|-------------|--------------|
+| `bip checkin` | `gh` CLI | Fetches issues, PRs, comments across repos |
+| `bip board list/add/move/remove` | `gh` CLI | Reads/writes GitHub project boards (needs `project` scope) |
+| `bip spawn` | `gh` CLI | Fetches issue/PR details for tmux sessions |
+| `bip digest` | `gh` CLI | Generates activity summaries |
+| `bip repo add/refresh` | `github_token` | Fetches repository metadata |
+
+### Troubleshooting
+
+**"gh: not logged in"** — Run `gh auth login`.
+
+**403 on project board commands** — You need the `project` scope: `gh auth refresh --scopes project`.
+
+**Rate limiting on `bip repo` commands** — Add `github_token` to your config file. Without a token, these requests are unauthenticated and limited to 60/hour.
 
 ## Per-Repository Configuration
 
