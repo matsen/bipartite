@@ -49,7 +49,7 @@ If you just want the `bip` CLI without agents/skills:
 go install github.com/matsen/bipartite/cmd/bip@latest
 ```
 
-**Note:** Ensure `$HOME/go/bin` is in your PATH. See [Getting Started](https://matsen.github.io/bipartite/guides/getting-started/#installation) for details.
+**Note:** This installs to `$GOBIN` if set, otherwise `$HOME/go/bin`. Ensure the appropriate directory is in your PATH.
 
 ## Quick Start
 
