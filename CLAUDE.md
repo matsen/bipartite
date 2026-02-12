@@ -188,7 +188,9 @@ Before any pull request, ensure the following workflow is completed:
 8. **Documentation Update**: If the feature adds new commands or changes user-facing behavior:
    - `README.md` — Keep short (overview, installation, environment variables only)
    - `docs/guides/` — Detailed guides with examples, config reference, troubleshooting
-   - `.claude/skills/bip/` — Update skill docs for Claude Code integration
+   - `skills/` — Update skill docs for Claude Code integration
+   - **Path verification**: Ensure all directory paths in docs match actual repository structure (e.g., skills are in `./skills/`, not `./.claude/skills/`)
+   - **Cross-file consistency**: Check that installation instructions are consistent across README.md, docs/index.md, and docs/guides/getting-started.md
 
 ### Skill Documentation Accuracy
 9. **Verify Skill Docs Match CLI**: Run `./bip <command> --help` to confirm skill documentation accurately reflects:

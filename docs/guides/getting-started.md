@@ -2,6 +2,105 @@
 
 Bipartite operates on a **[nexus](architecture.md)** — a directory that serves as the central hub for your paper library, server configurations, and workflow coordination. See [How It Works](architecture.md) for the full picture of how bipartite's pieces fit together.
 
+## Installation
+
+### Prerequisites
+
+- Go 1.24 or later ([install Go](https://go.dev/doc/install))
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (for agents/skills)
+- Git
+
+### Full Installation (Recommended)
+
+This method installs the `bip` CLI, Claude Code agents, and skills in one command:
+
+```bash
+git clone https://github.com/matsen/bipartite
+cd bipartite
+make install
+```
+
+This will:
+
+1. Build the `bip` binary
+2. Copy it to `~/bin/bip`
+3. Symlink agents to `~/.claude/agents/`
+4. Symlink skills to `~/.claude/skills/`
+
+**Verify installation:**
+
+```bash
+# Check bip is available
+bip --help
+
+# Check agents/skills are linked
+ls ~/.claude/agents/
+ls ~/.claude/skills/
+```
+
+**Note:** Ensure `~/bin` is in your PATH. Add to your shell profile if needed:
+
+```bash
+export PATH="$HOME/bin:$PATH"
+```
+
+### CLI-Only Installation
+
+If you only want the `bip` command-line tool without Claude Code integration:
+
+```bash
+go install github.com/matsen/bipartite/cmd/bip@latest
+```
+
+This installs the binary to `$GOPATH/bin` (typically `$HOME/go/bin`).
+
+**Add to PATH:**
+
+```bash
+# For bash/zsh, add to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/go/bin:$PATH"
+
+# Then reload:
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+**Verify installation:**
+
+```bash
+bip --help
+```
+
+### Manual Agent/Skill Installation
+
+If you want to manually symlink agents and skills (instead of using `make install`):
+
+```bash
+# Clone repository
+git clone https://github.com/matsen/bipartite
+cd bipartite
+
+# Create directories
+mkdir -p ~/.claude/agents
+mkdir -p ~/.claude/skills
+
+# Symlink agents
+for f in agents/*.md; do
+  ln -sf "$(pwd)/$f" ~/.claude/agents/$(basename "$f")
+done
+
+# Symlink skills (note: skills are in ./skills/, not ./.claude/skills/)
+for d in skills/*/; do
+  ln -sf "$(pwd)/$d" ~/.claude/skills/$(basename "$d")
+done
+```
+
+**Verify:**
+
+```bash
+ls -l ~/.claude/agents/
+ls -l ~/.claude/skills/
+```
+
 ## Creating a Nexus
 
 ### Option 1: Use the Template (Recommended)
