@@ -17,17 +17,27 @@ A context layer for research groups: connecting your internal world (projects, r
 
 ## Quick Start
 
+1. [Install bipartite](guides/getting-started.md#installation)
+
+2. Create your [nexus](guides/architecture.md) from the [nexus-template](https://github.com/matsen/nexus-template) (click "Use this template"), then clone it:
+
 ```bash
-# Install
-git clone https://github.com/matsen/bipartite && cd bipartite
-make install
+git clone https://github.com/YOUR_USERNAME/nexus ~/path/to/nexus
+```
 
-# Create nexus from template, then configure
-echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
+3. Point bip to your nexus:
 
-# Build index and search
+```bash
+mkdir -p ~/.config/bip
+echo 'nexus_path: ~/path/to/nexus' > ~/.config/bip/config.yml
+```
+
+4. Build the index and try it out:
+
+```bash
 bip rebuild
 bip search "phylogenetics"
+bip s2 add DOI:10.1038/s41586-021-03819-2
 ```
 
 See [Getting Started](guides/getting-started.md) for full setup instructions.
