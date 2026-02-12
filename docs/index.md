@@ -15,11 +15,22 @@ A context layer for research groups: connecting your internal world (projects, r
 - **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
 - **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code integration explained
 
-## Quick Links
+## Quick Start
 
-- [Installation](guides/getting-started.md#installation)
-- [Configuration Reference](guides/configuration.md)
-- [Creating a Nexus](guides/getting-started.md#creating-a-nexus)
+```bash
+# Install
+git clone https://github.com/matsen/bipartite && cd bipartite
+make install
+
+# Create nexus from template, then configure
+echo 'nexus_path: ~/re/nexus' > ~/.config/bip/config.yml
+
+# Build index and search
+bip rebuild
+bip search "phylogenetics"
+```
+
+See [Getting Started](guides/getting-started.md) for full setup instructions.
 
 ## License
 
