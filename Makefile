@@ -1,16 +1,14 @@
 REPO_DIR := $(shell pwd)
-BIN_DIR := ~/bin
 
 .PHONY: build install symlink-agents symlink-skills clean format check test
 
 build:
 	go build -o bip ./cmd/bip
 
-install: build symlink-agents symlink-skills
-	mkdir -p $(BIN_DIR)
-	cp bip $(BIN_DIR)/bip
-	@echo "Installed bip to $(BIN_DIR)/bip"
-	@echo "Make sure $(BIN_DIR) is in your PATH."
+install: symlink-agents symlink-skills
+	go install ./cmd/bip
+	@echo "Installed bip (to \$$GOBIN if set, otherwise \$$HOME/go/bin)"
+	@echo "Ensure the Go bin directory is in your PATH."
 
 symlink-agents:
 	mkdir -p ~/.claude/agents

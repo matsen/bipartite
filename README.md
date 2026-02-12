@@ -49,6 +49,8 @@ If you just want the `bip` CLI without agents/skills:
 go install github.com/matsen/bipartite/cmd/bip@latest
 ```
 
+**Note:** This installs to `$GOBIN` if set, otherwise `$HOME/go/bin`. Ensure the appropriate directory is in your PATH.
+
 ## Quick Start
 
 1. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:

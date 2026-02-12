@@ -8,36 +8,36 @@ A context layer for research groups: connecting your internal world (projects, r
 
 ## Guides
 
-- **[Getting Started](guides/getting-started.md)** — Create your nexus and start adding papers
+- **[Getting Started](guides/getting-started.md)** — Installation, configuration, and first steps
 - **[Reference Management](guides/reference-management.md)** — Search, import, cite, and collaborate on a git-backed paper library
 - **[Knowledge Graph](guides/knowledge-graph.md)** — Connect papers, concepts, and projects with typed edges
 - **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, boards, and Slack integration across repos
-- **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code skills explained
-
-## Installation
-
-```bash
-go install ./cmd/bip
-export PATH="$HOME/go/bin:$PATH"
-```
-
-Requires Go 1.24+. For Claude Code skills:
-
-```bash
-git clone https://github.com/matsen/bipartite
-cd bipartite
-ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
-```
+- **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
+- **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code integration explained
 
 ## Quick Start
 
-Create your [nexus](guides/architecture.md) from the [nexus-template](https://github.com/matsen/nexus-template), then:
+1. [Install bipartite](guides/getting-started.md#installation)
+
+2. Create your [nexus](guides/architecture.md) from the [nexus-template](https://github.com/matsen/nexus-template) (click "Use this template"), then clone it:
 
 ```bash
-bip config pdf-root ~/Google\ Drive/My\ Drive/Paperpile
-bip import --format paperpile ~/Downloads/export.json
+git clone https://github.com/YOUR_USERNAME/nexus ~/path/to/nexus
+```
+
+3. Point bip to your nexus:
+
+```bash
+mkdir -p ~/.config/bip
+echo 'nexus_path: ~/path/to/nexus' > ~/.config/bip/config.yml
+```
+
+4. Build the index and try it out:
+
+```bash
 bip rebuild
 bip search "phylogenetics"
+bip s2 add DOI:10.1038/s41586-021-03819-2
 ```
 
 See [Getting Started](guides/getting-started.md) for full setup instructions.

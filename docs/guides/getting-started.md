@@ -2,6 +2,103 @@
 
 Bipartite operates on a **[nexus](architecture.md)** — a directory that serves as the central hub for your paper library, server configurations, and workflow coordination. See [How It Works](architecture.md) for the full picture of how bipartite's pieces fit together.
 
+## Installation
+
+### Prerequisites
+
+- Go 1.24 or later ([install Go](https://go.dev/doc/install))
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (for agents/skills)
+- Git
+
+### Full Installation (Recommended)
+
+This method installs the `bip` CLI, Claude Code agents, and skills in one command:
+
+```bash
+git clone https://github.com/matsen/bipartite
+cd bipartite
+make install
+```
+
+This will:
+
+1. Install `bip` via `go install` (to `$GOBIN` if set, otherwise `$HOME/go/bin`)
+2. Symlink agents to `~/.claude/agents/`
+3. Symlink skills to `~/.claude/skills/`
+
+**Ensure the Go bin directory is in your PATH.** If you haven't configured `$GOBIN`, add to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+export PATH="$HOME/go/bin:$PATH"
+```
+
+Then reload your shell (`source ~/.bashrc` or `source ~/.zshrc`).
+
+**Verify installation:**
+
+```bash
+bip --help
+ls ~/.claude/agents/
+ls ~/.claude/skills/
+```
+
+### CLI-Only Installation
+
+If you only want the `bip` command-line tool without Claude Code integration:
+
+```bash
+go install github.com/matsen/bipartite/cmd/bip@latest
+```
+
+This installs to `$GOBIN` if set, otherwise `$HOME/go/bin`.
+
+**Add to PATH** (if you haven't configured `$GOBIN`):
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/go/bin:$PATH"
+
+# Then reload:
+source ~/.bashrc  # or source ~/.zshrc
+```
+
+**Verify installation:**
+
+```bash
+bip --help
+```
+
+### Manual Agent/Skill Installation
+
+If you want to manually symlink agents and skills (instead of using `make install`):
+
+```bash
+# Clone repository
+git clone https://github.com/matsen/bipartite
+cd bipartite
+
+# Create directories
+mkdir -p ~/.claude/agents
+mkdir -p ~/.claude/skills
+
+# Symlink agents
+for f in agents/*.md; do
+  ln -sf "$(pwd)/$f" ~/.claude/agents/$(basename "$f")
+done
+
+# Symlink skills (note: skills are in ./skills/, not ./.claude/skills/)
+for d in skills/*/; do
+  ln -sf "$(pwd)/$d" ~/.claude/skills/$(basename "$d")
+done
+```
+
+**Verify:**
+
+```bash
+ls -l ~/.claude/agents/
+ls -l ~/.claude/skills/
+```
+
 ## Creating a Nexus
 
 ### Option 1: Use the Template (Recommended)
