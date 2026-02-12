@@ -7,9 +7,8 @@ build:
 
 install: symlink-agents symlink-skills
 	go install ./cmd/bip
-	@echo "Installed bip to \$$HOME/go/bin/bip"
-	@echo "Ensure \$$HOME/go/bin is in your PATH (add to ~/.bashrc or ~/.zshrc):"
-	@echo "  export PATH=\"\$$HOME/go/bin:\$$PATH\""
+	@echo "Installed bip (to \$$GOBIN if set, otherwise \$$HOME/go/bin)"
+	@echo "Ensure the Go bin directory is in your PATH."
 
 symlink-agents:
 	mkdir -p ~/.claude/agents

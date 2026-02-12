@@ -22,11 +22,11 @@ make install
 
 This will:
 
-1. Install `bip` to `$HOME/go/bin/` (via `go install`)
+1. Install `bip` via `go install` (to `$GOBIN` if set, otherwise `$HOME/go/bin`)
 2. Symlink agents to `~/.claude/agents/`
 3. Symlink skills to `~/.claude/skills/`
 
-**Ensure `$HOME/go/bin` is in your PATH.** Add to `~/.bashrc` or `~/.zshrc`:
+**Ensure the Go bin directory is in your PATH.** If you haven't configured `$GOBIN`, add to `~/.bashrc` or `~/.zshrc`:
 
 ```bash
 export PATH="$HOME/go/bin:$PATH"
@@ -50,12 +50,12 @@ If you only want the `bip` command-line tool without Claude Code integration:
 go install github.com/matsen/bipartite/cmd/bip@latest
 ```
 
-This installs the binary to `$GOPATH/bin` (typically `$HOME/go/bin`).
+This installs to `$GOBIN` if set, otherwise `$HOME/go/bin`.
 
-**Add to PATH:**
+**Add to PATH** (if you haven't configured `$GOBIN`):
 
 ```bash
-# For bash/zsh, add to ~/.bashrc or ~/.zshrc:
+# Add to ~/.bashrc or ~/.zshrc:
 export PATH="$HOME/go/bin:$PATH"
 
 # Then reload:
