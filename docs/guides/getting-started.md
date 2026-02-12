@@ -22,26 +22,24 @@ make install
 
 This will:
 
-1. Build the `bip` binary
-2. Copy it to `~/bin/bip`
-3. Symlink agents to `~/.claude/agents/`
-4. Symlink skills to `~/.claude/skills/`
+1. Install `bip` to `$HOME/go/bin/` (via `go install`)
+2. Symlink agents to `~/.claude/agents/`
+3. Symlink skills to `~/.claude/skills/`
+
+**Ensure `$HOME/go/bin` is in your PATH.** Add to `~/.bashrc` or `~/.zshrc`:
+
+```bash
+export PATH="$HOME/go/bin:$PATH"
+```
+
+Then reload your shell (`source ~/.bashrc` or `source ~/.zshrc`).
 
 **Verify installation:**
 
 ```bash
-# Check bip is available
 bip --help
-
-# Check agents/skills are linked
 ls ~/.claude/agents/
 ls ~/.claude/skills/
-```
-
-**Note:** Ensure `~/bin` is in your PATH. Add to your shell profile if needed:
-
-```bash
-export PATH="$HOME/bin:$PATH"
 ```
 
 ### CLI-Only Installation
