@@ -1,10 +1,12 @@
 package scout
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -61,10 +63,16 @@ func NewSSHClient(cfg SSHConfig) (*RealSSHClient, error) {
 		return nil, fmt.Errorf("getting SSH agent signers: %w", err)
 	}
 
-	// Determine SSH username from current OS user
+	// Determine SSH username: prefer ~/.ssh/config User for the proxy host,
+	// fall back to the current OS user.
 	username := ""
-	if u, err := user.Current(); err == nil {
-		username = u.Username
+	if cfg.ProxyJump != "" {
+		username = sshConfigUser(cfg.ProxyJump)
+	}
+	if username == "" {
+		if u, err := user.Current(); err == nil {
+			username = u.Username
+		}
 	}
 
 	return &RealSSHClient{
@@ -80,11 +88,18 @@ func NewSSHClient(cfg SSHConfig) (*RealSSHClient, error) {
 func (c *RealSSHClient) RunCommand(server Server, command string) (string, error) {
 	timeout := time.Duration(c.sshConfig.ConnectTimeout) * time.Second
 
+	// Resolve per-server username from ~/.ssh/config, falling back to the
+	// session-level username set in NewSSHClient.
+	username := sshConfigUser(server.Name)
+	if username == "" {
+		username = c.username
+	}
+
 	// InsecureIgnoreHostKey disables host key verification. This is acceptable
 	// for an internal tool on a trusted network where servers are managed
 	// infrastructure. For untrusted networks, use a known_hosts file instead.
 	clientConfig := &ssh.ClientConfig{
-		User:            c.username,
+		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(c.signers...)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         timeout,
@@ -103,7 +118,7 @@ func (c *RealSSHClient) RunCommand(server Server, command string) (string, error
 		client, err = ssh.Dial("tcp", server.Name+":22", clientConfig)
 	}
 	if err != nil {
-		return "", c.wrapSSHError(err, server.Name)
+		return "", c.wrapSSHError(err, server.Name, username)
 	}
 	defer client.Close()
 
@@ -127,6 +142,68 @@ func (c *RealSSHClient) Close() error {
 		return c.agentConn.Close()
 	}
 	return nil
+}
+
+// sshConfigUser reads ~/.ssh/config and returns the User directive for the
+// first Host block that matches hostname. It supports glob patterns in Host
+// lines (e.g. "Host *.example.com"). Returns "" on any error or no match.
+func sshConfigUser(hostname string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return sshConfigUserFromFile(filepath.Join(home, ".ssh", "config"), hostname)
+}
+
+// sshConfigUserFromFile is the testable core of sshConfigUser.
+func sshConfigUserFromFile(path, hostname string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+
+	inMatchingBlock := false
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Split into keyword and argument(s)
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) < 2 {
+			// Also handle tab separators
+			parts = strings.SplitN(line, "\t", 2)
+			if len(parts) < 2 {
+				continue
+			}
+		}
+		keyword := strings.ToLower(strings.TrimSpace(parts[0]))
+		args := strings.TrimSpace(parts[1])
+
+		switch keyword {
+		case "host":
+			// New Host block — check if any pattern matches
+			inMatchingBlock = false
+			for _, pattern := range strings.Fields(args) {
+				// Skip negated patterns
+				if strings.HasPrefix(pattern, "!") {
+					continue
+				}
+				if matched, _ := filepath.Match(pattern, hostname); matched {
+					inMatchingBlock = true
+					break
+				}
+			}
+		case "user":
+			if inMatchingBlock {
+				return args
+			}
+		}
+	}
+	return ""
 }
 
 // dialViaProxy connects to the target server through a ProxyJump host.
@@ -163,13 +240,15 @@ func (c *RealSSHClient) dialViaProxy(target string, config *ssh.ClientConfig, ti
 }
 
 // wrapSSHError produces actionable error messages based on SSH error types.
-func (c *RealSSHClient) wrapSSHError(err error, server string) error {
+func (c *RealSSHClient) wrapSSHError(err error, server, username string) error {
 	errStr := err.Error()
 
 	// Check for common SSH error patterns
 	switch {
 	case strings.Contains(errStr, "no supported methods remain"):
-		return fmt.Errorf("SSH authentication failed for %s. Check ~/.ssh/config and ensure your key is authorized", server)
+		return fmt.Errorf("SSH authentication failed for %s (as user %q). "+
+			"If your remote username differs from %q, set \"User\" in ~/.ssh/config",
+			server, username, username)
 	case strings.Contains(errStr, "i/o timeout") || strings.Contains(errStr, "connection timed out"):
 		if c.sshConfig.ProxyJump != "" && strings.Contains(errStr, c.sshConfig.ProxyJump) {
 			return fmt.Errorf("cannot reach proxy %s: connection timed out", c.sshConfig.ProxyJump)
