@@ -81,6 +81,71 @@ func TestWrapSSHError_GenericError(t *testing.T) {
 	}
 }
 
+func TestParseSSHConfigUser(t *testing.T) {
+	config := `
+Host jump.example.com
+    User jdoe
+    IdentityFile ~/.ssh/id_rsa
+
+Host server01
+    User admin
+    ProxyJump jump.example.com
+
+Host *.cluster.example.com
+    User labuser
+
+# Comment line
+Host multi-pattern alt-name
+    User multiuser
+`
+
+	tests := []struct {
+		hostname string
+		want     string
+	}{
+		{"jump.example.com", "jdoe"},
+		{"server01", "admin"},
+		{"gpu01.cluster.example.com", "labuser"},
+		{"multi-pattern", "multiuser"},
+		{"alt-name", "multiuser"},
+		{"unknown-host", ""},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.hostname, func(t *testing.T) {
+			got := parseSSHConfigUser(config, tt.hostname)
+			if got != tt.want {
+				t.Errorf("parseSSHConfigUser(%q) = %q, want %q", tt.hostname, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParseSSHConfigUser_FirstMatchWins(t *testing.T) {
+	config := `
+Host server01
+    User specific-user
+
+Host *
+    User default-user
+`
+	// Specific match should win over wildcard
+	if got := parseSSHConfigUser(config, "server01"); got != "specific-user" {
+		t.Errorf("expected specific-user, got %q", got)
+	}
+	// Wildcard should match unmatched hosts
+	if got := parseSSHConfigUser(config, "other-server"); got != "default-user" {
+		t.Errorf("expected default-user, got %q", got)
+	}
+}
+
+func TestParseSSHConfigUser_EmptyConfig(t *testing.T) {
+	if got := parseSSHConfigUser("", "server01"); got != "" {
+		t.Errorf("expected empty string, got %q", got)
+	}
+}
+
 // containsStr is a test helper for string containment checks.
 func containsStr(s, substr string) bool {
 	return strings.Contains(s, substr)
