@@ -5,12 +5,62 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 )
+
+// sshConfigUser returns the SSH User directive from ~/.ssh/config for the
+// given host, or "" if none is found or the file cannot be read.
+// It matches the first Host block whose pattern matches the given hostname.
+func sshConfigUser(hostname string) string {
+	if hostname == "" {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(home, ".ssh", "config"))
+	if err != nil {
+		return ""
+	}
+	return parseSSHConfigUser(string(data), hostname)
+}
+
+// parseSSHConfigUser extracts the User directive for hostname from SSH config content.
+func parseSSHConfigUser(configData, hostname string) string {
+	var inMatchingBlock bool
+	for _, line := range strings.Split(configData, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		key := strings.ToLower(fields[0])
+
+		if key == "host" {
+			inMatchingBlock = false
+			for _, pat := range fields[1:] {
+				if matched, _ := filepath.Match(pat, hostname); matched {
+					inMatchingBlock = true
+					break
+				}
+			}
+			continue
+		}
+		if inMatchingBlock && key == "user" {
+			return fields[1]
+		}
+	}
+	return ""
+}
 
 // SSHClient abstracts SSH operations for testing.
 type SSHClient interface {
@@ -61,10 +111,14 @@ func NewSSHClient(cfg SSHConfig) (*RealSSHClient, error) {
 		return nil, fmt.Errorf("getting SSH agent signers: %w", err)
 	}
 
-	// Determine SSH username from current OS user
+	// Determine SSH username: start with OS user, then check ~/.ssh/config
+	// for the proxy jump host (the first hop).
 	username := ""
 	if u, err := user.Current(); err == nil {
 		username = u.Username
+	}
+	if cfgUser := sshConfigUser(cfg.ProxyJump); cfgUser != "" {
+		username = cfgUser
 	}
 
 	return &RealSSHClient{
@@ -80,11 +134,17 @@ func NewSSHClient(cfg SSHConfig) (*RealSSHClient, error) {
 func (c *RealSSHClient) RunCommand(server Server, command string) (string, error) {
 	timeout := time.Duration(c.sshConfig.ConnectTimeout) * time.Second
 
+	// Resolve per-host username from ~/.ssh/config, falling back to session default.
+	username := c.username
+	if hostUser := sshConfigUser(server.Name); hostUser != "" {
+		username = hostUser
+	}
+
 	// InsecureIgnoreHostKey disables host key verification. This is acceptable
 	// for an internal tool on a trusted network where servers are managed
 	// infrastructure. For untrusted networks, use a known_hosts file instead.
 	clientConfig := &ssh.ClientConfig{
-		User:            c.username,
+		User:            username,
 		Auth:            []ssh.AuthMethod{ssh.PublicKeys(c.signers...)},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         timeout,
