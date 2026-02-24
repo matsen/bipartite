@@ -493,6 +493,33 @@ func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []G
 	return comments
 }
 
+// FetchLastItemComment fetches the single most recent comment on an issue/PR.
+// Returns nil if the item has no comments.
+func FetchLastItemComment(repo string, number int) (*GitHubComment, error) {
+	endpoint := fmt.Sprintf("/repos/%s/issues/%d/comments?per_page=1&direction=desc", repo, number)
+
+	// Use gh api without --paginate since we only want 1 result
+	cmd := exec.Command("gh", "api", endpoint)
+	output, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("fetching last comment for %s#%d: %s", repo, number, string(exitErr.Stderr))
+		}
+		return nil, fmt.Errorf("fetching last comment for %s#%d: %w", repo, number, err)
+	}
+
+	var comments []GitHubComment
+	if err := json.Unmarshal(output, &comments); err != nil {
+		return nil, fmt.Errorf("parsing last comment for %s#%d: %w", repo, number, err)
+	}
+
+	if len(comments) == 0 {
+		return nil, nil
+	}
+
+	return &comments[0], nil
+}
+
 // FetchItemCommenters fetches commenters for an issue or PR.
 func FetchItemCommenters(repo string, number int) ([]string, error) {
 	endpoint := fmt.Sprintf("/repos/%s/issues/%d/comments", repo, number)

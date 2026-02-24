@@ -1,6 +1,8 @@
 package flow
 
 import (
+	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -138,6 +140,50 @@ func FilterByBallInCourt(items []GitHubItem, actions []ItemAction, githubUser st
 		}
 	}
 	return filtered
+}
+
+// EnrichActionsWithLastComments fetches the last comment for items that have
+// no actions in the current window. This prevents ball-in-court from falling
+// through to the author-based default when the user's last comment predates
+// the since window.
+func EnrichActionsWithLastComments(repo string, items []GitHubItem, existingActions []ItemAction) []ItemAction {
+	// Build set of item numbers that already have actions
+	hasActions := make(map[int]bool)
+	for _, a := range existingActions {
+		hasActions[a.ItemNumber] = true
+	}
+
+	var enriched []ItemAction
+	for _, item := range items {
+		if hasActions[item.Number] {
+			continue
+		}
+
+		comment, err := FetchLastItemComment(repo, item.Number)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to fetch last comment for %s#%d: %v\n", repo, item.Number, err)
+			continue
+		}
+		if comment == nil {
+			continue
+		}
+		if comment.User.Login == "" {
+			continue
+		}
+
+		itemNum := getCommentItemNumber(*comment)
+		if itemNum == 0 {
+			// Fallback: use the item number directly since we fetched for this specific item
+			itemNum = item.Number
+		}
+		enriched = append(enriched, ItemAction{
+			ItemNumber: itemNum,
+			Actor:      comment.User.Login,
+			Timestamp:  comment.UpdatedAt,
+		})
+	}
+
+	return enriched
 }
 
 // FilterCommentsByItems returns comments that belong to the given items.

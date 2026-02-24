@@ -116,8 +116,14 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		issueComments, _ := flow.FetchIssueComments(repo, since)
-		prComments, _ := flow.FetchPRComments(repo, since)
+		issueComments, err := flow.FetchIssueComments(repo, since)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to fetch issue comments for %s: %v\n", repo, err)
+		}
+		prComments, err := flow.FetchPRComments(repo, since)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to fetch PR comments for %s: %v\n", repo, err)
+		}
 		allComments := append(issueComments, prComments...)
 
 		// Split into issues and PRs
@@ -130,14 +136,22 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		// Fetch PR reviews and include them as comments for ball-in-court filtering
+		// Fetch ALL PR reviews (no time filter) in a single batch call.
+		// For display, only since-window reviews are added to allComments.
+		// For ball-in-court, all reviews are included as actions.
+		var allReviewComments []flow.GitHubComment
 		if len(prs) > 0 {
 			var prNumbers []int
 			for _, pr := range prs {
 				prNumbers = append(prNumbers, pr.Number)
 			}
-			reviewComments := flow.FetchPRReviewsAsComments(repo, prNumbers, since)
-			allComments = append(allComments, reviewComments...)
+			allReviewComments = flow.FetchPRReviewsAsComments(repo, prNumbers, time.Time{})
+			// Add only since-window reviews to display comments
+			for _, rc := range allReviewComments {
+				if !rc.UpdatedAt.Before(since) {
+					allComments = append(allComments, rc)
+				}
+			}
 		}
 
 		// Fetch issue events - warn but continue on error (degraded filtering is better than failure)
@@ -148,12 +162,24 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			issueEvents = nil // Continue with empty slice
 		}
 
-		// Convert to unified actions for ball-in-court filtering
+		// Convert to unified actions for ball-in-court filtering.
+		// Start with since-window comments + events.
 		allActions := flow.CommentsToActions(allComments)
 		allActions = append(allActions, flow.EventsToActions(issueEvents)...)
 
 		// Apply ball-in-my-court filtering if enabled
 		if githubUser != "" {
+			// Include ALL PR reviews (not just since-filtered) for ball-in-court,
+			// since a review predating the window is still relevant.
+			allActions = append(allActions, flow.CommentsToActions(allReviewComments)...)
+
+			// Enrich actions: for items with no actions at all, fetch their
+			// last comment so ball-in-court doesn't fall through to the default.
+			// This fixes the bug where the user's comment predates the since window.
+			allItems := append(append([]flow.GitHubItem{}, issues...), prs...)
+			enriched := flow.EnrichActionsWithLastComments(repo, allItems, allActions)
+			allActions = append(allActions, enriched...)
+
 			issues = flow.FilterByBallInCourt(issues, allActions, githubUser)
 			prs = flow.FilterByBallInCourt(prs, allActions, githubUser)
 			allComments = flow.FilterCommentsByItems(allComments, append(issues, prs...))
