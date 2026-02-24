@@ -53,6 +53,22 @@ Patterns preserve zero-padding: `gpu{01..12}` expands to `gpu01`, `gpu02`, ..., 
 
 Authentication uses your SSH agent (`SSH_AUTH_SOCK`). Ensure keys are loaded with `ssh-add`.
 
+#### SSH Username Resolution
+
+`bip scout` reads `~/.ssh/config` to determine the SSH username for each connection. This is important when your remote username differs from your local OS username. The resolution order is:
+
+1. **Per-server**: If `~/.ssh/config` has a `Host` block matching the server name with a `User` directive, that username is used.
+2. **Proxy host**: If no per-server match, the `User` from the `Host` block matching the `proxy_jump` hostname is used.
+3. **OS user**: Falls back to your local OS username.
+
+**Important:** The `Host` value in `~/.ssh/config` must match the hostname used in `servers.yml` exactly. SSH aliases won't resolve — for example, if `servers.yml` has `proxy_jump: snail.fhcrc.org`, then `~/.ssh/config` needs `Host snail.fhcrc.org` (not `Host snail`). To support both, use multiple patterns:
+
+```
+Host snail snail.fhcrc.org
+    User jdoe
+    HostName snail.fhcrc.org
+```
+
 ## Output
 
 ### Human-Readable (`--human`)
@@ -120,7 +136,7 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 | "SSH agent not running" | Run `eval $(ssh-agent)` and `ssh-add` |
 | "SSH agent has no keys" | Run `ssh-add` to load your keys |
 | "connection timed out" | Check network/VPN, increase `connect_timeout` |
-| "SSH authentication failed" | Verify key is authorized on server, check `~/.ssh/config` |
+| "SSH authentication failed for X (as user Y)" | The error shows which username was attempted. If wrong, add `User yourname` to the matching `Host` block in `~/.ssh/config` |
 | "connection refused" | Ensure SSH is running on the server |
 
 ## How It Works
