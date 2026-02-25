@@ -439,7 +439,8 @@ func fetchPRReviewsBatch(repo string, prNumbers []int) (map[int][]rawPRReview, e
 
 // FetchPRReviewsAsComments fetches PR reviews for a set of PRs and returns
 // them as GitHubComment entries so they participate in ball-in-court filtering.
-// Only reviews submitted since the given time are included.
+// Only reviews submitted at or after since are included; pass time.Time{} to
+// fetch all reviews regardless of age.
 // Uses a single batched GraphQL call, falling back to per-PR REST calls on failure.
 //
 // All errors are logged to stderr (never silently swallowed). A nil return
@@ -489,7 +490,6 @@ func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []G
 			})
 		}
 	}
-	fmt.Fprintf(os.Stderr, "Fetched %d review comment(s) across %d PR(s) for %s\n", len(comments), len(prNumbers), repo)
 	return comments
 }
 

@@ -170,14 +170,16 @@ func runCheckin(cmd *cobra.Command, args []string) {
 		// Apply ball-in-my-court filtering if enabled
 		if githubUser != "" {
 			// Include ALL PR reviews (not just since-filtered) for ball-in-court,
-			// since a review predating the window is still relevant.
+			// since a review predating the window is still relevant. This may
+			// duplicate since-window reviews already in allActions; duplicates
+			// are harmless since only the last actor per item matters.
 			allActions = append(allActions, flow.CommentsToActions(allReviewComments)...)
 
 			// Enrich actions: for items with no actions at all, fetch their
 			// last comment so ball-in-court doesn't fall through to the default.
 			// This fixes the bug where the user's comment predates the since window.
-			allItems := append(append([]flow.GitHubItem{}, issues...), prs...)
-			enriched := flow.EnrichActionsWithLastComments(repo, allItems, allActions)
+			itemsForEnrich := append(append([]flow.GitHubItem{}, issues...), prs...)
+			enriched := flow.EnrichActionsWithLastComments(repo, itemsForEnrich, allActions)
 			allActions = append(allActions, enriched...)
 
 			issues = flow.FilterByBallInCourt(issues, allActions, githubUser)

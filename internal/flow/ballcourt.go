@@ -142,10 +142,14 @@ func FilterByBallInCourt(items []GitHubItem, actions []ItemAction, githubUser st
 	return filtered
 }
 
-// EnrichActionsWithLastComments fetches the last comment for items that have
-// no actions in the current window. This prevents ball-in-court from falling
-// through to the author-based default when the user's last comment predates
-// the since window.
+// EnrichActionsWithLastComments fetches the last issue-thread comment for items
+// that have no actions in the current window. This prevents ball-in-court from
+// falling through to the author-based default when the user's last comment
+// predates the since window.
+//
+// Note: only issue-thread comments (/issues/{n}/comments) are considered here.
+// PR review submissions and inline review comments are handled separately
+// via FetchPRReviewsAsComments.
 func EnrichActionsWithLastComments(repo string, items []GitHubItem, existingActions []ItemAction) []ItemAction {
 	// Build set of item numbers that already have actions
 	hasActions := make(map[int]bool)
@@ -173,7 +177,8 @@ func EnrichActionsWithLastComments(repo string, items []GitHubItem, existingActi
 
 		itemNum := getCommentItemNumber(*comment)
 		if itemNum == 0 {
-			// Fallback: use the item number directly since we fetched for this specific item
+			// Should not occur unless the API returns a comment without issue_url;
+			// fall back to the known item number.
 			itemNum = item.Number
 		}
 		enriched = append(enriched, ItemAction{
