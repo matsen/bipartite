@@ -33,10 +33,26 @@ Examine the repository to determine what checks apply:
 
 Multiple types can apply (e.g., Snakemake + Python).
 
+### Step 1.5: Fetch and determine base branch
+
+Always fetch first so comparisons are against the true remote state, not a stale local branch:
+
+```bash
+git fetch origin
+```
+
+Determine the base branch from the PR (if one exists), otherwise default to `main` or `master`:
+
+```bash
+gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "main"
+```
+
+Use `origin/<base>` (not local `<base>`) for all diffs below. This avoids false positives from a stale local main.
+
 ### Step 2: Identify Changed Files
 
 ```bash
-git diff main...HEAD --name-only
+git diff origin/<base>...HEAD --name-only
 ```
 
 Focus review on changed files, not the entire codebase.
@@ -59,7 +75,7 @@ Scan changed files for artifacts that typically shouldn't be committed:
 
 **Check file sizes:**
 ```bash
-git diff main...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && stat -f "%z %N" "{}" 2>/dev/null || stat --format="%s %n" "{}" 2>/dev/null' | awk '$1 > 102400 {print}'
+git diff origin/<base>...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && stat -f "%z %N" "{}" 2>/dev/null || stat --format="%s %n" "{}" 2>/dev/null' | awk '$1 > 102400 {print}'
 ```
 
 Flag anything suspicious for user confirmation before proceeding.

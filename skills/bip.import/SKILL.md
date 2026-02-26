@@ -31,7 +31,6 @@ If multiple files match, ask the user which one.
 Always dry-run first to show what will change:
 
 ```bash
-cd ~/re/nexus
 bip import --format paperpile "<file>" --dry-run --human
 ```
 
