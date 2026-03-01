@@ -22,14 +22,14 @@ If no question is given, show a full summary of all servers.
 
 ### Step 1: Collect Server Metrics
 
-Run `bip scout` from the nexus directory to get JSON output:
+Run `bip scout` to get JSON output:
 
 ```bash
 bip scout
 ```
 
 **If the command fails**, check for common issues:
-- Missing `servers.yml`: "No servers.yml found. Create one in your nexus directory — see `bip scout --help`."
+- Missing `servers.yml`: "No servers.yml found — see `bip scout --help` for config location."
 - SSH authentication failure: Report the error and suggest checking SSH agent and `~/.ssh/config`.
 - All servers offline: Report that all servers are unreachable and suggest checking network/VPN.
 
