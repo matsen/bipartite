@@ -31,16 +31,13 @@ If PR is not open, abort: "PR is already `$STATE`."
 
 Save the base branch name (usually `main` or `master`) from `baseRefName`.
 
-### Step 2: Confirm with user
+### Step 2: Log and proceed
 
-Show the PR title and number, and ask for confirmation before proceeding:
+Print the PR summary line, then continue without waiting for confirmation:
 
 ```
-About to land: #42 "Add feature X" (branch: my-feature → main)
-Proceed?
+Landing: #42 "Add feature X" (branch: my-feature → main)
 ```
-
-**STOP and wait for user confirmation.**
 
 ### Step 3: Update base branch and rebase
 
