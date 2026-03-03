@@ -17,7 +17,11 @@ Run a comprehensive quality checklist before merging a PR. Automatically detects
 
 ### Step 0: Check for Project-Specific Checklist
 
-First, read the project's `CLAUDE.md` and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section. **If found, follow those steps exactly** instead of the generic workflow below.
+First, check for a project-specific checklist:
+1. Look for `PRE-MERGE-CHECKLIST.md` in the repo root
+2. If not found, read the project's `CLAUDE.md` and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
+
+**If a project-specific checklist is found, follow those steps exactly** instead of the generic workflow below.
 
 ### Step 1: Detect Project Type
 
