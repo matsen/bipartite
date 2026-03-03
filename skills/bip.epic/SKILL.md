@@ -33,8 +33,8 @@ repo base URL from `gh repo view --json url -q .url`.
 
 ### Tmux window naming
 
-Name tmux windows by **issue number**: `i281`, `i276`, etc. — not by
-clone name. This makes it easy to jump to the work for a specific issue.
+Name tmux windows by **clone name**: `cedar`, `oak`, etc. Clone names
+are easier to remember than issue numbers and match the filesystem.
 
 ### Attention signal
 
@@ -43,9 +43,9 @@ window with a `?` suffix **before** calling `AskUserQuestion`, and
 rename it back **immediately after** the answer is received:
 
 ```bash
-tmux rename-window "i281?"    # before AskUserQuestion
+tmux rename-window "cedar?"    # before AskUserQuestion
 # ... user answers ...
-tmux rename-window "i281"     # immediately after answer received
+tmux rename-window "cedar"     # immediately after answer received
 ```
 
 This must be automatic — the agent wraps every `AskUserQuestion` call
@@ -120,12 +120,11 @@ For each clone directory in the clone root, collect:
    cat <clone>/.epic-status.json 2>/dev/null
    ```
 
-3. **Tmux window**: Check if a tmux window exists for work in this clone.
-   Windows are named by issue number (`i281`), so cross-reference the
-   clone's branch (e.g. `281-richer-indel-signals`) with tmux windows:
+3. **Tmux window**: Check if a tmux window exists for this clone:
    ```bash
    tmux list-windows -F "#W"
    ```
+   Windows are named by clone name (`cedar`, `oak`, etc.).
 
 4. **Staleness**: If `.epic-status.json` exists but its `updated_at` is
    older than 30 minutes and no tmux window is active, mark as **stale**
@@ -203,11 +202,11 @@ cat > "$PROMPT_FILE" << 'PROMPT_EOF'
 <composed prompt here>
 PROMPT_EOF
 
-# Create tmux window named by issue number, in the clone directory
-tmux new-window -n "i<issue-number>" -c "<clone-path>"
+# Create tmux window named by clone, in the clone directory
+tmux new-window -n "<clone-name>" -c "<clone-path>"
 
 # Launch Claude Code with the prompt
-tmux send-keys -t "i<issue-number>" \
+tmux send-keys -t "<clone-name>" \
   "claude --dangerously-skip-permissions \"\$(cat $PROMPT_FILE)\"; rm -f $PROMPT_FILE" Enter
 ```
 
@@ -246,9 +245,10 @@ EPIC STATUS PROTOCOL — You MUST follow this:
 Phases: exploring, coding, testing, blocked, completed
 
 ATTENTION SIGNAL: Before EVERY AskUserQuestion call, rename the window:
-  tmux rename-window "i281?"
+  tmux rename-window "cedar?"
 Immediately after the answer is received, rename it back:
-  tmux rename-window "i281"
+  tmux rename-window "cedar"
+(Replace "cedar" with the actual clone name.)
 This must be automatic — never wait for the user to remind you.
 
 Now run: /work-issue 281
