@@ -38,20 +38,19 @@ clone name. This makes it easy to jump to the work for a specific issue.
 
 ### Attention signal
 
-When a spawned session is blocked or waiting for user input, it should
-rename its tmux window with a `?` suffix:
+When a spawned session needs user input, it should rename its tmux
+window with a `?` suffix **before** calling `AskUserQuestion`, and
+rename it back **immediately after** the answer is received:
 
 ```bash
-tmux rename-window "i281?"    # needs attention
+tmux rename-window "i281?"    # before AskUserQuestion
+# ... user answers ...
+tmux rename-window "i281"     # immediately after answer received
 ```
 
-When work resumes, rename back:
-
-```bash
-tmux rename-window "i281"     # back to normal
-```
-
-This makes attention-needed windows visible at a glance in the status bar.
+This must be automatic — the agent wraps every `AskUserQuestion` call
+with the rename-on / rename-off pair. The user should never need to
+remind the agent to remove the `?`.
 
 ### Opening files for review
 
@@ -246,11 +245,11 @@ EPIC STATUS PROTOCOL — You MUST follow this:
 
 Phases: exploring, coding, testing, blocked, completed
 
-ATTENTION SIGNAL: If you are blocked or need user input, rename the tmux
-window to signal it:
+ATTENTION SIGNAL: Before EVERY AskUserQuestion call, rename the window:
   tmux rename-window "i281?"
-When you resume work, rename back:
+Immediately after the answer is received, rename it back:
   tmux rename-window "i281"
+This must be automatic — never wait for the user to remind you.
 
 Now run: /work-issue 281
 ```
