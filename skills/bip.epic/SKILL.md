@@ -36,22 +36,6 @@ repo base URL from `gh repo view --json url -q .url`.
 Name tmux windows by **clone name**: `cedar`, `oak`, etc. Clone names
 are easier to remember than issue numbers and match the filesystem.
 
-### Attention signal
-
-When a spawned session needs user input, it should rename its tmux
-window with a `?` suffix **before** calling `AskUserQuestion`, and
-rename it back **immediately after** the answer is received:
-
-```bash
-tmux rename-window "cedar?"    # before AskUserQuestion
-# ... user answers ...
-tmux rename-window "cedar"     # immediately after answer received
-```
-
-This must be automatic — the agent wraps every `AskUserQuestion` call
-with the rename-on / rename-off pair. The user should never need to
-remind the agent to remove the `?`.
-
 ### Opening files for review
 
 The user runs the orchestrator in Zed. When you write a file that needs
@@ -243,13 +227,6 @@ EPIC STATUS PROTOCOL — You MUST follow this:
 }
 
 Phases: exploring, coding, testing, blocked, completed
-
-ATTENTION SIGNAL: Before EVERY AskUserQuestion call, rename the window:
-  tmux rename-window "cedar?"
-Immediately after the answer is received, rename it back:
-  tmux rename-window "cedar"
-(Replace "cedar" with the actual clone name.)
-This must be automatic — never wait for the user to remind you.
 
 Now run: /work-issue 281
 ```
