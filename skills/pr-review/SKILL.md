@@ -1,16 +1,16 @@
 ---
-name: pre-merge-check
+name: pr-review
 description: Run comprehensive pre-merge quality checklist for current branch's PR
 ---
 
-# /pre-merge-check
+# /pr-review
 
 Run a comprehensive quality checklist before merging a PR. Automatically detects project type and runs appropriate checks.
 
 ## Usage
 
 ```
-/pre-merge-check
+/pr-review
 ```
 
 ## Workflow
