@@ -417,17 +417,21 @@ func buildPRPrompt(repo string, number int, data *ItemData) string {
 	if engaged {
 		taskSection = `Your task:
 1. Read the PR and all comments/reviews carefully
-2. Prepare the user to respond to the latest activity
-3. If anything is unclear, explore the codebase to understand it
-4. Summarize the discussion and suggest a response
+2. Start by summarizing the PR description — surface any results, benchmarks,
+   or data the author included. Do not skip over this content.
+3. Prepare the user to respond to the latest activity
+4. If anything is unclear, explore the codebase to understand it
+5. Summarize the discussion and suggest a response
 
 Do NOT approve, merge, comment, or make changes. Analysis only.`
 	} else {
 		taskSection = `Your task:
 1. Check @CLAUDE.md in this repo for PR review guidelines and follow them
-2. If no guidelines exist, review the PR for correctness, style, and potential issues
-3. Summarize what the PR does and any concerns
-4. Prepare a review for the user
+2. Start by summarizing the PR description — surface any results, benchmarks,
+   or data the author included. Do not skip over this content.
+3. If no guidelines exist, review the PR for correctness, style, and potential issues
+4. Summarize what the PR does and any concerns
+5. Prepare a review for the user
 
 Do NOT approve, merge, comment, or make changes. Analysis only.`
 	}
