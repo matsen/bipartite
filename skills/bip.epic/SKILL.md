@@ -126,32 +126,37 @@ gh issue list --search "sort:updated-desc" --limit 10 --json number,title,state
 Cross-reference with EPIC bodies — flag anything merged/closed that
 the EPIC doesn't reflect yet.
 
-### Step 4: Build dashboard
+### Step 4: Build status table
 
-Three sections:
+Display a single table showing the full picture:
 
-**EPIC Progress**: Per-EPIC summary of done/active/next, which clones
-are working on what.
+| Clone | Branch | Status | Issue | Summary |
+|-------|--------|--------|-------|---------|
+| cedar | feat-x | active (tmux) | i281 | Implementing clamping |
+| oak   | main   | idle   | —    | — |
+| pine  | fix-y  | assigned | i295 | Blocked on upstream |
 
-**Clone Status**: Table with clone, branch, last commit, status.
+Then list **unassigned issues** ready for work (not blocked, not in progress):
 
-**Actionable Next Steps**: Cross-reference EPIC active items with clone
-status. Concrete suggestions.
+**Ready issues** (not assigned to any clone):
+- `i302` — Add retry logic to batch pipeline
+- `i310` — Update benchmark thresholds
 
-### Step 5: Offer options
+### Step 5: Propose next action
 
-Use `AskUserQuestion` with 3-4 dynamically generated options:
-- Start work on iN in clone X
-- Resume work on clone X
-- Review/land PR pN
-- Clean up stale clone X
+Based on the status table, propose a concrete next step. Examples:
 
-### Step 6: Act on selection
+> "Shall I spawn `i302` and `i310`? `oak` and `birch` are idle."
+
+> "All clones are busy. Shall I update EPIC bodies with current progress?"
+
+> "Clone `pine` looks stale (no tmux, status 2h old). Clean it up?"
+
+Wait for user confirmation, then act:
 
 - **Spawn work**: Run the `/bip.epic.spawn` skill (do NOT improvise tmux/claude commands)
-- **Review PR**: Read PR body, check CI, summarize for user
 - **Update EPICs**: Use the EPIC body update pattern (below)
-- **Land PR**: Use `/land` skill
+- **Clean up clone**: Checkout main, pull, clear stale `.epic-status.json`
 
 ## EPIC body update pattern
 
