@@ -15,26 +15,35 @@ Spawn a Claude Code session in a tmux window to work on a GitHub issue.
 
 If clone-name is omitted, pick the best idle clone automatically.
 
+## Configuration
+
+Reads `.epic-config.json` from the repo root (see `/bip.epic` for format).
+**If the file does not exist**, stop and ask the user to configure it
+via `/bip.epic` first.
+
 ## Workflow
 
 ### Step 1: Select clone
 
-If not specified, find an idle clone:
+Read `clone_root` and `clone_names` from `.epic-config.json`.
+
+If clone-name not specified, find an idle clone:
 ```bash
-cd ~/re/pz
-for d in */; do
-  branch=$(git -C "$d" branch --show-current 2>/dev/null)
-  [ "$branch" = "main" ] && echo "$d"
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+for name in $(jq -r '.clone_names[]' .epic-config.json); do
+  branch=$(git -C "$CLONE_ROOT/$name" branch --show-current 2>/dev/null)
+  [ "$branch" = "main" ] && echo "$name"
 done
 ```
 
 Prefer clones with clean worktrees. If all busy, offer to create a new
-clone (wood-themed names: walnut, cherry, willow, juniper, etc.).
+clone using a name from `new_clone_names` in the config.
 
 ### Step 2: Update clone to latest main
 
 ```bash
-cd ~/re/pz/<clone>
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
 ```
 
@@ -122,8 +131,9 @@ handles tmux window creation, temp file management, and launching
 Claude Code with `--dangerously-skip-permissions` automatically.
 
 ```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 bip spawn --prompt "<composed prompt>" \
-  --dir "$HOME/re/pz/<clone-name>" \
+  --dir "$CLONE_ROOT/<clone-name>" \
   --name "<clone-name>"
 ```
 
@@ -140,9 +150,13 @@ Report to the user:
 ## Creating new clones
 
 ```bash
-cd ~/re/pz
-git clone git@github.com:matsengrp/phyz.git <new-name>
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+REPO=$(jq -r .github_repo .epic-config.json)
+cd "$CLONE_ROOT"
+git clone "git@github.com:$REPO.git" <new-name>
 ```
+
+After creating, add the new name to `clone_names` in `.epic-config.json`.
 
 ## Cleaning up before reuse
 

@@ -24,9 +24,48 @@ Named by **clone name** (`cedar`, `oak`, etc.), not issue number.
 The conductor session stays on `main` and does NOT do feature work.
 It orchestrates: scans, updates EPICs, spawns clones, reviews PRs.
 
+## Configuration
+
+The epic skill reads `.epic-config.json` from the repo root. This file
+is gitignored and must exist before the skill can operate.
+
+```json
+{
+  "clone_root": "~/re/pz",
+  "clone_names": ["alder", "ash", "balsa", "birch", "cedar", "elm"],
+  "new_clone_names": ["walnut", "cherry", "willow", "juniper", "hemlock"],
+  "github_repo": "matsengrp/phyz",
+  "conductor": "balsa"
+}
+```
+
+Fields:
+- **clone_root**: Parent directory containing all clones
+- **clone_names**: Existing clone directory names
+- **new_clone_names**: Names available for creating new clones
+- **github_repo**: `org/repo` for `gh` commands
+- **conductor**: Which clone is the orchestrator (stays on main)
+
 ## Workflow
 
-### Step 0: Pull main
+### Step 0: Load config
+
+```bash
+cat .epic-config.json
+```
+
+**If the file does not exist**, stop and ask the user:
+1. Where are your clones? (e.g. `~/re/pz`)
+2. What are the clone directory names?
+3. What is the GitHub repo (`org/repo`)?
+4. Which clone is the conductor?
+
+Then create `.epic-config.json` with their answers and proceed.
+
+All subsequent steps use values from this config — never hardcode
+paths or clone names.
+
+### Step 0.5: Pull main
 
 ```bash
 git pull --ff-only origin main
@@ -47,11 +86,7 @@ completed, active, and blocked items.
 
 ### Step 2: Scan clones
 
-Clone root = parent directory of CWD (e.g. `~/re/pz/`).
-
-Known clones: alder, ash, balsa, birch, cedar, elm, fir, maple, oak,
-pine, spruce, teak. New names if needed: walnut, cherry, willow,
-juniper, hemlock, poplar, rowan, sitka.
+Use `clone_root` and `clone_names` from `.epic-config.json`.
 
 For each clone:
 
