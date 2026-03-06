@@ -70,12 +70,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	// Resolve working directory
 	var repoPath string
 	if spawnDir != "" {
-		// Validate --dir exists
-		if info, err := os.Stat(spawnDir); err != nil || !info.IsDir() {
-			fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", spawnDir)
-			os.Exit(1)
-		}
-		repoPath = spawnDir
+		repoPath = mustValidateDir(spawnDir)
 	} else {
 		// Validate repo is in sources.yml and has local clone
 		var found bool
@@ -165,22 +160,26 @@ func runAdhocSpawn() {
 		windowName = fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
 	}
 	var workDir string
-	var err error
 	if spawnDir != "" {
-		if info, serr := os.Stat(spawnDir); serr != nil || !info.IsDir() {
-			fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", spawnDir)
+		workDir = mustValidateDir(spawnDir)
+	} else {
+		var err error
+		workDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
 			os.Exit(1)
 		}
-		workDir = spawnDir
-	} else {
-		workDir, err = os.Getwd()
-	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
-		os.Exit(1)
 	}
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
 	spawnWindow(windowName, workDir, spawnPrompt, "")
+}
+
+func mustValidateDir(dir string) string {
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", dir)
+		os.Exit(1)
+	}
+	return dir
 }
 
 // spawnWindow validates tmux, checks for duplicates, and creates the window.
