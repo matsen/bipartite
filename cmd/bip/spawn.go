@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -36,10 +37,14 @@ Requires:
 }
 
 var spawnPrompt string
+var spawnDir string
+var spawnName string
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
 	spawnCmd.Flags().StringVar(&spawnPrompt, "prompt", "", "Custom prompt override")
+	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
+	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
 }
 
 func runSpawn(cmd *cobra.Command, args []string) {
@@ -63,19 +68,27 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Validate repo is in sources.yml and has local clone
-	repoPath, found := flow.GetRepoLocalPath(nexusPath, ref.Repo)
-	if !found {
-		fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
-		fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
-		os.Exit(1)
-	}
+	// Resolve working directory
+	var repoPath string
+	if spawnDir != "" {
+		repoPath = mustValidateDir(spawnDir)
+		fmt.Fprintf(os.Stderr, "Using custom directory: %s\n", repoPath)
+	} else {
+		// Validate repo is in sources.yml and has local clone
+		var found bool
+		repoPath, found = flow.GetRepoLocalPath(nexusPath, ref.Repo)
+		if !found {
+			fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
+			fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
+			os.Exit(1)
+		}
 
-	// Check local clone exists
-	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
-		fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
-		os.Exit(1)
+		// Check local clone exists
+		if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
+			fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
+			os.Exit(1)
+		}
 	}
 
 	// Detect item type if not known from URL
@@ -105,8 +118,13 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	}
 
 	// Build window name
-	repoName := flow.ExtractRepoName(ref.Repo)
-	windowName := fmt.Sprintf("%s#%d", repoName, ref.Number)
+	var windowName string
+	if spawnName != "" {
+		windowName = spawnName
+	} else {
+		repoName := flow.ExtractRepoName(ref.Repo)
+		windowName = fmt.Sprintf("%s#%d", repoName, ref.Number)
+	}
 
 	// Print spawning message first
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
@@ -139,14 +157,41 @@ func runSpawn(cmd *cobra.Command, args []string) {
 }
 
 func runAdhocSpawn() {
-	windowName := fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
-	workDir, err := os.Getwd()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
-		os.Exit(1)
+	windowName := spawnName
+	if windowName == "" {
+		windowName = fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
+	}
+	var workDir string
+	if spawnDir != "" {
+		workDir = mustValidateDir(spawnDir)
+	} else {
+		var err error
+		workDir, err = os.Getwd()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
+			os.Exit(1)
+		}
 	}
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
 	spawnWindow(windowName, workDir, spawnPrompt, "")
+}
+
+func mustValidateDir(dir string) string {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Could not resolve directory path: %s\n", dir)
+		os.Exit(1)
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", abs)
+		os.Exit(1)
+	}
+	if !info.IsDir() {
+		fmt.Fprintf(os.Stderr, "Error: Path is not a directory: %s\n", abs)
+		os.Exit(1)
+	}
+	return abs
 }
 
 // spawnWindow validates tmux, checks for duplicates, and creates the window.
@@ -417,17 +462,21 @@ func buildPRPrompt(repo string, number int, data *ItemData) string {
 	if engaged {
 		taskSection = `Your task:
 1. Read the PR and all comments/reviews carefully
-2. Prepare the user to respond to the latest activity
-3. If anything is unclear, explore the codebase to understand it
-4. Summarize the discussion and suggest a response
+2. Start by summarizing the PR description — surface any results, benchmarks,
+   or data the author included. Do not skip over this content.
+3. Prepare the user to respond to the latest activity
+4. If anything is unclear, explore the codebase to understand it
+5. Summarize the discussion and suggest a response
 
 Do NOT approve, merge, comment, or make changes. Analysis only.`
 	} else {
 		taskSection = `Your task:
 1. Check @CLAUDE.md in this repo for PR review guidelines and follow them
-2. If no guidelines exist, review the PR for correctness, style, and potential issues
-3. Summarize what the PR does and any concerns
-4. Prepare a review for the user
+2. Start by summarizing the PR description — surface any results, benchmarks,
+   or data the author included. Do not skip over this content.
+3. If no guidelines exist, review the PR for correctness, style, and potential issues
+4. Summarize what the PR does and any concerns
+5. Prepare a review for the user
 
 Do NOT approve, merge, comment, or make changes. Analysis only.`
 	}

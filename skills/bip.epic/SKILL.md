@@ -1,63 +1,77 @@
 ---
 name: bip.epic
-description: EPIC dashboard — review progress, plan next steps, spawn work across clones
+description: EPIC cold-start dashboard — full scan of clones, GitHub, and EPIC issues
 ---
 
 # /bip.epic
 
-Orchestrate work across multiple clones for EPIC-tagged GitHub issues.
-Run from the **reference clone** (e.g. `~/re/pz/balsa`) inside a tmux session.
+Full cold-start dashboard for EPIC-based multi-clone orchestration.
+Run from the **conductor clone** inside tmux.
 
-## Overview
-
-This skill scans EPIC issues, checks clone states, builds a status
-dashboard, and lets the user dispatch work to idle clones via tmux.
+Use this at **session start** to establish context. For mid-session
+updates, use `/bip.epic.poll`. To spawn work, use `/bip.epic.spawn`.
 
 ## Conventions
 
 ### Issue/PR naming
+- `i281` = issue #281, `p275` = PR #275. Never bare `#N`.
+- First mention in bullet lists: full URL inline.
 
-Always prefix references with `i` for issues and `p` for PRs:
-- `i281` = issue #281
-- `p275` = PR #275
+### Tmux windows
+Named by **clone name** (`cedar`, `oak`, etc.), not issue number.
 
-This applies everywhere: dashboard output, tmux window names, bullet
-lists, options, status files. Never use bare `#N` — always `iN` or `pN`.
+### Conductor role
+The conductor session stays on `main` and does NOT do feature work.
+It orchestrates: scans, updates EPICs, spawns clones, reviews PRs.
 
-### Issue link format
+## Configuration
 
-The first time you mention an issue or PR in a bullet list, include the
-full URL inline, e.g. `i281 (https://github.com/matsengrp/phyz/issues/281)`.
-Subsequent mentions of the same item can use short `i281`. Derive the
-repo base URL from `gh repo view --json url -q .url`.
+The epic skill reads `.epic-config.json` from the repo root. This file
+is gitignored and must exist before the skill can operate.
 
-### Tmux window naming
-
-Name tmux windows by **clone name**: `cedar`, `oak`, etc. Clone names
-are easier to remember than issue numbers and match the filesystem.
-
-### Opening files for review
-
-The user runs the orchestrator in Zed. When you write a file that needs
-user review (issue files, reports, etc.), open it in Zed:
-
-```bash
-zed <file-path>
+```json
+{
+  "clone_root": "~/re/myproject",
+  "clone_names": ["alpha", "beta", "gamma"],
+  "new_clone_names": ["delta", "epsilon", "zeta"],
+  "github_repo": "org/repo",
+  "conductor": "alpha"
+}
 ```
 
-This applies to ISSUE-*.md files, status reports, or anything where user
-feedback is wanted.
+Fields:
+- **clone_root**: Parent directory containing all clones
+- **clone_names**: Existing clone directory names
+- **new_clone_names**: Names available for creating new clones
+- **github_repo**: `org/repo` for `gh` commands
+- **conductor**: Which clone is the orchestrator (stays on main)
 
 ## Workflow
 
-### Step 0: Pull main
+### Step 0: Load config
+
+```bash
+cat .epic-config.json
+```
+
+**If the file does not exist**, stop and ask the user:
+1. Where are your clones? (e.g. `~/re/pz`)
+2. What are the clone directory names?
+3. What is the GitHub repo (`org/repo`)?
+4. Which clone is the conductor?
+
+Then create `.epic-config.json` with their answers and proceed.
+
+All subsequent steps use values from this config — never hardcode
+paths or clone names.
+
+### Step 0.5: Pull main
 
 ```bash
 git pull --ff-only origin main
 ```
 
-If this fails (dirty worktree, diverged), report the problem and continue
-with the stale state — don't force-reset.
+If this fails, report the problem and continue with stale state.
 
 ### Step 1: Discover EPIC issues
 
@@ -65,238 +79,137 @@ with the stale state — don't force-reset.
 gh issue list --label EPIC --json number,title,body
 ```
 
-If no `EPIC` label exists, fall back to searching for issues whose title
-starts with "EPIC:":
+Fallback: `gh issue list --search "EPIC: in:title" --json number,title,body`
 
-```bash
-gh issue list --search "EPIC: in:title" --json number,title,body
-```
-
-For each EPIC, parse the **Status dashboard** section from the body to
-extract:
-- Completed items (checked boxes)
-- Active items (unchecked boxes with issue/PR references)
-- Blocked/future items
+Parse the **Status dashboard** section from each EPIC body to extract
+completed, active, and blocked items.
 
 ### Step 2: Scan clones
 
-The clone root is the **parent directory** of the current working directory.
-For example if CWD is `~/re/pz/balsa`, the clone root is `~/re/pz/`.
+Use `clone_root` and `clone_names` from `.epic-config.json`.
 
-All clones are interchangeable — any clone can do feature work or run
-experiments. (Legacy `run*` clones may still have active work; treat
-them the same as any other clone.)
-
-Known clones: alder, ash, balsa, birch, cedar, elm, maple, oak, pine,
-teak, run1, run2.
-
-For each clone directory in the clone root, collect:
-
-1. **Git state**:
-   ```bash
-   git -C <clone> branch --show-current
-   git -C <clone> log --oneline -1
-   git -C <clone> status --porcelain | head -5
-   ```
-
-2. **Epic status file** (if present):
-   ```bash
-   cat <clone>/.epic-status.json 2>/dev/null
-   ```
-
-3. **Tmux window**: Check if a tmux window exists for this clone:
-   ```bash
-   tmux list-windows -F "#W"
-   ```
-   Windows are named by clone name (`cedar`, `oak`, etc.).
-
-4. **Staleness**: If `.epic-status.json` exists but its `updated_at` is
-   older than 30 minutes and no tmux window is active, mark as **stale**
-   (the session likely ended without cleanup).
-
-Classify each clone as:
-- **active**: Has a tmux window or fresh `.epic-status.json` (< 30 min)
-- **assigned**: On a non-main branch but no active session
-- **idle**: On `main`, clean worktree, no active session
-
-### Step 3: Build the dashboard
-
-Present a report with three sections:
-
-#### EPIC Progress
-
-For each EPIC issue, show:
-- Title and issue number (e.g. `i284`)
-- Summary of what's done, what's active, what's next
-- Which clones are working on related issues
-
-#### Clone Status
-
-A table like:
-
-```
-Clone   Branch                     Last Commit           Status
------   ------                     -----------           ------
-balsa   main                       5efaa47 (1h ago)      idle (this session)
-cedar   276-baseball-iterate-nni   103def3 (2h ago)      assigned (i276), 1 dirty file
-oak     198-iterate-benchmark      8056738 (5h ago)      assigned (i198)
-teak    main                       1b07327 (8h ago)      idle, 3 dirty files
-maple   main                       ba1ac9d (3d ago)      idle
-birch   main                       5efaa47 (1h ago)      idle
-elm     main                       5efaa47 (1h ago)      idle
-ash     main                       5efaa47 (1h ago)      idle
-pine    main                       5efaa47 (1h ago)      idle
-alder   main                       5efaa47 (1h ago)      idle
-run1    277-band-diagnostics       da9773b (3h ago)      assigned (i277)
-run2    main                       1aa50fd (1d ago)      idle
-```
-
-#### Actionable Next Steps
-
-Cross-reference EPIC active items with clone status. List concrete actions
-the user could take, such as:
-- "cedar has uncommitted work on i276 — resume or clean up?"
-- "i281 (richer indel signals) is unstarted — assign to an idle clone?"
-- "i278 (baseball × max-failures experiment) needs a run clone"
-
-### Step 4: Offer options
-
-Use `AskUserQuestion` to let the user pick what to do next. Options are
-generated dynamically based on the dashboard. Common option types:
-
-- **Start work on iN in clone X** — spawns a Claude session
-- **Resume work on clone X (iN)** — opens a tmux window in an assigned clone
-- **Clean up stale clone X** — switch back to main, delete branch
-- **Run experiment iN on clone X** — syncs to remote and spawns
-
-Present 3-4 of the most useful options plus "Other" for custom requests.
-
-### Step 5: Spawn work
-
-When the user picks an action that involves spawning a Claude session,
-use tmux to create a new window and launch Claude Code with a carefully
-composed prompt.
-
-#### Tmux spawning pattern
+For each clone:
 
 ```bash
-# Write the prompt to a temp file (too long for shell args)
-PROMPT_FILE=$(mktemp /tmp/epic-XXXXXX.txt)
-cat > "$PROMPT_FILE" << 'PROMPT_EOF'
-<composed prompt here>
-PROMPT_EOF
-
-# Create tmux window named by clone, in the clone directory
-tmux new-window -n "<clone-name>" -c "<clone-path>"
-
-# Launch Claude Code with the prompt
-tmux send-keys -t "<clone-name>" \
-  "claude --dangerously-skip-permissions \"\$(cat $PROMPT_FILE)\"; rm -f $PROMPT_FILE" Enter
+git -C <clone> branch --show-current
+git -C <clone> log --oneline -1
+git -C <clone> status --porcelain | head -5
+cat <clone>/.epic-status.json 2>/dev/null
 ```
 
-#### Composed prompt structure
+Check tmux windows: `tmux list-windows -F "#W"`
 
-The prompt sent to the spawned session MUST include:
+Classify as:
+- **active**: Has tmux window or fresh `.epic-status.json` (< 30 min)
+- **assigned**: On non-main branch, no active session
+- **idle**: On `main`, clean worktree
 
-1. **The task**: Issue number, title, and relevant context from the EPIC
-2. **Epic status protocol**: Instructions to maintain `.epic-status.json`
-   (see below)
-3. **`/work-issue <number>`**: Delegates the actual implementation to the
-   work-issue skill, which handles branching, coding, pre-merge checks,
-   and PR creation
-
-Example spawned prompt:
-
-```
-You are working on GitHub issue i281 "Richer PRANK indel signals for iterate
-NNI edge ranking" in the phyz project.
-
-EPIC STATUS PROTOCOL — You MUST follow this:
-1. At session start, write .epic-status.json (see format below)
-2. Update it when you transition between phases (exploring → coding → testing)
-3. Update it when you finish or encounter a blocker
-
-.epic-status.json format:
-{
-  "issue": 281,
-  "title": "Richer PRANK indel signals for iterate NNI edge ranking",
-  "phase": "exploring",
-  "summary": "Reading issue and exploring codebase",
-  "updated_at": "<ISO 8601 timestamp>",
-  "blockers": []
-}
-
-Phases: exploring, coding, testing, blocked, completed
-
-Now run: /work-issue 281
-```
-
-The `/work-issue` skill handles the full lifecycle: reading the issue,
-creating a branch, implementing, running `/pre-merge-check`, and creating
-a PR. The spawned prompt only needs to add the epic status protocol on
-top of that.
-
-#### Creating new clones
-
-If all dev clones are busy and the user wants to start new work:
+### Step 3: Check GitHub activity
 
 ```bash
-cd ~/re/pz
-git clone git@github.com:matsengrp/phyz.git <new-name>
+# Recently merged PRs
+gh pr list --search "is:pr is:merged sort:updated-desc" --limit 10 --json number,title,mergedAt
+
+# Open PRs
+gh pr list --json number,title,headRefName,state
+
+# Recent issues
+gh issue list --search "sort:updated-desc" --limit 10 --json number,title,state
 ```
 
-Pick wood-themed names: `walnut`, `cherry`, `willow`, `spruce`, `juniper`,
-`hemlock`, `poplar`, `rowan`. Check which names are already taken.
+Cross-reference with EPIC bodies — flag anything merged/closed that
+the EPIC doesn't reflect yet.
 
-#### Cleaning up stale clones
+### Step 4: Build dashboard
 
-Before reusing an assigned clone:
+Three sections:
 
-1. Check if there's an open PR for the branch
-2. If merged/closed, safe to reset: `git checkout main && git pull`
-3. If open, warn the user — they may want to resume instead
+**EPIC Progress**: Per-EPIC summary of done/active/next, which clones
+are working on what.
 
-### Step 6: Monitor (optional)
+**Clone Status**: Table with clone, branch, last commit, status.
 
-After spawning, offer to check on running sessions:
+**Actionable Next Steps**: Cross-reference EPIC active items with clone
+status. Concrete suggestions.
+
+### Step 5: Offer options
+
+Use `AskUserQuestion` with 3-4 dynamically generated options:
+- Start work on iN in clone X
+- Resume work on clone X
+- Review/land PR pN
+- Clean up stale clone X
+
+### Step 6: Act on selection
+
+- **Spawn work**: Run the `/bip.epic.spawn` skill (do NOT improvise tmux/claude commands)
+- **Review PR**: Read PR body, check CI, summarize for user
+- **Update EPICs**: Use the EPIC body update pattern (below)
+- **Land PR**: Use `/land` skill
+
+## EPIC body update pattern
+
+EPIC issue bodies are the source of truth for project status. Update
+them when findings come in, items complete, or new work starts.
+
+**Local file convention**: Keep a persistent local copy as
+`ISSUE-EPIC-<short-desc>.md` in the repo root (e.g.
+`ISSUE-EPIC-indel-signals.md`, `ISSUE-EPIC-benchmark.md`).
+These files are gitignored via the `ISSUE-*.md` pattern.
 
 ```bash
-# Read status files from all active clones
-for d in ~/re/pz/*/; do
-  [ -f "$d/.epic-status.json" ] && echo "=== $(basename $d) ===" && cat "$d/.epic-status.json"
-done
+# Pull current body and record the timestamp
+gh issue view <number> --json body,updatedAt > /tmp/epic-pull.json
+jq -r .body /tmp/epic-pull.json > ISSUE-EPIC-<short-desc>.md
+PULLED_AT=$(jq -r .updatedAt /tmp/epic-pull.json)
+rm -f /tmp/epic-pull.json
+
+# Edit the file (add findings, check boxes, update clone table)
+# ...
+
+# Before pushing: check if someone else edited since our pull
+CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
+if [ "$PULLED_AT" != "$CURRENT_AT" ]; then
+  echo "CONFLICT: Issue was updated since pull ($PULLED_AT → $CURRENT_AT)"
+  echo "Re-pull, merge changes, then try again."
+  # Stop here — do NOT push
+else
+  gh issue edit <number> --body-file ISSUE-EPIC-<short-desc>.md
+fi
 ```
+
+**Conflict check**: Record `updatedAt` when pulling. Before pushing,
+re-fetch `updatedAt` — if it changed, someone else edited. Re-pull,
+merge their changes, and retry. When in doubt, ask the user.
+
+Key sections to maintain:
+- **Status dashboard**: Check/uncheck boxes, add new items
+- **Key findings**: Numbered list, append new findings
+- **Related experiments**: Add new experiment rows
+- **Active clone assignments**: Update date and clone table
+
+Always include the date in the clone assignments header.
 
 ## .epic-status.json specification
 
 ```json
 {
   "issue": 281,
-  "title": "Richer PRANK indel signals for iterate NNI edge ranking",
+  "title": "Short title",
   "phase": "exploring | coding | testing | blocked | completed",
-  "summary": "Human-readable one-liner of current activity",
+  "summary": "Human-readable one-liner",
   "updated_at": "2026-03-03T14:30:00Z",
-  "blockers": ["waiting for i266 to merge", "need data from run1"]
+  "blockers": [],
+  "remote_run": null
 }
 ```
 
-- Written to `<clone-root>/.epic-status.json`
-- **Must be .gitignored** — add to project .gitignore if not present
-- Stale after 30 minutes with no tmux window = session ended uncleanly
+- Must be `.gitignored`
+- Stale after 30 minutes with no tmux window
+- `remote_run` optional — set when work dispatched to remote server
 
 ## Error handling
 
-- **Not in tmux**: Warn and exit — tmux is required for spawning
+- **Not in tmux**: Warn — tmux required for spawning
 - **No EPIC issues found**: Report and offer to create one
-- **Clone root detection fails**: Ask user for the clone root path
-- **gh not authenticated**: Report error, suggest `gh auth login`
-
-## Notes
-
-- The conductor session (running this skill) stays in the reference clone
-  on `main`. It does NOT do feature work itself.
-- Multiple spawned sessions can run in parallel in different tmux windows.
-- Run clones should use `make remote-sync` + `make remote-tmux` for
-  experiment work on compute servers. The spawned prompt should include this.
-- Always run `/bip.scout` before dispatching remote experiment work to pick
-  an available server.
+- **gh not authenticated**: Suggest `gh auth login`
