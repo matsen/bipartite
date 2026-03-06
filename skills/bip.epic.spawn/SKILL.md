@@ -117,21 +117,18 @@ Now read the issue and begin work:
 
 ### Step 5: Launch tmux window
 
-```bash
-PFILE=$(mktemp /tmp/epic-spawn.XXXX)
-cat > "$PFILE" << 'PROMPT_EOF'
-<composed prompt>
-PROMPT_EOF
+Use `bip spawn` with `--dir`, `--name`, and `--prompt` flags. This
+handles tmux window creation, temp file management, and launching
+Claude Code with `--dangerously-skip-permissions` automatically.
 
-tmux new-window -n "<clone-name>" -c "$HOME/re/pz/<clone-name>"
-sleep 1
-tmux send-keys -t "<clone-name>" \
-  "claude --dangerously-skip-permissions \"\$(cat $PFILE)\"; rm -f $PFILE" Enter
+```bash
+bip spawn --prompt "<composed prompt>" \
+  --dir "$HOME/re/pz/<clone-name>" \
+  --name "<clone-name>"
 ```
 
-**Note**: Use `sleep 1` between `new-window` and `send-keys` to avoid
-race conditions. Use unique temp file names (not fixed patterns like
-`/tmp/epic-XXXXXX.txt` which collide).
+**Do NOT** use raw `tmux new-window` / `tmux send-keys` / `claude` commands.
+Always go through `bip spawn` which handles the full lifecycle correctly.
 
 ### Step 6: Confirm
 

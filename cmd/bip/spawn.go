@@ -36,10 +36,14 @@ Requires:
 }
 
 var spawnPrompt string
+var spawnDir string
+var spawnName string
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
 	spawnCmd.Flags().StringVar(&spawnPrompt, "prompt", "", "Custom prompt override")
+	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
+	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
 }
 
 func runSpawn(cmd *cobra.Command, args []string) {
@@ -63,19 +67,31 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Validate repo is in sources.yml and has local clone
-	repoPath, found := flow.GetRepoLocalPath(nexusPath, ref.Repo)
-	if !found {
-		fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
-		fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
-		os.Exit(1)
-	}
+	// Resolve working directory
+	var repoPath string
+	if spawnDir != "" {
+		// Validate --dir exists
+		if info, err := os.Stat(spawnDir); err != nil || !info.IsDir() {
+			fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", spawnDir)
+			os.Exit(1)
+		}
+		repoPath = spawnDir
+	} else {
+		// Validate repo is in sources.yml and has local clone
+		var found bool
+		repoPath, found = flow.GetRepoLocalPath(nexusPath, ref.Repo)
+		if !found {
+			fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
+			fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
+			os.Exit(1)
+		}
 
-	// Check local clone exists
-	if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-		fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
-		fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
-		os.Exit(1)
+		// Check local clone exists
+		if _, err := os.Stat(repoPath); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
+			fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
+			os.Exit(1)
+		}
 	}
 
 	// Detect item type if not known from URL
@@ -105,8 +121,13 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	}
 
 	// Build window name
-	repoName := flow.ExtractRepoName(ref.Repo)
-	windowName := fmt.Sprintf("%s#%d", repoName, ref.Number)
+	var windowName string
+	if spawnName != "" {
+		windowName = spawnName
+	} else {
+		repoName := flow.ExtractRepoName(ref.Repo)
+		windowName = fmt.Sprintf("%s#%d", repoName, ref.Number)
+	}
 
 	// Print spawning message first
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
@@ -139,8 +160,21 @@ func runSpawn(cmd *cobra.Command, args []string) {
 }
 
 func runAdhocSpawn() {
-	windowName := fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
-	workDir, err := os.Getwd()
+	windowName := spawnName
+	if windowName == "" {
+		windowName = fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
+	}
+	var workDir string
+	var err error
+	if spawnDir != "" {
+		if info, serr := os.Stat(spawnDir); serr != nil || !info.IsDir() {
+			fmt.Fprintf(os.Stderr, "Error: Directory does not exist: %s\n", spawnDir)
+			os.Exit(1)
+		}
+		workDir = spawnDir
+	} else {
+		workDir, err = os.Getwd()
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: Could not get working directory: %v\n", err)
 		os.Exit(1)

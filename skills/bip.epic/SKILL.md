@@ -79,7 +79,7 @@ gh pr list --search "is:pr is:merged sort:updated-desc" --limit 10 --json number
 gh pr list --json number,title,headRefName,state
 
 # Recent issues
-gh issue list --sort updated --limit 10 --json number,title,state
+gh issue list --search "sort:updated-desc" --limit 10 --json number,title,state
 ```
 
 Cross-reference with EPIC bodies — flag anything merged/closed that
@@ -107,7 +107,7 @@ Use `AskUserQuestion` with 3-4 dynamically generated options:
 
 ### Step 6: Act on selection
 
-- **Spawn work**: Use `/bip.epic.spawn` pattern
+- **Spawn work**: Run the `/bip.epic.spawn` skill (do NOT improvise tmux/claude commands)
 - **Review PR**: Read PR body, check CI, summarize for user
 - **Update EPICs**: Use the EPIC body update pattern (below)
 - **Land PR**: Use `/land` skill
