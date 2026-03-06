@@ -158,28 +158,29 @@ them when findings come in, items complete, or new work starts.
 These files are gitignored via the `ISSUE-*.md` pattern.
 
 ```bash
-# Pull current body to local file (first time or to refresh)
-gh issue view <number> --json body -q .body > ISSUE-EPIC-<short-desc>.md
+# Pull current body and record the timestamp
+gh issue view <number> --json body,updatedAt > /tmp/epic-pull.json
+jq -r .body /tmp/epic-pull.json > ISSUE-EPIC-<short-desc>.md
+PULLED_AT=$(jq -r .updatedAt /tmp/epic-pull.json)
+rm -f /tmp/epic-pull.json
 
 # Edit the file (add findings, check boxes, update clone table)
 # ...
 
-# Before pushing: check for upstream changes since your last pull
-gh issue view <number> --json body -q .body > /tmp/epic-check.md
-if ! diff -q ISSUE-EPIC-<short-desc>.md /tmp/epic-check.md >/dev/null 2>&1; then
-  # Someone else edited — diff to see what changed, merge manually
-  diff ISSUE-EPIC-<short-desc>.md /tmp/epic-check.md
+# Before pushing: check if someone else edited since our pull
+CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
+if [ "$PULLED_AT" != "$CURRENT_AT" ]; then
+  echo "CONFLICT: Issue was updated since pull ($PULLED_AT → $CURRENT_AT)"
+  echo "Re-pull, merge changes, then try again."
+  # Stop here — do NOT push
+else
+  gh issue edit <number> --body-file ISSUE-EPIC-<short-desc>.md
 fi
-rm -f /tmp/epic-check.md
-
-# Push update back to GitHub
-gh issue edit <number> --body-file ISSUE-EPIC-<short-desc>.md
 ```
 
-**Conflict check**: The GitHub API has no conditional update, so always
-re-pull and diff before pushing. If the upstream body differs from your
-local starting point, someone else edited — merge their changes before
-pushing. When in doubt, ask the user.
+**Conflict check**: Record `updatedAt` when pulling. Before pushing,
+re-fetch `updatedAt` — if it changed, someone else edited. Re-pull,
+merge their changes, and retry. When in doubt, ask the user.
 
 Key sections to maintain:
 - **Status dashboard**: Check/uncheck boxes, add new items
