@@ -144,19 +144,15 @@ Then list **unassigned issues** ready for work (not blocked, not in progress):
 
 ### Step 5: Propose next action
 
-Based on the status table, propose a concrete next step. Examples:
+First, do housekeeping automatically (no need to ask):
+- **Update EPIC bodies** if anything merged/closed since last update
+- **Clean up stale clones** (no tmux window, status > 30 min): checkout main, pull, clear `.epic-status.json`
+
+Then propose spawning work for ready issues on idle clones:
 
 > "Shall I spawn `i302` and `i310`? `oak` and `birch` are idle."
 
-> "All clones are busy. Shall I update EPIC bodies with current progress?"
-
-> "Clone `pine` looks stale (no tmux, status 2h old). Clean it up?"
-
-Wait for user confirmation, then act:
-
-- **Spawn work**: Run the `/bip.epic.spawn` skill (do NOT improvise tmux/claude commands)
-- **Update EPICs**: Use the EPIC body update pattern (below)
-- **Clean up clone**: Checkout main, pull, clear stale `.epic-status.json`
+Wait for user confirmation, then run `/bip.epic.spawn` (do NOT improvise tmux/claude commands).
 
 ## EPIC body update pattern
 
