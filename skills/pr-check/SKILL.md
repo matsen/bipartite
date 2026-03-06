@@ -36,7 +36,22 @@ If there are uncommitted changes:
 - Ask the user: "There are uncommitted changes. Commit these before proceeding?"
 - **Do not proceed** until the worktree is clean or the user explicitly says to continue
 
-### Step 3: Check PR exists
+### Step 3: Fetch and rebase on base branch
+
+```bash
+git fetch origin
+BASE=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "main")
+git rebase "origin/$BASE"
+```
+
+If rebase has conflicts, stop and report — do not force-resolve.
+
+If the rebase moved commits, push immediately:
+```bash
+git push --force-with-lease
+```
+
+### Step 4: Check PR exists
 
 ```bash
 gh pr view --json number,title,body,state,isDraft 2>/dev/null
@@ -46,7 +61,7 @@ If no PR exists:
 - Tell the user and ask if they want to create one now
 - Stop here if no PR
 
-### Step 4: Evaluate PR title
+### Step 5: Evaluate PR title
 
 Check the PR title for quality:
 - Is it descriptive (not just "WIP" or a branch name)?
@@ -55,7 +70,7 @@ Check the PR title for quality:
 
 Flag any issues and suggest improvements.
 
-### Step 5: Evaluate PR body (the critical check)
+### Step 6: Evaluate PR body (the critical check)
 
 Fetch the PR body and evaluate whether it reads as a **clean summary** or as **historical commit noise**.
 
@@ -92,17 +107,6 @@ gh pr edit <number> --body "$(cat <<'EOF'
 EOF
 )"
 ```
-
-### Step 6: Check all commits are pushed
-
-```bash
-git fetch origin
-git rev-list HEAD --not origin/$(git branch --show-current) --count
-```
-
-If there are unpushed commits:
-- Report how many commits are ahead
-- Push: `git push`
 
 ### Step 7: Check draft status
 
