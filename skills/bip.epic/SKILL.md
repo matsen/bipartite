@@ -117,16 +117,24 @@ Use `AskUserQuestion` with 3-4 dynamically generated options:
 EPIC issue bodies are the source of truth for project status. Update
 them when findings come in, items complete, or new work starts.
 
+**Local file convention**: Keep a persistent local copy as
+`ISSUE-EPIC-<short-desc>.md` in the repo root (e.g.
+`ISSUE-EPIC-indel-signals.md`, `ISSUE-EPIC-benchmark.md`).
+These files are gitignored via the `ISSUE-*.md` pattern.
+
 ```bash
-# Read current body to temp file
-gh issue view <number> --json body -q .body > /tmp/epic-<number>-current.txt
+# Pull current body to local file (first time or to refresh)
+gh issue view <number> --json body -q .body > ISSUE-EPIC-<short-desc>.md
 
 # Edit the file (add findings, check boxes, update clone table)
 # ...
 
-# Push update
-gh issue edit <number> --body-file /tmp/epic-<number>-current.txt
+# Push update back to GitHub
+gh issue edit <number> --body-file ISSUE-EPIC-<short-desc>.md
 ```
+
+This gives you a durable local copy that survives session restarts,
+is visible in your editor, and avoids temp file loss.
 
 Key sections to maintain:
 - **Status dashboard**: Check/uncheck boxes, add new items
