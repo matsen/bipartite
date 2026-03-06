@@ -129,12 +129,22 @@ gh issue view <number> --json body -q .body > ISSUE-EPIC-<short-desc>.md
 # Edit the file (add findings, check boxes, update clone table)
 # ...
 
+# Before pushing: check for upstream changes since your last pull
+gh issue view <number> --json body -q .body > /tmp/epic-check.md
+if ! diff -q ISSUE-EPIC-<short-desc>.md /tmp/epic-check.md >/dev/null 2>&1; then
+  # Someone else edited — diff to see what changed, merge manually
+  diff ISSUE-EPIC-<short-desc>.md /tmp/epic-check.md
+fi
+rm -f /tmp/epic-check.md
+
 # Push update back to GitHub
 gh issue edit <number> --body-file ISSUE-EPIC-<short-desc>.md
 ```
 
-This gives you a durable local copy that survives session restarts,
-is visible in your editor, and avoids temp file loss.
+**Conflict check**: The GitHub API has no conditional update, so always
+re-pull and diff before pushing. If the upstream body differs from your
+local starting point, someone else edited — merge their changes before
+pushing. When in doubt, ask the user.
 
 Key sections to maintain:
 - **Status dashboard**: Check/uncheck boxes, add new items
