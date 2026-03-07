@@ -206,7 +206,7 @@ Always include the date in the clone assignments header.
 {
   "issue": 281,
   "title": "Short title",
-  "phase": "exploring | coding | testing | blocked | completed",
+  "phase": "exploring | coding | testing | pr-review | blocked | completed",
   "summary": "Human-readable one-liner",
   "updated_at": "2026-03-03T14:30:00Z",
   "blockers": [],

@@ -68,21 +68,37 @@ tmux capture-pane -t <clone-name> -p | tail -20
 
 ## After polling
 
-1. **Status table**: Display the same clone status table as `/bip.epic`
-   Step 4 (clone, branch, status, issue, summary) plus ready issues.
+### Focus on what matters
 
-2. **Auto-housekeep**:
-   - **Update EPIC bodies** if anything merged/closed since last update
-     (use the EPIC body update pattern from `/bip.epic`)
-   - **Clean up stale clones** (no tmux window, status > 30 min):
-     checkout main, pull, clear `.epic-status.json`
+**Lead with unblocked issues** — issues that are ready to work on but
+not assigned to any clone. This is the most actionable information.
 
-3. **Propose spawns**: If idle clones and ready issues exist, propose
-   which issues to spawn where. Wait for user confirmation.
+**Only report active clones** — clones with a tmux window that are
+actually doing something. Don't list completed or idle clones; that's
+noise. Completed clones can be mentioned briefly ("fir completed i374")
+but don't need a table row.
 
-4. **Update MEMORY.md** only if there's orchestrator-level context not
-   captured in EPIC bodies or `.epic-status.json` files (decisions,
-   patterns, blockers).
+**Mention recent merges** only if they unblock something or change
+the plan.
+
+### Output structure
+
+1. **Unblocked issues**: Issues ready for work, not assigned to a clone.
+   Cross-reference with EPIC dashboards to find next items.
+
+2. **Active work**: Clones with tmux windows that are mid-task. One line
+   each: clone, issue, what they're doing.
+
+3. **Recently landed** (brief): PRs merged since last poll, only if
+   noteworthy.
+
+4. **Propose spawns**: If unblocked issues and idle clones exist, propose
+   which to spawn. Wait for confirmation.
+
+### Housekeeping (do silently, don't report unless problems)
+
+- Update EPIC bodies if merges changed status
+- Update MEMORY.md only for orchestrator-level decisions/patterns
 
 ## Conventions
 

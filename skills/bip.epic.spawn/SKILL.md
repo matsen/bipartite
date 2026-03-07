@@ -80,7 +80,7 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   "blockers": []
 }
 
-Phases: exploring, coding, testing, blocked, completed
+Phases: exploring, coding, testing, pr-review, blocked, completed
 
 BRANCH: Create branch <N>-<short-name> from main.
 AUTONOMY: Do the work. Do not ask the user whether to proceed with
@@ -88,8 +88,17 @@ implementation steps, run experiments, or set up tests — just do them.
 If you hit an actual blocker, update .epic-status.json with phase
 "blocked" and stop.
 
-COMPLETION: When done, update .epic-status.json phase to "completed",
-commit your work, and stop. Do NOT push or create a PR.
+COMPLETION: When done:
+1. Update .epic-status.json phase to "pr-review"
+2. Commit all work and push the branch
+3. Create a PR: gh pr create --title "<title>" --body "Closes #<N>"
+4. Run /pr-check — fix everything it flags
+5. Run /pr-review — fix ALL issues, even minor/advisory ones
+6. Update .epic-status.json phase to "completed"
+7. STOP only if a finding requires genuine user judgment (design
+   questions, ambiguous requirements, architectural tradeoffs).
+   For everything else — formatting, test gaps, docs, naming,
+   lint, cruft — just fix it and move on.
 
 IMPORTANT CONTEXT:
 <Add issue-specific context here:>
