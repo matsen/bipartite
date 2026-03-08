@@ -190,16 +190,23 @@ Now read the issue and begin work:
 
 ### Step 5: Launch tmux window
 
-Use `bip spawn` with `--dir`, `--name`, and `--prompt` flags. This
-handles tmux window creation, temp file management, and launching
-Claude Code with `--dangerously-skip-permissions` automatically.
+Write the composed prompt to a temp file, then use `bip spawn` with
+`--prompt-file` to pass it. This avoids shell expansion issues with
+quotes, braces, and special characters in the prompt.
 
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-bip spawn --prompt "<composed prompt>" \
+
+# Write prompt to temp file (conductor does this, NOT via shell expansion)
+# Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
+
+bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/<clone-name>" \
   --name "<clone-name>"
 ```
+
+**IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat file)"`.
+The `$(cat)` pattern causes zsh shell expansion errors with complex prompts.
 
 **Do NOT** use raw `tmux new-window` / `tmux send-keys` / `claude` commands.
 Always go through `bip spawn` which handles the full lifecycle correctly.

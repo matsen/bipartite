@@ -37,21 +37,38 @@ Requires:
 }
 
 var spawnPrompt string
+var spawnPromptFile string
 var spawnDir string
 var spawnName string
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
 	spawnCmd.Flags().StringVar(&spawnPrompt, "prompt", "", "Custom prompt override")
+	spawnCmd.Flags().StringVar(&spawnPromptFile, "prompt-file", "", "Read prompt from file (avoids shell expansion issues)")
 	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
 	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
 }
 
+func resolvePrompt() string {
+	if spawnPromptFile != "" {
+		data, err := os.ReadFile(spawnPromptFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Could not read prompt file: %v\n", err)
+			os.Exit(1)
+		}
+		return string(data)
+	}
+	return spawnPrompt
+}
+
 func runSpawn(cmd *cobra.Command, args []string) {
+	// Resolve prompt from --prompt or --prompt-file
+	spawnPrompt = resolvePrompt()
+
 	// Handle adhoc mode (--prompt without ref) - doesn't need nexus directory
 	if len(args) == 0 {
 		if spawnPrompt == "" {
-			fmt.Fprintf(os.Stderr, "Error: Either provide a GitHub reference or use --prompt for adhoc sessions\n")
+			fmt.Fprintf(os.Stderr, "Error: Either provide a GitHub reference, --prompt, or --prompt-file for adhoc sessions\n")
 			os.Exit(1)
 		}
 		runAdhocSpawn()
