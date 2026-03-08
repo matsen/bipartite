@@ -69,7 +69,7 @@ on the issue — this is where the conductor adds value over a generic
 spawn.
 
 ```
-/ralph-loop --completion-promise "ISSUE WORK COMPLETE" \
+/ralph-loop:ralph-loop --completion-promise "ISSUE WORK COMPLETE" \
 You are working on GitHub issue #<N> "<title>".
 
 EPIC STATUS PROTOCOL — You MUST follow this:
