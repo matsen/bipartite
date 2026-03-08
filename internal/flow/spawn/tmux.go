@@ -46,49 +46,11 @@ func CreateWindow(windowName, repoPath, prompt, url string) error {
 	}
 	promptPath := promptFile.Name()
 
-	// Write a launcher script that safely reads the prompt file into a
-	// variable and passes it to claude. This avoids shell parse errors
-	// from $(cat file) expansion when the prompt contains quotes, braces,
-	// backslashes, or other shell metacharacters.
-	launcherFile, err := os.CreateTemp("", fmt.Sprintf("launcher-%s-*.sh", windowName))
-	if err != nil {
-		os.Remove(promptPath)
-		return fmt.Errorf("creating launcher file: %w", err)
-	}
-	defer launcherFile.Close()
-
-	launcherContent := fmt.Sprintf(`#!/bin/bash
-set -euo pipefail
-echo ""
-echo "%s"
-echo ""
-cat '%s'
-echo ""
-echo "---"
-prompt=$(<'%s')
-rm -f '%s' '%s'
-exec claude --dangerously-skip-permissions "$prompt"
-`, url, promptPath, promptPath, promptPath, launcherFile.Name())
-
-	if _, err := launcherFile.WriteString(launcherContent); err != nil {
-		os.Remove(promptPath)
-		os.Remove(launcherFile.Name())
-		return fmt.Errorf("writing launcher: %w", err)
-	}
-	launcherPath := launcherFile.Name()
-
-	if err := os.Chmod(launcherPath, 0755); err != nil {
-		os.Remove(promptPath)
-		os.Remove(launcherPath)
-		return fmt.Errorf("chmod launcher: %w", err)
-	}
-
 	// Create tmux window
 	cmd := exec.Command("tmux", "new-window", "-n", windowName, "-c", repoPath, "-P")
 	output, err := cmd.Output()
 	if err != nil {
 		os.Remove(promptPath)
-		os.Remove(launcherPath)
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("creating window: %s", string(exitErr.Stderr))
 		}
@@ -98,8 +60,14 @@ exec claude --dangerously-skip-permissions "$prompt"
 	// Window created successfully
 	_ = output // Contains the window target, not needed
 
-	// Run the launcher script in the tmux window
-	cmd = exec.Command("tmux", "send-keys", "-t", windowName, fmt.Sprintf("bash '%s'", launcherPath), "Enter")
+	// Build the command to run in the window
+	displayCmd := fmt.Sprintf(
+		`echo "\n%s\n" && cat %s && claude --dangerously-skip-permissions "$(cat %s)"; rm -f %s`,
+		url, promptPath, promptPath, promptPath,
+	)
+
+	// Send the command to the window
+	cmd = exec.Command("tmux", "send-keys", "-t", windowName, displayCmd, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sending command to window: %w", err)
 	}
