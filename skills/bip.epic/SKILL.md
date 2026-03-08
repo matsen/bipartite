@@ -41,7 +41,8 @@ is gitignored and must exist before the skill can operate.
   "clone_names": ["alpha", "beta", "gamma"],
   "new_clone_names": ["delta", "epsilon", "zeta"],
   "github_repo": "org/repo",
-  "conductor": "alpha"
+  "conductor": "alpha",
+  "max_lead_iterations": 8
 }
 ```
 
@@ -51,6 +52,7 @@ Fields:
 - **new_clone_names**: Names available for creating new clones
 - **github_repo**: `org/repo` for `gh` commands
 - **conductor**: Which clone is the orchestrator (stays on main)
+- **max_lead_iterations**: Max issue-lead evaluations before escalating to `needs-human` (default: 8)
 
 ## Workflow
 
@@ -206,16 +208,21 @@ Always include the date in the clone assignments header.
 {
   "issue": 281,
   "title": "Short title",
-  "phase": "exploring | coding | testing | quality-gate | pr-review | blocked | completed",
+  "phase": "exploring | coding | testing | awaiting-results | quality-gate | needs-human | completed",
   "summary": "Human-readable one-liner",
   "updated_at": "2026-03-03T14:30:00Z",
   "blockers": [],
   "remote_run": null,
-  "quality": null
+  "quality": null,
+  "scope": "One-line restatement of issue goal from lead",
+  "stop_reason": "phase-complete | needs-instrumentation | needs-deeper-investigation | awaiting-results | run-production | pr-ready | quality-gate | mechanical-blocker | scope-drift | needs-human | completed",
+  "lead_guidance": "What the worker should do next",
+  "lead_notes": [],
+  "awaiting": null
 }
 ```
 
-- Must be `.gitignored`
+- Must be `.gitignored` (along with `.epic-worklog.md`)
 - Stale after 30 minutes with no tmux window
 - `remote_run` optional — set when work dispatched to remote server
 - `quality` optional — set during `quality-gate` phase:
@@ -224,6 +231,26 @@ Always include the date in the clone assignments header.
   ```
   Workers loop `/pr-check` and `/pr-review` until both pass clean.
   The orchestrator can monitor progress via this field during polling.
+- `scope` — set by the issue lead each iteration (one-line restatement of the issue goal)
+- `stop_reason` — categorized reason from the lead's decision framework
+- `lead_guidance` — actionable instruction for the worker's next iteration
+- `lead_notes` — append-only log of lead evaluations (max 8 before escalation)
+- `awaiting` — set during `awaiting-results` phase:
+  ```json
+  {
+    "description": "What we're waiting for",
+    "check_cmd": "command that exits 0 when done",
+    "check_files": ["paths whose existence means done"],
+    "started_at": "ISO 8601",
+    "timeout_hours": 12
+  }
+  ```
+
+### Phase migration
+
+Legacy phases from older `.epic-status.json` files:
+- `blocked` → treat as `needs-human`
+- `pr-review` → treat as `quality-gate`
 
 ## Error handling
 
