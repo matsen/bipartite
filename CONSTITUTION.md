@@ -12,7 +12,7 @@ requirements, architectural tradeoffs).
 The issue lead pattern is the model: a fresh-eyes subagent evaluates
 worker progress from file-based state alone and nudges the worker
 forward. It escalates to the human only when real judgment is needed.
-Loop prevention (same stop category 3 times → escalate) keeps
+Loop prevention (8 lead iterations max, then escalate) keeps
 automation from spinning.
 
 ## II. File-Based State, No Hidden Memory

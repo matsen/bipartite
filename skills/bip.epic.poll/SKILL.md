@@ -9,6 +9,8 @@ Lightweight mid-session update. Checks what changed on GitHub and in
 active clones since last check. Use this instead of `/bip.epic` when
 you already have context established.
 
+For continuous auto-polling, use: `/loop 10m /bip.epic.poll`
+
 ## What to check
 
 ### 1. Recently merged PRs
@@ -42,6 +44,10 @@ Check comments on active issues (especially ones with running clones):
 gh api repos/{owner}/{repo}/issues/{number}/comments --jq '.[-1].body' | head -40
 ```
 
+Look for **issue-lead comments** (prefixed with `🤖 **Issue Lead**`) —
+these show worker evaluation results and may indicate workers that need
+attention.
+
 ### 5. Clone status
 
 Read `clone_root` and `clone_names` from `.epic-config.json`:
@@ -59,6 +65,21 @@ For active clones, check recent commits:
 git -C <clone> log --oneline main..HEAD | head -5
 ```
 
+#### New status fields to display
+
+When reading `.epic-status.json`, surface these fields in addition to
+phase and summary:
+- **stop_reason** — the lead's classification of why the worker stopped
+- **lead_guidance** — what the lead told the worker to do next
+- **scope** — the lead's restatement of the issue goal (useful for
+  spotting drift)
+
+#### Phase migration
+
+Handle legacy phases from older status files:
+- `blocked` → display as `needs-human`
+- `pr-review` → display as `quality-gate`
+
 ### 6. Tmux output (if interesting)
 
 For clones that seem to have finished or are blocked:
@@ -72,6 +93,15 @@ tmux capture-pane -t <clone-name> -p | tail -20
 
 **Lead with unblocked issues** — issues that are ready to work on but
 not assigned to any clone. This is the most actionable information.
+
+**Surface lead evaluations** — if a clone's status shows a recent lead
+evaluation (stop_reason set, lead_guidance present), mention the lead's
+assessment briefly. This tells the conductor what the workers are doing
+without having to read full issue comments.
+
+**Flag needs-human** — if any clone has `phase: "needs-human"` (or
+legacy `blocked`), highlight it prominently. These require conductor
+attention.
 
 **Only report active clones** — clones with a tmux window that are
 actually doing something. Don't list completed or idle clones; that's
@@ -87,12 +117,15 @@ the plan.
    Cross-reference with EPIC dashboards to find next items.
 
 2. **Active work**: Clones with tmux windows that are mid-task. One line
-   each: clone, issue, what they're doing.
+   each: clone, issue, phase, stop_reason (if set), lead assessment.
 
-3. **Recently landed** (brief): PRs merged since last poll, only if
+3. **Needs human**: Clones in `needs-human` phase — show the lead's
+   assessment and what decision is needed.
+
+4. **Recently landed** (brief): PRs merged since last poll, only if
    noteworthy.
 
-4. **Propose spawns**: If unblocked issues and idle clones exist, propose
+5. **Propose spawns**: If unblocked issues and idle clones exist, propose
    which to spawn. Wait for confirmation.
 
 ### Housekeeping (do silently, don't report unless problems)

@@ -6,6 +6,8 @@ description: Spawn a Claude session in a clone for an EPIC issue
 # /bip.epic.spawn
 
 Spawn a Claude Code session in a tmux window to work on a GitHub issue.
+The worker runs inside a **ralph-loop** with an **issue-lead subagent**
+that evaluates progress at stopping points.
 
 ## Usage
 
@@ -39,13 +41,17 @@ done
 Prefer clones with clean worktrees. If all busy, offer to create a new
 clone using a name from `new_clone_names` in the config.
 
-### Step 2: Update clone to latest main
+### Step 2: Update clone and clean stale state
 
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
+rm -f .epic-status.json .epic-worklog.md
 ```
+
+**State cleanup is mandatory** — stale files from a previous assignment
+will confuse the worker and lead.
 
 ### Step 3: Read the issue
 
@@ -58,64 +64,115 @@ dependencies.
 
 ### Step 4: Compose the prompt
 
-Use the template below. Customize the IMPORTANT CONTEXT section based
-on the issue — this is where the conductor adds value over a generic
-spawn.
+The prompt has two parts: (1) the work instructions passed as the
+initial message to `claude` via `--prompt-file`, and (2) a ralph-loop
+invocation that the worker runs as its first action. The ralph-loop
+prompt is kept SHORT (no special characters) — just a reminder to
+continue. The detailed instructions are already in the conversation
+from the initial message.
 
+**Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ```
-You are working on GitHub issue #<N> "<title>".
+You are working on GitHub issue #N TITLE.
+
+First, run this command to start the iteration loop:
+/ralph-loop:ralph-loop --completion-promise 'ISSUE WORK COMPLETE' --max-iterations 20 Continue working on the task. Read .epic-status.json and .epic-worklog.md for context. Output ISSUE WORK COMPLETE in promise tags when done.
 
 EPIC STATUS PROTOCOL — You MUST follow this:
 1. At session start, write .epic-status.json (see format below)
 2. Update it when you transition between phases
 3. Update it when you finish or encounter a blocker
+4. Maintain .epic-worklog.md as a narrative log (see format below)
 
-.epic-status.json format:
-{
-  "issue": <N>,
-  "title": "<title>",
-  "phase": "exploring",
-  "summary": "Reading issue and exploring codebase",
-  "updated_at": "<ISO 8601 timestamp>",
-  "blockers": []
-}
+.epic-status.json fields:
+  issue — the issue number
+  title — short title
+  phase — one of: exploring, coding, testing, awaiting-results, quality-gate, needs-human, completed
+  summary — human-readable one-liner
+  updated_at — ISO 8601 timestamp
+  blockers — list of blockers (empty list if none)
+  scope — one-line restatement of issue goal (set by lead)
+  stop_reason — category from lead decision framework (set by lead)
+  lead_guidance — what the lead told you to do next (set by lead)
+  lead_notes — list of lead evaluation entries (set by lead)
+  awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours)
 
-Phases: exploring, coding, testing, pr-review, blocked, completed
+.epic-worklog.md format (append-only, never edit previous entries):
+Timestamped markdown entries with phase header.
+Brief description of what you did and why (3-5 sentences per entry).
 
-BRANCH: Create branch <N>-<short-name> from main.
+RECOVERING CONTEXT (after compaction):
+1. Read .epic-status.json — current phase and lead guidance
+2. Read .epic-worklog.md — narrative of what happened
+3. If lead_guidance is set → follow it
+4. If lead_guidance is empty → read the last worklog entry and continue
+5. If both are empty → read the issue and begin fresh
+
+BRANCH: Create branch N-short-name from main.
 AUTONOMY: Do the work. Do not ask the user whether to proceed with
 implementation steps, run experiments, or set up tests — just do them.
-If you hit an actual blocker, update .epic-status.json with phase
-"blocked" and stop.
 
-COMPLETION: When done:
+EXPERIMENTS ARE MANDATORY: If the issue specifies running an experiment,
+benchmark, or analysis, you MUST run it before considering the work done.
+Writing code is not enough — the issue is not complete until every
+experiment described in it has been executed and results collected.
+Do not stop at "code is ready to run" — actually run it.
+
+WORKLOG: Append entries to .epic-worklog.md when:
+- Starting work or reading the issue
+- Changing approach or strategy
+- Hitting a blocker
+- Completing a phase
+- Receiving lead guidance (copy it to the worklog)
+
+AWAITING RESULTS:
+If you launch a long-running experiment:
+1. Set phase to awaiting-results in .epic-status.json
+2. Set the awaiting field with check_cmd and check_files
+3. Each ralph-loop iteration: run check_cmd, if not ready end the turn
+4. After 3 consecutive check failures, set stop_reason to
+   mechanical-blocker and invoke the lead
+
+STOPPING POINTS — When you reach a natural stopping point:
+1. Append a worklog entry describing what you did and why you stopped
+2. Update .epic-status.json with phase, summary, stop_reason
+3. Spawn the issue-lead subagent for evaluation:
+
+   Use the Agent tool with subagent_type issue-lead and prompt:
+   Evaluate progress on issue #N in this clone. Follow your
+   full evaluation protocol: read .epic-status.json,
+   .epic-worklog.md, the issue body, commits, PR, and any
+   experiment results. Write your assessment and guidance.
+
+4. Read the lead response:
+   - If it says PHASE: completed or PHASE: needs-human →
+     output the completion promise ISSUE WORK COMPLETE
+   - Otherwise → copy the lead guidance to .epic-worklog.md
+     as a Lead guidance entry, then continue working
+
+COMPLETION: When done (or when lead says completed):
 1. Commit all work and push the branch
-2. Create a PR: gh pr create --title "<title>" --body "Closes #<N>"
-3. Update .epic-status.json phase to "quality-gate"
+2. Create a PR with gh pr create, title matches issue, body says Closes #N
+3. Update .epic-status.json phase to quality-gate
 4. QUALITY GATE LOOP — repeat until both pass clean:
    a. Run /pr-check — fix everything it flags, commit and push
    b. Run /pr-review — fix ALL issues (even minor/advisory), commit and push
    c. If either flagged issues, go back to (a)
-   Track iterations in .epic-status.json:
-   {"phase":"quality-gate","quality":{"pr_check":"pass|fail","pr_review":"pass|fail","iterations":N}}
+   Track quality gate iterations in .epic-status.json
 5. When both pass with zero issues:
-   - Update .epic-status.json phase to "completed"
-   - Update quality field to show final pass state
+   - Invoke the issue-lead one final time (it will set phase to completed)
+   - Output the completion promise ISSUE WORK COMPLETE
 6. STOP only if a finding requires genuine user judgment (design
    questions, ambiguous requirements, architectural tradeoffs).
    For everything else — formatting, test gaps, docs, naming,
    lint, cruft — just fix it and move on.
 
 IMPORTANT CONTEXT:
-<Add issue-specific context here:>
-<- Data locations (e.g. SSF143587 path, vialle benchmark path)>
-<- Phasing instructions (e.g. "start with Phase 1 only")>
-<- Remote execution notes (e.g. "use make remote-sync REMOTE_HOST=...")>
-<- Dependencies or blockers>
-<- Key files to read first>
+(Add issue-specific context here — data locations, phasing
+instructions, remote execution notes, dependencies, key files)
 
 Now read the issue and begin work:
-/work-issue <N>
+/work-issue N
 ```
 
 ### Common context additions
@@ -145,16 +202,23 @@ Now read the issue and begin work:
 
 ### Step 5: Launch tmux window
 
-Use `bip spawn` with `--dir`, `--name`, and `--prompt` flags. This
-handles tmux window creation, temp file management, and launching
-Claude Code with `--dangerously-skip-permissions` automatically.
+Write the composed prompt to a temp file, then use `bip spawn` with
+`--prompt-file` to pass it. This avoids shell expansion issues with
+quotes, braces, and special characters in the prompt.
 
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-bip spawn --prompt "<composed prompt>" \
+
+# Write prompt to temp file (conductor does this, NOT via shell expansion)
+# Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
+
+bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/<clone-name>" \
   --name "<clone-name>"
 ```
+
+**IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat file)"`.
+The `$(cat)` pattern causes zsh shell expansion errors with complex prompts.
 
 **Do NOT** use raw `tmux new-window` / `tmux send-keys` / `claude` commands.
 Always go through `bip spawn` which handles the full lifecycle correctly.
@@ -183,6 +247,16 @@ If a clone is on a non-main branch:
 1. Check if there's an open PR: `gh pr list --head <branch>`
 2. If merged/closed: `git checkout main && git pull --ff-only`
 3. If open: warn user — they may want to resume
+
+## Gitignore reminder
+
+Target project repos should gitignore these files (add to `.gitignore`):
+```
+.epic-status.json
+.epic-worklog.md
+```
+
+These files live in clones, not in bipartite itself.
 
 ## Conventions
 

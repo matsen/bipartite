@@ -46,11 +46,48 @@ func CreateWindow(windowName, repoPath, prompt, url string) error {
 	}
 	promptPath := promptFile.Name()
 
+	// Write a launcher script that reads the prompt into a bash variable
+	// and passes it to claude. This avoids zsh shell expansion issues —
+	// the prompt content never gets interpreted by the shell.
+	launcherFile, err := os.CreateTemp("", fmt.Sprintf("launcher-%s-*.sh", windowName))
+	if err != nil {
+		os.Remove(promptPath)
+		return fmt.Errorf("creating launcher: %w", err)
+	}
+
+	launcherPath := launcherFile.Name()
+	var urlLine string
+	if url != "" {
+		urlLine = fmt.Sprintf("echo '%s'\necho ''\n", url)
+	}
+	launcherContent := fmt.Sprintf(`#!/bin/bash
+%scat '%s'
+echo '---'
+prompt=$(<'%s')
+rm -f '%s' '%s'
+claude --dangerously-skip-permissions "$prompt"
+`, urlLine, promptPath, promptPath, promptPath, launcherPath)
+
+	if _, err := launcherFile.WriteString(launcherContent); err != nil {
+		os.Remove(promptPath)
+		os.Remove(launcherPath)
+		launcherFile.Close()
+		return fmt.Errorf("writing launcher: %w", err)
+	}
+	launcherFile.Close()
+
+	if err := os.Chmod(launcherPath, 0755); err != nil {
+		os.Remove(promptPath)
+		os.Remove(launcherPath)
+		return fmt.Errorf("chmod launcher: %w", err)
+	}
+
 	// Create tmux window
 	cmd := exec.Command("tmux", "new-window", "-n", windowName, "-c", repoPath, "-P")
 	output, err := cmd.Output()
 	if err != nil {
 		os.Remove(promptPath)
+		os.Remove(launcherPath)
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("creating window: %s", string(exitErr.Stderr))
 		}
@@ -60,14 +97,8 @@ func CreateWindow(windowName, repoPath, prompt, url string) error {
 	// Window created successfully
 	_ = output // Contains the window target, not needed
 
-	// Build the command to run in the window
-	displayCmd := fmt.Sprintf(
-		`echo "\n%s\n" && cat %s && claude --dangerously-skip-permissions "$(cat %s)"; rm -f %s`,
-		url, promptPath, promptPath, promptPath,
-	)
-
-	// Send the command to the window
-	cmd = exec.Command("tmux", "send-keys", "-t", windowName, displayCmd, "Enter")
+	// Run the launcher script — bash reads the file safely
+	cmd = exec.Command("tmux", "send-keys", "-t", windowName, launcherPath, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sending command to window: %w", err)
 	}
