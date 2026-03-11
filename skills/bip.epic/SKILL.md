@@ -18,7 +18,8 @@ updates, use `/bip.epic.poll`. To spawn work, use `/bip.epic.spawn`.
 - First mention in bullet lists: full URL inline.
 
 ### Tmux windows
-Named by **clone name** (`cedar`, `oak`, etc.), not issue number.
+- *Clone mode*: Named by **clone name** (`cedar`, `oak`, etc.)
+- *Worktree mode*: Named by **issue number** (`i281`, `i295`, etc.)
 
 ### Conductor role
 The conductor session stays on `main` and does NOT do feature work.
@@ -35,6 +36,7 @@ branches for numbered issues.
 The epic skill reads `.epic-config.json` from the repo root. This file
 is gitignored and must exist before the skill can operate.
 
+**Clone mode** (remote compute or pre-existing clones):
 ```json
 {
   "clone_root": "~/re/myproject",
@@ -46,12 +48,25 @@ is gitignored and must exist before the skill can operate.
 }
 ```
 
+**Worktree mode** (local parallel work only):
+```json
+{
+  "clone_root": "~/re/myproject-workers",
+  "local_worktrees": true,
+  "github_repo": "org/repo",
+  "max_lead_iterations": 8
+}
+```
+
+**Validation**: If `local_worktrees: true` and `clone_names` are both present, **stop and report an error** — they are mutually exclusive. `clone_names` is meaningless in worktree mode because slots are created on demand and named after the issue.
+
 Fields:
-- **clone_root**: Parent directory containing all clones
-- **clone_names**: Existing clone directory names
-- **new_clone_names**: Names available for creating new clones
+- **clone_root**: Parent directory containing all clones or worktrees
+- **clone_names**: (clone mode only) Existing clone directory names
+- **new_clone_names**: (clone mode only) Names available for creating new clones
+- **local_worktrees**: (worktree mode) If `true`, use `git worktree` for local slots named `issue-N`
 - **github_repo**: `org/repo` for `gh` commands
-- **conductor**: Which clone is the orchestrator (stays on main)
+- **conductor**: (clone mode only) Which clone is the orchestrator (stays on main)
 - **max_lead_iterations**: Max issue-lead evaluations before escalating to `needs-human` (default: 8)
 - **shared_filesystem**: (optional, default `false`) Set to `true` when the conductor and all compute nodes share an NFS filesystem; the conductor composes direct SSH execution commands instead of `make remote-sync` calls, and experiment results are immediately visible on local NFS paths. Each machine sets this flag for itself — no central list of NFS nodes is needed.
 
@@ -67,11 +82,15 @@ Also read MEMORY.md from the auto-memory directory for orchestrator
 context from previous sessions (decisions, patterns, what's next).
 
 **If the file does not exist**, stop and ask the user:
-1. Where are your clones? (e.g. `~/re/pz`)
-2. What are the clone directory names?
-3. What is the GitHub repo (`org/repo`)?
-4. Which clone is the conductor?
-5. Are the conductor and compute nodes on a shared NFS filesystem? (sets `shared_filesystem`)
+1. Are you using local git worktrees or separate clones for parallel work?
+2. Where should slots live? (e.g. `~/re/pz-workers` for worktrees, or `~/re/pz` for clones)
+3. (Clone mode only) What are the clone directory names? Which is the conductor?
+4. What is the GitHub repo (`org/repo`)?
+5. Are compute nodes on a shared NFS filesystem? (sets `shared_filesystem`)
+
+**Note (worktree mode)**: The skill is run from the main repo itself, which
+acts as the conductor. There is no separate conductor clone — `clone_root`
+is just where worktrees are placed, not the main checkout.
 
 Then create `.epic-config.json` with their answers and proceed.
 
@@ -97,25 +116,38 @@ Fallback: `gh issue list --search "EPIC: in:title" --json number,title,body`
 Parse the **Status dashboard** section from each EPIC body to extract
 completed, active, and blocked items.
 
-### Step 2: Scan clones
+### Step 2: Scan slots
 
-Use `clone_root` and `clone_names` from `.epic-config.json`.
+Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
-For each clone:
-
+**Clone mode** (`local_worktrees` absent or false): iterate `clone_names`:
 ```bash
-git -C <clone> branch --show-current
-git -C <clone> log --oneline -1
-git -C <clone> status --porcelain | head -5
-cat <clone>/.epic-status.json 2>/dev/null
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+for name in $(jq -r '.clone_names[]' .epic-config.json); do
+  git -C "$CLONE_ROOT/$name" branch --show-current
+  git -C "$CLONE_ROOT/$name" log --oneline -1
+  git -C "$CLONE_ROOT/$name" status --porcelain | head -5
+  cat "$CLONE_ROOT/$name/.epic-status.json" 2>/dev/null
+done
+```
+
+**Worktree mode** (`local_worktrees: true`): discover via `git worktree list`:
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+# Find worktrees under clone_root (excludes the main checkout)
+find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d | while read slot; do
+  git -C "$slot" log --oneline -1 2>/dev/null
+  git -C "$slot" status --porcelain 2>/dev/null | head -5
+  cat "$slot/.epic-status.json" 2>/dev/null
+done
 ```
 
 Check tmux windows: `tmux list-windows -F "#W"`
 
-Classify as:
+Classify each slot as:
 - **active**: Has tmux window or fresh `.epic-status.json` (< 30 min)
 - **assigned**: On non-main branch, no active session
-- **idle**: On `main`, clean worktree
+- **idle**: (clone mode) On `main`, clean worktree — (worktree mode) worktrees are created per-issue and removed when done, so no "idle" state exists
 
 ### Step 3: Check GitHub activity
 
@@ -137,11 +169,11 @@ the EPIC doesn't reflect yet.
 
 Display a single table showing the full picture:
 
-| Clone | Branch | Status | Issue | Summary |
-|-------|--------|--------|-------|---------|
+| Slot | Branch | Status | Issue | Summary |
+|------|--------|--------|-------|---------|
 | cedar | feat-x | active (tmux) | i281 | Implementing clamping |
 | oak   | main   | idle   | —    | — |
-| pine  | fix-y  | assigned | i295 | Blocked on upstream |
+| issue-295 | fix-y | active (tmux) | i295 | Blocked on upstream |
 
 Then list **unassigned issues** ready for work (not blocked, not in progress):
 
@@ -153,7 +185,9 @@ Then list **unassigned issues** ready for work (not blocked, not in progress):
 
 First, do housekeeping automatically (no need to ask):
 - **Update EPIC bodies** if anything merged/closed since last update
-- **Clean up stale clones** (no tmux window, status > 30 min): checkout main, pull, clear `.epic-status.json`
+- **Clean up stale slots**:
+  - *Clone mode*: (no tmux window, status > 30 min): `git checkout main && git pull --ff-only`, clear `.epic-status.json`
+  - *Worktree mode*: (no tmux window, status > 30 min, OR PR merged): `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`, nothing to reset
 
 Then propose spawning work for ready issues on idle clones:
 

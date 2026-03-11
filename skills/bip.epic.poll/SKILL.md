@@ -48,9 +48,11 @@ Look for **issue-lead comments** (prefixed with `🤖 **Issue Lead**`) —
 these show worker evaluation results and may indicate workers that need
 attention.
 
-### 5. Clone status
+### 5. Slot status
 
-Read `clone_root` and `clone_names` from `.epic-config.json`:
+Read `clone_root` and `local_worktrees` from `.epic-config.json`.
+
+**Clone mode** (`local_worktrees` absent or false):
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
@@ -58,12 +60,21 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
 done
 ```
 
+**Worktree mode** (`local_worktrees: true`):
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d | while read slot; do
+  [ -f "$slot/.epic-status.json" ] && echo "=== $(basename $slot) ===" && cat "$slot/.epic-status.json"
+done
+```
+
 Also check tmux: `tmux list-windows -F "#W"`
 
-For active clones, check recent commits:
+For active slots, check recent commits:
 ```bash
-git -C <clone> log --oneline main..HEAD | head -5
+git -C <slot-path> log --oneline main..HEAD | head -5
 ```
+In worktree mode, `<slot-path>` is `$CLONE_ROOT/issue-<N>`.
 
 #### New status fields to display
 
@@ -135,5 +146,6 @@ the plan.
 
 ## Conventions
 
-Same as `/bip.epic`: `iN`/`pN` prefixes, full URLs on first mention,
-clone-name tmux windows.
+Same as `/bip.epic`: `iN`/`pN` prefixes, full URLs on first mention.
+Tmux windows named by clone name (clone mode) or issue number like `i281`
+(worktree mode).

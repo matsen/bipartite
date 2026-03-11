@@ -43,18 +43,22 @@ pattern: edit the local `ISSUE-EPIC-<N>.md`, then push with `gh issue edit`.
 
 Report which EPICs were pushed (and which were skipped due to conflicts).
 
-### Step 2: Update clone status files
+### Step 2: Update slot status files
 
-Read `clone_root` from `.epic-config.json`.
+Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
-For each clone the orchestrator interacted with this session:
+Slot paths:
+- *Clone mode*: `$CLONE_ROOT/<clone-name>`
+- *Worktree mode*: `$CLONE_ROOT/issue-<N>`
 
-1. Check if the clone's `.epic-status.json` is stale or missing
-2. If the orchestrator has newer information (e.g., a clone finished,
+For each slot the orchestrator interacted with this session:
+
+1. Check if the slot's `.epic-status.json` is stale or missing
+2. If the orchestrator has newer information (e.g., a slot finished,
    got blocked, or changed phase), update the file:
    ```bash
    CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-   cat > "$CLONE_ROOT/<clone>/.epic-status.json" << 'EOF'
+   cat > "$CLONE_ROOT/<slot>/.epic-status.json" << 'EOF'
    {
      "issue": <N>,
      "title": "<title>",
@@ -66,12 +70,12 @@ For each clone the orchestrator interacted with this session:
    EOF
    ```
 
-Update clones the orchestrator has direct knowledge about. This includes:
-- Clones whose PRs were merged this session (even if the clone's own
+Update slots the orchestrator has direct knowledge about. This includes:
+- Slots whose PRs were merged this session (even if the slot's own
   session already exited)
-- Clones the orchestrator observed finishing via tmux or poll
+- Slots the orchestrator observed finishing via tmux or poll
 
-Do not guess status for clones with active sessions that may have
+Do not guess status for slots with active sessions that may have
 progressed beyond what the orchestrator last observed.
 
 ### Step 3: Update MEMORY.md (lightweight)
@@ -93,7 +97,7 @@ Print a summary:
 
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
-- Clone status updated: cedar, oak
+- Slot status updated: cedar, issue-295
 - MEMORY.md updated: yes
 
 Safe to reset context.

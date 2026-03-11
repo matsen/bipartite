@@ -25,9 +25,11 @@ via `/bip.epic` first.
 
 ## Workflow
 
-### Step 1: Select clone
+### Step 1: Select or create slot
 
-Read `clone_root` and `clone_names` from `.epic-config.json`.
+Read `clone_root` and `local_worktrees` from `.epic-config.json`.
+
+**Clone mode** (`local_worktrees` absent or false):
 
 If clone-name not specified, find an idle clone:
 ```bash
@@ -41,13 +43,47 @@ done
 Prefer clones with clean worktrees. If all busy, offer to create a new
 clone using a name from `new_clone_names` in the config.
 
-### Step 2: Update clone and clean stale state
+**Worktree mode** (`local_worktrees: true`):
 
+Slot name is always `issue-<N>`. Branch name is `<N>-<slug>` where `<slug>`
+is the first 4 words of the issue title, lowercased and hyphenated.
+
+Check if slot already exists:
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+SLOT="$CLONE_ROOT/issue-<N>"
+if [ -d "$SLOT" ]; then
+  # Worktree exists — check for active tmux window
+  if tmux list-windows -F "#W" | grep -q "^i<N>$"; then
+    echo "Active session already running for i<N> — attach to it instead"
+    exit 0
+  else
+    echo "Worktree exists, no active session — will resume"
+  fi
+else
+  # Check for leftover branch from a previous failed attempt
+  if git branch --list "<N>-*" | grep -q .; then
+    git branch -D $(git branch --list "<N>-*" | tr -d ' ')
+  fi
+  # Create worktree from the main repo (conductor's working directory)
+  git worktree add "$SLOT" -b <N>-<slug>
+fi
+```
+
+### Step 2: Prepare slot and clean stale state
+
+**Clone mode**:
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
 rm -f .epic-status.json .epic-worklog.md
+```
+
+**Worktree mode**: worktree was just created fresh from main — just clear
+any stale status files from a previous run on this same issue:
+```bash
+rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 ```
 
 **State cleanup is mandatory** — stale files from a previous assignment
@@ -235,9 +271,15 @@ CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 # Write prompt to temp file (conductor does this, NOT via shell expansion)
 # Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
 
+# Clone mode: --name is the clone name (e.g. "cedar")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/<clone-name>" \
   --name "<clone-name>"
+
+# Worktree mode: --name is the issue number (e.g. "i281")
+bip spawn --prompt-file /tmp/spawn-<N>.txt \
+  --dir "$CLONE_ROOT/issue-<N>" \
+  --name "i<N>"
 ```
 
 **IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat file)"`.
@@ -253,23 +295,35 @@ Report to the user:
 - Which issue it's working on
 - Any phasing or gate criteria
 
-## Creating new clones
+## Creating new slots
 
+**Clone mode** — create a new clone and register it:
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 REPO=$(jq -r .github_repo .epic-config.json)
 cd "$CLONE_ROOT"
 git clone "git@github.com:$REPO.git" <new-name>
 ```
-
 After creating, add the new name to `clone_names` in `.epic-config.json`.
 
-## Cleaning up before reuse
+**Worktree mode** — no registration needed; worktrees are created on demand
+in Step 1 and named `issue-<N>`. No config changes required.
 
-If a clone is on a non-main branch:
+## Cleaning up slots after work
+
+**Clone mode** — if a clone is on a non-main branch:
 1. Check if there's an open PR: `gh pr list --head <branch>`
 2. If merged/closed: `git checkout main && git pull --ff-only`
 3. If open: warn user — they may want to resume
+
+**Worktree mode** — when an issue's PR is merged:
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+git worktree remove "$CLONE_ROOT/issue-<N>"
+git branch -d <N>-short-desc
+```
+If the worktree has uncommitted changes, use `--force`. Check for an open
+PR first — don't remove a worktree with unmerged work.
 
 ## Gitignore reminder
 
@@ -283,4 +337,5 @@ These files live in clones, not in bipartite itself.
 
 ## Conventions
 
-Same as `/bip.epic`: `iN`/`pN` prefixes, clone-name tmux windows.
+Same as `/bip.epic`: `iN`/`pN` prefixes. Tmux windows named by clone name
+(clone mode) or issue number like `i281` (worktree mode).
