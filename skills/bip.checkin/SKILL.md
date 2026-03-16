@@ -88,6 +88,13 @@ Skip issues that are:
 - Pure questions/discussions without actionable work
 - Already closed
 
+## Action item verification
+
+Before presenting any item as an action item (e.g., "ready to merge", "needs review"):
+- Verify current state with `gh pr view --repo <owner>/<repo> <number> --json state` or `gh api`
+- Do NOT infer state from comment content alone — checkin shows *activity*, not *status*
+- Only label items as actionable if they are confirmed OPEN and awaiting the user's input
+
 ## Output guidelines
 
 When summarizing checkin results:
