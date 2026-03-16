@@ -23,13 +23,13 @@ By default, shows a preview only. Use --post to actually send to Slack.`,
 }
 
 var (
-	digestChannel     string
-	digestSince       string
-	digestPostTo      string
-	digestRepos       string
-	digestExclude     string
-	digestPost        bool
-	digestVerbose     bool
+	digestChannel string
+	digestSince   string
+	digestPostTo  string
+	digestRepos   string
+	digestExclude string
+	digestPost    bool
+	digestVerbose bool
 )
 
 func init() {
