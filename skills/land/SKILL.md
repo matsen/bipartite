@@ -23,12 +23,15 @@ git status --porcelain
 git diff --stat
 ```
 
-If there are uncommitted changes or untracked files:
-- Review the diffs/files to determine if they belong with this PR
-- If clearly related (e.g. leftover formatting, forgotten test fix), stage
-  and commit them with a short message — no need to ask
-- If unclear whether they belong, show the user and ask before committing
-- If unrelated, warn the user and proceed without committing them
+If there are uncommitted changes or untracked files, you MUST resolve each one explicitly — **never stash and move on**:
+
+1. **Identify every dirty file.** For each one, read enough of the diff or file content to understand what it is and why it exists.
+2. **Categorize each file:**
+   - **Belongs to this PR** (e.g. forgotten formatting fix, test update): stage and commit with a short message.
+   - **Unclear**: show the user the file and diff, explain what you see, and ask whether to commit it with the PR or move it aside.
+   - **Unrelated / stray**: move it to `_ignore/$(date -I)-landing/` so main stays clean. Create the directory if needed. Tell the user what you moved and why.
+3. **Never use `git stash`.** Stashing hides work and risks losing it. Every file must be either committed or moved to `_ignore/`.
+4. **Ask the user if unsure.** If you can't confidently categorize a file, ask. A quick question is always better than guessing wrong.
 
 ### Step 2: Identify the PR
 
@@ -96,6 +99,19 @@ git branch -d <branch>
 The remote branch is already deleted by `gh pr merge` (GitHub default).
 If not, also run: `git push origin --delete <branch>`
 
-### Step 9: Confirm
+### Step 9: Ensure clean main
 
-Report: "Landed #42. On `<base>`, up to date. Branch `<branch>` deleted."
+```bash
+git status --porcelain
+```
+
+If any untracked or modified files remain on main:
+- Move them to `_ignore/$(date -I)-landing/` (create the directory if needed)
+- Report what was moved
+
+The goal is a **totally clean `git status`** on main when landing is done.
+
+### Step 10: Confirm
+
+Report: "Landed #42. On `<base>`, up to date, worktree clean. Branch `<branch>` deleted."
+If any files were moved to `_ignore/`, list them.

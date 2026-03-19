@@ -247,6 +247,10 @@ Now read the issue and begin work:
   Use the awaiting-results phase with check_files pointing to local NFS
   output paths — no SSH needed to poll, just test -f /nfs/path/output.
 - Never use make remote-sync or make remote-tmux in NFS mode.
+- SSH quoting tip: if a command has complex quoting or special characters,
+  write it to a temp file (e.g. /tmp/run-<N>.sh), then:
+    ssh <host> "bash /nfs/path/to/run-<N>.sh"
+  Clean up the temp file when the command finishes.
 - Use the absolute clone path in SSH commands (expand ~ from clone_root
   before embedding — remote shells resolve ~ relative to the SSH user's
   home, which may differ from the NFS path).

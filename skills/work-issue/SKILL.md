@@ -63,11 +63,13 @@ After the pre-merge check:
 ### Step 7: Create the PR
 
 ```bash
-gh pr create --title "<concise title>" --body "Closes #$ARGUMENTS"
+gh pr create --title "<concise title>" --body "<body>"
 ```
 
-- Include `Closes #$ARGUMENTS` to auto-close the issue on merge
+- Include `Closes #$ARGUMENTS` in the body to auto-close the issue on merge
 - Do NOT manually close the issue — GitHub handles it when the PR merges
+
+**Report findings in the PR body.** If the work involved experiments or benchmarks, include key results (tables, numbers, conclusions) directly in the PR body. Don't just point at branch files — the PR body is the permanent record.
 
 ### Step 8: Summary for the user
 
