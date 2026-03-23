@@ -112,7 +112,11 @@ without having to read full issue comments.
 
 **Flag needs-human** — if any clone has `phase: "needs-human"` (or
 legacy `blocked`), highlight it prominently. These require conductor
-attention.
+attention. **Ring the terminal bell** so the user notices even if
+Ghostty is in the background:
+```bash
+printf '\a'
+```
 
 **Only report active clones** — clones with a tmux window that are
 actually doing something. Don't list completed or idle clones; that's
@@ -141,7 +145,44 @@ the plan.
 
 ### Housekeeping (do silently, don't report unless problems)
 
-- Update EPIC bodies if merges changed status
+This is the ongoing cleanup that keeps slots and EPICs current between
+cold starts. Do it every poll cycle — don't wait for `/bip.epic`.
+
+#### Slot cleanup for merged PRs
+
+For each slot whose PR has merged (cross-reference merged PRs from
+check 1 with slot branches):
+
+**Worktree mode**:
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+# Confirm PR is merged before removing
+gh pr list --head <branch> --state merged --json number | jq length
+# If merged:
+git worktree remove "$CLONE_ROOT/issue-<N>"
+git branch -d <branch>
+```
+
+**Clone mode**:
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+git -C "$CLONE_ROOT/<clone>" checkout main
+git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
+rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"
+```
+
+Also clean up stale slots: no tmux window AND `.epic-status.json`
+older than 30 minutes. Same cleanup as above.
+
+#### EPIC body updates
+
+If merges closed issues tracked in an EPIC, update the EPIC body:
+follow the **EPIC body update pattern** from `/bip.epic` (pull →
+edit → conflict-check → push). Check the box for completed items,
+update the clone assignments table.
+
+#### Memory
+
 - Update MEMORY.md only for orchestrator-level decisions/patterns
 
 ## Conventions

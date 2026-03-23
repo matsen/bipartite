@@ -18,28 +18,10 @@ session end. Run this when context is getting long or before stopping.
 
 ### Step 1: Push EPIC body edits
 
-EPIC bodies live as `ISSUE-EPIC-<N>.md` files in the repo root (gitignored).
-These are the working copies — edit them locally, then push to GitHub.
-
-For each `ISSUE-EPIC-*.md` file in the repo root:
-
-1. Extract the issue number from the filename (`ISSUE-EPIC-284.md` → 284)
-2. Conflict check before pushing:
-   ```bash
-   CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
-   ```
-   Compare against the `updatedAt` recorded when the file was last pulled.
-   If it changed, someone else edited — re-pull, merge, and retry.
-3. Push to GitHub:
-   ```bash
-   gh issue edit <number> --body-file ISSUE-EPIC-<N>.md
-   ```
-
-During the session, always edit the local file first, then push. This
-ensures the local file is the source of truth and survives context resets.
-
-If editing EPIC bodies mid-session (not just at tuckin), follow the same
-pattern: edit the local `ISSUE-EPIC-<N>.md`, then push with `gh issue edit`.
+For each `ISSUE-EPIC-*.md` file in the repo root, follow the **EPIC body
+update pattern** from `/bip.epic` (pull with `updatedAt` tracking → edit →
+conflict-check → push). Extract the issue number from the filename
+(`ISSUE-EPIC-284.md` → 284).
 
 Report which EPICs were pushed (and which were skipped due to conflicts).
 
