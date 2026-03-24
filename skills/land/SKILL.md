@@ -111,6 +111,15 @@ If any untracked or modified files remain on main:
 
 The goal is a **totally clean `git status`** on main when landing is done.
 
+### Step 9.5: Clean up orchestration files
+
+Remove EPIC worker state files if present (these are gitignored and
+stale after landing):
+
+```bash
+rm -f .epic-status.json .epic-worklog.md
+```
+
 ### Step 10: Confirm
 
 Report: "Landed #42. On `<base>`, up to date, worktree clean. Branch `<branch>` deleted."
