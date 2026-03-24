@@ -149,6 +149,14 @@ NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
 [ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip ms" -d "New result: <description>" "ntfy.sh/$NTFY_TOPIC" > /dev/null
 ```
 
+### Verify state before reporting
+
+When mentioning any PR or issue in the poll output, always verify its
+current state programmatically (`gh pr view --json state`, `gh issue
+view --json state`) rather than relying on earlier poll results or
+conversation memory. Stale state leads to confusing reports (e.g.,
+reporting a merged PR as "open").
+
 ### Keep it brief
 
 This is a poll, not a cold start. Only report what changed. If nothing

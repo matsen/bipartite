@@ -95,7 +95,7 @@ Handle legacy phases from older status files:
 
 For clones that seem to have finished or are blocked:
 ```bash
-tmux capture-pane -t <clone-name> -p | tail -20
+tmux capture-pane -t <N>-<clone-name> -p | tail -20
 ```
 
 ## After polling
@@ -190,5 +190,5 @@ update the clone assignments table.
 ## Conventions
 
 Same as `/bip.epic`: `iN`/`pN` prefixes, full URLs on first mention.
-Tmux windows named by clone name (clone mode) or issue number like `i281`
-(worktree mode).
+Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the
+clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).

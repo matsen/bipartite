@@ -34,6 +34,11 @@ the EPIC workers and conductor do (running on a remote). This session:
 or kicking off computational work. If manuscript work reveals a gap,
 note it for the user — they will handle issue creation separately.
 
+**Issue quality gate:** When the user asks to file an issue during a
+manuscript session, always run `/issue-check` on the draft before
+submitting via `/issue-file`. Do not shortcut to `gh issue create`
+directly, regardless of perceived simplicity.
+
 ## Configuration
 
 The skill reads `.ms-config.json` from the manuscript root (gitignored).
@@ -231,6 +236,21 @@ When drafting new results or methods text:
 4. After confirmation, draft the paragraph(s) in LaTeX
 5. Run the `@scientific-tex-editor` agent on the new text for style review
 6. Present the edited draft for final approval before inserting into the TeX file
+
+## Remote server awareness
+
+Experiment results and data live on remote servers (orca/ermine), not
+locally. When validating claims about experiment results — especially
+when drafting or checking issues — use `ssh` to verify:
+- That data files exist at the stated paths
+- That intermediate outputs (filtered FASTAs, DAG protobufs) match
+  what READMEs and Snakefiles describe
+- That result TSVs have the expected columns and row counts
+
+Do not assume local READMEs and Snakefiles are the full picture.
+Experiments may produce filtered or transformed intermediates that
+change the data (e.g., filtered FASTAs with different taxa, condensed
+DAGs with extra leaves). Always check the actual files on disk.
 
 ## Error handling
 

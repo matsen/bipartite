@@ -67,8 +67,8 @@ CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 SLOT="$CLONE_ROOT/issue-<N>"
 if [ -d "$SLOT" ]; then
   # Worktree exists — check for active tmux window
-  if tmux list-windows -F "#W" | grep -q "^i<N>$"; then
-    echo "Active session already running for i<N> — attach to it instead"
+  if tmux list-windows -F "#W" | grep -q "^<N>-issue-<N>$"; then
+    echo "Active session already running for <N>-issue-<N> — attach to it instead"
     exit 0
   else
     echo "Worktree exists, no active session — will resume"
@@ -288,15 +288,15 @@ CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
 # Write prompt to temp file (conductor does this, NOT via shell expansion)
 # Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
 
-# Clone mode: --name is the clone name (e.g. "cedar")
+# Clone mode: --name is NNN-clone (e.g. "281-cedar")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/<clone-name>" \
-  --name "<clone-name>"
+  --name "<N>-<clone-name>"
 
-# Worktree mode: --name is the issue number (e.g. "i281")
+# Worktree mode: --name is NNN-issue-NNN (e.g. "281-issue-281")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/issue-<N>" \
-  --name "i<N>"
+  --name "<N>-issue-<N>"
 ```
 
 **IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat file)"`.
@@ -354,5 +354,6 @@ These files live in clones, not in bipartite itself.
 
 ## Conventions
 
-Same as `/bip.epic`: `iN`/`pN` prefixes. Tmux windows named by clone name
-(clone mode) or issue number like `i281` (worktree mode).
+Same as `/bip.epic`: `iN`/`pN` prefixes. Tmux windows named `NNN-YYY`
+where NNN is the issue number and YYY is the clone/slot name
+(e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).

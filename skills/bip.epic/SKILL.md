@@ -18,8 +18,9 @@ updates, use `/bip.epic.poll`. To spawn work, use `/bip.epic.spawn`.
 - First mention in bullet lists: full URL inline.
 
 ### Tmux windows
-- *Clone mode*: Named by **clone name** (`cedar`, `oak`, etc.)
-- *Worktree mode*: Named by **issue number** (`i281`, `i295`, etc.)
+- Named `NNN-YYY` where NNN is the issue number and YYY is the clone/slot name
+- *Clone mode*: e.g. `281-cedar`, `295-pine`
+- *Worktree mode*: e.g. `281-issue-281`, `295-issue-295`
 
 ### Conductor role
 The conductor session stays on `main` and does NOT do feature work.
@@ -174,7 +175,7 @@ status (active → awaiting → needs-human → stale):
 
 | Issue | Status | Clone | Summary |
 |-------|--------|-------|---------|
-| i281 | active (tmux) | cedar | Implementing clamping |
+| i281 | active (tmux `281-cedar`) | cedar | Implementing clamping |
 | i295 | awaiting (~Tue) | pine | 436/1800 ML jobs on orca02 |
 | i310 | needs-human | fir | Architectural decision needed |
 | i589 | stale (4d) | cedar | Check if experiment finished |

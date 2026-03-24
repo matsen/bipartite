@@ -115,4 +115,5 @@ the conductor handle cleanup.
 ## Conventions
 
 Same as `/bip.epic`: `iN`/`pN` prefixes, full URLs on first mention.
-Tmux windows named by clone name (clone mode) or `i<N>` (worktree mode).
+Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the
+clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
