@@ -90,6 +90,8 @@ should be a short kebab-case summary (e.g., `ISSUE-quartet-timing-instrumentatio
 **Avoid vague language.** Every adjective must have a measurable
 criterion. No "fast", "scalable", "robust" without numbers.
 
+**No hard-wrapping.** Write each paragraph as a single long line. Do NOT insert newlines at 70-80 characters within paragraphs or bullet points. Let GitHub's renderer handle line wrapping. Only use newlines for actual structural breaks (between paragraphs, list items, headings).
+
 ### Step 5: Run /issue-check
 
 Invoke the `/issue-check` skill on the drafted file:

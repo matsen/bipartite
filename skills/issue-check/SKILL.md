@@ -133,6 +133,8 @@ Based on the subagent's report, edit the issue file to address all
 gaps. Prefer adding concrete details (exact column names, formulas,
 file paths) over vague placeholders.
 
+**Fix hard-wrapping.** If the file contains hard-wrapped paragraphs (newlines inserted mid-sentence at ~70-80 characters), unwrap them so each paragraph is a single long line. Only newlines for actual structural breaks (between paragraphs, list items, headings). GitHub renders markdown with soft wrapping.
+
 ### Step 5: Submit via /issue-file
 
 After fixes are applied, invoke the `/issue-file` skill with the same
