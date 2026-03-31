@@ -86,44 +86,96 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
 5. **Directory structure**: Does the proposed structure follow project
    conventions? (Check CLAUDE.md or experiments/CLAUDE.md for patterns.)
 
-6. **Test config**: If the project requires fast test configs (e.g.,
+6. **Code organization — library vs scripts**: If the repo has a Python
+   package (look for `__init__.py` under a top-level directory, or
+   `pyproject.toml` with `[project]`), and the issue proposes new `.py`
+   files in `scripts/`, `workflow/scripts/`, or `bin/`, check whether
+   the core logic should instead live in the library package as a
+   reusable module, with only a thin CLI wrapper in the scripts
+   directory. Flag as **HIGH** if:
+   - The proposed script contains non-trivial logic (algorithms, data
+     transformations, model fitting) rather than just CLI argument
+     parsing and a `main()` call
+   - Similar modules already exist in the library package (check for
+     a pattern of library + wrapper)
+   - The logic would benefit from unit testing independent of the CLI
+   Suggest a concrete module path following the existing package naming
+   conventions (check sibling modules for style).
+
+7. **Test config**: If the project requires fast test configs (e.g.,
    < 1 minute), is one specified with concrete parameters?
+
+#### Infrastructure reuse
+
+8. **Existing infrastructure reuse**: Before accepting that the issue
+   should build new infrastructure (Snakefiles, pipelines, experiment
+   directories, scripts, configs), search for existing work that could
+   be extended. This is one of the most common and costly mistakes in
+   issue design — building from scratch when 80% of the pipeline
+   already exists.
+
+   **How to check:**
+   - Search merged PRs for related keywords (dataset names, method
+     names, tool names):
+     ```bash
+     gh pr list --repo <org/repo> --state merged --search "<keywords>" --limit 20
+     ```
+   - Search the repo for existing Snakefiles, experiment directories,
+     or pipeline configs that overlap with the proposed work:
+     ```bash
+     find <repo_path> -name "Snakefile" -o -name "*.smk" -o -name "config.yml" | head -20
+     ```
+   - Read the most promising matches to assess overlap.
+
+   **Flag as HIGH if:**
+   - An existing Snakefile/pipeline already implements >50% of the
+     proposed workflow steps (e.g., same data ingestion, same tool
+     invocations, same output structure)
+   - The issue proposes a new experiment directory when an existing
+     one uses the same datasets and tools
+   - The issue creates new wrapper scripts for tools that already
+     have wrappers in the repo
+
+   **Recommend:** Extend the existing infrastructure (add rules to the
+   existing Snakefile, add config entries, add new targets) rather
+   than duplicating it. Name the specific existing file/directory and
+   explain what can be reused.
 
 #### Ambiguity and placeholder checks
 
-7. **Vague language**: Scan the entire issue for adjectives and adverbs
+9. **Vague language**: Scan the entire issue for adjectives and adverbs
    that lack measurable criteria. Flag instances of words like "fast",
    "scalable", "robust", "intuitive", "efficient", "significant",
    "reasonable", "appropriate", "properly", "should improve". Each
    flagged term must be replaced with a concrete, quantified criterion.
 
-8. **Unresolved placeholders**: Scan for `TODO`, `TKTK`, `TBD`, `???`,
+10. **Unresolved placeholders**: Scan for `TODO`, `TKTK`, `TBD`, `???`,
    `<placeholder>`, `[NEEDS CLARIFICATION]`, `XXX`, or similar markers
    that indicate unfinished thinking. Every placeholder must be resolved
    with concrete content before the issue is submitted.
 
 #### Validation and benchmarking checks
 
-9. **Success criteria**: Are there concrete, measurable success criteria?
+11. **Success criteria**: Are there concrete, measurable success criteria?
    Not vague ("should improve") but specific ("held-out lnL improves by
    >1 nat per lineage on average").
 
-10. **Null model / baseline**: Is there a clearly specified baseline for
+12. **Null model / baseline**: Is there a clearly specified baseline for
     comparison? Is the baseline computation described in enough detail
     to reproduce (formula, software, parameters)?
 
-11. **Evaluation metric**: Is the primary metric well-defined? Is it
+13. **Evaluation metric**: Is the primary metric well-defined? Is it
     clear how to compute it (what software, what formula, what data)?
 
-12. **Cross-validation / held-out evaluation**: If the issue involves
+14. **Cross-validation / held-out evaluation**: If the issue involves
     model fitting, is the train/test split strategy specified? Are
     leakage risks addressed?
 
-13. **Benchmarks**: Are runtime expectations stated? Are absolute
+15. **Benchmarks**: Are runtime expectations stated? Are absolute
     numbers reported (not just relative improvements) so future work
     can compare?
 
-14. **Diagnostics**: Are there diagnostic outputs that help debug
+16. **Diagnostics**: Are there diagnostic outputs that help debug
     problems (e.g., coverage histograms, convergence plots, sanity
     checks)?
 
