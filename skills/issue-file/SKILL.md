@@ -73,7 +73,7 @@ gh issue create --title "<extracted title>" --body-file <file> --assignee <usern
 
 ### Step 6: Open the file for review
 
-After the gh command succeeds, open the file so the user can review what was submitted:
+After the gh command succeeds, open the file so the user can review what was submitted (whether called standalone or chained from `/issue-check`):
 
 ```bash
 if [ -n "$TMUX" ]; then

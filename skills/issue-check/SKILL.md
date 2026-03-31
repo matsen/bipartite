@@ -187,30 +187,16 @@ file paths) over vague placeholders.
 
 **Fix hard-wrapping.** If the file contains hard-wrapped paragraphs (newlines inserted mid-sentence at ~70-80 characters), unwrap them so each paragraph is a single long line. Only newlines for actual structural breaks (between paragraphs, list items, headings). GitHub renders markdown with soft wrapping.
 
-### Step 5: Open the edited file for review
+### Step 5: Submit via /issue-file
 
-Before submitting, open the file so the user can review the changes:
-
-```bash
-if [ -n "$TMUX" ]; then
-    tmux display-popup -w 80% -h 80% -E -- less <file_path>
-elif [ "$TERM_PROGRAM" = "zed" ]; then
-    zed <file_path>
-fi
-```
-
-Then stop and wait for the user to confirm before proceeding. Do not summarize the file contents.
-
-### Step 6: Submit via /issue-file
-
-After the user confirms, invoke the `/issue-file` skill with the same
-file path to create or update the GitHub issue:
+Invoke the `/issue-file` skill with the same file path. It will open
+the file for the user to review after submitting:
 
 ```
 /issue-file <file_path>
 ```
 
-### Step 7: Report
+### Step 6: Report
 
 Summarize:
 - Number of gaps found and fixed (grouped by severity if constitution
