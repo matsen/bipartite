@@ -51,7 +51,7 @@ Use the issue number as a branch prefix for traceability.
 
 ### Step 5: Pre-merge check
 
-Run `/pre-merge-check` before creating the PR. This runs the project's quality checklist (formatting, tests, parity, code review, etc.).
+Read `PRE-MERGE-CHECKLIST.md` in the project root **line by line** and verify every numbered item before creating the PR. Do not rely on memory — re-read the file fresh each time. For each item, either confirm it passes or explicitly state why it is not applicable (e.g. "item 4: parity — skipped, no alignment code changed"). Issue-lead approval does **not** substitute for this checklist: the lead evaluates issue scope; the checklist catches cross-cutting concerns (citations, formatting, README sync) that the issue body does not mention.
 
 ### Step 6: Fix review findings
 
