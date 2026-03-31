@@ -23,8 +23,9 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
 
 1. **Local search FIRST** (always do this):
    ```bash
-   bip search "author keyword"
+   bip search -a "LastName" "keyword" --human
    ```
+   **Always use `--human`** — the default JSON output is verbose and easy to mis-scan.
 
 2. **If `bip search` fails** (e.g., schema error), rebuild the database:
    ```bash
@@ -51,7 +52,7 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
 
 When invoked with arguments like `/bip find <query>` or `/bip <query>`:
 
-1. **Always search local library first** with `bip search "<query>"`
+1. **Always search local library first** with `bip search "<query>" --human`
 2. If local search fails with an error, rebuild the database and retry
 3. **If found locally and answering a question, read the paper PDF** using pdf-navigator tools
 4. **Only after exhausting local options**, ask user if they want to search externally
@@ -74,13 +75,13 @@ Suggest creating concepts when you notice:
 
 | Task | Command |
 |------|---------|
-| Search local library | `bip search "query"` |
-| Search by author | `bip search -a "LastName"` (exact last name, AND logic) |
-| Search by title | `bip search -t "keywords"` or `--title` |
-| Search by year | `bip search --year 2024` or `--year 2020:` |
-| Search by venue | `bip search --venue "Nature"` (partial match) |
-| Lookup by DOI | `bip search --doi "10.1234/..."` |
-| Combined search | `bip search "topic" -a "Author" --year 2020:` |
+| Search local library | `bip search "query" --human` |
+| Search by author | `bip search -a "LastName" --human` |
+| Search by title | `bip search -t "keywords" --human` |
+| Search by year | `bip search --year 2024 --human` |
+| Search by venue | `bip search --venue "Nature" --human` |
+| Lookup by DOI | `bip search --doi "10.1234/..." --human` |
+| Combined search | `bip search "topic" -a "Author" --year 2020: --human` |
 | Semantic search | `bip semantic "query"` |
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
@@ -146,11 +147,11 @@ For finding a specific paper or result:
 1. **Local library first** (fastest, already curated):
    ```bash
    # Use flags for author/year filtering (most reliable)
-   bip search -a "AuthorName" --year 2020:
-   bip search "topic" -a "Author"
+   bip search -a "AuthorName" --year 2020: --human
+   bip search "topic" -a "Author" --human
 
-   # Or plain keyword search
-   bip search "author topic"
+   # Or plain keyword search (use -a for authors when possible)
+   bip search "distinctive title words" --human
    bip semantic "conceptual description"  # for topic-heavy queries
    ```
 
@@ -212,7 +213,7 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 1. **Search local library first**:
    ```bash
-   bip search "Schmidler phylogenetics"
+   bip search "Schmidler phylogenetics" --human
    # or for topic-heavy queries:
    bip semantic "importance sampling MCMC"
    ```
@@ -389,7 +390,7 @@ If searches return nothing relevant:
 2. **Simplify query** - fewer terms, more common synonyms
 3. **Try both local and external**:
    ```bash
-   bip search "topic"        # local
+   bip search "topic" --human # local
    bip semantic "topic"      # local semantic
    bip asta search "topic"   # external
    ```

@@ -18,7 +18,7 @@ Parse user queries to identify:
 
 1. **Search the local library**:
    ```bash
-   bip search "<constructed query>"
+   bip search "<constructed query>" --human
    ```
 
 2. **For topic-heavy queries**, also try semantic search:
@@ -154,7 +154,7 @@ When you know a paper exists and need to find it:
 
 1. **If you know authors**: Start with author name + key term
    ```bash
-   bip search "Felsenstein distance"
+   bip search "Felsenstein distance" --human
    bip asta search "Bruno Halpern neighbor joining" --human
    ```
 
