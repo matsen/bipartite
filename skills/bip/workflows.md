@@ -140,7 +140,7 @@ Import references from a Paperpile export.
    bip rebuild
    ```
 
-5. **Report results**: Show new/updated/unchanged counts.
+5. **Report results**: Show new/updated/unchanged counts. Notes from Paperpile are preserved and will be searchable via `bip search`.
 
 6. **Ask about cleanup**: Offer to remove the import file from Downloads if user wants.
 

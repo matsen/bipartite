@@ -56,4 +56,4 @@ rm "<file>"
 
 ### 6. Report
 
-Summarize: new refs added, total count, file deleted.
+Summarize: new refs added, total count, file deleted. Notes from Paperpile are preserved and searchable via `bip search`.

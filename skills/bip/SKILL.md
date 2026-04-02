@@ -75,7 +75,7 @@ Suggest creating concepts when you notice:
 
 | Task | Command |
 |------|---------|
-| Search local library | `bip search "query" --human` |
+| Search local library | `bip search "query" --human` (searches title, abstract, authors, notes) |
 | Search by author | `bip search -a "LastName" --human` |
 | Search by title | `bip search -t "keywords" --human` |
 | Search by year | `bip search --year 2024 --human` |
