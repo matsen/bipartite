@@ -11,6 +11,15 @@ artifacts from remote, and reacts to new results.
 
 For continuous auto-polling, use: `/loop 10m /bip.ms.poll`
 
+**Never modify remote server state.** Do not run `snakemake` (even
+dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any
+write command via SSH on remote servers (ermine, quokka, orca, etc.).
+Other agents are actively running experiments there. SSH is fine for
+read-only inspection (`ls`, `cat`, `head`, `grep`, checking file
+dates/sizes), but never run anything that modifies files, locks, or
+builds. Local `git pull` and `make remote-fetch` (which uses `rsync`
+to copy FROM remote) are fine — they only modify the local clone.
+
 ## What to check
 
 ### 1. EPIC updates

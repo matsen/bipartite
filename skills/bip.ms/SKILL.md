@@ -34,6 +34,15 @@ the EPIC workers and conductor do (running on a remote). This session:
 or kicking off computational work. If manuscript work reveals a gap,
 note it for the user — they will handle issue creation separately.
 
+**Never modify remote server state.** Do not run `snakemake` (even
+dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any
+write command on remote servers (ermine, quokka, orca, etc.). Other
+agents are actively running experiments there. SSH is fine for
+read-only inspection (`ls`, `cat`, `head`, `grep`, checking file
+dates/sizes), but never run anything that modifies files, locks, or
+builds. Report what you observe and let the user or the responsible
+agent handle modifications.
+
 **Issue quality gate:** When the user asks to file an issue during a
 manuscript session, always run `/issue-check` on the draft before
 submitting via `/issue-file`. Do not shortcut to `gh issue create`
