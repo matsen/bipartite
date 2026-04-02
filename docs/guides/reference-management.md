@@ -12,6 +12,8 @@ bip import --format paperpile ~/Downloads/export.json
 bip rebuild
 ```
 
+Paperpile import preserves the `notes` field from your Paperpile library. Notes appear in `bip get` output and are searchable via `bip search`.
+
 `bip rebuild` builds the SQLite query index from the JSONL source files. Run it after pulling changes or if the database gets corrupted.
 
 ## Searching
@@ -22,7 +24,7 @@ bip search "author:Matsen"
 bip search "title:influenza" --limit 10
 ```
 
-Keyword search queries title, abstract, and authors. Use `author:` or `title:` prefixes to narrow scope.
+Keyword search queries title, abstract, authors, and notes. Use `author:` or `title:` prefixes to narrow scope.
 
 ### Semantic Search
 
@@ -39,7 +41,7 @@ Semantic search uses local embeddings via Ollama to find related papers even wit
 ## Working with Papers
 
 ```bash
-bip get Smith2024-ab             # Fetch metadata as JSON
+bip get Smith2024-ab             # Fetch metadata as JSON (includes notes if present)
 bip get Smith2024-ab --human     # Human-readable output
 bip open Smith2024-ab            # Open PDF in configured viewer
 bip open --recent 5              # Open the 5 most recently added papers

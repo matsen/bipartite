@@ -25,7 +25,8 @@ type Reference struct {
     Title    string   `json:"title"`
     Authors  []Author `json:"authors"`
     Abstract string   `json:"abstract"`
-    Venue    string   `json:"venue"` // Journal, conference, or preprint server
+    Venue    string   `json:"venue"`           // Journal, conference, or preprint server
+    Notes    string   `json:"notes,omitempty"` // User notes (e.g., from Paperpile)
 
     // Publication Date
     Published PublicationDate `json:"published"`
@@ -52,6 +53,7 @@ type Reference struct {
 | `authors` | Yes | At least one author |
 | `abstract` | No | May be empty string |
 | `venue` | No | May be empty string |
+| `notes` | No | User notes, preserved from source (e.g., Paperpile) |
 | `published.year` | Yes | Integer > 1900 |
 | `published.month` | No | Integer 1-12 when present |
 | `published.day` | No | Integer 1-31 when present |
