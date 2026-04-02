@@ -182,6 +182,15 @@ If you launch a long-running experiment:
 4. After 3 consecutive check failures, set stop_reason to
    mechanical-blocker and invoke the lead
 
+PHONE NOTIFICATION — When you set phase to needs-human or completed,
+ring the terminal bell and send a push notification so the user notices:
+```bash
+printf '\a'
+NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
+[ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip epic" -d "#N <phase>: <one-line summary>" "ntfy.sh/$NTFY_TOPIC" > /dev/null
+```
+Do this EVERY time you write needs-human or completed to .epic-status.json.
+
 STOPPING POINTS — When you reach a natural stopping point:
 1. Append a worklog entry describing what you did and why you stopped
 2. Update .epic-status.json with phase, summary, stop_reason
