@@ -1,7 +1,7 @@
 [
   {
     "_id": "2773420d-4009-0be9-920f-d674f7f86794",
-    "abstract": "Abstract Hemagglutinins (HA) from different influenza A virus subtypes share as little as ∼40% amino acid identity, yet their protein structure and cell entry function are highly conserved. Here we examine the extent that sequence constraints on HA differ across three subtypes. To do this, we first use pseudovirus deep mutational scanning to measure how all amino-acid mutations to an H7 HA affect its cell entry function. We then compare these new measurements to previously described measurements of how all mutations to H3 and H5 HAs affect cell entry function. We find that ∼50% of HA sites display substantially diverged preferences for different amino acids across the HA subtypes. The sites with the most divergent amino-acid preferences tend to be buried and have biochemically distinct wildtype amino acids in the different HA subtypes. We provide an example of how rewiring the interactions among contacting residues has dramatically shifted which amino acids are tolerated at specific sites. Overall, our results show how proteins with the same structure and function can become subject to very different site-specific evolutionary constraints as their sequences diverge.",
+    "abstract": "Abstract Hemagglutinins (HA) from different influenza A virus subtypes share as little as \u223c40% amino acid identity, yet their protein structure and cell entry function are highly conserved. Here we examine the extent that sequence constraints on HA differ across three subtypes. To do this, we first use pseudovirus deep mutational scanning to measure how all amino-acid mutations to an H7 HA affect its cell entry function. We then compare these new measurements to previously described measurements of how all mutations to H3 and H5 HAs affect cell entry function. We find that \u223c50% of HA sites display substantially diverged preferences for different amino acids across the HA subtypes. The sites with the most divergent amino-acid preferences tend to be buried and have biochemically distinct wildtype amino acids in the different HA subtypes. We provide an example of how rewiring the interactions among contacting residues has dramatically shifted which amino acids are tolerated at specific sites. Overall, our results show how proteins with the same structure and function can become subject to very different site-specific evolutionary constraints as their sequences diverge.",
     "accessed": {
       "year": "2026",
       "month": "1",
@@ -104,11 +104,12 @@
       "https://www.biorxiv.org/content/10.64898/2026.01.05.697808v1",
       "http://dx.doi.org/10.64898/2026.01.05.697808",
       "http://biorxiv.org/lookup/doi/10.64898/2026.01.05.697808"
-    ]
+    ],
+    "notes": "DMS study comparing H3, H5, H7 hemagglutinin subtypes"
   },
   {
     "_id": "b663b963-ea26-0c4e-b07b-467141a47da8",
-    "abstract": "Bayesian phylodynamics is central to epidemiological studies, but exploring the complex tree space is computationally challenging. Phylodynamic datasets comprise many highly similar sequences, sampled through time, creating a uniquely structured landscape of optimal trees. Here, we show that phylodynamic tree landscapes are often highly rugged, with multiple peaks separated by difficult-to-cross valleys. These features lead to widespread sampling problems which are often driven by a few sequences. These problems can significantly impact phylodynamic estimates, especially those associated with particular clades, distorting biological conclusions. We develop diagnostics to identify problematic sequences and provide solutions to mitigate their impacts. We offer strategies to optimize phylodynamic analysis workflows and to develop algorithms for navigating rugged landscapes, thereby advancing infectious disease investigation. Phylodynamic analysis has been instrumental in elucidating epidemiological and evolutionary dynamics of pathogens. Bayesian phylodynamics integrates out phylogenetic uncertainty, which is typically substantial in phylodynamic datasets due to limited genetic diversity. Phylodynamic inference does not, however, scale with modern datasets, partly due to difficulties in traversing tree space. Here, we characterize tree space and landscape in phylodynamic inference and assess its impacts on analysis difficulty and key biological estimates. By running extensive Bayesian analyses of 15 classic large phylodynamic datasets and carefully analyzing the posterior samples, we find that the posterior tree landscape is diffuse yet rugged, leading to widespread tree sampling problems that usually stem from sequences in a small part of the tree. We develop clade-specific diagnostics to show that a few sequences—including putative recombinants and recurrent mutants—frequently drive the ruggedness and sampling problems, although existing data-quality tests show limited power to detect them. The sampling problems can significantly impact phylodynamic inferences or distort major biological conclusions; the impact is usually stronger on “local” estimates (e.g., introduction history) associated with particular clades than on “global” parameters (e.g., demographic trajectory) governed by general tree shape. We evaluate existing Markov chain Monte Carlo diagnostics and diagnostics developed here, and offer strategies for optimizing phylodynamic analysis settings and mitigating sampling problem impacts. Our findings highlight the need and directions to develop efficient traversal over rugged tree landscapes, ultimately advancing scalable and reliable phylodynamics.",
+    "abstract": "Bayesian phylodynamics is central to epidemiological studies, but exploring the complex tree space is computationally challenging. Phylodynamic datasets comprise many highly similar sequences, sampled through time, creating a uniquely structured landscape of optimal trees. Here, we show that phylodynamic tree landscapes are often highly rugged, with multiple peaks separated by difficult-to-cross valleys. These features lead to widespread sampling problems which are often driven by a few sequences. These problems can significantly impact phylodynamic estimates, especially those associated with particular clades, distorting biological conclusions. We develop diagnostics to identify problematic sequences and provide solutions to mitigate their impacts. We offer strategies to optimize phylodynamic analysis workflows and to develop algorithms for navigating rugged landscapes, thereby advancing infectious disease investigation. Phylodynamic analysis has been instrumental in elucidating epidemiological and evolutionary dynamics of pathogens. Bayesian phylodynamics integrates out phylogenetic uncertainty, which is typically substantial in phylodynamic datasets due to limited genetic diversity. Phylodynamic inference does not, however, scale with modern datasets, partly due to difficulties in traversing tree space. Here, we characterize tree space and landscape in phylodynamic inference and assess its impacts on analysis difficulty and key biological estimates. By running extensive Bayesian analyses of 15 classic large phylodynamic datasets and carefully analyzing the posterior samples, we find that the posterior tree landscape is diffuse yet rugged, leading to widespread tree sampling problems that usually stem from sequences in a small part of the tree. We develop clade-specific diagnostics to show that a few sequences\u2014including putative recombinants and recurrent mutants\u2014frequently drive the ruggedness and sampling problems, although existing data-quality tests show limited power to detect them. The sampling problems can significantly impact phylodynamic inferences or distort major biological conclusions; the impact is usually stronger on \u201clocal\u201d estimates (e.g., introduction history) associated with particular clades than on \u201cglobal\u201d parameters (e.g., demographic trajectory) governed by general tree shape. We evaluate existing Markov chain Monte Carlo diagnostics and diagnostics developed here, and offer strategies for optimizing phylodynamic analysis settings and mitigating sampling problem impacts. Our findings highlight the need and directions to develop efficient traversal over rugged tree landscapes, ultimately advancing scalable and reliable phylodynamics.",
     "accessed": {
       "year": "2026",
       "month": "1",
@@ -230,7 +231,7 @@
   },
   {
     "_id": "e6073822-688c-023f-9745-a4d2539680b7",
-    "abstract": "Abstract Protein language models have become essential tools for engineering novel functional proteins. The emerging paradigm of family-based language models makes use of homologous sequences to steer protein design and enhance zero-shot fitness prediction, by imbuing models with an ability to explicitly reason over evolutionary context. To provide an open foundation for this modelling approach, we introduce ProFam-1 , a 251M-parameter autoregressive protein family language model (pfLM) trained with next-token prediction on millions of protein families represented as concatenated, unaligned sets of sequences. ProFam-1 is competitive with state-of-the-art models on the ProteinGym zero-shot fitness prediction benchmark, achieving Spearman correlations of 0.47 for substitutions and 0.53 for indels. For homology-guided generation, ProFam-1 generates diverse sequences with predicted structural similarity, while preserving residue conservation and covariance patterns. All of ProFam’s training and inference pipelines, together with our curated, large-scale training dataset ProFam Atlas , are released fully open source, lowering the barrier to future method development.",
+    "abstract": "Abstract Protein language models have become essential tools for engineering novel functional proteins. The emerging paradigm of family-based language models makes use of homologous sequences to steer protein design and enhance zero-shot fitness prediction, by imbuing models with an ability to explicitly reason over evolutionary context. To provide an open foundation for this modelling approach, we introduce ProFam-1 , a 251M-parameter autoregressive protein family language model (pfLM) trained with next-token prediction on millions of protein families represented as concatenated, unaligned sets of sequences. ProFam-1 is competitive with state-of-the-art models on the ProteinGym zero-shot fitness prediction benchmark, achieving Spearman correlations of 0.47 for substitutions and 0.53 for indels. For homology-guided generation, ProFam-1 generates diverse sequences with predicted structural similarity, while preserving residue conservation and covariance patterns. All of ProFam\u2019s training and inference pipelines, together with our curated, large-scale training dataset ProFam Atlas , are released fully open source, lowering the barrier to future method development.",
     "accessed": {
       "year": "2026",
       "month": "1",
@@ -375,7 +376,8 @@
       "https://www.biorxiv.org/content/10.64898/2025.12.19.695431v1",
       "http://dx.doi.org/10.64898/2025.12.19.695431",
       "http://biorxiv.org/lookup/doi/10.64898/2025.12.19.695431"
-    ]
+    ],
+    "notes": "SONIA (linear)"
   },
   {
     "_id": "52ab50b5-6b43-032b-aaaf-7bfc73fb501f",
@@ -480,13 +482,13 @@
   },
   {
     "_id": "403fd76a-98ea-0db4-9aa3-ce843b90dd95",
-    "abstract": "We enumerate the strict ordinate binary trees according to two parameters: the direct antecedent of the greatest vertex and the vertex which is at the end of the lower sequence of vertices. A similar study concerning André's trees had led us to Entringer's integers.",
+    "abstract": "We enumerate the strict ordinate binary trees according to two parameters: the direct antecedent of the greatest vertex and the vertex which is at the end of the lower sequence of vertices. A similar study concerning Andr\u00e9's trees had led us to Entringer's integers.",
     "attachments": [
       {
         "_id": "5ade7307-e741-4878-b6df-4e896f27d031",
         "article_pdf": 1,
         "created": 1767814909.442,
-        "filename": "All Papers/P/Poupard 1989 - Deux propriétés des arbres binaires ordonnés stricts.pdf",
+        "filename": "All Papers/P/Poupard 1989 - Deux propri\u00e9t\u00e9s des arbres binaires ordonn\u00e9s stricts.pdf",
         "filesize": 358476,
         "gdrive_id": "1phO8oLv2GOQj7lPFn_jsaz7zf4KZQQPu",
         "mimeType": "application/pdf",
@@ -538,7 +540,7 @@
     "publisher": "Elsevier BV",
     "pubtype": "PP_ARTICLE",
     "sha1": "da0b41c449f6a9cf304fa8d6cd00cede882b3616",
-    "title": "Deux propriétés des arbres binaires ordonnés stricts",
+    "title": "Deux propri\u00e9t\u00e9s des arbres binaires ordonn\u00e9s stricts",
     "url": [
       "http://dx.doi.org/10.1016/S0195-6698(89)80009-5",
       "https://linkinghub.elsevier.com/retrieve/pii/S0195669889800095",

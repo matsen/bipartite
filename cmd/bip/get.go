@@ -79,6 +79,12 @@ func printRefDetail(ref reference.Reference) {
 		fmt.Printf("DOI:      %s\n", ref.DOI)
 	}
 
+	// Notes
+	if ref.Notes != "" {
+		fmt.Println()
+		fmt.Printf("Notes:    %s\n", wrapText(ref.Notes, TextWrapWidth, "          "))
+	}
+
 	// Abstract
 	if ref.Abstract != "" {
 		fmt.Println()

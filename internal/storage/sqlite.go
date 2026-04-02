@@ -22,7 +22,7 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	pub_year, pub_month, pub_day,
 	pdf_path, source_type, source_id, supersedes,
 	authors_json, supplement_paths_json,
-	pmid, pmcid, arxiv_id, s2_id`
+	pmid, pmcid, arxiv_id, s2_id, notes`
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
@@ -70,7 +70,8 @@ func createSchema(db *sql.DB) error {
 			pmid TEXT,
 			pmcid TEXT,
 			arxiv_id TEXT,
-			s2_id TEXT
+			s2_id TEXT,
+			notes TEXT
 		);
 
 		-- Index for DOI lookups
@@ -82,7 +83,8 @@ func createSchema(db *sql.DB) error {
 			title,
 			abstract,
 			authors_text,
-			pub_year
+			pub_year,
+			notes
 		);
 
 		-- Embedding metadata for semantic index staleness detection (Phase II)
@@ -121,8 +123,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			pub_year, pub_month, pub_day,
 			pdf_path, source_type, source_id, supersedes,
 			authors_json, supplement_paths_json,
-			pmid, pmcid, arxiv_id, s2_id
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			pmid, pmcid, arxiv_id, s2_id, notes
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
@@ -130,8 +132,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 	defer refsStmt.Close()
 
 	ftsStmt, err := d.db.Prepare(`
-		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year, notes)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing fts insert: %w", err)
@@ -159,6 +161,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			string(authorsJSON), nullableString(supplementJSON),
 			nullableStringValue(ref.PMID), nullableStringValue(ref.PMCID),
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
+			nullableStringValue(ref.Notes),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -168,7 +171,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		authorsText := formatAuthorsText(ref.Authors)
 
 		// Insert into FTS table
-		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year))
+		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year), ref.Notes)
 		if err != nil {
 			return 0, fmt.Errorf("inserting fts for %s: %w", ref.ID, err)
 		}
@@ -429,7 +432,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	var ref reference.Reference
 	var authorsJSON, supplementJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
-	var pmid, pmcid, arxivID, s2id sql.NullString
+	var pmid, pmcid, arxivID, s2id, notes sql.NullString
 	var pubMonth, pubDay sql.NullInt64
 
 	err := s.Scan(
@@ -437,7 +440,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&ref.Published.Year, &pubMonth, &pubDay,
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
-		&pmid, &pmcid, &arxivID, &s2id,
+		&pmid, &pmcid, &arxivID, &s2id, &notes,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -457,6 +460,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.PMCID = pmcid.String
 	ref.ArXivID = arxivID.String
 	ref.S2ID = s2id.String
+	ref.Notes = notes.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)

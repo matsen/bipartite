@@ -39,6 +39,7 @@ func setupTestDB(t *testing.T) (*DB, string, func()) {
 			Title:    "Deep Learning for Protein Structure",
 			Abstract: "A study of deep learning methods for proteins.",
 			Venue:    "Science",
+			Notes:    "SONIA (linear)",
 			Authors: []reference.Author{
 				{First: "Alice", Last: "Jones"},
 			},
@@ -218,6 +219,48 @@ func TestDB_GetByID_FullReference(t *testing.T) {
 	}
 	if ref.Source.Type != "paperpile" || ref.Source.ID != "abc123" {
 		t.Errorf("Source = %+v, want paperpile/abc123", ref.Source)
+	}
+}
+
+func TestDB_GetByID_Notes(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	ref, err := db.GetByID("Jones2025-cd")
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if ref == nil {
+		t.Fatal("GetByID() returned nil")
+	}
+	if ref.Notes != "SONIA (linear)" {
+		t.Errorf("Notes = %q, want %q", ref.Notes, "SONIA (linear)")
+	}
+
+	// Ref without notes should have empty string
+	ref2, err := db.GetByID("Smith2026-ab")
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if ref2.Notes != "" {
+		t.Errorf("Notes = %q, want empty string", ref2.Notes)
+	}
+}
+
+func TestDB_Search_Notes(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Search for text that only appears in notes
+	refs, err := db.Search("SONIA", 10)
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	if len(refs) < 1 {
+		t.Error("Search(SONIA) returned no results, expected to find via notes field")
+	}
+	if len(refs) > 0 && refs[0].ID != "Jones2025-cd" {
+		t.Errorf("Search(SONIA) returned %s, want Jones2025-cd", refs[0].ID)
 	}
 }
 

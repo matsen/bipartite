@@ -61,6 +61,7 @@ func TestParsePaperpile_ValidEntry(t *testing.T) {
 		"title": "Test Paper",
 		"abstract": "This is a test abstract",
 		"journal": "Test Journal",
+		"notes": "SONIA (linear)",
 		"published": {"year": "2026", "month": "3", "day": "15"},
 		"author": [
 			{"first": "John", "last": "Smith", "orcid": "0000-0001-2345-6789"},
@@ -131,12 +132,35 @@ func TestParsePaperpile_ValidEntry(t *testing.T) {
 		t.Errorf("SupplementPaths = %v, want [Papers/supplement.pdf]", ref.SupplementPaths)
 	}
 
+	// Check notes
+	if ref.Notes != "SONIA (linear)" {
+		t.Errorf("Notes = %v, want SONIA (linear)", ref.Notes)
+	}
+
 	// Check import source
 	if ref.Source.Type != "paperpile" {
 		t.Errorf("Source.Type = %v, want paperpile", ref.Source.Type)
 	}
 	if ref.Source.ID != "abc123" {
 		t.Errorf("Source.ID = %v, want abc123", ref.Source.ID)
+	}
+}
+
+func TestParsePaperpile_WithoutNotes(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "NoNotes2026",
+		"title": "Paper without notes",
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}]
+	}]`)
+
+	refs, errs := ParsePaperpile(data)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if refs[0].Notes != "" {
+		t.Errorf("Notes = %v, want empty string", refs[0].Notes)
 	}
 }
 
