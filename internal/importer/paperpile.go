@@ -70,7 +70,7 @@ type PaperpileEntry struct {
 		ArticlePDF int    `json:"article_pdf"` // 1 = main PDF, 0 = supplement
 		Filename   string `json:"filename"`
 	} `json:"attachments"`
-	Notes string `json:"notes"`
+	Notes string `json:"note"`
 }
 
 // ParsePaperpile parses a Paperpile JSON export and returns references.

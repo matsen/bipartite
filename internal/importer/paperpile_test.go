@@ -61,7 +61,7 @@ func TestParsePaperpile_ValidEntry(t *testing.T) {
 		"title": "Test Paper",
 		"abstract": "This is a test abstract",
 		"journal": "Test Journal",
-		"notes": "SONIA (linear)",
+		"note": "SONIA (linear)",
 		"published": {"year": "2026", "month": "3", "day": "15"},
 		"author": [
 			{"first": "John", "last": "Smith", "orcid": "0000-0001-2345-6789"},

@@ -105,7 +105,7 @@
       "http://dx.doi.org/10.64898/2026.01.05.697808",
       "http://biorxiv.org/lookup/doi/10.64898/2026.01.05.697808"
     ],
-    "notes": "DMS study comparing H3, H5, H7 hemagglutinin subtypes"
+    "note": "DMS study comparing H3, H5, H7 hemagglutinin subtypes"
   },
   {
     "_id": "b663b963-ea26-0c4e-b07b-467141a47da8",
@@ -377,7 +377,7 @@
       "http://dx.doi.org/10.64898/2025.12.19.695431",
       "http://biorxiv.org/lookup/doi/10.64898/2025.12.19.695431"
     ],
-    "notes": "SONIA (linear)"
+    "note": "SONIA (linear)"
   },
   {
     "_id": "52ab50b5-6b43-032b-aaaf-7bfc73fb501f",
