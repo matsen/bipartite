@@ -179,6 +179,67 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
     problems (e.g., coverage histograms, convergence plots, sanity
     checks)?
 
+#### Correctness validation brainstorm (REQUIRED)
+
+This is one of the most important parts of the review. Scientific code
+must be validated beyond basic smoke tests. The subagent MUST actively
+brainstorm additional validations that would be convincing evidence the
+math and implementation are correct, then check whether the issue
+already includes them. If not, flag as **HIGH**.
+
+Think creatively about what tests would actually catch bugs in the
+mathematical or algorithmic core. Common categories:
+
+17. **Known-answer tests**: Are there cases where the correct answer
+    is known analytically or from a trusted reference implementation?
+    For example: degenerate inputs where the formula simplifies,
+    textbook examples with published answers, or toy cases small
+    enough to verify by hand. Every non-trivial algorithm should have
+    at least one known-answer test specified in the issue.
+
+18. **Symmetry and invariance checks**: Does the algorithm have
+    mathematical properties that can be tested? Examples: commutativity
+    (swapping inputs gives the same result), idempotency (applying
+    twice gives the same result as once), conservation laws (quantities
+    that should sum to a constant), invariance under permutation or
+    relabeling. Each such property is a free correctness check.
+
+19. **Limit and boundary behavior**: What happens at extremes? Does the
+    algorithm degrade gracefully or produce known results at boundaries?
+    Examples: uniform input, all-zeros, single-element input, very
+    large/small values, identity transformations. These often expose
+    off-by-one errors and numerical issues.
+
+20. **Comparison to reference implementation**: If a reference
+    implementation exists (in R, Python, another language, or a
+    published software package), is there a test that runs both and
+    compares outputs on realistic data? Matching a trusted
+    implementation on non-trivial inputs is strong evidence of
+    correctness.
+
+21. **Stochastic / statistical tests**: For randomized algorithms, are
+    there distribution-level tests? Examples: checking that samples
+    have the correct mean/variance, that a sampler passes a
+    goodness-of-fit test, that Monte Carlo estimates converge to known
+    values as sample size increases.
+
+22. **Gradient / sensitivity checks**: For optimization or
+    differentiable code, are there finite-difference gradient checks?
+    For any continuous function, is the output tested for reasonable
+    sensitivity to input perturbations?
+
+23. **Round-trip and self-consistency**: Can the computation be checked
+    by inverting it or by verifying an internal consistency relation?
+    Examples: encode then decode should recover the original,
+    likelihood of the MAP estimate should be >= likelihood of
+    perturbed values, forward and reverse computations should agree.
+
+The subagent should propose at least 2-3 concrete, specific
+validations tailored to the particular algorithm or method in the
+issue. Generic suggestions like "add more tests" are not acceptable —
+each suggestion must name the specific test, what inputs to use, and
+what the expected output or property is.
+
 ### Step 4: Fix gaps (with approval gate)
 
 Determine whether the agent authored this issue file in the current
