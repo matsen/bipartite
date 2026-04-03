@@ -11,7 +11,7 @@ type Reference struct {
 	Title    string   `json:"title"`
 	Authors  []Author `json:"authors"`
 	Abstract string   `json:"abstract"`
-	Venue    string   `json:"venue"`           // Journal, conference, or preprint server
+	Venue    string   `json:"venue"`          // Journal, conference, or preprint server
 	Note     string   `json:"note,omitempty"` // User note (e.g., from Paperpile)
 
 	// Publication Date
