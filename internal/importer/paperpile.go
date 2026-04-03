@@ -70,7 +70,7 @@ type PaperpileEntry struct {
 		ArticlePDF int    `json:"article_pdf"` // 1 = main PDF, 0 = supplement
 		Filename   string `json:"filename"`
 	} `json:"attachments"`
-	Notes string `json:"note"`
+	Note string `json:"note"`
 }
 
 // ParsePaperpile parses a Paperpile JSON export and returns references.
@@ -163,7 +163,7 @@ func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error
 		Authors:         authors,
 		Abstract:        entry.Abstract,
 		Venue:           entry.Journal,
-		Notes:           entry.Notes,
+		Note:            entry.Note,
 		Published:       pubDate,
 		PDFPath:         pdfPath,
 		SupplementPaths: supplementPaths,

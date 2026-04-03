@@ -80,9 +80,9 @@ func printRefDetail(ref reference.Reference) {
 	}
 
 	// Notes
-	if ref.Notes != "" {
+	if ref.Note != "" {
 		fmt.Println()
-		fmt.Printf("Notes:    %s\n", wrapText(ref.Notes, TextWrapWidth, "          "))
+		fmt.Printf("Notes:    %s\n", wrapText(ref.Note, TextWrapWidth, "          "))
 	}
 
 	// Abstract

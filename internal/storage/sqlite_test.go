@@ -39,7 +39,7 @@ func setupTestDB(t *testing.T) (*DB, string, func()) {
 			Title:    "Deep Learning for Protein Structure",
 			Abstract: "A study of deep learning methods for proteins.",
 			Venue:    "Science",
-			Notes:    "SONIA (linear)",
+			Note:     "SONIA (linear)",
 			Authors: []reference.Author{
 				{First: "Alice", Last: "Jones"},
 			},
@@ -233,8 +233,8 @@ func TestDB_GetByID_Notes(t *testing.T) {
 	if ref == nil {
 		t.Fatal("GetByID() returned nil")
 	}
-	if ref.Notes != "SONIA (linear)" {
-		t.Errorf("Notes = %q, want %q", ref.Notes, "SONIA (linear)")
+	if ref.Note != "SONIA (linear)" {
+		t.Errorf("Notes = %q, want %q", ref.Note, "SONIA (linear)")
 	}
 
 	// Ref without notes should have empty string
@@ -242,8 +242,8 @@ func TestDB_GetByID_Notes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetByID() error = %v", err)
 	}
-	if ref2.Notes != "" {
-		t.Errorf("Notes = %q, want empty string", ref2.Notes)
+	if ref2.Note != "" {
+		t.Errorf("Notes = %q, want empty string", ref2.Note)
 	}
 }
 

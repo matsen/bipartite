@@ -161,7 +161,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			string(authorsJSON), nullableString(supplementJSON),
 			nullableStringValue(ref.PMID), nullableStringValue(ref.PMCID),
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
-			nullableStringValue(ref.Notes),
+			nullableStringValue(ref.Note),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -171,7 +171,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		authorsText := formatAuthorsText(ref.Authors)
 
 		// Insert into FTS table
-		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year), ref.Notes)
+		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year), ref.Note)
 		if err != nil {
 			return 0, fmt.Errorf("inserting fts for %s: %w", ref.ID, err)
 		}
@@ -460,7 +460,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.PMCID = pmcid.String
 	ref.ArXivID = arxivID.String
 	ref.S2ID = s2id.String
-	ref.Notes = notes.String
+	ref.Note = notes.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)
