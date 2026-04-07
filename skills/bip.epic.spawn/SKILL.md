@@ -35,7 +35,7 @@ experiments), file the issue first:
 2. `gh issue create --title "..." --body-file ISSUE-*.md`
 3. Then proceed with the spawn using the new issue number
 
-Never write a spawn prompt with `issue=0` or without `/work-issue <N>`.
+Never write a spawn prompt with `issue=0` or without `/bip.issue.work <N>`.
 Issueless spawns break EPIC tracking, PR linking, and conductor polling.
 
 ### Step 1: Select or create slot
@@ -213,8 +213,8 @@ COMPLETION: When done (or when lead says completed):
 2. Create a PR with gh pr create, title matches issue, body says Closes #N
 3. Update .epic-status.json phase to quality-gate
 4. QUALITY GATE LOOP — repeat until both pass clean:
-   a. Run /pr-check — fix everything it flags, commit and push
-   b. Run /pr-review — triage each finding (see REVIEW TRIAGE below),
+   a. Run /bip.pr.check — fix everything it flags, commit and push
+   b. Run /bip.pr.review — triage each finding (see REVIEW TRIAGE below),
       fix the ones you'll address, commit and push
    c. If either flagged issues that you fixed, go back to (a)
    Track quality gate iterations in .epic-status.json
@@ -227,7 +227,7 @@ COMPLETION: When done (or when lead says completed):
    For everything else — formatting, test gaps, docs, naming,
    lint, cruft — just fix it and move on.
 
-REVIEW TRIAGE — For each /pr-review finding, decide:
+REVIEW TRIAGE — For each /bip.pr.review finding, decide:
   • FIX NOW — sensible improvements you can complete quickly
     (naming, docs, small refactors, test gaps, lint). Just do them.
   • DEFER — findings that are too large to complete in this PR or
@@ -271,7 +271,7 @@ IMPORTANT CONTEXT:
 instructions, remote execution notes, dependencies, key files)
 
 Now read the issue and begin work:
-/work-issue N
+/bip.issue.work N
 ```
 
 ### Common context additions

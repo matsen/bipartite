@@ -12,7 +12,7 @@ Bipartite has three main pieces: a **nexus** (your data), the **bip CLI** (opera
 │  │ ┌────────────┐ │    │                             │   │
 │  │ │  Skills    │─┼────┼─▶ refs.jsonl  (papers)      │   │
 │  │ │            │ │    │   edges.jsonl (graph)       │   │
-│  │ │ /bip       │ │    │   concepts.jsonl            │   │
+│  │ │ /bip.lit   │ │    │   concepts.jsonl            │   │
 │  │ │ /bip.digest│ │    │   servers.yml (scout)       │   │
 │  │ │ /bip.spawn │ │    │   sources.yml (GitHub)     │   │
 │  │ └─────┬──────┘ │    │                             │   │
@@ -88,7 +88,7 @@ Skills are prompt templates that invoke `bip` commands with appropriate context.
 
 ```
 ~/.claude/skills/
-├── bip/                      # /bip - Search, add papers, library guidance
+├── bip.lit/                  # /bip.lit - Search, add papers, library guidance
 ├── bip.checkin/              # /bip.checkin - GitHub activity check
 ├── bip.digest/               # /bip.digest - Activity digests
 ├── bip.spawn/                # /bip.spawn - Spawn tmux sessions
@@ -101,7 +101,7 @@ Skills are prompt templates that invoke `bip` commands with appropriate context.
 Skills are symlinked from the bipartite repo:
 
 ```bash
-ln -s ~/re/bipartite/.claude/skills/* ~/.claude/skills/
+ln -s ~/re/bipartite/skills/* ~/.claude/skills/
 ```
 
 ### Skill vs CLI

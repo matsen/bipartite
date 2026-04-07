@@ -46,7 +46,7 @@ did (commits + diff). Ask:
 | **awaiting-results** | Experiment running, not done | Check partial results: if sufficient to answer the question, tell worker to analyze what's available. Otherwise, the ralph-loop handles polling — each iteration checks and exits if not ready. |
 | **run-production** | Works on test data, not on real data | "Run on production data with the new feature" |
 | **pr-ready** | Work done, no PR yet | Verify topic branch, instruct: push, PR, quality gate |
-| **quality-gate** | PR exists, needs checks | Instruct: run /pr-check, fix all, run /pr-review, fix all, repeat until clean |
+| **quality-gate** | PR exists, needs checks | Instruct: run /bip.pr.check, fix all, run /bip.pr.review, fix all, repeat until clean |
 | **mechanical-blocker** | CI, merge conflict, deps | Provide specific fix instructions |
 | **scope-drift** | Work outside the issue | Redirect firmly to issue scope |
 | **needs-human** | Design question, ambiguous requirements, architectural tradeoff, genuine research direction choice | **STOP. Escalate.** |

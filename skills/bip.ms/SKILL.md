@@ -44,8 +44,8 @@ builds. Report what you observe and let the user or the responsible
 agent handle modifications.
 
 **Issue quality gate:** When the user asks to file an issue during a
-manuscript session, always run `/issue-check` on the draft before
-submitting via `/issue-file`. Do not shortcut to `gh issue create`
+manuscript session, always run `/bip.issue.check` on the draft before
+submitting via `/bip.issue.file`. Do not shortcut to `gh issue create`
 directly, regardless of perceived simplicity.
 
 ## Configuration
@@ -96,14 +96,27 @@ Then create `.ms-config.json` and proceed.
 
 ## Workflow
 
-### Step 0: Load config
+### Step 0: Load config and memory
 
 ```bash
 cat .ms-config.json
 ```
 
-Also read MEMORY.md from the auto-memory directory for context from
-previous sessions.
+Read `MEMORY.md` from the auto-memory directory. For each memory file
+listed there, read it and apply:
+
+- **Project memories** (e.g., `project_dasmfit_status.md`): Use as
+  the baseline for what's done vs pending. Cross-check against live
+  GitHub state — memories can be stale. When a memory says "PR open"
+  but `gh pr view` says merged, trust GitHub and update the memory.
+- **Pending decisions** (e.g., `project_pending_decisions.md`): Check
+  whether they've been resolved since last session. Remove resolved
+  items, flag unresolved ones in the status table.
+- **Feedback memories**: Apply silently — these are behavioral
+  guidelines, not status items.
+
+After loading, briefly note what the memory says the current state is,
+then verify it in Steps 1-4. Do not trust memory over live state.
 
 ### Step 1: Check manuscript state
 
@@ -269,3 +282,9 @@ DAGs with extra leaves). Always check the actual files on disk.
 - **Fetch cmd fails**: Warn — remote may be unreachable or path may have changed. Report and continue.
 - **EPIC not found**: Check if issue number is correct
 - **No new results**: Report "all quiet" and suggest checking back later
+
+## Session end
+
+Before ending a manuscript session or resetting context, run
+`/bip.ms.tuckin` to persist session state to memory and commit any
+manuscript changes.
