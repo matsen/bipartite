@@ -304,7 +304,7 @@ Always include the date in the clone assignments header.
   ```json
   {"pr_check": "pass|fail", "pr_review": "pass|fail", "iterations": 2}
   ```
-  Workers loop `/pr-check` and `/pr-review` until both pass clean.
+  Workers loop `/bip.pr.check` and `/bip.pr.review` until both pass clean.
   The orchestrator can monitor progress via this field during polling.
 - `scope` — set by the issue lead each iteration (one-line restatement of the issue goal)
 - `stop_reason` — categorized reason from the lead's decision framework

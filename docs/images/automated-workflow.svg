@@ -92,9 +92,9 @@
   <text x="45" y="420" class="phase-label">LITERATURE</text>
 
   <g>
-    <title>/bip — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
+    <title>/bip.lit — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
     <rect x="45" y="430" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="448" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip</text>
+    <text x="127" y="448" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.lit</text>
     <text x="127" y="462" text-anchor="middle" font-size="10" fill="#5a7a9a">asta + local search</text>
   </g>
 
@@ -102,24 +102,24 @@
   <text x="45" y="495" class="phase-label">ISSUES</text>
 
   <g>
-    <title>/issue-check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
+    <title>/bip.issue.check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
     <rect x="45" y="505" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="529" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/issue-check</text>
+    <text x="127" y="529" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.issue.check</text>
   </g>
 
   <g>
-    <title>CONSTITUTION.md — Development principles that issue-check validates against: scope discipline, file-based state, skill-first design.</title>
+    <title>CONSTITUTION.md — Development principles that bip.issue.check validates against: scope discipline, file-based state, skill-first design.</title>
     <rect x="235" y="505" width="175" height="38" rx="6" fill="#f0f8f0" stroke="#4a8a5a" stroke-width="1.5"/>
     <text x="322" y="529" text-anchor="middle" fill="#2a5a3a" class="mono" font-size="11">CONSTITUTION.md</text>
   </g>
 
-  <!-- constitution → issue-check -->
+  <!-- constitution → bip.issue.check -->
   <line x1="231" y1="524" x2="214" y2="524" stroke="#4a8a5a" stroke-width="1.2" marker-end="url(#arr-green)"/>
 
   <g>
-    <title>/issue-next — Draft a follow-up GitHub issue from a PR decision or identified gap, review it with /issue-check, and submit.</title>
+    <title>/bip.issue.next — Draft a follow-up GitHub issue from a PR decision or identified gap, review it with /bip.issue.check, and submit.</title>
     <rect x="45" y="555" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="579" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/issue-next</text>
+    <text x="127" y="579" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.issue.next</text>
   </g>
 
 
@@ -185,24 +185,24 @@
   <text x="565" y="345" class="phase-label">WORK</text>
 
   <g>
-    <title>Clone α — Autonomous Claude Code worker running /work-issue. Implements, tests, and creates a PR for one GitHub issue.</title>
+    <title>Clone α — Autonomous Claude Code worker running /bip.issue.work. Implements, tests, and creates a PR for one GitHub issue.</title>
     <rect x="565" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
     <text x="622" y="375" text-anchor="middle" fill="#1a2a3a">Clone α</text>
-    <text x="622" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/work-issue</text>
+    <text x="622" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
   </g>
 
   <g>
-    <title>Clone β — Autonomous Claude Code worker running /work-issue in a separate tmux window and git clone.</title>
+    <title>Clone β — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
     <rect x="695" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
     <text x="752" y="375" text-anchor="middle" fill="#1a2a3a">Clone β</text>
-    <text x="752" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/work-issue</text>
+    <text x="752" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
   </g>
 
   <g>
-    <title>Clone γ — Autonomous Claude Code worker running /work-issue in a separate tmux window and git clone.</title>
+    <title>Clone γ — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
     <rect x="825" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
     <text x="882" y="375" text-anchor="middle" fill="#1a2a3a">Clone γ</text>
-    <text x="882" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/work-issue</text>
+    <text x="882" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
   </g>
 
   <!-- spawn → workers -->
@@ -231,15 +231,15 @@
   <text x="565" y="500" class="phase-label">QUALITY</text>
 
   <g>
-    <title>/pr-check — Quick PR readiness check: clean worktree, good description, squash-ready. Run before /pr-review.</title>
+    <title>/bip.pr.check — Quick PR readiness check: clean worktree, good description, squash-ready. Run before /bip.pr.review.</title>
     <rect x="565" y="510" width="130" height="38" rx="6" fill="#fef3e2" stroke="#d4a847" stroke-width="1.5"/>
-    <text x="630" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/pr-check</text>
+    <text x="630" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/bip.pr.check</text>
   </g>
 
   <g>
-    <title>/pr-review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
+    <title>/bip.pr.review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
     <rect x="710" y="510" width="130" height="38" rx="6" fill="#fef3e2" stroke="#d4a847" stroke-width="1.5"/>
-    <text x="775" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/pr-review</text>
+    <text x="775" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/bip.pr.review</text>
   </g>
 
   <!-- evaluate → quality -->
@@ -270,8 +270,8 @@
   <!-- KAIZEN (continuous improvement loop)                          -->
   <!-- ============================================================ -->
   <g>
-    <title>/kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
+    <title>/bip.kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
     <rect x="150" y="645" width="700" height="38" rx="19" fill="#f4f7f0" stroke="#7a8a6a" stroke-width="1.5" stroke-dasharray="6 3"/>
-    <text x="500" y="669" text-anchor="middle" font-size="12" font-weight="500" fill="#5a6a4a"><tspan class="mono">/kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
+    <text x="500" y="669" text-anchor="middle" font-size="12" font-weight="500" fill="#5a6a4a"><tspan class="mono">/bip.kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
   </g>
 </svg>

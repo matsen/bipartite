@@ -131,7 +131,7 @@ a comparison that's missing, a figure variant that would strengthen
 the paper — propose raising an issue on the tracked repo:
 
 1. Describe what's needed and why (from the manuscript perspective)
-2. After user confirmation, run `/issue-next` targeting the tracked repo
+2. After user confirmation, run `/bip.issue.next` targeting the tracked repo
 3. The remote EPIC conductor will pick it up on its next poll
 
 ## After polling

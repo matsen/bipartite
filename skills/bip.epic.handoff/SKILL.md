@@ -31,7 +31,7 @@ you invoke it.
 ```
 
 - With an issue number: spawn work for an existing issue
-- Without: run `/issue-next` first to create the follow-up issue
+- Without: run `/bip.issue.next` first to create the follow-up issue
 
 ## Workflow
 
@@ -48,7 +48,7 @@ If not, finish the current work first.
 
 If no issue number was provided:
 ```
-/issue-next
+/bip.issue.next
 ```
 
 This drafts and creates the follow-up issue. Record the new issue
@@ -129,7 +129,7 @@ rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 Follow `/bip.epic.spawn` Steps 3-4 to compose the prompt:
 1. Read the new issue: `gh issue view <N>`
 2. Compose the full prompt including:
-   - `/work-issue <N>` as the core instruction
+   - `/bip.issue.work <N>` as the core instruction
    - Ralph-loop invocation block
    - EPIC status protocol (`.epic-status.json` fields, worklog format)
    - Any phasing or gate criteria from the issue

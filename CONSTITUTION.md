@@ -41,7 +41,7 @@ and comparing recent commits against it.
 
 ## V. Quality Gates Over Manual Review
 
-Automated checks (`/pr-check`, `/pr-review`) run in a loop until clean.
+Automated checks (`/bip.pr.check`, `/bip.pr.review`) run in a loop until clean.
 Fix everything they flag — don't skip, don't `--no-verify`. But the
 checks themselves MUST be fast and actionable, not ceremonial.
 
