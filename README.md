@@ -1,27 +1,32 @@
 # bipartite
 
-## The Problem
-
-### Knowledge
-
-In 2025, agentic coding completely revolutionized my role as an individual researcher because it shortened the distance between idea and implementation. However, it didn't really help my role as a research team lead, because agents don't have all of my knowledge of what we are doing and how it fits together.
-
-Let's tell the agents about everything!
-
-### Tools
-
-Last year I sent 8,077 Slack messages, reviewed 186 PRs, created 250 issues, and evaluated hundreds of papers for relevance to our research. I'd like to get agentic help with this in 2026. In order to do so, an agent is going to need to work with all of these tools.
-
-Let's connect the agents to everything!
+A platform for orchestrating Claude Code agents across research projects. Bipartite provides a `bip` CLI and a library of Claude Code skills that coordinate multi-agent workflows: spawning workers on GitHub issues, tracking manuscript progress across repositories, managing paper libraries, and keeping a research team informed via Slack digests.
 
 ## What Bipartite Does
 
-Bipartite is a tool to give agents knowledge and access to all the tools they need to draw context from our workflow.
+### Agent Orchestration (EPIC workflow)
 
-- **[Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)** — An agent-first reference manager: JSON output, CLI interface, git-backed storage, Semantic Scholar and Asta search. JSONL means your library is mergeable across collaborators with standard git workflows.
-- **[Knowledge Graph](https://matsen.github.io/bipartite/guides/knowledge-graph/)** — This knowledge graph connects the literature to _your group's projects_ and is designed for agents to traverse.
-- **[Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/)** — Themed digests, cross-repo check-ins (spawn dedicated `tmux` windows!), and Slack integration for group leaders.
-- **[Server Scout](https://matsen.github.io/bipartite/guides/server-scout/)** — Check remote server CPU, memory, load, and GPU availability via native SSH.
+The core of bipartite is the **EPIC orchestration system** — a conductor/worker pattern for managing multiple Claude Code sessions across clones and worktrees. The conductor session stays on `main`, scans GitHub for open issues, and spawns workers in dedicated tmux windows. Workers implement, test, and create PRs autonomously; an issue-lead subagent evaluates progress and escalates only when human judgment is needed.
+
+Key skills: `/bip.epic`, `/bip.epic.spawn`, `/bip.epic.poll`, `/bip.epic.handoff`, `/bip.epic.tuckin`
+
+### Manuscript Coordination
+
+Manuscript sessions (`/bip.ms`) monitor tracked EPIC issues in remote code repositories and react when new results arrive — pulling data, importing figures, and drafting text. This separates the "writing the paper" concern from the "running experiments" concern.
+
+Key skills: `/bip.ms`, `/bip.ms.poll`, `/bip.ms.tuckin`
+
+### Reference Management
+
+An agent-first reference manager: JSON output, CLI interface, git-backed JSONL storage, Semantic Scholar and Asta search. Your library is mergeable across collaborators with standard git workflows.
+
+Guide: [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)
+
+### Workflow Coordination
+
+Themed narrative digests, cross-repo check-ins (spawn dedicated `tmux` windows), Slack integration, and server resource scouting via SSH.
+
+Key skills: `/bip.checkin`, `/bip.digest`, `/bip.narrative`, `/bip.spawn`, `/bip.scout`
 
 ## Installation
 
@@ -53,7 +58,7 @@ go install github.com/matsen/bipartite/cmd/bip@latest
 
 ## Quick Start
 
-1. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, knowledge graph, and workflow config. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
+1. **Create your private [nexus](https://matsen.github.io/bipartite/guides/architecture/)** — the repository that stores your paper library, workflow config, and project context. Click "Use this template" on [nexus-template](https://github.com/matsen/nexus-template), then clone:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/nexus ~/re/nexus
