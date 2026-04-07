@@ -16,6 +16,9 @@
     <marker id="arr-orange" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
       <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#b07840"/>
     </marker>
+    <marker id="arr-gh" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="6" markerHeight="4" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#aaa"/>
+    </marker>
   </defs>
 
   <!-- Title -->
@@ -46,17 +49,8 @@
     <text x="127" y="229" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.ms.poll</text>
   </g>
 
-  <g>
-    <title>Fetch latest results from remote compute servers: git pull tracked repos, run Makefile fetch targets to sync experiment outputs.</title>
-    <rect x="235" y="205" width="175" height="38" rx="6" fill="#f0f8f0" stroke="#4a8a5a" stroke-width="1.5"/>
-    <text x="322" y="222" text-anchor="middle" font-size="11" fill="#2a5a3a">git pull + make</text>
-    <text x="322" y="236" text-anchor="middle" font-size="11" fill="#2a5a3a">remote-fetch</text>
-  </g>
-
   <!-- init → monitor -->
   <line x1="127" y1="168" x2="127" y2="201" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-  <!-- poll → fetch -->
-  <line x1="210" y1="224" x2="231" y2="224" stroke="#4a8a5a" stroke-width="1.2" marker-end="url(#arr-green)"/>
 
   <!-- === REACT === -->
   <text x="45" y="270" class="phase-label">REACT</text>
@@ -65,12 +59,6 @@
     <title>Draft results and methods text based on new findings from EPIC workers.</title>
     <rect x="45" y="280" width="165" height="38" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
     <text x="127" y="304" text-anchor="middle" font-weight="500" fill="#1a2a3a">Draft text</text>
-  </g>
-
-  <g>
-    <title>Edit the LaTeX manuscript: incorporate new results, update figures, revise methods and discussion.</title>
-    <rect x="235" y="280" width="175" height="38" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="2"/>
-    <text x="322" y="304" text-anchor="middle" font-weight="600" fill="#1a2a3a">Edit .tex</text>
   </g>
 
   <!-- monitor → react -->
@@ -130,11 +118,19 @@
   <text x="485" y="385" text-anchor="middle" font-size="13" font-weight="600" fill="#555" letter-spacing="0.5" transform="rotate(-90, 485, 385)">GitHub  ·  Issues  ·  PRs  ·  EPICs</text>
 
   <!-- ============================================================ -->
+  <!-- GitHub ↔ Local connectors                                     -->
+  <!-- ============================================================ -->
+  <!-- GitHub → local: ms.poll pulls updates -->
+  <line x1="446" y1="224" x2="214" y2="224" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- Local → GitHub: issue.next files issues -->
+  <line x1="214" y1="574" x2="446" y2="560" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+
+  <!-- ============================================================ -->
   <!-- REMOTE CONDUCTOR                                              -->
   <!-- ============================================================ -->
   <rect x="540" y="50" width="440" height="650" rx="12" fill="#f0f3f8" stroke="#4a6fa5" stroke-width="2"/>
   <text x="760" y="76" text-anchor="middle" class="box-title" fill="#2a4a6a">Remote Conductor</text>
-  <text x="760" y="93" text-anchor="middle" class="box-subtitle" fill="#5a6a8a">Code repo on compute server</text>
+  <text x="760" y="93" text-anchor="middle" class="box-subtitle" fill="#5a6a8a">Code repos on compute server</text>
 
   <!-- === INITIALIZE === -->
   <text x="565" y="120" class="phase-label">INITIALIZE</text>
@@ -245,18 +241,20 @@
   <!-- evaluate → quality -->
   <line x1="657" y1="473" x2="657" y2="506" stroke="#d4a847" stroke-width="1.2" marker-end="url(#arr-orange)"/>
 
+  <!-- ============================================================ -->
+  <!-- GitHub ↔ Remote connectors                                    -->
+  <!-- ============================================================ -->
+  <!-- GitHub → remote: epic reads issues -->
+  <line x1="524" y1="149" x2="561" y2="149" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- GitHub → remote: epic.poll monitors activity -->
+  <line x1="524" y1="224" x2="561" y2="224" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- GitHub → remote: epic.spawn reads issues to dispatch -->
+  <line x1="524" y1="299" x2="561" y2="299" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- Remote → GitHub: workers push PRs -->
+  <line x1="561" y1="377" x2="524" y2="377" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- Remote → GitHub: quality gates update PRs -->
+  <line x1="561" y1="529" x2="524" y2="529" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
 
-  <!-- === RESULTS === -->
-  <text x="565" y="575" class="phase-label">RESULTS</text>
-
-  <g>
-    <title>Experiment outputs produced by workers on the remote compute server. Synced to local machine via rsync or git for manuscript integration.</title>
-    <rect x="565" y="585" width="390" height="36" rx="6" fill="#f0f8f0" stroke="#4a8a5a" stroke-width="1.5"/>
-    <text x="760" y="608" text-anchor="middle" fill="#2a5a3a" font-size="12">Experiment outputs (uncommitted on remote)</text>
-  </g>
-
-  <!-- quality → results -->
-  <line x1="750" y1="548" x2="750" y2="581" stroke="#4a8a5a" stroke-width="1.2" marker-end="url(#arr-green)"/>
 
 
   <!-- ============================================================ -->
