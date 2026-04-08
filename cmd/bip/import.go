@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	importFormat string
-	importDryRun bool
+	importFormat   string
+	importDryRun   bool
+	importZoteroDB string
 )
 
 func init() {
-	importCmd.Flags().StringVar(&importFormat, "format", "", "Import format (paperpile)")
+	importCmd.Flags().StringVar(&importFormat, "format", "", "Import format (paperpile, zotero)")
 	importCmd.Flags().BoolVar(&importDryRun, "dry-run", false, "Show what would be imported without writing")
+	importCmd.Flags().StringVar(&importZoteroDB, "zotero-db", "", "Path to Zotero SQLite database for PDF resolution (e.g., ~/Zotero/zotero.sqlite)")
 	importCmd.MarkFlagRequired("format")
 	rootCmd.AddCommand(importCmd)
 }
@@ -30,10 +32,12 @@ var importCmd = &cobra.Command{
 
 Usage:
   bip import --format paperpile export.json
+  bip import --format zotero export.json
   bip import --format paperpile export.json --dry-run
 
 Supported formats:
-  paperpile  - Paperpile JSON export`,
+  paperpile  - Paperpile JSON export
+  zotero     - Zotero CSL-JSON export`,
 	Args: cobra.ExactArgs(1),
 	RunE: runImport,
 }
@@ -73,12 +77,26 @@ func runImport(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 
 	// Validate format
-	if importFormat != "paperpile" {
-		exitWithError(ExitError, "unknown format: %s", importFormat)
+	switch importFormat {
+	case "paperpile", "zotero":
+		// valid
+	default:
+		exitWithError(ExitError, "unknown format: %s (supported: paperpile, zotero)", importFormat)
 	}
 
 	// Parse input file
 	newRefs, parseErrors := parseImportFile(args[0])
+
+	// Resolve Zotero PDF paths if database provided
+	if importZoteroDB != "" && importFormat == "zotero" {
+		dbPath := config.ExpandTilde(importZoteroDB)
+		resolved, err := importer.ResolveZoteroPDFs(newRefs, dbPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: PDF resolution failed: %v\n", err)
+		} else if humanOutput {
+			fmt.Printf("Resolved %d PDF paths from Zotero database\n", resolved)
+		}
+	}
 
 	// Load existing references
 	refsPath := config.RefsPath(repoRoot)
@@ -116,7 +134,16 @@ func parseImportFile(path string) ([]reference.Reference, []error) {
 		exitWithError(ExitError, "reading file: %v", err)
 	}
 
-	newRefs, parseErrors := importer.ParsePaperpile(data)
+	var newRefs []reference.Reference
+	var parseErrors []error
+
+	switch importFormat {
+	case "paperpile":
+		newRefs, parseErrors = importer.ParsePaperpile(data)
+	case "zotero":
+		newRefs, parseErrors = importer.ParseZotero(data)
+	}
+
 	if len(parseErrors) > 0 && len(newRefs) == 0 {
 		exitWithError(ExitDataError, "failed to parse any references: %v", parseErrors[0])
 	}
@@ -184,7 +211,7 @@ func errorsToStrings(errs []error) []string {
 // reportDryRun outputs the dry-run results.
 func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 	if humanOutput {
-		fmt.Println("Dry run - would import from Paperpile export...")
+		fmt.Printf("Dry run - would import from %s export...\n", importFormat)
 		fmt.Printf("  Would add:    %d new references\n", stats.newCount)
 		fmt.Printf("  Would update: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Would skip:   %d (errors or duplicates)\n", stats.skipped)
@@ -207,7 +234,7 @@ func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 // reportImportResults outputs the actual import results.
 func reportImportResults(stats importStats, errStrs []string) {
 	if humanOutput {
-		fmt.Println("Imported from Paperpile export:")
+		fmt.Printf("Imported from %s export:\n", importFormat)
 		fmt.Printf("  Added:   %d new references\n", stats.newCount)
 		fmt.Printf("  Updated: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Skipped: %d (errors or duplicates)\n", stats.skipped)

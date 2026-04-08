@@ -1,0 +1,89 @@
+[
+  {
+    "id": "http://zotero.org/users/12345/items/ABCD1234",
+    "type": "article-journal",
+    "citation-key": "Bloom2023-ne",
+    "title": "Fitness effects of mutations to SARS-CoV-2 proteins",
+    "author": [
+      {"family": "Bloom", "given": "Jesse D"},
+      {"family": "Neher", "given": "Richard A"}
+    ],
+    "container-title": "Virus Evolution",
+    "DOI": "10.1093/ve/vead055",
+    "PMID": "37727785",
+    "PMCID": "PMC10506396",
+    "abstract": "Knowledge of the fitness effects of mutations to SARS-CoV-2 proteins can inform assessment of new viral variants.",
+    "issued": {
+      "date-parts": [[2023, 8, 22]]
+    },
+    "volume": "9",
+    "issue": "2",
+    "note": "Key paper on viral fitness landscapes"
+  },
+  {
+    "id": "http://zotero.org/users/12345/items/EFGH5678",
+    "type": "paper-conference",
+    "citation-key": "Vaswani2017-at",
+    "title": "Attention Is All You Need",
+    "author": [
+      {"family": "Vaswani", "given": "Ashish"},
+      {"family": "Shazeer", "given": "Noam"},
+      {"family": "Parmar", "given": "Niki"},
+      {"family": "Uszkoreit", "given": "Jakob"},
+      {"family": "Jones", "given": "Llion"},
+      {"family": "Gomez", "given": "Aidan N"},
+      {"family": "Kaiser", "given": "Lukasz"},
+      {"family": "Polosukhin", "given": "Illia"}
+    ],
+    "container-title": "Advances in Neural Information Processing Systems",
+    "DOI": "10.48550/arXiv.1706.03762",
+    "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.",
+    "issued": {
+      "date-parts": [[2017]]
+    }
+  },
+  {
+    "id": "http://zotero.org/users/12345/items/IJKL9012",
+    "type": "article-journal",
+    "title": "Phylogenetic analysis of Guinea 2014 EBOV Ebolavirus outbreak",
+    "author": [
+      {"family": "Dudas", "given": "Gytis"},
+      {"family": "Rambaut", "given": "Andrew"}
+    ],
+    "container-title": "PLoS Currents",
+    "DOI": "10.1371/currents.outbreaks.84eefe5ce43ec9dc0bf0670f7b8b417d",
+    "abstract": "The 2013-2015 Ebola virus epidemic in West Africa is the largest on record.",
+    "issued": {
+      "date-parts": [[2014, 5]]
+    },
+    "PMID": "24860690"
+  },
+  {
+    "id": "http://zotero.org/users/12345/items/MNOP3456",
+    "type": "article-journal",
+    "citation-key": "WHO2020-report",
+    "title": "Global surveillance for COVID-19 caused by human infection with COVID-19 virus",
+    "author": [
+      {"literal": "World Health Organization"}
+    ],
+    "container-title": "WHO Interim Guidance",
+    "issued": {
+      "date-parts": [[2020, 3, 20]]
+    }
+  },
+  {
+    "id": "http://zotero.org/users/12345/items/QRST7890",
+    "type": "article-journal",
+    "citation-key": "Poupard1989-jk",
+    "title": "Two short proofs of Cayley formula",
+    "author": [
+      {"family": "Poupard", "given": "Christiane"}
+    ],
+    "DOI": "10.1016/S0195-6698(89)80023-6",
+    "container-title": "European Journal of Combinatorics",
+    "abstract": "We provide two short combinatorial proofs of the Cayley formula.",
+    "issued": {
+      "date-parts": [[1989, 11, 1]]
+    }
+  }
+]
