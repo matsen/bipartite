@@ -71,6 +71,20 @@ If rebase has conflicts, stop and report. Do not force-push or auto-resolve.
 git push --force-with-lease
 ```
 
+### Step 5.5: Wait for CI to pass
+
+Check whether the PR has any CI checks configured, and if so, block until they all pass:
+
+```bash
+gh pr checks "$BRANCH" --json name,state,conclusion
+```
+
+- **No checks configured** (empty array): proceed immediately. This repo has no CI for this PR.
+- **Checks present**: wait until all required checks are `COMPLETED` with conclusion `SUCCESS` (or `NEUTRAL`/`SKIPPED`). Use `gh pr checks "$BRANCH" --watch --fail-fast` to block.
+- **Any check fails**: abort with the failing check name and a link via `gh pr view --web`. Do **not** merge. Report to user and stop.
+
+Never merge a PR with failing or pending required checks. If checks are still queued/in progress, wait — do not assume they will pass.
+
 ### Step 6: Squash merge via gh
 
 ```bash
