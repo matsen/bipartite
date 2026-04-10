@@ -142,6 +142,10 @@ func (c *Client) GetItems(ctx context.Context) ([]ZoteroItem, error) {
 
 		allItems = append(allItems, items...)
 
+		if len(items) == 0 {
+			break // guard against infinite loop if API returns empty page
+		}
+
 		// Check if there are more pages via Total-Results header
 		totalStr := resp.Header.Get("Total-Results")
 		if totalStr == "" {
@@ -202,6 +206,10 @@ func (c *Client) GetItemsSince(ctx context.Context, sinceVersion int) ([]ZoteroI
 		resp.Body.Close()
 
 		allItems = append(allItems, items...)
+
+		if len(items) == 0 {
+			break // guard against infinite loop if API returns empty page
+		}
 
 		totalStr := resp.Header.Get("Total-Results")
 		if totalStr == "" {
@@ -355,6 +363,8 @@ func checkResponse(resp *http.Response) error {
 // generateWriteToken creates a random 32-char hex token for write requests.
 func generateWriteToken() string {
 	b := make([]byte, 16)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand.Read failed: " + err.Error())
+	}
 	return hex.EncodeToString(b)
 }

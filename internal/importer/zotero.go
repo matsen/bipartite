@@ -161,7 +161,7 @@ func parseCSLDate(d CSLDate) (reference.PublicationDate, error) {
 // If the ID is not a URL, returns it as-is.
 func extractZoteroItemKey(id string) string {
 	const prefix = "/items/"
-	if idx := strings.LastIndex(id, prefix); idx != -1 {
+	if idx := strings.Index(id, prefix); idx != -1 {
 		return id[idx+len(prefix):]
 	}
 	return id
