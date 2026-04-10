@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/reference"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/matsen/bipartite/internal/zotero"
 	"github.com/spf13/cobra"
@@ -76,9 +77,8 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Fetched %d items from Zotero\n", len(items))
 	}
 
-	// Convert and classify
-	var newRefs []storage.RefWithAction
-	stats := importStats{}
+	// Convert Zotero items to references
+	var convertedRefs []reference.Reference
 	var convertErrors int
 
 	for _, item := range items {
@@ -87,23 +87,11 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 			convertErrors++
 			continue
 		}
-
-		// Classify against existing refs (reuse import pipeline logic)
-		action := classifyImport(existingRefs, ref)
-
-		switch action.action {
-		case "new":
-			ref.ID = storage.GenerateUniqueID(existingRefs, ref.ID)
-			newRefs = append(newRefs, storage.RefWithAction{Ref: ref, Action: "new"})
-			existingRefs = append(existingRefs, ref)
-			stats.newCount++
-		case "update":
-			newRefs = append(newRefs, storage.RefWithAction{Ref: ref, Action: "update", ExistingIdx: action.existingIdx})
-			stats.updated++
-		case "skip":
-			stats.skipped++
-		}
+		convertedRefs = append(convertedRefs, ref)
 	}
+
+	// Classify using the same processImports pipeline as file import
+	stats, _, newRefs := processImports(convertedRefs, existingRefs)
 
 	result := ZoteroSyncResult{
 		Fetched: len(items),
@@ -130,12 +118,6 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 	}
 
 	// Actually persist
-	// Re-read existing refs fresh for the actual write
-	existingRefs, err = storage.ReadAll(refsPath)
-	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "reading refs", err)
-	}
-
 	if err := persistImports(refsPath, existingRefs, newRefs); err != nil {
 		return outputZoteroError(ExitZoteroAPIError, "writing refs", err)
 	}
