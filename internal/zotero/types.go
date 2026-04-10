@@ -18,34 +18,34 @@ type ZoteroLibrary struct {
 
 // ZoteroItemData holds the metadata for a Zotero item.
 type ZoteroItemData struct {
-	Key              string           `json:"key"`
-	Version          int              `json:"version"`
+	Key              string           `json:"key,omitempty"`
+	Version          int              `json:"version,omitempty"`
 	ItemType         string           `json:"itemType"`
 	Title            string           `json:"title"`
 	Creators         []ZoteroCreator  `json:"creators"`
-	AbstractNote     string           `json:"abstractNote"`
-	PublicationTitle string           `json:"publicationTitle"` // Journal/conference name
-	Volume           string           `json:"volume"`
-	Issue            string           `json:"issue"`
-	Pages            string           `json:"pages"`
-	Date             string           `json:"date"` // Free-form date string
-	DOI              string           `json:"DOI"`
-	ISSN             string           `json:"ISSN"`
-	URL              string           `json:"url"`
-	Extra            string           `json:"extra"` // Contains PMID, PMCID, arXiv etc.
-	Tags             []ZoteroTag      `json:"tags"`
-	Collections      []string         `json:"collections"`
-	Relations        map[string]interface{} `json:"relations"`
-	DateAdded        string           `json:"dateAdded"`
-	DateModified     string           `json:"dateModified"`
+	AbstractNote     string           `json:"abstractNote,omitempty"`
+	PublicationTitle string           `json:"publicationTitle,omitempty"` // Journal/conference name
+	Volume           string           `json:"volume,omitempty"`
+	Issue            string           `json:"issue,omitempty"`
+	Pages            string           `json:"pages,omitempty"`
+	Date             string           `json:"date,omitempty"` // Free-form date string
+	DOI              string           `json:"DOI,omitempty"`
+	ISSN             string           `json:"ISSN,omitempty"`
+	URL              string           `json:"url,omitempty"`
+	Extra            string           `json:"extra,omitempty"` // Contains PMID, PMCID, arXiv etc.
+	Tags             []ZoteroTag      `json:"tags,omitempty"`
+	Collections      []string         `json:"collections,omitempty"`
+	Relations        map[string]interface{} `json:"relations,omitempty"`
+	DateAdded        string           `json:"dateAdded,omitempty"`
+	DateModified     string           `json:"dateModified,omitempty"`
 }
 
 // ZoteroCreator represents an author or other contributor.
 type ZoteroCreator struct {
 	CreatorType string `json:"creatorType"` // "author", "editor", etc.
-	FirstName   string `json:"firstName"`
-	LastName    string `json:"lastName"`
-	Name        string `json:"name"` // For single-field names (institutional)
+	FirstName   string `json:"firstName,omitempty"`
+	LastName    string `json:"lastName,omitempty"`
+	Name        string `json:"name,omitempty"` // For single-field names (institutional)
 }
 
 // ZoteroTag represents a tag on an item.

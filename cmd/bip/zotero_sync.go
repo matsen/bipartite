@@ -77,9 +77,14 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Fetched %d items from Zotero\n", len(items))
 	}
 
-	// Convert Zotero items to references
-	var convertedRefs []reference.Reference
+	// Convert Zotero items to references and classify
+	var newRefs []storage.RefWithAction
+	var stats importStats
 	var convertErrors int
+
+	// Build working set for deduplication (grows as we add new refs)
+	workingSet := make([]reference.Reference, len(existingRefs))
+	copy(workingSet, existingRefs)
 
 	for _, item := range items {
 		ref, err := zotero.MapZoteroToReference(item)
@@ -87,11 +92,35 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 			convertErrors++
 			continue
 		}
-		convertedRefs = append(convertedRefs, ref)
-	}
 
-	// Classify using the same processImports pipeline as file import
-	stats, _, newRefs := processImports(convertedRefs, existingRefs)
+		action := classifyImport(workingSet, ref)
+
+		switch action.action {
+		case "new":
+			ref.ID = storage.GenerateUniqueID(workingSet, ref.ID)
+			newRefs = append(newRefs, storage.RefWithAction{Ref: ref, Action: "new"})
+			workingSet = append(workingSet, ref)
+			stats.newCount++
+		case "update":
+			if action.existingIdx < len(existingRefs) {
+				// Check if anything actually changed before writing
+				existing := existingRefs[action.existingIdx]
+				if refsMetadataEqual(existing, ref) {
+					stats.skipped++
+				} else {
+					// Preserve the existing bip ID
+					ref.ID = existing.ID
+					newRefs = append(newRefs, storage.RefWithAction{Ref: ref, Action: "update", ExistingIdx: action.existingIdx})
+					stats.updated++
+				}
+			} else {
+				// Within-batch duplicate
+				stats.skipped++
+			}
+		case "skip":
+			stats.skipped++
+		}
+	}
 
 	result := ZoteroSyncResult{
 		Fetched: len(items),
@@ -143,4 +172,30 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 
 func outputZoteroError(exitCode int, context string, err error) error {
 	return outputGenericError(exitCode, "zotero_error", context, err)
+}
+
+// refsMetadataEqual checks if two references have the same metadata.
+// Used to skip unnecessary updates during sync.
+func refsMetadataEqual(a, b reference.Reference) bool {
+	if a.Title != b.Title || a.DOI != b.DOI || a.Abstract != b.Abstract {
+		return false
+	}
+	if a.Venue != b.Venue || a.Note != b.Note {
+		return false
+	}
+	if a.Published != b.Published {
+		return false
+	}
+	if a.PMID != b.PMID || a.PMCID != b.PMCID || a.ArXivID != b.ArXivID {
+		return false
+	}
+	if len(a.Authors) != len(b.Authors) {
+		return false
+	}
+	for i := range a.Authors {
+		if a.Authors[i].First != b.Authors[i].First || a.Authors[i].Last != b.Authors[i].Last {
+			return false
+		}
+	}
+	return true
 }
