@@ -50,7 +50,7 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 	// Create Zotero client
 	client, err := zotero.NewClient()
 	if err != nil {
-		return outputZoteroError(ExitZoteroNotConfigured, "Zotero not configured", err)
+		return outputZoteroError(ExitConfigError, "Zotero not configured", err)
 	}
 
 	// Find repository
@@ -60,7 +60,7 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 	// Load existing refs
 	existingRefs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "reading refs", err)
+		return outputZoteroError(ExitError, "reading refs", err)
 	}
 
 	// Fetch items from Zotero
@@ -70,7 +70,7 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 
 	items, err := client.GetItems(ctx)
 	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "fetching items from Zotero", err)
+		return outputZoteroError(ExitError, "fetching items from Zotero", err)
 	}
 
 	if humanOutput {
@@ -148,7 +148,7 @@ func runZoteroSync(cmd *cobra.Command, args []string) error {
 
 	// Actually persist
 	if err := persistImports(refsPath, existingRefs, newRefs); err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "writing refs", err)
+		return outputZoteroError(ExitError, "writing refs", err)
 	}
 
 	result.Action = "synced"

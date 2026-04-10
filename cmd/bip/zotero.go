@@ -4,13 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Exit codes specific to zotero commands.
-const (
-	ExitZoteroNotConfigured = 1 // API key or user ID not set
-	ExitZoteroAPIError      = 2 // API error (rate limit, network)
-	ExitZoteroDuplicate     = 3 // Item already exists
-)
-
 var zoteroCmd = &cobra.Command{
 	Use:   "zotero",
 	Short: "Zotero library integration commands",

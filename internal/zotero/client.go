@@ -80,7 +80,7 @@ func NewClient(opts ...ClientOption) (*Client, error) {
 	c := &Client{
 		httpClient: &http.Client{Timeout: DefaultTimeout},
 		baseURL:    BaseURL,
-		limiter:    rate.NewLimiter(rate.Limit(RateLimit), 1),
+		limiter:    rate.NewLimiter(rate.Limit(RateLimit), 3),
 	}
 
 	// Load from global config

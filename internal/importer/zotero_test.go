@@ -1,8 +1,8 @@
 package importer
 
 import (
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"testing"
 )
 

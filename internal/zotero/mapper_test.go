@@ -223,7 +223,7 @@ func TestParseZoteroDate(t *testing.T) {
 
 func TestParseExtra(t *testing.T) {
 	tests := []struct {
-		input                  string
+		input                          string
 		wantPMID, wantPMCID, wantArXiv string
 	}{
 		{"PMID: 12345\nPMCID: PMC67890\narXiv: 2106.15928", "12345", "PMC67890", "2106.15928"},

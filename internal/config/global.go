@@ -12,14 +12,14 @@ import (
 
 // GlobalConfig represents configuration stored in ~/.config/bip/config.yml.
 type GlobalConfig struct {
-	NexusPath      string            `yaml:"nexus_path,omitempty"`
-	S2APIKey       string            `yaml:"s2_api_key,omitempty"`
-	ASTAAPIKey     string            `yaml:"asta_api_key,omitempty"`
-	SlackBotToken  string            `yaml:"slack_bot_token,omitempty"`
-	GitHubToken    string            `yaml:"github_token,omitempty"`
-	SlackWebhooks  map[string]string `yaml:"slack_webhooks,omitempty"`
-	ZoteroAPIKey   string            `yaml:"zotero_api_key,omitempty"`
-	ZoteroUserID   string            `yaml:"zotero_user_id,omitempty"`
+	NexusPath     string            `yaml:"nexus_path,omitempty"`
+	S2APIKey      string            `yaml:"s2_api_key,omitempty"`
+	ASTAAPIKey    string            `yaml:"asta_api_key,omitempty"`
+	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
+	GitHubToken   string            `yaml:"github_token,omitempty"`
+	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
+	ZoteroAPIKey  string            `yaml:"zotero_api_key,omitempty"`
+	ZoteroUserID  string            `yaml:"zotero_user_id,omitempty"`
 }
 
 const (

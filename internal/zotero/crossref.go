@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"net/http"
 	"net/url"
 	"strings"
@@ -128,7 +129,8 @@ func mapCrossRefToReference(work crossrefWork) (reference.Reference, error) {
 	return ref, nil
 }
 
-// stripHTMLTags removes HTML/XML tags from a string.
+// stripHTMLTags removes HTML/XML tags and unescapes HTML entities.
+// CrossRef abstracts commonly contain JATS XML markup and entities like &amp;.
 func stripHTMLTags(s string) string {
 	var result strings.Builder
 	inTag := false
@@ -145,5 +147,5 @@ func stripHTMLTags(s string) string {
 			result.WriteRune(r)
 		}
 	}
-	return strings.TrimSpace(result.String())
+	return strings.TrimSpace(html.UnescapeString(result.String()))
 }

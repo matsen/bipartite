@@ -41,8 +41,8 @@ func init() {
 
 // ZoteroAddResult is the JSON output for the add command.
 type ZoteroAddResult struct {
-	Action    string             `json:"action"`              // added, skipped
-	Source    string             `json:"source,omitempty"`    // s2, crossref
+	Action    string             `json:"action"`           // added, skipped
+	Source    string             `json:"source,omitempty"` // s2, crossref
 	BipPaper  *S2AddPaperSummary `json:"bip_paper,omitempty"`
 	ZoteroKey string             `json:"zotero_key,omitempty"`
 	Error     *S2ErrorResult     `json:"error,omitempty"`
@@ -55,7 +55,7 @@ func runZoteroAdd(cmd *cobra.Command, args []string) error {
 	// Create Zotero client
 	zotClient, err := zotero.NewClient()
 	if err != nil {
-		return outputZoteroError(ExitZoteroNotConfigured, "Zotero not configured", err)
+		return outputZoteroError(ExitConfigError, "Zotero not configured", err)
 	}
 
 	// Find repository
@@ -65,18 +65,23 @@ func runZoteroAdd(cmd *cobra.Command, args []string) error {
 	// Load existing refs
 	refs, err := storage.ReadAll(refsPath)
 	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "reading refs", err)
+		return outputZoteroError(ExitError, "reading refs", err)
 	}
 
 	// Resolve metadata: try S2 first, fall back to CrossRef for DOIs
 	ref, metadataSource, err := resolveMetadata(ctx, paperID)
 	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "resolving paper metadata", err)
+		return outputZoteroError(ExitError, "resolving paper metadata", err)
 	}
 
-	// Check for duplicates in bip
+	// Check for duplicates in bip (by DOI or ID)
 	if ref.DOI != "" {
 		if _, found := storage.FindByDOI(refs, ref.DOI); found {
+			return outputZoteroDuplicate(ref.ID, ref.DOI)
+		}
+	}
+	if ref.ID != "" {
+		if _, found := storage.FindByID(refs, ref.ID); found {
 			return outputZoteroDuplicate(ref.ID, ref.DOI)
 		}
 	}
@@ -85,7 +90,7 @@ func runZoteroAdd(cmd *cobra.Command, args []string) error {
 	zotItem := zotero.MapReferenceToZotero(ref)
 	createdItem, err := zotClient.CreateItem(ctx, zotItem)
 	if err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "creating item in Zotero", err)
+		return outputZoteroError(ExitError, "creating item in Zotero", err)
 	}
 
 	// Update the ref with the Zotero key
@@ -97,7 +102,7 @@ func runZoteroAdd(cmd *cobra.Command, args []string) error {
 	// Add to bip
 	ref.ID = storage.GenerateUniqueID(refs, ref.ID)
 	if err := storage.Append(refsPath, ref); err != nil {
-		return outputZoteroError(ExitZoteroAPIError, "saving reference", err)
+		return outputZoteroError(ExitError, "saving reference", err)
 	}
 
 	// Output
@@ -186,6 +191,6 @@ func outputZoteroDuplicate(existingID, doi string) error {
 	} else {
 		outputJSON(result)
 	}
-	os.Exit(ExitZoteroDuplicate)
+	os.Exit(ExitDataError)
 	return nil
 }

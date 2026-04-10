@@ -11,20 +11,20 @@ import (
 
 // CSLItem represents a single entry from a CSL-JSON export (Zotero's native export format).
 type CSLItem struct {
-	ID             string     `json:"id"`
-	Type           string     `json:"type"`
-	CitationKey    string     `json:"citation-key"`
-	Title          string     `json:"title"`
-	DOI            string     `json:"DOI"`
-	Abstract       string     `json:"abstract"`
-	ContainerTitle string     `json:"container-title"`
-	Note           string     `json:"note"`
-	PMID           string     `json:"PMID"`
-	PMCID          string     `json:"PMCID"`
-	Author         []CSLName  `json:"author"`
-	Issued         CSLDate    `json:"issued"`
-	Volume         string     `json:"volume"`
-	Issue          string     `json:"issue"`
+	ID             string    `json:"id"`
+	Type           string    `json:"type"`
+	CitationKey    string    `json:"citation-key"`
+	Title          string    `json:"title"`
+	DOI            string    `json:"DOI"`
+	Abstract       string    `json:"abstract"`
+	ContainerTitle string    `json:"container-title"`
+	Note           string    `json:"note"`
+	PMID           string    `json:"PMID"`
+	PMCID          string    `json:"PMCID"`
+	Author         []CSLName `json:"author"`
+	Issued         CSLDate   `json:"issued"`
+	Volume         string    `json:"volume"`
+	Issue          string    `json:"issue"`
 }
 
 // CSLName represents an author in CSL-JSON format.

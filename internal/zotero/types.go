@@ -18,26 +18,26 @@ type ZoteroLibrary struct {
 
 // ZoteroItemData holds the metadata for a Zotero item.
 type ZoteroItemData struct {
-	Key              string           `json:"key,omitempty"`
-	Version          int              `json:"version,omitempty"`
-	ItemType         string           `json:"itemType"`
-	Title            string           `json:"title"`
-	Creators         []ZoteroCreator  `json:"creators"`
-	AbstractNote     string           `json:"abstractNote,omitempty"`
-	PublicationTitle string           `json:"publicationTitle,omitempty"` // Journal/conference name
-	Volume           string           `json:"volume,omitempty"`
-	Issue            string           `json:"issue,omitempty"`
-	Pages            string           `json:"pages,omitempty"`
-	Date             string           `json:"date,omitempty"` // Free-form date string
-	DOI              string           `json:"DOI,omitempty"`
-	ISSN             string           `json:"ISSN,omitempty"`
-	URL              string           `json:"url,omitempty"`
-	Extra            string           `json:"extra,omitempty"` // Contains PMID, PMCID, arXiv etc.
-	Tags             []ZoteroTag      `json:"tags,omitempty"`
-	Collections      []string         `json:"collections,omitempty"`
+	Key              string                 `json:"key,omitempty"`
+	Version          int                    `json:"version,omitempty"`
+	ItemType         string                 `json:"itemType"`
+	Title            string                 `json:"title"`
+	Creators         []ZoteroCreator        `json:"creators"`
+	AbstractNote     string                 `json:"abstractNote,omitempty"`
+	PublicationTitle string                 `json:"publicationTitle,omitempty"` // Journal/conference name
+	Volume           string                 `json:"volume,omitempty"`
+	Issue            string                 `json:"issue,omitempty"`
+	Pages            string                 `json:"pages,omitempty"`
+	Date             string                 `json:"date,omitempty"` // Free-form date string
+	DOI              string                 `json:"DOI,omitempty"`
+	ISSN             string                 `json:"ISSN,omitempty"`
+	URL              string                 `json:"url,omitempty"`
+	Extra            string                 `json:"extra,omitempty"` // Contains PMID, PMCID, arXiv etc.
+	Tags             []ZoteroTag            `json:"tags,omitempty"`
+	Collections      []string               `json:"collections,omitempty"`
 	Relations        map[string]interface{} `json:"relations,omitempty"`
-	DateAdded        string           `json:"dateAdded,omitempty"`
-	DateModified     string           `json:"dateModified,omitempty"`
+	DateAdded        string                 `json:"dateAdded,omitempty"`
+	DateModified     string                 `json:"dateModified,omitempty"`
 }
 
 // ZoteroCreator represents an author or other contributor.
@@ -66,10 +66,10 @@ type CreateItemRequest []ZoteroItemData
 
 // CreateItemResponse is the response from POST /items.
 type CreateItemResponse struct {
-	Successful   map[string]ZoteroItem `json:"successful"`
-	Success      map[string]string     `json:"success"` // index -> key
-	Unchanged    map[string]string     `json:"unchanged"`
-	Failed       map[string]FailedItem `json:"failed"`
+	Successful map[string]ZoteroItem `json:"successful"`
+	Success    map[string]string     `json:"success"` // index -> key
+	Unchanged  map[string]string     `json:"unchanged"`
+	Failed     map[string]FailedItem `json:"failed"`
 }
 
 // FailedItem describes why an item creation failed.
