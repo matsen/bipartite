@@ -9,6 +9,14 @@ import (
 	"github.com/matsen/bipartite/internal/concept"
 )
 
+// ensureConceptPrefix returns the ID with a "concept:" prefix if not already present.
+func ensureConceptPrefix(id string) string {
+	if strings.HasPrefix(id, "concept:") {
+		return id
+	}
+	return "concept:" + id
+}
+
 // ensureConceptsSchema ensures the concepts schema exists (idempotent via CREATE IF NOT EXISTS).
 func (d *DB) ensureConceptsSchema() error {
 	schema := `
@@ -191,6 +199,9 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 		return nil, err
 	}
 
+	// Edge target_ids use the "concept:" prefix, so ensure it's present.
+	prefixedID := ensureConceptPrefix(conceptID)
+
 	var query string
 	var args []interface{}
 
@@ -201,7 +212,7 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 			WHERE e.target_id = ? AND e.relationship_type = ?
 			ORDER BY e.relationship_type, e.source_id
 		`
-		args = []interface{}{conceptID, relationshipType}
+		args = []interface{}{prefixedID, relationshipType}
 	} else {
 		query = `
 			SELECT e.source_id, e.relationship_type, e.summary
@@ -209,7 +220,7 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 			WHERE e.target_id = ?
 			ORDER BY e.relationship_type, e.source_id
 		`
-		args = []interface{}{conceptID}
+		args = []interface{}{prefixedID}
 	}
 
 	rows, err := d.db.Query(query, args...)
@@ -247,7 +258,7 @@ func (d *DB) GetConceptsByPaper(paperID string, relationshipType string) ([]Pape
 			SELECT e.target_id, e.relationship_type, e.summary
 			FROM edges e
 			WHERE e.source_id = ? AND e.relationship_type = ?
-			  AND e.target_id IN (SELECT id FROM concepts)
+			  AND e.target_id IN (SELECT 'concept:' || id FROM concepts)
 			ORDER BY e.relationship_type, e.target_id
 		`
 		args = []interface{}{paperID, relationshipType}
@@ -256,7 +267,7 @@ func (d *DB) GetConceptsByPaper(paperID string, relationshipType string) ([]Pape
 			SELECT e.target_id, e.relationship_type, e.summary
 			FROM edges e
 			WHERE e.source_id = ?
-			  AND e.target_id IN (SELECT id FROM concepts)
+			  AND e.target_id IN (SELECT 'concept:' || id FROM concepts)
 			ORDER BY e.relationship_type, e.target_id
 		`
 		args = []interface{}{paperID}
@@ -281,13 +292,15 @@ func (d *DB) GetConceptsByPaper(paperID string, relationshipType string) ([]Pape
 }
 
 // CountEdgesByTarget returns the number of edges pointing to a given target.
+// The targetID may be bare or prefixed; both forms are checked.
 func (d *DB) CountEdgesByTarget(targetID string) (int, error) {
 	if err := d.ensureEdgesSchema(); err != nil {
 		return 0, err
 	}
 
 	var count int
-	err := d.db.QueryRow("SELECT COUNT(*) FROM edges WHERE target_id = ?", targetID).Scan(&count)
+	prefixed := ensureConceptPrefix(targetID)
+	err := d.db.QueryRow("SELECT COUNT(*) FROM edges WHERE target_id = ? OR target_id = ?", targetID, prefixed).Scan(&count)
 	return count, err
 }
 

@@ -711,7 +711,12 @@ func runEdgeListByProject(db *storage.DB, projectID string) error {
 
 // runEdgeListByConcept outputs edges involving a specific concept.
 func runEdgeListByConcept(db *storage.DB, conceptID string) error {
-	edges, err := db.GetEdgesByTarget(conceptID)
+	// Ensure "concept:" prefix so the query matches stored edge target_ids.
+	prefixedID := conceptID
+	if !strings.HasPrefix(prefixedID, "concept:") {
+		prefixedID = "concept:" + conceptID
+	}
+	edges, err := db.GetEdgesByTarget(prefixedID)
 	if err != nil {
 		exitWithError(ExitDataError, "querying edges: %v", err)
 	}
