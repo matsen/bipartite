@@ -64,7 +64,15 @@ The skill reads `.ms-config.json` from the manuscript root (gitignored).
       "fetch_cmds": [
         "make remote-fetch DIR=experiments/2026-03-benchmark/results",
         "make artifacts-pull DIR=figures/final"
-      ]
+      ],
+      "remote_watch": {
+        "host": "orca02",
+        "paths": [
+          "~/re/peak-origins/experiments/2026-03-benchmark/results",
+          "~/re/peak-origins/figures/final"
+        ],
+        "patterns": ["*.svg", "*.html", "*.tsv"]
+      }
     }
   ]
 }
@@ -78,6 +86,10 @@ Fields:
   - **local_path**: Local checkout of the repo
   - **epics**: EPIC issue numbers to monitor
   - **fetch_cmds**: Shell commands to run **inside `local_path`** to fetch specific result directories from remote. Each command should be selective — pull only the results the manuscript needs, not the entire experiment tree. Uses the repo's own Makefile targets (which know the remote host and rsync config).
+  - **remote_watch** (optional): Configuration for the persistent result monitor (Step 7). Fields:
+    - **host**: SSH hostname for the remote server
+    - **paths**: Remote directories to watch for new results
+    - **patterns**: File glob patterns to match (e.g. `*.svg`, `*.html`, `*.tsv`)
 
 **Updating fetch_cmds**: As new experiments land and the manuscript
 needs different results, update this list. Old entries can be kept
@@ -222,6 +234,70 @@ Based on what's new, propose concrete next steps:
    note them for the user (do not create issues — that's out of scope)
 
 Wait for user confirmation before taking action.
+
+### Step 7: Start result monitor
+
+If any tracked repo has a `remote_watch` configuration, offer to start a
+**persistent Monitor** that watches remote servers for new result files
+via SSH. This provides real-time awareness of experiment completion
+without waiting for the next `/bip.ms.poll` cycle.
+
+Use the Monitor tool with `persistent: true`:
+
+```
+description: "Remote experiment results"
+persistent: true
+command: |
+  # Built from .ms-config.json remote_watch entries
+  touch /tmp/.ms-monitor-baseline
+
+  while true; do
+    CHANGED=0
+    # For each tracked repo with remote_watch:
+    #   HOST=<remote_watch.host>
+    #   PATHS=<remote_watch.paths joined by space>
+    #   PATTERNS=<-name "*.svg" -o -name "*.html" etc.>
+    #
+    # SSH to check for new files (read-only):
+    NEW=$(ssh -o ConnectTimeout=5 "$HOST" \
+      "find $PATHS \( $PATTERNS \) -newer /tmp/.ms-monitor-mark-\$USER 2>/dev/null" \
+      || true)
+    if [ -n "$NEW" ]; then
+      echo "$NEW" | while read f; do
+        echo "NEW on $HOST: $f"
+      done
+      CHANGED=1
+      # Update remote marker
+      ssh -o ConnectTimeout=5 "$HOST" "touch /tmp/.ms-monitor-mark-\$USER" || true
+    fi
+
+    [ "$CHANGED" -eq 0 ] || true
+    sleep 60
+  done
+```
+
+The conductor dynamically builds this script from `.ms-config.json` at
+startup — the template above shows the structure. Each repo's
+`remote_watch` contributes one SSH check block.
+
+When a notification arrives showing new files:
+1. Run the repo's `fetch_cmds` to pull the new results locally
+2. Check if the files are SVGs/notebooks and react per the import workflows below
+3. Notify the user with a summary of what arrived
+
+**Prerequisites**: SSH access to the remote host with key-based auth
+(no password prompts). If SSH fails, the monitor logs the error to
+stderr and retries on the next cycle.
+
+**Alternative: sshfs + fswatch** — For lower latency, mount the remote
+result directories via `sshfs` and use `fswatch` locally:
+```bash
+sshfs host:/remote/results /local/mount -o reconnect,ServerAliveInterval=15
+fswatch --batch-marker=EOF /local/mount --include '*.svg' --include '*.html' --exclude '.*'
+```
+This gives true real-time notification but requires `sshfs` (`brew
+install macfuse sshfs`) and is less robust on flaky networks. The SSH
+poll approach is the default recommendation.
 
 ## Figure import workflow
 

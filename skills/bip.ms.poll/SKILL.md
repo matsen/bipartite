@@ -9,7 +9,14 @@ Lightweight mid-session update for a manuscript session. Checks what
 changed in tracked code repos and EPICs since last check, fetches new
 artifacts from remote, and reacts to new results.
 
-For continuous auto-polling, use: `/loop 10m /bip.ms.poll`
+For continuous monitoring, prefer the **persistent result monitor**
+started by `/bip.ms` (Step 7) — it uses SSH polling to detect new
+result files on remote servers in real time. Use `/bip.ms.poll` for:
+- Full GitHub reconciliation (EPIC updates, merged PRs, new issues)
+- Running `fetch_cmds` to pull results locally after the monitor flags them
+- When the result monitor isn't running
+
+For periodic auto-polling: `/loop 10m /bip.ms.poll`
 
 **Never modify remote server state.** Do not run `snakemake` (even
 dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any
