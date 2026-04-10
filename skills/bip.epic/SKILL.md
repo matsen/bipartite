@@ -225,6 +225,56 @@ Then propose spawning work for ready issues:
 
 Wait for user confirmation, then run `/bip.epic.spawn` (do NOT improvise tmux/claude commands).
 
+### Step 8: Start slot monitor
+
+After the dashboard is built and any spawns are launched, offer to start
+a **persistent Monitor** that watches `.epic-status.json` across all
+active slots. This replaces `/loop 10m /bip.epic.poll` for the most
+time-sensitive signals (phase transitions), while `/bip.epic.poll`
+remains available for full GitHub + slot reconciliation sweeps.
+
+Use the Monitor tool with `persistent: true`:
+
+```
+description: "EPIC slot phase changes"
+persistent: true
+command: |
+  CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+  LOCAL_WT=$(jq -r '.local_worktrees // false' .epic-config.json)
+  touch /tmp/.epic-monitor-baseline
+
+  if [ "$LOCAL_WT" = "true" ]; then
+    WATCH_DIR="$CLONE_ROOT"
+  else
+    WATCH_DIR="$CLONE_ROOT"
+  fi
+
+  fswatch --batch-marker=EOF -r "$WATCH_DIR" --include '.epic-status.json' --exclude '.*' | \
+    while read line; do
+      if [ "$line" = "EOF" ]; then
+        find "$WATCH_DIR" -name '.epic-status.json' -newer /tmp/.epic-monitor-baseline \
+          -exec sh -c '
+            SLOT=$(basename "$(dirname "$1")")
+            PHASE=$(jq -r .phase "$1" 2>/dev/null)
+            SUMMARY=$(jq -r .summary "$1" 2>/dev/null)
+            ISSUE=$(jq -r .issue "$1" 2>/dev/null)
+            echo "$SLOT (i$ISSUE): $PHASE — $SUMMARY"
+          ' _ {} \;
+        touch /tmp/.epic-monitor-baseline
+      fi
+    done
+```
+
+When a notification arrives showing `needs-human` or `completed`, the
+conductor should react immediately — read the slot's status, check the
+lead guidance, and either propose the next action or flag it for the user.
+
+> "Slot monitor started — you'll see phase changes as they happen.
+> Use `/bip.epic.poll` for a full reconciliation sweep when needed."
+
+**Prerequisites**: Requires `fswatch` (`brew install fswatch` on macOS).
+If not available, fall back to `/loop 10m /bip.epic.poll`.
+
 ## EPIC body update pattern
 
 EPIC issue bodies are the source of truth for project status. Update

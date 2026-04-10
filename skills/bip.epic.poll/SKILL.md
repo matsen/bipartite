@@ -9,7 +9,14 @@ Lightweight mid-session update. Checks what changed on GitHub and in
 active clones since last check. Use this instead of `/bip.epic` when
 you already have context established.
 
-For continuous auto-polling, use: `/loop 10m /bip.epic.poll`
+For continuous monitoring, prefer the **persistent slot monitor**
+started by `/bip.epic` (Step 8) — it uses `fswatch` to stream phase
+changes in real time. Use `/bip.epic.poll` for:
+- Full GitHub reconciliation (merged PRs, new issues, comments)
+- Slot cleanup and EPIC body updates
+- When the slot monitor isn't running
+
+For periodic auto-polling: `/loop 10m /bip.epic.poll`
 
 ## What to check
 
