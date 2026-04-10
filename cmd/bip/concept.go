@@ -359,10 +359,11 @@ func deleteLinkedEdges(repoRoot string, conceptID string, db *storage.DB) int {
 		exitWithError(ExitDataError, "reading edges: %v", err)
 	}
 
+	prefixedID := "concept:" + conceptID
 	var remaining []edge.Edge
 	edgesRemoved := 0
 	for _, e := range edges {
-		if e.TargetID != conceptID {
+		if e.TargetID != prefixedID {
 			remaining = append(remaining, e)
 		} else {
 			edgesRemoved++
@@ -417,7 +418,8 @@ func runConceptDelete(cmd *cobra.Command, args []string) error {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
-	edgeCount, err := db.CountEdgesByTarget(conceptID)
+	prefixedID := "concept:" + conceptID
+	edgeCount, err := db.CountEdgesByTarget(prefixedID)
 	if err != nil {
 		exitWithError(ExitDataError, "counting edges: %v", err)
 	}

@@ -204,7 +204,7 @@ func (d *DB) GetPapersByProjectTransitive(projectID string) ([]edge.Edge, error)
 		)
 		SELECT e.source_id, e.target_id, e.relationship_type, e.summary, e.created_at
 		FROM edges e
-		JOIN project_concepts pc ON e.target_id = REPLACE(pc.concept_id, 'concept:', '')
+		JOIN project_concepts pc ON e.target_id = pc.concept_id
 		WHERE e.source_id NOT LIKE '%:%'
 		ORDER BY e.source_id, e.target_id
 	`, "querying papers by project transitive", prefixedID, prefixedID, prefixedID, prefixedID)

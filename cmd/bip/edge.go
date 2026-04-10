@@ -711,7 +711,7 @@ func runEdgeListByProject(db *storage.DB, projectID string) error {
 
 // runEdgeListByConcept outputs edges involving a specific concept.
 func runEdgeListByConcept(db *storage.DB, conceptID string) error {
-	edges, err := db.GetEdgesByTarget(conceptID)
+	edges, err := db.GetEdgesByTarget("concept:" + conceptID)
 	if err != nil {
 		exitWithError(ExitDataError, "querying edges: %v", err)
 	}

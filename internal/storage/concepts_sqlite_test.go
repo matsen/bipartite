@@ -213,9 +213,9 @@ func TestGetPapersByConcept(t *testing.T) {
 
 	// Create test edges file and rebuild
 	edgesPath := filepath.Join(tmpDir, "edges.jsonl")
-	testEdges := `{"source_id": "Paper1", "target_id": "test-concept", "relationship_type": "introduces", "summary": "Test 1"}
-{"source_id": "Paper2", "target_id": "test-concept", "relationship_type": "applies", "summary": "Test 2"}
-{"source_id": "Paper3", "target_id": "other-concept", "relationship_type": "applies", "summary": "Test 3"}
+	testEdges := `{"source_id": "Paper1", "target_id": "concept:test-concept", "relationship_type": "introduces", "summary": "Test 1"}
+{"source_id": "Paper2", "target_id": "concept:test-concept", "relationship_type": "applies", "summary": "Test 2"}
+{"source_id": "Paper3", "target_id": "concept:other-concept", "relationship_type": "applies", "summary": "Test 3"}
 `
 	if err := os.WriteFile(edgesPath, []byte(testEdges), 0644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
@@ -224,7 +224,7 @@ func TestGetPapersByConcept(t *testing.T) {
 		t.Fatalf("RebuildEdgesFromJSONL() error = %v", err)
 	}
 
-	// Test all papers for concept
+	// Test all papers for concept (bare ID — function prepends "concept:")
 	papers, err := db.GetPapersByConcept("test-concept", "")
 	if err != nil {
 		t.Fatalf("GetPapersByConcept() error = %v", err)
@@ -267,8 +267,8 @@ func TestGetConceptsByPaper(t *testing.T) {
 	}
 
 	edgesPath := filepath.Join(tmpDir, "edges.jsonl")
-	testEdges := `{"source_id": "Paper1", "target_id": "concept-a", "relationship_type": "introduces", "summary": "Test 1"}
-{"source_id": "Paper1", "target_id": "concept-b", "relationship_type": "applies", "summary": "Test 2"}
+	testEdges := `{"source_id": "Paper1", "target_id": "concept:concept-a", "relationship_type": "introduces", "summary": "Test 1"}
+{"source_id": "Paper1", "target_id": "concept:concept-b", "relationship_type": "applies", "summary": "Test 2"}
 {"source_id": "Paper1", "target_id": "Paper2", "relationship_type": "cites", "summary": "Not a concept edge"}
 `
 	if err := os.WriteFile(edgesPath, []byte(testEdges), 0644); err != nil {
@@ -308,11 +308,11 @@ func TestCountEdgesByTarget(t *testing.T) {
 	}
 	defer db.Close()
 
-	// Create test edges
+	// Create test edges (with concept: prefix as stored by edge add)
 	edgesPath := filepath.Join(tmpDir, "edges.jsonl")
-	testEdges := `{"source_id": "Paper1", "target_id": "test-concept", "relationship_type": "introduces", "summary": "Test 1"}
-{"source_id": "Paper2", "target_id": "test-concept", "relationship_type": "applies", "summary": "Test 2"}
-{"source_id": "Paper3", "target_id": "other-concept", "relationship_type": "applies", "summary": "Test 3"}
+	testEdges := `{"source_id": "Paper1", "target_id": "concept:test-concept", "relationship_type": "introduces", "summary": "Test 1"}
+{"source_id": "Paper2", "target_id": "concept:test-concept", "relationship_type": "applies", "summary": "Test 2"}
+{"source_id": "Paper3", "target_id": "concept:other-concept", "relationship_type": "applies", "summary": "Test 3"}
 `
 	if err := os.WriteFile(edgesPath, []byte(testEdges), 0644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
@@ -321,7 +321,8 @@ func TestCountEdgesByTarget(t *testing.T) {
 		t.Fatalf("RebuildEdgesFromJSONL() error = %v", err)
 	}
 
-	count, err := db.CountEdgesByTarget("test-concept")
+	// Callers must pass prefixed ID (CountEdgesByTarget is generic)
+	count, err := db.CountEdgesByTarget("concept:test-concept")
 	if err != nil {
 		t.Fatalf("CountEdgesByTarget() error = %v", err)
 	}
@@ -329,7 +330,7 @@ func TestCountEdgesByTarget(t *testing.T) {
 		t.Errorf("CountEdgesByTarget() = %d, want 2", count)
 	}
 
-	count, err = db.CountEdgesByTarget("nonexistent")
+	count, err = db.CountEdgesByTarget("concept:nonexistent")
 	if err != nil {
 		t.Fatalf("CountEdgesByTarget() error = %v", err)
 	}

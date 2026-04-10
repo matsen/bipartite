@@ -191,6 +191,9 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 		return nil, err
 	}
 
+	// Edges store concept targets with "concept:" prefix
+	prefixedID := "concept:" + conceptID
+
 	var query string
 	var args []interface{}
 
@@ -201,7 +204,7 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 			WHERE e.target_id = ? AND e.relationship_type = ?
 			ORDER BY e.relationship_type, e.source_id
 		`
-		args = []interface{}{conceptID, relationshipType}
+		args = []interface{}{prefixedID, relationshipType}
 	} else {
 		query = `
 			SELECT e.source_id, e.relationship_type, e.summary
@@ -209,7 +212,7 @@ func (d *DB) GetPapersByConcept(conceptID string, relationshipType string) ([]Pa
 			WHERE e.target_id = ?
 			ORDER BY e.relationship_type, e.source_id
 		`
-		args = []interface{}{conceptID}
+		args = []interface{}{prefixedID}
 	}
 
 	rows, err := d.db.Query(query, args...)
@@ -247,7 +250,7 @@ func (d *DB) GetConceptsByPaper(paperID string, relationshipType string) ([]Pape
 			SELECT e.target_id, e.relationship_type, e.summary
 			FROM edges e
 			WHERE e.source_id = ? AND e.relationship_type = ?
-			  AND e.target_id IN (SELECT id FROM concepts)
+			  AND e.target_id IN (SELECT 'concept:' || id FROM concepts)
 			ORDER BY e.relationship_type, e.target_id
 		`
 		args = []interface{}{paperID, relationshipType}
@@ -256,7 +259,7 @@ func (d *DB) GetConceptsByPaper(paperID string, relationshipType string) ([]Pape
 			SELECT e.target_id, e.relationship_type, e.summary
 			FROM edges e
 			WHERE e.source_id = ?
-			  AND e.target_id IN (SELECT id FROM concepts)
+			  AND e.target_id IN (SELECT 'concept:' || id FROM concepts)
 			ORDER BY e.relationship_type, e.target_id
 		`
 		args = []interface{}{paperID}
