@@ -12,12 +12,14 @@ import (
 
 // GlobalConfig represents configuration stored in ~/.config/bip/config.yml.
 type GlobalConfig struct {
-	NexusPath     string            `yaml:"nexus_path,omitempty"`
-	S2APIKey      string            `yaml:"s2_api_key,omitempty"`
-	ASTAAPIKey    string            `yaml:"asta_api_key,omitempty"`
-	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
-	GitHubToken   string            `yaml:"github_token,omitempty"`
-	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
+	NexusPath      string            `yaml:"nexus_path,omitempty"`
+	S2APIKey       string            `yaml:"s2_api_key,omitempty"`
+	ASTAAPIKey     string            `yaml:"asta_api_key,omitempty"`
+	SlackBotToken  string            `yaml:"slack_bot_token,omitempty"`
+	GitHubToken    string            `yaml:"github_token,omitempty"`
+	SlackWebhooks  map[string]string `yaml:"slack_webhooks,omitempty"`
+	ZoteroAPIKey   string            `yaml:"zotero_api_key,omitempty"`
+	ZoteroUserID   string            `yaml:"zotero_user_id,omitempty"`
 }
 
 const (
@@ -158,6 +160,18 @@ func MustGetNexusPath() string {
 		os.Exit(2)
 	}
 	return path
+}
+
+// GetZoteroAPIKey returns the Zotero API key from global config.
+func GetZoteroAPIKey() string {
+	cfg, _ := LoadGlobalConfig()
+	return cfg.ZoteroAPIKey
+}
+
+// GetZoteroUserID returns the Zotero user ID from global config.
+func GetZoteroUserID() string {
+	cfg, _ := LoadGlobalConfig()
+	return cfg.ZoteroUserID
 }
 
 // HelpfulConfigMessage returns a helpful message when nexus_path is not configured.
