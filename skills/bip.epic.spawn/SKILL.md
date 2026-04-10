@@ -362,6 +362,13 @@ Report to the user:
 - Which issue it's working on
 - Any phasing or gate criteria
 
+If a persistent slot monitor is running (started by `/bip.epic`), the
+conductor will receive automatic notifications when this worker changes
+phase. No additional monitoring setup is needed.
+
+If no monitor is running, suggest starting one or using
+`/loop 10m /bip.epic.poll` to track progress.
+
 ## Creating new slots
 
 **Clone mode** — create a new clone and register it:
