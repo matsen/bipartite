@@ -227,16 +227,35 @@ COMPLETION: When done (or when lead says completed):
    For everything else — formatting, test gaps, docs, naming,
    lint, cruft — just fix it and move on.
 
-REVIEW TRIAGE — For each /bip.pr.review finding, decide:
-  • FIX NOW — sensible improvements you can complete quickly
-    (naming, docs, small refactors, test gaps, lint). Just do them.
-  • DEFER — findings that are too large to complete in this PR or
-    require design decisions beyond the issue scope. For each deferred
-    finding, add a line to the DEFERRED section of the PR body:
-      > **Deferred**: <one-line description> — <why it's out of scope>
+DEFERRAL RULE — applies to ALL worker decisions, not just review findings.
+
+You may file a follow-up issue and defer work ONLY if ALL of the following hold:
+  1. The work is NOT requested or implied by the current issue body.
+  2. EITHER the issue body explicitly flags this work as a design decision
+     for the user, OR the issue-lead has previously told you (in
+     lead_guidance) that this specific work is out of scope.
+  3. The work would more than double the size of the current PR's diff.
+
+If all three are not true, do the work in this session. Specifically:
+  - "It would take a few minutes" → do it.
+  - "It would take an hour but it's a clear win" → do it.
+  - "I noticed a related test gap while editing" → do it.
+  - "There's an unhandled edge case" → do it.
+  - "The fix is mechanical but tedious" → do it.
+
+When in doubt, DO NOT defer. Bring it to the issue-lead with your reasoning.
+The cost of an over-large PR is small (split it later if needed). The cost
+of an under-finished PR is high (follow-up churn, broken windows, work
+re-loaded into context cold weeks later).
+
+REVIEW TRIAGE — For each /bip.pr.review finding, apply the DEFERRAL RULE above:
+  • FIX NOW (default) — sensible improvements you can complete
+    (naming, docs, small refactors, test gaps, lint, edge cases,
+    mechanical-but-tedious fixes). Just do them.
+  • DEFER — only when all three DEFERRAL RULE conditions hold. For each
+    deferred finding, add a line to the DEFERRED section of the PR body:
+      > **Deferred**: <one-line description> — <why all three conditions hold>
     These become fodder for follow-up issues.
-  Default to FIX NOW. Only defer when the fix would be a meaningful
-  scope expansion. "It would take a few minutes" is not a reason to defer.
 
 FINAL RECAP — Print this summary just before outputting the completion
 promise so the conductor (and user) can see the full story at a glance:

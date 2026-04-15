@@ -31,10 +31,24 @@ Read ALL of these before making any judgment:
 ### Step 2: Scope check (mandatory every time)
 
 Compare the issue body (the contract) against what the worker actually
-did (commits + diff). Ask:
+did (commits + diff). Scope has two failure modes — expansion (drift)
+and contraction (premature deferral) — and you must check for both.
+
+Expansion check:
 - Is the worker still solving what was asked?
 - Has scope crept? ("while I'm here" refactors, unrelated cleanups)
 - Has the worker discovered adjacent work? (note as follow-up, don't pursue)
+
+Contraction check:
+- Has the worker punted finishable work into follow-up issues or
+  "deferred" notes that they could have completed in this session?
+- Search the diff, PR body, and worklog for phrases like "deferred",
+  "follow-up", "out of scope", "future work", "TODO", "left for later".
+  For each, ask: is this genuinely out of scope, or is the worker punting?
+- Apply the DEFERRAL RULE (three conditions: not requested/implied by
+  the issue, explicitly flagged as a design decision or previously
+  ruled out-of-scope by you, AND would more than double the PR diff).
+  If all three do not hold, the deferral is premature.
 
 ### Step 3: Classify the stop reason
 
@@ -49,6 +63,7 @@ did (commits + diff). Ask:
 | **quality-gate** | PR exists, needs checks | Instruct: run /bip.pr.check, fix all, run /bip.pr.review, fix all, repeat until clean |
 | **mechanical-blocker** | CI, merge conflict, deps | Provide specific fix instructions |
 | **scope-drift** | Work outside the issue | Redirect firmly to issue scope |
+| **premature-deferral** | Worker punted finishable work into follow-ups | Identify each deferred item, instruct the worker to complete the ones that fail the DEFERRAL RULE in this session, and justify why each is finishable now |
 | **needs-human** | Design question, ambiguous requirements, architectural tradeoff, genuine research direction choice | **STOP. Escalate.** |
 | **completed** | All requirements met, tested, PR clean | Confirm completion |
 
@@ -77,6 +92,14 @@ Before accepting "done" or "phase-complete", ask yourself:
 - "Has the worker addressed the *why* or just the *what*?"
 - "If we merge this PR, what's our confidence the issue is resolved?"
 - "Is there production/real data we should run this on first?"
+- "Did the worker defer anything? For each deferred item, does it pass
+  all three DEFERRAL RULE conditions, or could the worker have finished
+  it in this session?"
+- "If we merged this PR right now, would a user consider the issue fully
+  resolved, or would they immediately ask 'why didn't you also fix X'?"
+- "Are there finishing touches (test coverage, edge cases, error paths,
+  small refactors discovered along the way) the worker left for 'later'
+  without justification?"
 
 ### Step 6: Check for loops
 
