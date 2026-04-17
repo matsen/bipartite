@@ -22,7 +22,7 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	pub_year, pub_month, pub_day,
 	pdf_path, source_type, source_id, supersedes,
 	authors_json, supplement_paths_json,
-	pmid, pmcid, arxiv_id, s2_id, notes`
+	pmid, pmcid, arxiv_id, s2_id, notes, tags_json`
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
@@ -71,7 +71,8 @@ func createSchema(db *sql.DB) error {
 			pmcid TEXT,
 			arxiv_id TEXT,
 			s2_id TEXT,
-			notes TEXT
+			notes TEXT,
+			tags_json TEXT
 		);
 
 		-- Index for DOI lookups
@@ -84,7 +85,8 @@ func createSchema(db *sql.DB) error {
 			abstract,
 			authors_text,
 			pub_year,
-			notes
+			notes,
+			tags_text
 		);
 
 		-- Embedding metadata for semantic index staleness detection (Phase II)
@@ -123,8 +125,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			pub_year, pub_month, pub_day,
 			pdf_path, source_type, source_id, supersedes,
 			authors_json, supplement_paths_json,
-			pmid, pmcid, arxiv_id, s2_id, notes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			pmid, pmcid, arxiv_id, s2_id, notes, tags_json
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
@@ -132,8 +134,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 	defer refsStmt.Close()
 
 	ftsStmt, err := d.db.Prepare(`
-		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year, notes)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year, notes, tags_text)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing fts insert: %w", err)
@@ -152,6 +154,13 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 				return 0, fmt.Errorf("marshaling supplement paths for %s: %w", ref.ID, err)
 			}
 		}
+		var tagsJSON []byte
+		if len(ref.Tags) > 0 {
+			tagsJSON, err = json.Marshal(ref.Tags)
+			if err != nil {
+				return 0, fmt.Errorf("marshaling tags for %s: %w", ref.ID, err)
+			}
+		}
 
 		// Insert into refs table
 		_, err = refsStmt.Exec(
@@ -161,7 +170,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			string(authorsJSON), nullableString(supplementJSON),
 			nullableStringValue(ref.PMID), nullableStringValue(ref.PMCID),
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
-			nullableStringValue(ref.Note),
+			nullableStringValue(ref.Note), nullableString(tagsJSON),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -170,8 +179,11 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		// Build authors text for FTS
 		authorsText := formatAuthorsText(ref.Authors)
 
+		// Build tags text for FTS (space-separated)
+		tagsText := strings.Join(ref.Tags, " ")
+
 		// Insert into FTS table
-		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year), ref.Note)
+		_, err = ftsStmt.Exec(ref.ID, ref.Title, ref.Abstract, authorsText, strconv.Itoa(ref.Published.Year), ref.Note, tagsText)
 		if err != nil {
 			return 0, fmt.Errorf("inserting fts for %s: %w", ref.ID, err)
 		}
@@ -263,6 +275,7 @@ type SearchFilters struct {
 	Title    string   // Search in title only (FTS)
 	Venue    string   // Filter by venue (SQL LIKE, case-insensitive)
 	DOI      string   // Exact DOI match (SQL)
+	Tag      string   // Filter by tag (SQL LIKE on tags_json, case-insensitive)
 }
 
 // SearchWithFilters performs a search with multiple optional filters.
@@ -335,6 +348,10 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 	if filters.DOI != "" {
 		query += " AND doi = ?"
 		args = append(args, filters.DOI)
+	}
+	if filters.Tag != "" {
+		query += " AND tags_json LIKE ?"
+		args = append(args, "%"+filters.Tag+"%")
 	}
 
 	query += " LIMIT ?"
@@ -430,7 +447,7 @@ type scanner interface {
 
 func scanReference(s scanner) (*reference.Reference, error) {
 	var ref reference.Reference
-	var authorsJSON, supplementJSON sql.NullString
+	var authorsJSON, supplementJSON, tagsJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
 	var pmid, pmcid, arxivID, s2id, notes sql.NullString
 	var pubMonth, pubDay sql.NullInt64
@@ -440,7 +457,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&ref.Published.Year, &pubMonth, &pubDay,
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
-		&pmid, &pmcid, &arxivID, &s2id, &notes,
+		&pmid, &pmcid, &arxivID, &s2id, &notes, &tagsJSON,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -478,6 +495,11 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	if supplementJSON.Valid && supplementJSON.String != "" {
 		if err := json.Unmarshal([]byte(supplementJSON.String), &ref.SupplementPaths); err != nil {
 			return nil, fmt.Errorf("parsing supplement paths JSON for %s: %w", ref.ID, err)
+		}
+	}
+	if tagsJSON.Valid && tagsJSON.String != "" {
+		if err := json.Unmarshal([]byte(tagsJSON.String), &ref.Tags); err != nil {
+			return nil, fmt.Errorf("parsing tags JSON for %s: %w", ref.ID, err)
 		}
 	}
 

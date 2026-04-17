@@ -24,6 +24,9 @@ type Reference struct {
 	// Import Tracking
 	Source ImportSource `json:"source"`
 
+	// Tags (e.g., Paperpile labels and folders)
+	Tags []string `json:"tags,omitempty"`
+
 	// Relationships
 	Supersedes string `json:"supersedes,omitempty"` // DOI of paper this replaces
 

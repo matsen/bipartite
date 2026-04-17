@@ -365,6 +365,67 @@ func TestPaperpileEntry_AuthorWithOnlyLast(t *testing.T) {
 	}
 }
 
+func TestParsePaperpile_WithLabelsAndFolders(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "Tagged2026",
+		"title": "Tagged Paper",
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}],
+		"labelsNamed": ["antibody", "vaccine"],
+		"foldersNamed": ["my papers"]
+	}]`)
+
+	refs, errs := ParsePaperpile(data)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if len(refs[0].Tags) != 3 {
+		t.Fatalf("Tags count = %d, want 3, got %v", len(refs[0].Tags), refs[0].Tags)
+	}
+	if refs[0].Tags[0] != "antibody" || refs[0].Tags[1] != "vaccine" || refs[0].Tags[2] != "my papers" {
+		t.Errorf("Tags = %v, want [antibody vaccine my papers]", refs[0].Tags)
+	}
+}
+
+func TestParsePaperpile_DuplicateLabelAndFolder(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "Dedup2026",
+		"title": "Dedup Paper",
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}],
+		"labelsNamed": ["antibody"],
+		"foldersNamed": ["antibody"]
+	}]`)
+
+	refs, errs := ParsePaperpile(data)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if len(refs[0].Tags) != 1 {
+		t.Errorf("Tags count = %d, want 1 (deduplicated), got %v", len(refs[0].Tags), refs[0].Tags)
+	}
+}
+
+func TestParsePaperpile_NoLabelsOrFolders(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "NoTags2026",
+		"title": "No Tags Paper",
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}]
+	}]`)
+
+	refs, errs := ParsePaperpile(data)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if len(refs[0].Tags) != 0 {
+		t.Errorf("Tags = %v, want empty", refs[0].Tags)
+	}
+}
+
 // Helper function for comparing references
 func refsEqual(a, b reference.Reference) bool {
 	if a.ID != b.ID || a.DOI != b.DOI || a.Title != b.Title {
