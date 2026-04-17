@@ -24,7 +24,7 @@ type Reference struct {
 	// Import Tracking
 	Source ImportSource `json:"source"`
 
-	// Tags (e.g., Paperpile labels and folders)
+	// Tags are user-defined labels for organizing references.
 	Tags []string `json:"tags,omitempty"`
 
 	// Relationships

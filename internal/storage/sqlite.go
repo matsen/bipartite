@@ -275,7 +275,7 @@ type SearchFilters struct {
 	Title    string   // Search in title only (FTS)
 	Venue    string   // Filter by venue (SQL LIKE, case-insensitive)
 	DOI      string   // Exact DOI match (SQL)
-	Tag      string   // Filter by tag (SQL LIKE on tags_json, case-insensitive)
+	Tag      string   // Filter by tag (SQL LIKE on tags_json, partial match)
 }
 
 // SearchWithFilters performs a search with multiple optional filters.

@@ -222,6 +222,9 @@ func TestDB_GetByID_FullReference(t *testing.T) {
 	if ref.Source.Type != "paperpile" || ref.Source.ID != "abc123" {
 		t.Errorf("Source = %+v, want paperpile/abc123", ref.Source)
 	}
+	if len(ref.Tags) != 2 || ref.Tags[0] != "antibody" || ref.Tags[1] != "vaccine" {
+		t.Errorf("Tags = %v, want [antibody vaccine]", ref.Tags)
+	}
 }
 
 func TestDB_GetByID_Notes(t *testing.T) {
@@ -373,6 +376,7 @@ func TestDB_SearchWithFilters(t *testing.T) {
 		limit   int
 		wantIDs []string
 		wantMin int
+		wantMax int // 0 means no upper bound check
 	}{
 		{
 			name:    "keyword only",
@@ -543,10 +547,11 @@ func TestDB_SearchWithFilters(t *testing.T) {
 			wantMin: 1,
 		},
 		{
-			name:    "no tags ref excluded by tag filter",
+			name:    "tag filter excludes untagged refs",
 			filters: SearchFilters{Tag: "antibody"},
 			limit:   10,
-			wantMin: 1,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMax: 1,
 		},
 	}
 
@@ -559,6 +564,9 @@ func TestDB_SearchWithFilters(t *testing.T) {
 
 			if len(refs) < tt.wantMin {
 				t.Errorf("SearchWithFilters() returned %d results, want at least %d", len(refs), tt.wantMin)
+			}
+			if tt.wantMax > 0 && len(refs) > tt.wantMax {
+				t.Errorf("SearchWithFilters() returned %d results, want at most %d", len(refs), tt.wantMax)
 			}
 
 			if tt.wantIDs != nil {
