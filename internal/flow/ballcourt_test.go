@@ -451,6 +451,246 @@ func TestCommentsToActions(t *testing.T) {
 	})
 }
 
+func TestBallInMyCourtStrict(t *testing.T) {
+	me := "jgallowa07"
+	now := time.Now()
+
+	t.Run("known-answer mix", func(t *testing.T) {
+		// 5 items from different authors, various involvement signals.
+		items := []GitHubItem{
+			{ // #1: assigned to me
+				Number:    1,
+				User:      GitHubUser{Login: "alice"},
+				Assignees: []GitHubUser{{Login: me}},
+				UpdatedAt: now,
+			},
+			{ // #2: mentioned in body
+				Number:    2,
+				User:      GitHubUser{Login: "bob"},
+				Body:      "hey @jgallowa07, can you look at this?",
+				UpdatedAt: now,
+			},
+			{ // #3: I previously commented
+				Number:    3,
+				User:      GitHubUser{Login: "carol"},
+				UpdatedAt: now,
+			},
+			{ // #4: requested reviewer
+				Number:             4,
+				User:               GitHubUser{Login: "dave"},
+				IsPR:               true,
+				RequestedReviewers: []GitHubUser{{Login: me}},
+				UpdatedAt:          now,
+			},
+			{ // #5: no connection
+				Number:    5,
+				User:      GitHubUser{Login: "eve"},
+				UpdatedAt: now,
+			},
+		}
+
+		inv := Involvement{
+			Commenters: map[int][]string{
+				3: {"carol", me, "frank"}, // I'm a past commenter on #3
+				5: {"eve", "frank"},       // not me
+			},
+		}
+
+		for _, n := range []int{1, 2, 3, 4} {
+			if !BallInMyCourtStrict(items[n-1], nil, me, inv) {
+				t.Errorf("item #%d: expected ball-in-my-court (involvement signal present)", n)
+			}
+		}
+		if BallInMyCourtStrict(items[4], nil, me, inv) {
+			t.Error("item #5: expected NOT ball-in-my-court (no connection)")
+		}
+	})
+
+	t.Run("their item no actions no involvement -> false", func(t *testing.T) {
+		// Regression for issue #123: EPIC #506 in dasm2-experiments authored by
+		// matsen with no assignees, no comments, no mentions of jgallowa07.
+		// Broad filter would show this; strict filter must drop it.
+		item := GitHubItem{
+			Number: 506,
+			User:   GitHubUser{Login: "matsen"},
+		}
+		if BallInMyCourtStrict(item, nil, me, Involvement{}) {
+			t.Error("Expected false: teammate item with no involvement should be dropped by strict filter")
+		}
+	})
+
+	t.Run("two-person repo regression", func(t *testing.T) {
+		// In a small repo where the user is assigned to or a requested reviewer
+		// on every teammate item, the strict filter matches the broad filter.
+		// No regression for small-team workflows.
+		items := []GitHubItem{
+			{Number: 1, User: GitHubUser{Login: "colleague"}, Assignees: []GitHubUser{{Login: me}}},
+			{Number: 2, User: GitHubUser{Login: "colleague"}, IsPR: true, RequestedReviewers: []GitHubUser{{Login: me}}},
+			{Number: 3, User: GitHubUser{Login: me}}, // my own, no actions
+		}
+		for _, item := range items {
+			broad := BallInMyCourt(item, nil, me)
+			strict := BallInMyCourtStrict(item, nil, me, Involvement{})
+			if broad != strict {
+				t.Errorf("item #%d: broad=%v strict=%v; expected agreement when user is connected to every teammate item", item.Number, broad, strict)
+			}
+		}
+	})
+
+	t.Run("stale engagement still counts", func(t *testing.T) {
+		// Their item, no actions in window, I commented 6 months ago.
+		// Should still show as ball-in-court.
+		item := GitHubItem{
+			Number: 42,
+			User:   GitHubUser{Login: "colleague"},
+		}
+		inv := Involvement{
+			Commenters: map[int][]string{42: {"colleague", me}},
+		}
+		if !BallInMyCourtStrict(item, nil, me, inv) {
+			t.Error("Expected true: past engagement should keep ball-in-court even without window actions")
+		}
+	})
+
+	t.Run("strict matches base when actions present", func(t *testing.T) {
+		// When there are actions in the window, strict and base behave identically:
+		// last actor decides, involvement is irrelevant.
+		item := GitHubItem{
+			Number: 7,
+			User:   GitHubUser{Login: "colleague"},
+		}
+		actions := []ItemAction{
+			{Actor: "colleague", ItemNumber: 7, Timestamp: now.Add(-1 * time.Hour)},
+			{Actor: me, ItemNumber: 7, Timestamp: now},
+		}
+		// I acted last -> false in both filters
+		if BallInMyCourtStrict(item, actions, me, Involvement{}) {
+			t.Error("Expected false: I acted last")
+		}
+		if BallInMyCourt(item, actions, me) != BallInMyCourtStrict(item, actions, me, Involvement{}) {
+			t.Error("Strict and base should agree when actions exist")
+		}
+	})
+
+	t.Run("my item no actions still false under strict", func(t *testing.T) {
+		// Involvement does not matter for my own items.
+		item := GitHubItem{
+			Number:    10,
+			User:      GitHubUser{Login: me},
+			Assignees: []GitHubUser{{Login: me}},
+		}
+		if BallInMyCourtStrict(item, nil, me, Involvement{}) {
+			t.Error("Expected false: my own item with no actions is waiting for feedback")
+		}
+	})
+
+	t.Run("mention in code block does not count", func(t *testing.T) {
+		item := GitHubItem{
+			Number: 20,
+			User:   GitHubUser{Login: "colleague"},
+			Body:   "here is some code:\n```\n@jgallowa07 wrote this\n```\nthat's it",
+		}
+		if BallInMyCourtStrict(item, nil, me, Involvement{}) {
+			t.Error("Expected false: @mention inside fenced code block should not count")
+		}
+	})
+
+	t.Run("mention in inline code does not count", func(t *testing.T) {
+		item := GitHubItem{
+			Number: 21,
+			User:   GitHubUser{Login: "colleague"},
+			Body:   "the handle `@jgallowa07` is formatted as code, not a mention",
+		}
+		if BallInMyCourtStrict(item, nil, me, Involvement{}) {
+			t.Error("Expected false: @mention inside inline code should not count")
+		}
+	})
+
+	t.Run("mention as substring of longer handle does not count", func(t *testing.T) {
+		item := GitHubItem{
+			Number: 22,
+			User:   GitHubUser{Login: "colleague"},
+			Body:   "cc @jgallowa07-alt please",
+		}
+		if BallInMyCourtStrict(item, nil, me, Involvement{}) {
+			t.Error("Expected false: @jgallowa07-alt is a different handle, not a mention of jgallowa07")
+		}
+	})
+}
+
+func TestBodyMentionsUser(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+		user string
+		want bool
+	}{
+		{"simple mention", "hey @alice", "alice", true},
+		{"mention at start", "@alice please review", "alice", true},
+		{"mention after punctuation", "cc: @alice, thanks", "alice", true},
+		{"case insensitive", "cc @Alice", "alice", true},
+		{"no mention", "alice is the author", "alice", false},
+		{"email-like not a mention", "alice@example.com", "alice", false},
+		{"longer handle not a match", "cc @alice-bot", "alice", false},
+		{"underscore continuation not a match", "cc @alice_bot", "alice", false},
+		{"substring prefix not a match", "cc @alicia", "alice", false},
+		{"inside fenced block", "```\n@alice\n```", "alice", false},
+		{"inside inline code", "use `@alice` as handle", "alice", false},
+		{"mixed: mention + code", "`@alice` means @alice", "alice", true},
+		{"empty body", "", "alice", false},
+		{"empty user", "hey @alice", "", false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := bodyMentionsUser(c.body, c.user); got != c.want {
+				t.Errorf("bodyMentionsUser(%q, %q) = %v, want %v", c.body, c.user, got, c.want)
+			}
+		})
+	}
+}
+
+func TestHasInvolvement(t *testing.T) {
+	me := "me"
+	t.Run("assignee", func(t *testing.T) {
+		item := GitHubItem{Assignees: []GitHubUser{{Login: me}}}
+		if !HasInvolvement(item, me, Involvement{}) {
+			t.Error("expected true: assignee")
+		}
+	})
+	t.Run("requested reviewer", func(t *testing.T) {
+		item := GitHubItem{RequestedReviewers: []GitHubUser{{Login: me}}}
+		if !HasInvolvement(item, me, Involvement{}) {
+			t.Error("expected true: requested reviewer")
+		}
+	})
+	t.Run("mention", func(t *testing.T) {
+		item := GitHubItem{Body: "cc @me here"}
+		if !HasInvolvement(item, me, Involvement{}) {
+			t.Error("expected true: mention")
+		}
+	})
+	t.Run("past commenter", func(t *testing.T) {
+		item := GitHubItem{Number: 1}
+		inv := Involvement{Commenters: map[int][]string{1: {"other", me}}}
+		if !HasInvolvement(item, me, inv) {
+			t.Error("expected true: past commenter")
+		}
+	})
+	t.Run("no signals", func(t *testing.T) {
+		item := GitHubItem{Number: 1, Body: "nothing here"}
+		inv := Involvement{Commenters: map[int][]string{1: {"other"}}}
+		if HasInvolvement(item, me, inv) {
+			t.Error("expected false: no involvement signals")
+		}
+	})
+	t.Run("empty user", func(t *testing.T) {
+		item := GitHubItem{Assignees: []GitHubUser{{Login: ""}}}
+		if HasInvolvement(item, "", Involvement{}) {
+			t.Error("expected false: empty user should not match empty assignee login")
+		}
+	})
+}
+
 func TestFilterByBallInCourt(t *testing.T) {
 	me := "me"
 	now := time.Now()

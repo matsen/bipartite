@@ -126,6 +126,7 @@ func FetchIssues(repo string, since time.Time) ([]GitHubItem, error) {
 		User        GitHubUser
 		PullRequest *struct{} `json:"pull_request,omitempty"`
 		Labels      []GitHubLabel
+		Assignees   []GitHubUser `json:"assignees"`
 	}
 
 	if err := json.Unmarshal(data, &rawItems); err != nil {
@@ -145,6 +146,7 @@ func FetchIssues(repo string, since time.Time) ([]GitHubItem, error) {
 			User:      raw.User,
 			IsPR:      raw.PullRequest != nil,
 			Labels:    raw.Labels,
+			Assignees: raw.Assignees,
 		})
 	}
 
@@ -206,6 +208,7 @@ func FetchIssue(repo string, number int) (*GitHubItem, error) {
 		User        GitHubUser
 		PullRequest *struct{} `json:"pull_request,omitempty"`
 		Labels      []GitHubLabel
+		Assignees   []GitHubUser `json:"assignees"`
 	}
 
 	if err := json.Unmarshal(data, &raw); err != nil {
@@ -223,6 +226,7 @@ func FetchIssue(repo string, number int) (*GitHubItem, error) {
 		User:      raw.User,
 		IsPR:      raw.PullRequest != nil,
 		Labels:    raw.Labels,
+		Assignees: raw.Assignees,
 	}, nil
 }
 
@@ -491,6 +495,194 @@ func FetchPRReviewsAsComments(repo string, prNumbers []int, since time.Time) []G
 		}
 	}
 	return comments
+}
+
+// FetchPRsRequestedReviewers fetches requested-reviewer logins for a batch of PRs
+// in a single GraphQL call. Returns a map from PR number to reviewer logins.
+// On failure, returns an error; callers may choose to continue without this data.
+//
+// Team and mannequin reviewers are omitted — only individual User reviewers are
+// returned (matching how ball-in-court checks a specific GitHub user login).
+func FetchPRsRequestedReviewers(repo string, prNumbers []int) (map[int][]string, error) {
+	if len(prNumbers) == 0 {
+		return map[int][]string{}, nil
+	}
+
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo format %q, expected owner/name", repo)
+	}
+	owner, name := parts[0], parts[1]
+
+	if len(prNumbers) > 50 {
+		fmt.Fprintf(os.Stderr, "Warning: batching %d PRs in a single GraphQL query; may hit node limits\n", len(prNumbers))
+	}
+
+	var fragments []string
+	for _, n := range prNumbers {
+		fragments = append(fragments, fmt.Sprintf(`pr_%d: pullRequest(number: %d) {
+      reviewRequests(first: 100) {
+        nodes { requestedReviewer { __typename ... on User { login } } }
+      }
+    }`, n, n))
+	}
+
+	query := fmt.Sprintf(`query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    %s
+  }
+}`, strings.Join(fragments, "\n    "))
+
+	data, err := GHGraphQL(query, map[string]interface{}{
+		"owner": owner,
+		"name":  name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("batch fetching requested reviewers for %s: %w", repo, err)
+	}
+
+	var top struct {
+		Data struct {
+			Repository json.RawMessage `json:"repository"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &top); err != nil {
+		return nil, fmt.Errorf("parsing requested reviewers response: %w", err)
+	}
+
+	var prMap map[string]json.RawMessage
+	if err := json.Unmarshal(top.Data.Repository, &prMap); err != nil {
+		return nil, fmt.Errorf("parsing repository aliases: %w", err)
+	}
+
+	result := make(map[int][]string)
+	for _, n := range prNumbers {
+		alias := fmt.Sprintf("pr_%d", n)
+		raw, ok := prMap[alias]
+		if !ok {
+			continue
+		}
+
+		var prData struct {
+			ReviewRequests struct {
+				Nodes []struct {
+					RequestedReviewer struct {
+						Typename string `json:"__typename"`
+						Login    string `json:"login"`
+					} `json:"requestedReviewer"`
+				} `json:"nodes"`
+			} `json:"reviewRequests"`
+		}
+		if err := json.Unmarshal(raw, &prData); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: parsing requested reviewers for %s#%d: %v\n", repo, n, err)
+			continue
+		}
+
+		var reviewers []string
+		for _, node := range prData.ReviewRequests.Nodes {
+			if node.RequestedReviewer.Typename == "User" && node.RequestedReviewer.Login != "" {
+				reviewers = append(reviewers, node.RequestedReviewer.Login)
+			}
+		}
+		result[n] = reviewers
+	}
+
+	return result, nil
+}
+
+// FetchItemsCommenters fetches unique commenter logins for each issue/PR number
+// in a single batched GraphQL call. Returns a map from item number to commenter
+// logins. This is more efficient than N calls to FetchItemCommenters.
+//
+// Only the first 100 comments per item are fetched; items with more comments may
+// be missing older commenters. For ball-in-court "previously commented" checks,
+// this is acceptable — if the user commented on something with >100 comments, they
+// are almost certainly reachable via other signals (assignment, mention, review).
+func FetchItemsCommenters(repo string, itemNumbers []int) (map[int][]string, error) {
+	if len(itemNumbers) == 0 {
+		return map[int][]string{}, nil
+	}
+
+	parts := strings.SplitN(repo, "/", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid repo format %q, expected owner/name", repo)
+	}
+	owner, name := parts[0], parts[1]
+
+	if len(itemNumbers) > 50 {
+		fmt.Fprintf(os.Stderr, "Warning: batching %d items in a single GraphQL query; may hit node limits\n", len(itemNumbers))
+	}
+
+	var fragments []string
+	for _, n := range itemNumbers {
+		fragments = append(fragments, fmt.Sprintf(`item_%d: issueOrPullRequest(number: %d) {
+      ... on Issue { comments(first: 100) { nodes { author { login } } } }
+      ... on PullRequest { comments(first: 100) { nodes { author { login } } } }
+    }`, n, n))
+	}
+
+	query := fmt.Sprintf(`query($owner: String!, $name: String!) {
+  repository(owner: $owner, name: $name) {
+    %s
+  }
+}`, strings.Join(fragments, "\n    "))
+
+	data, err := GHGraphQL(query, map[string]interface{}{
+		"owner": owner,
+		"name":  name,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("batch fetching commenters for %s: %w", repo, err)
+	}
+
+	var top struct {
+		Data struct {
+			Repository json.RawMessage `json:"repository"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(data, &top); err != nil {
+		return nil, fmt.Errorf("parsing commenters response: %w", err)
+	}
+
+	var itemMap map[string]json.RawMessage
+	if err := json.Unmarshal(top.Data.Repository, &itemMap); err != nil {
+		return nil, fmt.Errorf("parsing repository aliases: %w", err)
+	}
+
+	result := make(map[int][]string)
+	for _, n := range itemNumbers {
+		alias := fmt.Sprintf("item_%d", n)
+		raw, ok := itemMap[alias]
+		if !ok {
+			continue
+		}
+
+		var itemData struct {
+			Comments struct {
+				Nodes []struct {
+					Author struct {
+						Login string `json:"login"`
+					} `json:"author"`
+				} `json:"nodes"`
+			} `json:"comments"`
+		}
+		if err := json.Unmarshal(raw, &itemData); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: parsing commenters for %s#%d: %v\n", repo, n, err)
+			continue
+		}
+
+		seen := make(map[string]bool)
+		var commenters []string
+		for _, node := range itemData.Comments.Nodes {
+			if node.Author.Login != "" && !seen[node.Author.Login] {
+				seen[node.Author.Login] = true
+				commenters = append(commenters, node.Author.Login)
+			}
+		}
+		result[n] = commenters
+	}
+
+	return result, nil
 }
 
 // FetchLastItemComment fetches the single most recent comment on an issue/PR.

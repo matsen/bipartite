@@ -10,6 +10,7 @@ Bipartite provides visibility across your team's GitHub repositories, Slack chan
 bip checkin                     # Items needing your attention since last checkin
 bip checkin --since 7d          # Last week (does not update .last-checkin.json)
 bip checkin --since 12h         # Last 12 hours
+bip checkin --broad             # Legacy broad filter (every teammate item counts)
 bip checkin --all               # All activity, not just action-needed
 bip checkin --category code     # Only repos in "code" category
 bip checkin --repo org/repo     # Single repo
@@ -18,7 +19,7 @@ bip checkin --summarize         # Include LLM-generated summaries
 
 Each run saves the current timestamp to `.last-checkin.json`, so the next run picks up where you left off (falling back to 3 days if the file doesn't exist). Using `--since` overrides the window without updating the state file.
 
-By default, checkin filters to items where the "ball is in your court" — PRs awaiting your review, issues assigned to you, discussions needing your response. Use `--all` to see everything.
+By default, checkin filters to items where the "ball is in your court" — PRs awaiting your review, issues assigned to you, discussions needing your response. For teammate items with no activity in the window, the default filter also requires some involvement signal: you are an assignee, requested reviewer, @mentioned in the body, or have previously commented. Use `--broad` to restore the older behavior (every teammate item counts), or `--all` to disable filtering entirely.
 
 Requires `sources.yml` in the working directory (typically your nexus repo).
 
