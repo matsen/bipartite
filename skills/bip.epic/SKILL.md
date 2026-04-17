@@ -166,16 +166,20 @@ done
 ```
 
 For each clone/worktree, note which issue (if any) it's working on. Classify:
-- **occupied**: Has tmux window or fresh `.epic-status.json` (< 30 min)
-- **stale**: Assigned to an issue but no active session (no tmux, status > 30 min)
-- **available**: (clone mode) On `main`, clean worktree — (worktree mode) N/A, new worktrees are created on demand
+- **occupied**: Has tmux window (regardless of agent status — user may be doing follow-up work)
+- **stale**: No tmux window, but has `.epic-status.json` or is on a non-main branch
+- **available**: (clone mode) No tmux window, on `main`, clean worktree — (worktree mode) N/A, new worktrees are created on demand
+
+**Key rule**: An open tmux window means the clone is in use. The user
+closes the window when they are done. Never kill tmux windows.
 
 ### Step 5: Reconcile issues with clones
 
 Cross-reference the two datasets:
-- If an issue is **CLOSED on GitHub** but a clone is still assigned → mark
-  it as stale and propose cleanup
-- If a PR is **MERGED** but the clone hasn't been reset → same
+- If an issue is **CLOSED on GitHub** but a clone is still assigned →
+  if the clone has no tmux window, clean it up; if it has a tmux window,
+  leave it alone (user may be doing follow-up work)
+- If a PR is **MERGED** but the clone hasn't been reset → same rule
 - Never present an issue as "ready to spawn" or "needs action" without
   confirming it's still OPEN on GitHub
 - Flag anything merged/closed that the EPIC doesn't reflect yet
@@ -215,9 +219,15 @@ next. Keep it tight — the user should be able to scan in 10 seconds.
 
 First, do housekeeping automatically (no need to ask):
 - **Update EPIC bodies** if anything merged/closed since last update
-- **Clean up stale clones**:
-  - *Clone mode*: (no tmux window, status > 30 min): `git checkout main && git pull --ff-only`, clear `.epic-status.json`
-  - *Worktree mode*: (no tmux window, status > 30 min, OR PR merged): `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`, nothing to reset
+- **Clean up clones whose tmux window the user has already closed**:
+  - An **open tmux window** means the user is still using that clone —
+    even if the agent completed and the PR merged. The user often does
+    follow-up work (filing next issues, inspecting results, ad-hoc
+    commands). **Never kill a tmux window. Never clean up a clone that
+    still has a tmux window open.**
+  - Only clean up clones with **no tmux window** (the user closed it):
+    - *Clone mode*: `git checkout main && git pull --ff-only`, clear `.epic-status.json`
+    - *Worktree mode*: `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`
 
 Then propose spawning work for ready issues:
 
