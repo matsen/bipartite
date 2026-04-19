@@ -70,7 +70,9 @@ type PaperpileEntry struct {
 		ArticlePDF int    `json:"article_pdf"` // 1 = main PDF, 0 = supplement
 		Filename   string `json:"filename"`
 	} `json:"attachments"`
-	Note string `json:"note"`
+	Note         string   `json:"note"`
+	LabelsNamed  []string `json:"labelsNamed"`
+	FoldersNamed []string `json:"foldersNamed"`
 }
 
 // ParsePaperpile parses a Paperpile JSON export and returns references.
@@ -150,6 +152,22 @@ func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error
 		}
 	}
 
+	// Collect tags from labels and folders (deduplicated)
+	var tags []string
+	seen := make(map[string]bool)
+	for _, label := range entry.LabelsNamed {
+		if label != "" && !seen[label] {
+			tags = append(tags, label)
+			seen[label] = true
+		}
+	}
+	for _, folder := range entry.FoldersNamed {
+		if folder != "" && !seen[folder] {
+			tags = append(tags, folder)
+			seen[folder] = true
+		}
+	}
+
 	// Use citekey as ID, falling back to Paperpile ID if no citekey
 	id := entry.Citekey
 	if id == "" {
@@ -164,6 +182,7 @@ func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error
 		Abstract:        entry.Abstract,
 		Venue:           entry.Journal,
 		Note:            entry.Note,
+		Tags:            tags,
 		Published:       pubDate,
 		PDFPath:         pdfPath,
 		SupplementPaths: supplementPaths,

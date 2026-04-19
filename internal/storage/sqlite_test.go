@@ -31,6 +31,7 @@ func setupTestDB(t *testing.T) (*DB, string, func()) {
 			},
 			Published: reference.PublicationDate{Year: 2026, Month: 3, Day: 15},
 			PDFPath:   "Papers/smith.pdf",
+			Tags:      []string{"antibody", "vaccine"},
 			Source:    reference.ImportSource{Type: "paperpile", ID: "abc123"},
 		},
 		{
@@ -45,6 +46,7 @@ func setupTestDB(t *testing.T) (*DB, string, func()) {
 			},
 			Published: reference.PublicationDate{Year: 2025, Month: 6},
 			PDFPath:   "Papers/jones.pdf",
+			Tags:      []string{"protein"},
 			Source:    reference.ImportSource{Type: "paperpile", ID: "def456"},
 		},
 		{
@@ -220,6 +222,9 @@ func TestDB_GetByID_FullReference(t *testing.T) {
 	if ref.Source.Type != "paperpile" || ref.Source.ID != "abc123" {
 		t.Errorf("Source = %+v, want paperpile/abc123", ref.Source)
 	}
+	if len(ref.Tags) != 2 || ref.Tags[0] != "antibody" || ref.Tags[1] != "vaccine" {
+		t.Errorf("Tags = %v, want [antibody vaccine]", ref.Tags)
+	}
 }
 
 func TestDB_GetByID_Notes(t *testing.T) {
@@ -371,6 +376,7 @@ func TestDB_SearchWithFilters(t *testing.T) {
 		limit   int
 		wantIDs []string
 		wantMin int
+		wantMax int // 0 means no upper bound check
 	}{
 		{
 			name:    "keyword only",
@@ -513,6 +519,40 @@ func TestDB_SearchWithFilters(t *testing.T) {
 			limit:   10,
 			wantMin: 0,
 		},
+		{
+			name:    "tag filter",
+			filters: SearchFilters{Tag: "antibody"},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "tag filter protein",
+			filters: SearchFilters{Tag: "protein"},
+			limit:   10,
+			wantIDs: []string{"Jones2025-cd"},
+			wantMin: 1,
+		},
+		{
+			name:    "tag filter no match",
+			filters: SearchFilters{Tag: "nonexistent"},
+			limit:   10,
+			wantMin: 0,
+		},
+		{
+			name:    "tag and author combined",
+			filters: SearchFilters{Tag: "antibody", Authors: []string{"Smith"}},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMin: 1,
+		},
+		{
+			name:    "tag filter excludes untagged refs",
+			filters: SearchFilters{Tag: "antibody"},
+			limit:   10,
+			wantIDs: []string{"Smith2026-ab"},
+			wantMax: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -524,6 +564,9 @@ func TestDB_SearchWithFilters(t *testing.T) {
 
 			if len(refs) < tt.wantMin {
 				t.Errorf("SearchWithFilters() returned %d results, want at least %d", len(refs), tt.wantMin)
+			}
+			if tt.wantMax > 0 && len(refs) > tt.wantMax {
+				t.Errorf("SearchWithFilters() returned %d results, want at most %d", len(refs), tt.wantMax)
 			}
 
 			if tt.wantIDs != nil {

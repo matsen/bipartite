@@ -24,6 +24,9 @@ type Reference struct {
 	// Import Tracking
 	Source ImportSource `json:"source"`
 
+	// Tags are user-defined labels for organizing references.
+	Tags []string `json:"tags,omitempty"`
+
 	// Relationships
 	Supersedes string `json:"supersedes,omitempty"` // DOI of paper this replaces
 

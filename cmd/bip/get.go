@@ -79,6 +79,11 @@ func printRefDetail(ref reference.Reference) {
 		fmt.Printf("DOI:      %s\n", ref.DOI)
 	}
 
+	// Tags
+	if len(ref.Tags) > 0 {
+		fmt.Printf("Tags:     %s\n", strings.Join(ref.Tags, ", "))
+	}
+
 	// Notes
 	if ref.Note != "" {
 		fmt.Println()

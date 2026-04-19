@@ -17,6 +17,7 @@ var (
 	searchTitle   string
 	searchVenue   string
 	searchDOI     string
+	searchTag     string
 )
 
 // hasAnyFilterFlags returns true if any field-specific search flags were provided.
@@ -26,7 +27,8 @@ func hasAnyFilterFlags() bool {
 		searchYear != "" ||
 		searchTitle != "" ||
 		searchVenue != "" ||
-		searchDOI != ""
+		searchDOI != "" ||
+		searchTag != ""
 }
 
 func init() {
@@ -36,6 +38,7 @@ func init() {
 	searchCmd.Flags().StringVarP(&searchTitle, "title", "t", "", "Search in title only")
 	searchCmd.Flags().StringVar(&searchVenue, "venue", "", "Filter by venue/journal (partial match)")
 	searchCmd.Flags().StringVar(&searchDOI, "doi", "", "Lookup by exact DOI")
+	searchCmd.Flags().StringVar(&searchTag, "tag", "", "Filter by tag/label (partial match)")
 	rootCmd.AddCommand(searchCmd)
 }
 
@@ -45,7 +48,7 @@ var searchCmd = &cobra.Command{
 	Long: `Search references with flexible filtering options.
 
 Query Syntax (positional argument):
-  Plain text     - Searches title, abstract, and authors
+  Plain text     - Searches title, abstract, authors, and tags
   author:name    - Search author names only (legacy syntax)
   title:text     - Search title only
 
@@ -55,6 +58,7 @@ Flags:
   --year         - Filter by year (exact, range, or open-ended)
   --venue        - Filter by venue/journal (partial match)
   --doi          - Lookup by exact DOI
+  --tag          - Filter by tag/label (partial match)
 
 Author matching uses exact last name matching to avoid false positives:
   -a "Yu"           - Matches last name "Yu" exactly (not "Yujia")
@@ -74,7 +78,8 @@ Examples:
   bip search "deep mutational scanning" -a "Bloom" --year 2023:
   bip search -a "Yu" -a "Bloom" --year 2022:
   bip search --title "SARS-CoV-2" --venue Nature
-  bip search --doi "10.1126/science.abf4063"`,
+  bip search --doi "10.1126/science.abf4063"
+  bip search --tag "antibody"`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runSearch,
 }
@@ -96,6 +101,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			Title:   searchTitle,
 			Venue:   searchVenue,
 			DOI:     searchDOI,
+			Tag:     searchTag,
 		}
 
 		if len(args) > 0 {
