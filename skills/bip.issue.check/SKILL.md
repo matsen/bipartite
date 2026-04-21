@@ -241,6 +241,48 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
    "reasonable", "appropriate", "properly", "should improve". Each
    flagged term must be replaced with a concrete, quantified criterion.
 
+9b. **Defined terms for computed quantities**: Every named metric, rate,
+   ratio, slope, statistic, or other computed quantity must be anchored
+   to an explicit formula or to code that computes it. Interpretive or
+   evaluative names ("quality", "fit", "accuracy", "performance",
+   "signal") are worse than neutral ones — they carry connotations the
+   computation may not support, and reviewers can't check claims built
+   on a term they can't pin down.
+
+   **Common failure modes:**
+   - Rate, ratio, or fraction without a specified denominator (the
+     same numerator over different denominators gives different
+     answers).
+   - Average, mean, or median without naming the population, subset,
+     or weighting it's taken over.
+   - Correlation, slope, or regression without naming both variables,
+     the sample, and any weighting.
+   - Domain-loaded nouns ("quality", "fitness", "affinity",
+     "performance") attached to what is actually a mechanical count,
+     ratio, or model output.
+   - Comparison claim ("X is better than baseline") without naming
+     the baseline, the test, or the threshold for "better".
+   - Statistical test reported with name or software but not the
+     settings that matter (alpha, alternative, one- vs two-sided,
+     weighting).
+
+   **How to check:** For every named quantity, find a formula, code
+   snippet, or pointer to the exact function. If a pointer is given,
+   read the code and confirm the name matches what the code computes
+   — denominators, filters, and weightings are where names most often
+   drift from reality.
+
+   **Flag as HIGH** when the quantity drives a conclusion (prediction,
+   success criterion, hypothesis). Flag as **MEDIUM** when it only
+   appears in motivating context and the surrounding discussion
+   doesn't depend on its exact value.
+
+   **Recommend:** replace evaluative labels with mechanical ones, and
+   give the formula or code inline the first time a quantity appears.
+   Spell out denominator, population, and weighting explicitly — these
+   are the details reviewers most often have to reconstruct on their
+   own.
+
 10. **Unresolved placeholders**: Scan for `TODO`, `TKTK`, `TBD`, `???`,
    `<placeholder>`, `[NEEDS CLARIFICATION]`, `XXX`, or similar markers
    that indicate unfinished thinking. Every placeholder must be resolved
