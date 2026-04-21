@@ -69,6 +69,29 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
    someone find every referenced file without asking questions? Check
    that paths exist on disk or that remote paths have copy instructions.
 
+   **Git-tracked status** (reproducibility): For every in-repo path the
+   issue references — notes files, scripts, configs, notebooks — check
+   that the path is tracked in the remote branch that readers will have.
+   Flag as **HIGH** if a path is untracked, uncommitted, or committed
+   only to a local branch that hasn't been pushed. Other contributors
+   cannot open a file that lives only on the author's machine, and
+   ad-hoc shell snippets "not committed anywhere" are the same problem.
+   Checks (run against the branch the issue lives on, or `main`):
+   ```bash
+   git ls-files --error-unmatch <path>     # tracked?
+   git log -1 --oneline -- <path>          # has a commit?
+   git status --porcelain <path>           # uncommitted changes?
+   ```
+   **Fix:** default to inlining the needed content directly into the
+   issue body — reproducer snippets, tables of numbers, key paragraphs
+   from a notes file. Do this as part of the normal fix pass; read the
+   uncommitted file and lift the load-bearing parts. "Ad-hoc shell
+   snippets" cited as the source of quoted numbers are a red flag —
+   inline the actual commands. Only if inlining would be unreasonable
+   (many pages of content, binary artifacts, or relevance is ambiguous)
+   surface to the user and ask whether to inline a subset or drop the
+   reference.
+
 2. **Column names / API contracts**: If the issue references specific
    data formats (CSV columns, API fields, config keys), verify them
    against the actual source (read the relevant code or data files).
@@ -222,6 +245,33 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
    `<placeholder>`, `[NEEDS CLARIFICATION]`, `XXX`, or similar markers
    that indicate unfinished thinking. Every placeholder must be resolved
    with concrete content before the issue is submitted.
+
+#### Internal consistency
+
+10b. **Cross-section agreement**: An issue is a specification. When two
+   sections disagree, the worker has to guess which is authoritative,
+   and whichever they pick will be wrong for someone.
+
+   **Common failure modes:**
+   - Numbers stated in one section don't match another (counts, sums,
+     line deltas).
+   - Two rules or constraints, each satisfiable alone, can't both hold
+     on some inputs.
+   - Named entities (file paths, identifiers, issue numbers) appear
+     in multiple sections with different forms.
+
+   **How to check:** For each prescriptive section (tables, rules,
+   lists, counts), find the other sections that reference or verify
+   it and confirm they agree. Count things that state a count. Run
+   each verification command mentally against the prescribed content.
+
+   **Flag as HIGH if** the worker would have to choose between two
+   sections of the issue to proceed.
+
+   **Recommend:** Name the conflicting locations and propose which
+   side should change — usually the prescriptive section reflects
+   author intent and the verification should match it, but the
+   author confirms.
 
 #### Validation and benchmarking checks
 
