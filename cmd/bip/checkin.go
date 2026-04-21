@@ -16,7 +16,12 @@ var checkinCmd = &cobra.Command{
 	Long: `Check in on GitHub activity across tracked repositories.
 
 By default, shows only items where the "ball is in your court" - items
-that need your attention or response. Use --all to see all activity.
+that need your attention or response. For items authored by someone else
+with no activity in the window, the default filter requires some signal
+of involvement: you are assigned, requested as reviewer, @mentioned in
+the body, or have previously commented. Use --broad to restore the older
+behavior (every teammate item counts as needing review), or --all to
+disable ball-in-my-court filtering entirely.
 
 The activity window defaults to the timestamp in .last-checkin.json (falling
 back to 3 days if the file doesn't exist). Each run updates .last-checkin.json
@@ -32,6 +37,7 @@ var (
 	checkinRepo      string
 	checkinCategory  string
 	checkinAll       bool
+	checkinBroad     bool
 	checkinSummarize bool
 )
 
@@ -42,6 +48,7 @@ func init() {
 	checkinCmd.Flags().StringVar(&checkinRepo, "repo", "", "Check single repo only")
 	checkinCmd.Flags().StringVar(&checkinCategory, "category", "", "Check repos in category only (code, writing)")
 	checkinCmd.Flags().BoolVar(&checkinAll, "all", false, "Show all activity (disable ball-in-my-court filtering)")
+	checkinCmd.Flags().BoolVar(&checkinBroad, "broad", false, "Use the legacy broad filter (count every teammate item as needing review)")
 	checkinCmd.Flags().BoolVar(&checkinSummarize, "summarize", false, "Generate LLM take-home summaries")
 }
 
@@ -174,8 +181,20 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			enriched := flow.EnrichActionsWithLastComments(repo, itemsForEnrich, allActions)
 			allActions = append(allActions, enriched...)
 
-			issues = flow.FilterByBallInCourt(issues, allActions, githubUser)
-			prs = flow.FilterByBallInCourt(prs, allActions, githubUser)
+			if checkinBroad {
+				issues = flow.FilterByBallInCourt(issues, allActions, githubUser)
+				prs = flow.FilterByBallInCourt(prs, allActions, githubUser)
+			} else {
+				// Strict filter: for teammate items with no window activity, require
+				// some signal of involvement. Populate PR requested reviewers and
+				// past commenters for items that would otherwise fall through.
+				prs = enrichPRsWithRequestedReviewers(repo, prs)
+				inv := flow.Involvement{
+					Commenters: fetchCommentersForUnengaged(repo, issues, prs, allActions, githubUser),
+				}
+				issues = flow.FilterByBallInCourtStrict(issues, allActions, githubUser, inv)
+				prs = flow.FilterByBallInCourtStrict(prs, allActions, githubUser, inv)
+			}
 			allComments = flow.FilterCommentsByItems(allComments, append(issues, prs...))
 		}
 
@@ -243,6 +262,81 @@ func runCheckin(cmd *cobra.Command, args []string) {
 			printSummariesByRepo(allItems, summaries)
 		}
 	}
+}
+
+// enrichPRsWithRequestedReviewers populates RequestedReviewers on each PR via a
+// single batched GraphQL call. On failure, PRs keep empty reviewer lists and a
+// warning goes to stderr — the strict filter still runs using the other
+// involvement signals (assignees, mentions, past comments).
+func enrichPRsWithRequestedReviewers(repo string, prs []flow.GitHubItem) []flow.GitHubItem {
+	if len(prs) == 0 {
+		return prs
+	}
+	var numbers []int
+	for _, p := range prs {
+		numbers = append(numbers, p.Number)
+	}
+	reviewers, err := flow.FetchPRsRequestedReviewers(repo, numbers)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not fetch requested reviewers for %s: %v\n", repo, err)
+		return prs
+	}
+	for i, pr := range prs {
+		logins := reviewers[pr.Number]
+		var users []flow.GitHubUser
+		for _, l := range logins {
+			users = append(users, flow.GitHubUser{Login: l})
+		}
+		prs[i].RequestedReviewers = users
+	}
+	return prs
+}
+
+// fetchCommentersForUnengaged returns commenter logins for teammate items with
+// no actions in the window. These are the items the strict filter routes
+// through HasInvolvement — past commenters only change the outcome when
+// `len(itemActions) == 0`; if anyone has acted, the last-actor rule decides
+// and involvement is not consulted.
+//
+// Only items that (a) have no actions from any participant AND (b) are authored
+// by someone other than githubUser are queried.
+func fetchCommentersForUnengaged(repo string, issues, prs []flow.GitHubItem, actions []flow.ItemAction, githubUser string) map[int][]string {
+	// Which items have any action in the window (from anyone)?
+	itemHasActions := make(map[int]bool)
+	for _, a := range actions {
+		itemHasActions[a.ItemNumber] = true
+	}
+
+	var targets []int
+	for _, it := range issues {
+		if it.User.Login == githubUser {
+			continue
+		}
+		if itemHasActions[it.Number] {
+			continue
+		}
+		targets = append(targets, it.Number)
+	}
+	for _, it := range prs {
+		if it.User.Login == githubUser {
+			continue
+		}
+		if itemHasActions[it.Number] {
+			continue
+		}
+		targets = append(targets, it.Number)
+	}
+
+	if len(targets) == 0 {
+		return map[int][]string{}
+	}
+
+	commenters, err := flow.FetchItemsCommenters(repo, targets)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not fetch past commenters for %s: %v\n", repo, err)
+		return map[int][]string{}
+	}
+	return commenters
 }
 
 // printSummariesByRepo prints summaries grouped by repo with clickable URLs.

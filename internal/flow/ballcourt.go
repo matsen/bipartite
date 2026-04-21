@@ -3,6 +3,7 @@ package flow
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -65,6 +66,109 @@ func BallInMyCourt(item GitHubItem, actions []ItemAction, githubUser string) boo
 	lastActor := itemActions[len(itemActions)-1].Actor
 
 	return lastActor != "" && lastActor != githubUser
+}
+
+// Involvement captures all the signals that indicate a user has some connection
+// to a GitHub item beyond "author posted it." Used by BallInMyCourtStrict to
+// decide whether a teammate's fresh item is really ball-in-court.
+//
+// The Commenters map carries past commenter logins keyed by item number; callers
+// populate it via FetchItemsCommenters (batched) so the check stays O(1) per item.
+type Involvement struct {
+	Commenters map[int][]string
+}
+
+// HasInvolvement reports whether the user has any non-authorship connection to
+// the item: assignee, requested reviewer, @mention in the body, or a past
+// commenter (from inv.Commenters).
+//
+// This is the gate for "their item, no actions" in BallInMyCourtStrict — without
+// at least one of these signals, a teammate's fresh item is not ball-in-court.
+func HasInvolvement(item GitHubItem, user string, inv Involvement) bool {
+	if user == "" {
+		return false
+	}
+	for _, a := range item.Assignees {
+		if a.Login == user {
+			return true
+		}
+	}
+	for _, r := range item.RequestedReviewers {
+		if r.Login == user {
+			return true
+		}
+	}
+	if bodyMentionsUser(item.Body, user) {
+		return true
+	}
+	for _, c := range inv.Commenters[item.Number] {
+		if c == user {
+			return true
+		}
+	}
+	return false
+}
+
+// fencedCodeBlock matches triple-backtick or tilde fenced code blocks.
+// @mentions inside these don't count as real mentions.
+var fencedCodeBlock = regexp.MustCompile("(?s)(```.*?```|~~~.*?~~~)")
+
+// inlineCode matches single-backtick inline code spans.
+var inlineCode = regexp.MustCompile("`[^`]*`")
+
+// bodyMentionsUser reports whether body contains an @user mention outside code
+// spans or fenced code blocks.
+func bodyMentionsUser(body, user string) bool {
+	if body == "" || user == "" {
+		return false
+	}
+	stripped := fencedCodeBlock.ReplaceAllString(body, "")
+	stripped = inlineCode.ReplaceAllString(stripped, "")
+	// Reject handle continuations in [A-Za-z0-9_-] so "@alice" doesn't match
+	// inside "@alice-bot" (a different GitHub user) or "@alice_bot" (underscore
+	// isn't valid in GitHub handles but rejecting it is defense-in-depth). The
+	// leading char class similarly prevents substring matches like "foo@alice"
+	// (email-like patterns).
+	pattern := regexp.MustCompile(`(?i)(^|[^A-Za-z0-9_-])@` + regexp.QuoteMeta(user) + `($|[^A-Za-z0-9_-])`)
+	return pattern.MatchString(stripped)
+}
+
+// BallInMyCourtStrict is like BallInMyCourt but adds an involvement check for
+// the "their item, no actions" case. Without a signal that the user is actually
+// connected to the item (assigned, requested reviewer, @mentioned, or a past
+// commenter), a teammate's fresh item is not ball-in-court.
+//
+// All other cases match BallInMyCourt exactly: if there are actions in the
+// window, the last actor decides; if it's my item with no actions, it's not
+// ball-in-court.
+func BallInMyCourtStrict(item GitHubItem, actions []ItemAction, githubUser string, inv Involvement) bool {
+	author := item.User.Login
+	isMyItem := author == githubUser
+
+	itemActions := filterActionsForItem(actions, item.Number)
+
+	if len(itemActions) == 0 {
+		if isMyItem {
+			return false
+		}
+		return HasInvolvement(item, githubUser, inv)
+	}
+
+	sortActionsByTime(itemActions)
+	lastActor := itemActions[len(itemActions)-1].Actor
+
+	return lastActor != "" && lastActor != githubUser
+}
+
+// FilterByBallInCourtStrict applies BallInMyCourtStrict to each item.
+func FilterByBallInCourtStrict(items []GitHubItem, actions []ItemAction, githubUser string, inv Involvement) []GitHubItem {
+	var filtered []GitHubItem
+	for _, item := range items {
+		if BallInMyCourtStrict(item, actions, githubUser, inv) {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
 }
 
 // filterActionsForItem returns actions that belong to the given item number.

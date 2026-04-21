@@ -23,18 +23,25 @@ By default, checkin only shows items where you need to act:
 
 | Scenario | Shown? | Reason |
 |----------|--------|--------|
-| Their issue/PR, no comments | Yes | Need to review |
+| Their issue/PR, no comments, you're involved* | Yes | Need to review |
+| Their issue/PR, no comments, no involvement | No | Not your responsibility |
 | Their issue/PR, they commented last | Yes | They pinged again |
 | Their issue/PR, you commented last | No | Waiting for their reply |
 | Your issue/PR, no comments | No | Waiting for feedback |
 | Your issue/PR, they commented last | Yes | They replied |
 | Your issue/PR, you commented last | No | Waiting for their reply |
 
-Use `--all` to see everything (original behavior).
+*"You're involved" means at least one of: you're an assignee, requested
+reviewer, @mentioned in the body, or have previously commented on the item.
+
+Use `--broad` to restore the older behavior (every teammate item with no
+window activity counts as needing review). Use `--all` to disable filtering
+entirely.
 
 ## Options
 
 - `bip checkin --all` — Show all activity (disable ball-in-my-court filtering)
+- `bip checkin --broad` — Legacy broad filter (count every teammate item as needing review)
 - `bip checkin --since 2d` — Check activity from last 2 days instead of last check-in
 - `bip checkin --since 12h` — Check activity from last 12 hours
 - `bip checkin --repo matsengrp/dasm2-experiments` — Check single repo

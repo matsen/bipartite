@@ -54,16 +54,18 @@ type GitHubRef struct {
 
 // GitHubItem represents an issue or PR from the GitHub API.
 type GitHubItem struct {
-	Number    int       `json:"number"`
-	Title     string    `json:"title"`
-	Body      string    `json:"body"`
-	State     string    `json:"state"`
-	HTMLURL   string    `json:"html_url"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	User      GitHubUser
-	IsPR      bool
-	Labels    []GitHubLabel
+	Number             int       `json:"number"`
+	Title              string    `json:"title"`
+	Body               string    `json:"body"`
+	State              string    `json:"state"`
+	HTMLURL            string    `json:"html_url"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+	User               GitHubUser
+	IsPR               bool
+	Labels             []GitHubLabel
+	Assignees          []GitHubUser // Assignee logins (from issues list API)
+	RequestedReviewers []GitHubUser // Requested PR reviewers (PRs only; populated via separate fetch)
 }
 
 // GitHubUser represents a GitHub user.
