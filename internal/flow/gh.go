@@ -679,6 +679,9 @@ func FetchItemsCommenters(repo string, itemNumbers []int) (map[int][]string, err
 				commenters = append(commenters, node.Author.Login)
 			}
 		}
+		if len(itemData.Comments.Nodes) >= 100 {
+			fmt.Fprintf(os.Stderr, "Warning: %s#%d returned 100 comments (GraphQL limit); older commenters may be missing\n", repo, n)
+		}
 		result[n] = commenters
 	}
 

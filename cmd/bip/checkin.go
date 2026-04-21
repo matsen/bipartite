@@ -292,21 +292,19 @@ func enrichPRsWithRequestedReviewers(repo string, prs []flow.GitHubItem) []flow.
 	return prs
 }
 
-// fetchCommentersForUnengaged returns commenter logins for items where there is
-// no action from githubUser in the window. These are the items the strict
-// filter would otherwise drop — fetching their commenters lets the filter keep
-// items the user previously engaged with (stale engagement still counts).
+// fetchCommentersForUnengaged returns commenter logins for teammate items with
+// no actions in the window. These are the items the strict filter routes
+// through HasInvolvement — past commenters only change the outcome when
+// `len(itemActions) == 0`; if anyone has acted, the last-actor rule decides
+// and involvement is not consulted.
 //
-// Only items that (a) have no actions from githubUser AND (b) are authored by
-// someone other than githubUser are queried, since those are the only ones
-// where past commenters change the outcome.
+// Only items that (a) have no actions from any participant AND (b) are authored
+// by someone other than githubUser are queried.
 func fetchCommentersForUnengaged(repo string, issues, prs []flow.GitHubItem, actions []flow.ItemAction, githubUser string) map[int][]string {
-	// Which items have the user already acted on in the window?
-	userActed := make(map[int]bool)
+	// Which items have any action in the window (from anyone)?
+	itemHasActions := make(map[int]bool)
 	for _, a := range actions {
-		if a.Actor == githubUser {
-			userActed[a.ItemNumber] = true
-		}
+		itemHasActions[a.ItemNumber] = true
 	}
 
 	var targets []int
@@ -314,7 +312,7 @@ func fetchCommentersForUnengaged(repo string, issues, prs []flow.GitHubItem, act
 		if it.User.Login == githubUser {
 			continue
 		}
-		if userActed[it.Number] {
+		if itemHasActions[it.Number] {
 			continue
 		}
 		targets = append(targets, it.Number)
@@ -323,7 +321,7 @@ func fetchCommentersForUnengaged(repo string, issues, prs []flow.GitHubItem, act
 		if it.User.Login == githubUser {
 			continue
 		}
-		if userActed[it.Number] {
+		if itemHasActions[it.Number] {
 			continue
 		}
 		targets = append(targets, it.Number)

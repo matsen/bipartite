@@ -124,10 +124,11 @@ func bodyMentionsUser(body, user string) bool {
 	}
 	stripped := fencedCodeBlock.ReplaceAllString(body, "")
 	stripped = inlineCode.ReplaceAllString(stripped, "")
-	// GitHub handles contain [A-Za-z0-9-]. We also reject handle continuations of
-	// `_` so "alice" doesn't match bot-style handles like "alice_bot" that share
-	// the handle-character set. `foo@bar.com` emails are rejected because `foo`
-	// is in the trailing character set of the prefix check.
+	// Reject handle continuations in [A-Za-z0-9_-] so "@alice" doesn't match
+	// inside "@alice-bot" (a different GitHub user) or "@alice_bot" (underscore
+	// isn't valid in GitHub handles but rejecting it is defense-in-depth). The
+	// leading char class similarly prevents substring matches like "foo@alice"
+	// (email-like patterns).
 	pattern := regexp.MustCompile(`(?i)(^|[^A-Za-z0-9_-])@` + regexp.QuoteMeta(user) + `($|[^A-Za-z0-9_-])`)
 	return pattern.MatchString(stripped)
 }
