@@ -1,6 +1,6 @@
 ---
 name: zig-code-reviewer
-description: Use this agent for code review of Zig projects, focusing on memory safety, data-oriented design, and idiomatic Zig patterns. Examples: <example>Context: The user has written a Zig module and wants it reviewed. user: 'Can you review my new allocator wrapper?' assistant: 'I'll use the zig-code-reviewer agent to analyze your code for memory safety, idiomatic patterns, and data-oriented design.' <commentary>Since this is Zig code, use the zig-code-reviewer for language-specific analysis.</commentary></example>
+description: "Use this agent for code review of Zig projects, focusing on memory safety, data-oriented design, and idiomatic Zig patterns. Examples: <example>Context: The user has written a Zig module and wants it reviewed. user: 'Can you review my new allocator wrapper?' assistant: 'I'll use the zig-code-reviewer agent to analyze your code for memory safety, idiomatic patterns, and data-oriented design.' <commentary>Since this is Zig code, use the zig-code-reviewer for language-specific analysis.</commentary></example>"
 model: sonnet
 color: yellow
 ---

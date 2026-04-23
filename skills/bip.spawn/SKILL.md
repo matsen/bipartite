@@ -1,3 +1,8 @@
+---
+name: bip.spawn
+description: "Open a tmux window with a Claude Code session for a GitHub issue or PR."
+---
+
 # /bip.spawn
 
 Open a tmux window for GitHub issue or PR review.

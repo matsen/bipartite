@@ -1,3 +1,8 @@
+---
+name: bip.tree
+description: "Generate an interactive HTML tree view of beads issues, with --since date highlighting."
+---
+
 # /bip.tree
 
 Generate interactive HTML tree view of beads issues.

@@ -1,3 +1,8 @@
+---
+name: bip.checkin
+description: "Check in on recent GitHub activity across tracked repos. Filters to items needing your action (ball-in-court)."
+---
+
 # /bip.checkin
 
 Check in on recent activity across tracked repos. Shows issues, PRs, and comments that need your attention.

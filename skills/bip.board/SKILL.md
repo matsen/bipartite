@@ -1,3 +1,8 @@
+---
+name: bip.board
+description: "Manage GitHub project boards. Add, move, and remove issues; boards auto-resolve from repo→channel mappings in sources.yml."
+---
+
 # /bip.board
 
 Manage GitHub project boards. Boards are resolved automatically from repo → channel → board mappings in sources.yml.
