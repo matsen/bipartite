@@ -25,6 +25,7 @@ This will:
 1. Install `bip` via `go install` (to `$GOBIN` if set, otherwise `$HOME/go/bin`)
 2. Symlink agents to `~/.claude/agents/`
 3. Symlink skills to `~/.claude/skills/`
+4. Symlink the statusline script to `~/.claude/statusline/`
 
 **Ensure the Go bin directory is in your PATH.** If you haven't configured `$GOBIN`, add to `~/.bashrc` or `~/.zshrc`:
 
@@ -33,6 +34,15 @@ export PATH="$HOME/go/bin:$PATH"
 ```
 
 Then reload your shell (`source ~/.bashrc` or `source ~/.zshrc`).
+
+**Enable the Claude Code status line.** Add the following to `~/.claude/settings.json` to display model name, working directory, git branch, and context window usage in the Claude Code status bar:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "node ~/.claude/statusline/ctx_monitor.js"
+}
+```
 
 **Verify installation:**
 
