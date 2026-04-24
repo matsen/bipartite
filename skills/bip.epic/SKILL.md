@@ -344,6 +344,7 @@ Always include the date in the clone assignments header.
   "stop_reason": "phase-complete | needs-instrumentation | needs-deeper-investigation | awaiting-results | run-production | pr-ready | quality-gate | mechanical-blocker | scope-drift | needs-human | completed",
   "lead_guidance": "What the worker should do next",
   "lead_notes": [],
+  "completed_at": null,
   "awaiting": null
 }
 ```
@@ -361,6 +362,11 @@ Always include the date in the clone assignments header.
 - `stop_reason` — categorized reason from the lead's decision framework
 - `lead_guidance` — actionable instruction for the worker's next iteration
 - `lead_notes` — append-only log of lead evaluations (max 8 before escalation)
+- `completed_at` — ISO 8601 timestamp set by the lead after it
+  finishes the terminal `completed` ceremony (files any legitimate
+  follow-ups, posts the final PR comment). Its presence is the
+  idempotency signal: subsequent lead invocations at `completed` skip
+  the ceremony.
 - `awaiting` — set during `awaiting-results` phase:
   ```json
   {

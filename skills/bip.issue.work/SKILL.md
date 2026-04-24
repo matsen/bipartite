@@ -78,11 +78,17 @@ gh pr create --title "<concise title>" --body "<body>"
 
 ### Step 8: Summary for the user
 
-After creating the PR, provide a concise summary that highlights anything the user should know or decide on. Always surface:
+After creating the PR, provide a concise summary that highlights
+things the user needs to **judge**:
 
 - **Underlying bugs or tech debt** discovered during the work (even if worked around)
 - **Structural concerns** — places where the fix is a workaround rather than a root-cause fix
 - **Performance implications** of the approach taken
-- **Follow-up issues** that should be filed
 
-The goal is that the user can scan the summary and immediately see if there's something they want to take further action on (e.g., filing a deeper bug, reconsidering the approach, or adding to a future milestone).
+Record any deferred work in the PR body `DEFERRED` section (one line
+per item, with rationale per the DEFERRAL RULE). In EPIC mode the
+issue-lead will scan these at terminal `completed` and file the
+legitimate ones as follow-up issues; standalone users can review the
+list and run `/bip.issue.next` for the ones worth filing. Either way,
+do not list follow-ups in this summary — the PR body is the source of
+truth.

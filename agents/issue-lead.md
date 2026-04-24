@@ -42,13 +42,27 @@ Expansion check:
 Contraction check:
 - Has the worker punted finishable work into follow-up issues or
   "deferred" notes that they could have completed in this session?
-- Search the diff, PR body, and worklog for phrases like "deferred",
-  "follow-up", "out of scope", "future work", "TODO", "left for later".
-  For each, ask: is this genuinely out of scope, or is the worker punting?
+- Search the diff, PR body `DEFERRED` section, worklog, and FINAL RECAP
+  for phrases like "deferred", "follow-up", "out of scope", "future
+  work", "TODO", "left for later". For each candidate, ask: is this
+  genuinely out of scope, or is the worker punting?
 - Apply the DEFERRAL RULE (three conditions: not requested/implied by
   the issue, explicitly flagged as a design decision or previously
   ruled out-of-scope by you, AND would more than double the PR diff).
   If all three do not hold, the deferral is premature.
+
+Classify each candidate into one of three buckets (used by Step 3
+and, at terminal `completed`, by Step 8):
+- **premature** — DEFERRAL RULE fails; worker must complete it now.
+  This drives `stop_reason: premature-deferral`.
+- **scope-drift** — outside the issue's contract; reject, do not
+  file as a follow-up. This drives `stop_reason: scope-drift`.
+- **legitimate** — DEFERRAL RULE passes; a real follow-up. At
+  terminal `completed` these get filed as GitHub issues in Step 8.
+
+No schema field — the classification lives in your analysis for this
+iteration. Every lead invocation re-derives cold from the signals
+(PR body `DEFERRED` section, diff, worklog, prior PR comments).
 
 ### Step 3: Classify the stop reason
 
@@ -124,7 +138,11 @@ Read `lead_notes` in `.epic-status.json`:
        "action": "What you told the worker to do"
      }
      ```
-2. **Post a GitHub comment** on the PR (or issue if no PR):
+2. **Prepare a GitHub comment** on the PR (or issue if no PR). Do NOT
+   post yet if you are classifying as `completed` — posting happens
+   after Step 8 so the comment includes filed follow-ups. For all
+   other classifications, post now.
+
    ```
    gh pr comment <N> --body "..."
    # or if no PR:
@@ -141,9 +159,50 @@ Read `lead_notes` in `.epic-status.json`:
    **Action**: <what happens next>
    ```
 
-3. **Return your verdict** to the worker as your final output:
+3. **Return your verdict** to the worker as your final output — but
+   for `completed`, only after Step 8 runs:
    - For terminal states: "PHASE: completed" or "PHASE: needs-human"
    - For continuation: "PHASE: <phase>. GUIDANCE: <what to do next>"
+
+### Step 8: File legitimate follow-ups (only at terminal `completed`)
+
+Runs **only** when you are setting `phase: "completed"`. Skip for all
+other classifications.
+
+**Idempotency guard.** If `.epic-status.json#completed_at` is already
+set, the terminal ceremony already ran — return "PHASE: completed"
+immediately without posting or filing.
+
+Otherwise:
+
+1. Take the list of candidates from Step 2 classified as
+   `legitimate`. For each, write the item (and rationale, if useful)
+   to a focus tempfile and invoke `/bip.issue.next`:
+
+   ```bash
+   FOCUS=/tmp/issue-next-focus-<issueN>-<idx>.txt
+   printf '%s\n\n%s\n' "<item>" "<rationale>" > "$FOCUS"
+   /bip.issue.next <PR-URL> --focus-file "$FOCUS"
+   rm -f "$FOCUS"
+   ```
+
+   Using a file (not a CLI string) avoids shell-quoting hazards.
+   The skill runs draft → `/bip.issue.check` → `/bip.issue.file` and
+   returns a filed issue URL; capture it. If a filing fails, note it
+   and continue with the remaining candidates.
+
+2. Append a **Follow-ups filed** section to the Step 7 comment
+   listing filed issues, plus a **Follow-ups that failed to file**
+   section for any failures. If there are no legitimate candidates,
+   omit both. Post the comment.
+
+3. Set `.epic-status.json#completed_at` to the current ISO 8601
+   timestamp, then return "PHASE: completed".
+
+**Do not file on non-terminal evaluations.** Signals may change as
+the worker addresses feedback; filing only at `completed` means the
+final state is authoritative. `completed_at` ensures re-invocation is
+idempotent.
 
 ## Awaiting-results Protocol
 

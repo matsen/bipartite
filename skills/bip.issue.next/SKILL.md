@@ -13,27 +13,57 @@ quality-check it, and submit — all in one command.
 
 ```
 /bip.issue.next <PR-URL-or-number>
+/bip.issue.next <PR-URL-or-number> --focus-file <path>
 /bip.issue.next                      # infer PR from conversation context
 ```
 
+The `--focus-file` form lets a caller (typically the issue-lead filing
+a specific legitimate deferral) name the next-action directly,
+skipping the candidate collection and the "ask the user if ambiguous"
+step. The file path points to a plain-text file whose contents are the
+focus description (one-line or multi-line both OK). A file is used
+instead of a CLI string to avoid shell-quoting hazards when the
+description contains quotes, backticks, or parentheses.
+
 ## Workflow
 
-### Step 1: Identify the source PR
+### Step 1: Parse arguments and identify the source PR
 
-- If `$ARGUMENTS` looks like a URL or number, use it
+Parse `$ARGUMENTS` as whitespace-separated tokens:
+- Extract the PR reference (first token that looks like a URL or a
+  `#?NNN` pattern)
+- Extract `--focus-file <path>` if present and read the file contents
+  as the focus description. Strip leading/trailing whitespace but
+  preserve interior content verbatim. If the file is missing or
+  empty, stop and report the error — do not fall back to
+  candidate-picking.
+
+Duplicate-detection is the caller's responsibility — if called twice
+with the same focus, two issues will be filed. The issue-lead guards
+against this via `completed_at` (which makes the terminal ceremony
+run at most once per session).
+
+Then resolve the PR:
+- If a URL or number was given, use it
   (`gh pr view <arg> --json number,title,body,comments,reviews,baseRefName,headRefName`)
 - Otherwise scan conversation history for the most recently discussed PR
 - If still unclear, ask the user
 
-### Step 2: Extract the "what's next" signal
+### Step 2: Determine the next-action
 
-Read the PR body, comments, and review threads. Look for:
+**If `--focus-file` was provided**, use the file's contents as the
+next-action directly. Skip candidate collection. Read the PR body,
+comments, and review threads only to enrich the motivation
+(quantitative results, linked issues) — not to override the focus.
+
+**Otherwise**, read the PR body, comments, and review threads and
+look for:
 
 - **Explicit next-steps**: "next issue should …", "follow-up:", "TODO for next PR"
 - **Decisions with implications**: a hypothesis confirmed/falsified, an
   approach chosen over alternatives, a scope item deferred
-- **Unfinished checkboxes** in the PR's test plan or task list
 - **Reviewer requests** that were marked out-of-scope for this PR
+- **Unfinished checkboxes** in the PR's test plan or task list
 
 Collect these into a bullet list of candidate next-actions. If there are
 multiple independent next-actions, pick the single most impactful one

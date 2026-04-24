@@ -144,6 +144,10 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   stop_reason — category from lead decision framework (set by lead)
   lead_guidance — what the lead told you to do next (set by lead)
   lead_notes — list of lead evaluation entries (set by lead)
+  completed_at — ISO 8601 timestamp set by the lead after the
+    terminal completed ceremony (idempotency signal; do not set
+    yourself). Record deferred work in the PR body DEFERRED section;
+    the lead will file legitimate ones as follow-up issues.
   awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours)
 
 .epic-worklog.md format (append-only, never edit previous entries):
@@ -258,7 +262,9 @@ REVIEW TRIAGE — For each /bip.pr.review finding, apply the DEFERRAL RULE above
     These become fodder for follow-up issues.
 
 FINAL RECAP — Print this summary just before outputting the completion
-promise so the conductor (and user) can see the full story at a glance:
+promise so the conductor (and user) can see the full story at a glance.
+By the time this runs, the final lead invocation has set phase to
+`completed` and posted a PR comment listing any follow-ups it filed.
 
 ```
 ═══ COMPLETED: #N — TITLE ═══
@@ -270,20 +276,26 @@ Summary:
 Pivots / surprises:
   <anything that deviated from the original plan, or "none">
 
-Deferred items:
-  <list from PR body DEFERRED section, or "none">
-
-Suggested follow-up issues:
-  <ideas for next steps, loose ends, or extensions that emerged
-   during the work — one bullet each, phrased as issue titles>
+Human-judgment items:
+  <from your Step 8 summary — architectural tradeoffs, root-cause
+   suspicions, perf findings — things the user should weigh in on
+   that aren't simple follow-ups. Omit if none.>
 
 Quality gate: passed
 ═══════════════════════════════
 ```
 
-Get the PR URL from `gh pr view --json url -q .url`. This recap MUST
-appear in the worker's output — it is the primary artifact the
-conductor reads after the session ends.
+The lead's PR comment is the source of truth for filed follow-ups;
+the recap doesn't duplicate it. Get the PR URL from
+`gh pr view --json url -q .url`. This recap MUST appear in the
+worker's output — it is the primary artifact the conductor reads
+after the session ends.
+
+**Do NOT invent follow-up ideas here.** The lead owns follow-up
+filing. If you notice something during implementation that belongs in
+a follow-up, record it in the PR body `DEFERRED` section (with
+rationale per the DEFERRAL RULE) and the lead will classify it at its
+final invocation.
 
 IMPORTANT CONTEXT:
 (Add issue-specific context here — data locations, phasing
