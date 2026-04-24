@@ -47,18 +47,43 @@ Contraction check:
   work", "TODO", "left for later". For each candidate, ask: is this
   genuinely out of scope, or is the worker punting?
 - Apply the DEFERRAL RULE (three conditions: not requested/implied by
-  the issue, explicitly flagged as a design decision or previously
-  ruled out-of-scope by you, AND would more than double the PR diff).
-  If all three do not hold, the deferral is premature.
+  the issue; explicitly flagged as a design decision or previously
+  ruled out-of-scope by you; AND would more than double the PR diff
+  *and* requires distinct expertise / new infrastructure / multi-day
+  work / an unrelated module — size alone is not enough). If all
+  three do not hold, the deferral is premature.
 
-Classify each candidate into one of three buckets (used by Step 3
-and, at terminal `completed`, by Step 8):
-- **premature** — DEFERRAL RULE fails; worker must complete it now.
-  This drives `stop_reason: premature-deferral`.
+Classify each candidate into one of four buckets. **Fold-in is the
+default for any borderline item** — bias strongly toward telling the
+worker to do it in this PR rather than filing a new issue. The user
+prefers larger PRs that mix concerns a little over narrow PRs that
+generate a trail of follow-ups.
+
+- **fold-in** (default for borderline) — the work touches the same
+  files or module the worker already edited, OR fits in the current
+  PR without more than roughly doubling the diff. Tell the worker to
+  complete it in this PR before closing. Drives `stop_reason:
+  premature-deferral`. Framing is neutral — this is the normal case,
+  not a worker error.
+- **premature-punt** — clearly finishable in this session but the
+  worker skipped it with a vague "TODO" or "will handle later"
+  (e.g., handling the positive case while leaving the negative case
+  with a `TODO`). Same behavior as fold-in (worker does it now),
+  distinct only because the deferral was a clear punt rather than a
+  judgment call. Drives `stop_reason: premature-deferral`.
+- **file-followup** — genuinely separate work. ALL of: passes the
+  DEFERRAL RULE, would more than double the PR diff, AND requires
+  distinct expertise, new infrastructure, multi-day experiments, or
+  touches a clearly unrelated module. At terminal `completed` these
+  get filed as GitHub issues in Step 8.
 - **scope-drift** — outside the issue's contract; reject, do not
-  file as a follow-up. This drives `stop_reason: scope-drift`.
-- **legitimate** — DEFERRAL RULE passes; a real follow-up. At
-  terminal `completed` these get filed as GitHub issues in Step 8.
+  file. Drives `stop_reason: scope-drift`.
+
+When in doubt between `fold-in` and `file-followup`, choose `fold-in`.
+The cost of an over-large PR is small (split it later if needed).
+The cost of a too-small PR is high: follow-up churn, context
+re-loaded cold weeks later, and user prompts to merge what should
+have been one coherent change.
 
 No schema field — the classification lives in your analysis for this
 iteration. Every lead invocation re-derives cold from the signals
@@ -77,7 +102,7 @@ iteration. Every lead invocation re-derives cold from the signals
 | **quality-gate** | PR exists, needs checks | Instruct: run /bip.pr.check, fix all, run /bip.pr.review, fix all, repeat until clean |
 | **mechanical-blocker** | CI, merge conflict, deps | Provide specific fix instructions |
 | **scope-drift** | Work outside the issue | Redirect firmly to issue scope |
-| **premature-deferral** | Worker punted finishable work into follow-ups | Identify each deferred item, instruct the worker to complete the ones that fail the DEFERRAL RULE in this session, and justify why each is finishable now |
+| **premature-deferral** | Items bucketed as `fold-in` or `premature-punt` in Step 2 | Name each item and tell the worker to complete it in this PR. Framing for fold-in items is neutral ("fold this into the PR"), not punitive. For premature-punts, call out the specific `TODO`/"later" that needs resolving. |
 | **needs-human** | Design question, ambiguous requirements, architectural tradeoff, genuine research direction choice | **STOP. Escalate.** |
 | **completed** | All requirements met, tested, PR clean | Confirm completion |
 
@@ -109,6 +134,10 @@ Before accepting "done" or "phase-complete", ask yourself:
 - "Did the worker defer anything? For each deferred item, does it pass
   all three DEFERRAL RULE conditions, or could the worker have finished
   it in this session?"
+- "For each item in the PR body `DEFERRED` section: would folding it
+  into the current PR roughly double the diff or less? Does it touch
+  the same files the worker already edited? If either is true,
+  classify as `fold-in` — do not file a new issue."
 - "If we merged this PR right now, would a user consider the issue fully
   resolved, or would they immediately ask 'why didn't you also fix X'?"
 - "Are there finishing touches (test coverage, edge cases, error paths,
@@ -176,8 +205,10 @@ immediately without posting or filing.
 Otherwise:
 
 1. Take the list of candidates from Step 2 classified as
-   `legitimate`. For each, write the item (and rationale, if useful)
-   to a focus tempfile and invoke `/bip.issue.next`:
+   `file-followup` (only this bucket — not `fold-in`, which the
+   worker should have already completed in this PR). For each, write
+   the item (and rationale, if useful) to a focus tempfile and
+   invoke `/bip.issue.next`:
 
    ```bash
    FOCUS=/tmp/issue-next-focus-<issueN>-<idx>.txt

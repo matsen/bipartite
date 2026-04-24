@@ -233,12 +233,17 @@ COMPLETION: When done (or when lead says completed):
 
 DEFERRAL RULE — applies to ALL worker decisions, not just review findings.
 
-You may file a follow-up issue and defer work ONLY if ALL of the following hold:
+Default: fold into this PR. The user prefers larger PRs that mix concerns
+a little over narrow PRs that generate a trail of follow-up issues. Only
+defer when ALL of the following hold:
   1. The work is NOT requested or implied by the current issue body.
   2. EITHER the issue body explicitly flags this work as a design decision
      for the user, OR the issue-lead has previously told you (in
      lead_guidance) that this specific work is out of scope.
-  3. The work would more than double the size of the current PR's diff.
+  3. The work would more than double the PR diff AND requires distinct
+     expertise, new infrastructure, multi-day experiments, or touches a
+     clearly unrelated module. Size alone is not enough — a 400-line
+     addition to files you're already editing should still be folded in.
 
 If all three are not true, do the work in this session. Specifically:
   - "It would take a few minutes" → do it.
@@ -246,11 +251,14 @@ If all three are not true, do the work in this session. Specifically:
   - "I noticed a related test gap while editing" → do it.
   - "There's an unhandled edge case" → do it.
   - "The fix is mechanical but tedious" → do it.
+  - "It touches the same files I'm already modifying" → do it.
+  - "It would grow the PR by 50% but it's coherent with the current work" → do it.
 
 When in doubt, DO NOT defer. Bring it to the issue-lead with your reasoning.
 The cost of an over-large PR is small (split it later if needed). The cost
 of an under-finished PR is high (follow-up churn, broken windows, work
-re-loaded into context cold weeks later).
+re-loaded into context cold weeks later, user prompts to merge what
+should have been one coherent change).
 
 REVIEW TRIAGE — For each /bip.pr.review finding, apply the DEFERRAL RULE above:
   • FIX NOW (default) — sensible improvements you can complete
