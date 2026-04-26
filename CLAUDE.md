@@ -32,12 +32,6 @@ bd list                     # List all tasks
 - Designed specifically for AI agent workflows
 
 ## Active Technologies
-- Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (014-jsonl-sqlite-store)
-- JSONL (source of truth) + SQLite (ephemeral index) (014-jsonl-sqlite-store)
-- Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite) (015-url-clipboard)
-- JSONL (source of truth) + ephemeral SQLite (rebuilt via `bip rebuild`) (015-url-clipboard)
-- Go 1.24.1 (from go.mod) + spf13/cobra (CLI), golang.org/x/crypto/ssh (native SSH), gopkg.in/yaml.v3 (config parsing) (016-bip-scout)
-- N/A — stateless command, no persistence (016-bip-scout)
 
 **Go version**: See `go.mod` for minimum version (no cutting-edge features required)
 
@@ -53,7 +47,6 @@ bd list                     # List all tasks
 ```text
 cmd/           # Go CLI command implementations (bip)
 internal/      # Go internal packages (s2, store, index, flow, etc.)
-specs/         # Feature specifications
 testdata/      # Test fixtures
 tests/         # Go integration tests
 ```
@@ -167,25 +160,22 @@ These commands read configuration from:
 
 Before any pull request, ensure the following workflow is completed:
 
-### Requirement Verification (Do This First!)
-1. **Spec Compliance**: Review the feature's `spec.md` and `tasks.md` to verify 100% completion of all specified requirements. If any requirement cannot be met, engage with the user to resolve blockers before proceeding
-
 ### Code Quality Foundation
-2. **Format Code**: Run `go fmt ./...` to apply consistent formatting
-3. **Documentation**: Ensure all exported functions and types have doc comments
+1. **Format Code**: Run `go fmt ./...` to apply consistent formatting
+2. **Documentation**: Ensure all exported functions and types have doc comments
 
 ### Architecture and Implementation Review
-4. **Clean Code Review**: Run `@clean-code-reviewer` agent on all new/modified code for architectural review
+3. **Clean Code Review**: Run `@clean-code-reviewer` agent on all new/modified code for architectural review
 
 ### Test Quality Validation
-5. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
-6. **Run Tests**: Ensure all tests pass: `go test ./...`
+4. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
+5. **Run Tests**: Ensure all tests pass: `go test ./...`
 
 ### Final Static Analysis
-7. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
+6. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
 
 ### Documentation Sync
-8. **Documentation Update**: If the feature adds new commands or changes user-facing behavior:
+7. **Documentation Update**: If the feature adds new commands or changes user-facing behavior:
    - `README.md` — Keep short (overview, installation, environment variables only)
    - `docs/guides/` — Detailed guides with examples, config reference, troubleshooting
    - `skills/` — Update skill docs for Claude Code integration
@@ -193,14 +183,9 @@ Before any pull request, ensure the following workflow is completed:
    - **Cross-file consistency**: Check that installation instructions are consistent across README.md, docs/index.md, and docs/guides/getting-started.md
 
 ### Skill Documentation Accuracy
-9. **Verify Skill Docs Match CLI**: Run `./bip <command> --help` to confirm skill documentation accurately reflects:
+8. **Verify Skill Docs Match CLI**: Run `./bip <command> --help` to confirm skill documentation accurately reflects:
    - Command flags and their syntax (no non-existent flags like `--force`)
    - Workflow steps (e.g., rebuild after import)
    - Quick reference table entries match actual command signatures
 
 <!-- MANUAL ADDITIONS END -->
-
-## Recent Changes
-- 016-bip-scout: Added Go 1.24.1 (from go.mod) + spf13/cobra (CLI), golang.org/x/crypto/ssh (native SSH), gopkg.in/yaml.v3 (config parsing)
-- 015-url-clipboard: Added Go 1.24.1 (from go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)
-- 014-jsonl-sqlite-store: Added Go 1.21+ (matches existing go.mod) + spf13/cobra (CLI), modernc.org/sqlite (pure Go SQLite)
