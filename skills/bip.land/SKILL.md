@@ -108,9 +108,8 @@ git pull
 
 If you landed from a scratch clone (EPIC worker, `bip spawn`, or any
 working copy that isn't the canonical one in `sources.yml`), the primary
-clone is now behind `origin/<base>`. For compiled projects — we mostly
-use Zig and C++ — this matters: binaries symlinked from the primary
-clone onto `$PATH` go stale silently.
+clone is now behind `origin/<base>`. Pull it forward so the canonical
+checkout matches `main`.
 
 1. Resolve the primary clone path the way `bip spawn` does (mirrors
    `flow.GetRepoLocalPath`: `nexus_path` from `~/.config/bip/config.yml`,
@@ -122,11 +121,7 @@ clone onto `$PATH` go stale silently.
    and continue — the merge is already upstream, nothing is lost. Never
    stash.
 
-3. If `$PRIMARY` is a compiled project, rebuild it using the project's
-   documented build command (check `CLAUDE.md` / `README.md`). Skip
-   interpreted projects. On build failure, warn and continue.
-
-4. Report what you did in Step 10.
+3. Report what you did in Step 10.
 
 ### Step 8: Delete local branch
 
@@ -163,4 +158,4 @@ rm -f .epic-status.json .epic-worklog.md
 Report: "Landed #42. On `<base>`, up to date, worktree clean. Branch `<branch>` deleted."
 If any files were moved to `_ignore/`, list them.
 If the primary clone was synced in Step 7.5, say so:
-"Primary clone `<path>` pulled" and, if rebuilt, "and rebuilt (`<command>`)."
+"Primary clone `<path>` pulled."
