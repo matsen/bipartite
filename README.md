@@ -4,31 +4,33 @@
 
 Computational PIs have always worked at a high level: directing teams of researchers, framing problems, choosing which experiments are worth running, and weaving the results into papers. Bipartite is a platform for bringing that workflow into the agentic age — a `bip` CLI and a library of Claude Code skills that coordinate teams of agents across GitHub issues, code repositories, manuscripts, and the literature.
 
+The workflow runs as two coupled loops, **ideas** and **experiments**, with GitHub as the shared transport layer. On the ideas side, manuscript sessions surface new results, situate them in the literature, and turn them into well-scoped issues. On the experiments side, those issues are picked up by autonomous workers in dedicated clones, implemented, reviewed, and landed — surfacing fresh results back for discussion. Two human touchpoints anchor the otherwise-autonomous flow: high-level discussion of new findings on the ideas side, and pre-merge review on the experiments side.
+
 ## What Bipartite Does
 
-### Agent Orchestration (EPIC workflow)
+### Ideas Coordination
 
-The core of bipartite is the **EPIC orchestration system** — a conductor/worker pattern for managing multiple Claude Code sessions across clones and worktrees. The conductor session stays on `main`, scans GitHub for open issues, and spawns workers in dedicated `tmux` windows. Workers implement, test, and create PRs autonomously; an issue-lead subagent evaluates progress and escalates only when human judgment is needed.
+For a PI, the paper is the unit that ties a team's work together. Manuscript sessions (`/bip.ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive. High-level discussion of findings, grounded in the literature via `/bip.lit`, becomes new issues, which are validated against project conventions before being filed.
 
-Key skills: `/bip.epic`, `/bip.epic.spawn`, `/bip.epic.poll`, `/bip.epic.handoff`, `/bip.epic.tuckin`
+Key skills: `/bip.ms`, `/bip.ms.poll`, `/bip.lit`, `/bip.issue.file`, `/bip.issue.check`, `/bip.issue.next`
 
-### Manuscript Coordination
+### Agent Orchestration (the experiments side, EPIC workflow)
 
-For a PI, the paper has traditionally been the unit that ties a team's work together. Manuscript sessions (`/bip.ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive — pulling data, importing figures, and keeping the manuscript in sync with the science.
+The experiments side is the **EPIC orchestration system** — a conductor/worker pattern for managing multiple Claude Code sessions across clones and worktrees. A conductor session stays on `main`, scans GitHub for open issues, and spawns workers in dedicated `tmux` windows. Workers implement, test, and create PRs autonomously. Two subagents keep the loop honest: an `issue-lead` evaluates progress from file-based state and escalates only when human judgment is needed, and a `surprising-conclusion-skeptic` interrogates strong or negative claims before they propagate. Quality gates and PR landing close the loop, with follow-up issues flowing back to the ideas side.
 
-Key skills: `/bip.ms`, `/bip.ms.poll`, `/bip.ms.tuckin`
-
-### Reference Management
-
-Bipartite includes an agent-first reference manager with JSON output, a CLI interface, git-backed JSONL storage, and search via Semantic Scholar and Asta. Because the storage format is JSONL, your library is mergeable across collaborators using standard git workflows.
-
-Guide: [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)
+Key skills: `/bip.epic`, `/bip.epic.spawn`, `/bip.epic.poll`, `/bip.epic.handoff`, `/bip.pr.review`, `/bip.land`
 
 ### Workflow Coordination
 
-Beyond orchestration, bipartite provides themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows, Slack integration, and server resource scouting via SSH.
+Cross-cutting tools that span both sides of the workflow: themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows for review, Slack integration, and server resource scouting via SSH.
 
 Key skills: `/bip.checkin`, `/bip.digest`, `/bip.narrative`, `/bip.spawn`, `/bip.scout`
+
+### Reference Management
+
+The library backing `/bip.lit` is an agent-first reference manager with JSON output, a CLI interface, git-backed JSONL storage, and search via Semantic Scholar and Asta. Because the storage format is JSONL, your library is mergeable across collaborators using standard git workflows.
+
+Guide: [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)
 
 ## Installation
 

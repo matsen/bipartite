@@ -1,275 +1,986 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 740" font-family="Inter, 'SF Pro Display', system-ui, -apple-system, sans-serif" font-size="13">
-  <defs>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
-      .mono { font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
-      .phase-label { font-size: 10px; font-weight: 600; fill: #8a9aaa; letter-spacing: 1.5px; }
-      .box-title { font-size: 15px; font-weight: 600; }
-      .box-subtitle { font-size: 11px; }
-    </style>
-    <marker id="arr" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#5a7a9a"/>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 35 1000 610"
+   font-family="Inter, 'SF Pro Display', system-ui, -apple-system, sans-serif"
+   font-size="13"
+   version="1.1"
+   id="svg54"
+   sodipodi:docname="automated-workflow.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview54"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.896"
+     inkscape:cx="500"
+     inkscape:cy="305.24554"
+     inkscape:window-width="1024"
+     inkscape:window-height="1186"
+     inkscape:window-x="2240"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg54" />
+  <defs
+     id="defs4">
+    <style
+       id="style1">500&amp;display=swap');600&amp;family=JetBrains+Mono:wght@400;500;@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;.mono { font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+.phase-label { font-size: 10px; font-weight: 600; fill: #8a9aaa; letter-spacing: 1.5px; }
+.box-title { font-size: 15px; font-weight: 600; }
+.box-subtitle { font-size: 11px; }
+</style>
+    <marker
+       id="arr"
+       viewBox="0 0 10 7"
+       refX="9"
+       refY="3.5"
+       markerWidth="7"
+       markerHeight="5"
+       orient="auto-start-reverse">
+      <path
+         d="M 0 0 L 10 3.5 L 0 7 z"
+         fill="#5a7a9a"
+         id="path1" />
     </marker>
-    <marker id="arr-green" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#4a8a5a"/>
+    <marker
+       id="arr-green"
+       viewBox="0 0 10 7"
+       refX="9"
+       refY="3.5"
+       markerWidth="7"
+       markerHeight="5"
+       orient="auto-start-reverse">
+      <path
+         d="M 0 0 L 10 3.5 L 0 7 z"
+         fill="#4a8a5a"
+         id="path2" />
     </marker>
-    <marker id="arr-orange" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#b07840"/>
+    <marker
+       id="arr-orange"
+       viewBox="0 0 10 7"
+       refX="9"
+       refY="3.5"
+       markerWidth="7"
+       markerHeight="5"
+       orient="auto-start-reverse">
+      <path
+         d="M 0 0 L 10 3.5 L 0 7 z"
+         fill="#b07840"
+         id="path3" />
     </marker>
-    <marker id="arr-gh" viewBox="0 0 10 7" refX="9" refY="3.5" markerWidth="6" markerHeight="4" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 3.5 L 0 7 z" fill="#aaa"/>
+    <marker
+       id="arr-gh"
+       viewBox="0 0 10 7"
+       refX="9"
+       refY="3.5"
+       markerWidth="6"
+       markerHeight="4"
+       orient="auto-start-reverse">
+      <path
+         d="M 0 0 L 10 3.5 L 0 7 z"
+         fill="#aaa"
+         id="path4" />
     </marker>
   </defs>
-
-  <!-- Title -->
-  <text x="500" y="30" text-anchor="middle" font-size="20" font-weight="600" fill="#1a2a3a" letter-spacing="-0.3">Automated Manuscript–Experiment Workflow</text>
-
   <!-- ============================================================ -->
   <!-- LOCAL MACHINE                                                 -->
   <!-- ============================================================ -->
-  <rect x="20" y="50" width="410" height="650" rx="12" fill="#f8fbff" stroke="#3a86a8" stroke-width="2"/>
-  <text x="225" y="76" text-anchor="middle" class="box-title" fill="#2a5a7a">Local Machine</text>
-  <text x="225" y="93" text-anchor="middle" class="box-subtitle" fill="#5a7a9a">Manuscript repo</text>
-
-  <!-- === INITIALIZE === -->
-  <text x="45" y="120" class="phase-label">INITIALIZE</text>
-
-  <g>
-    <title>/bip.ms — Cold-start dashboard for a manuscript session. Scans tracked EPICs across code repos for new results, figures, and findings.</title>
-    <rect x="45" y="130" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="154" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.ms</text>
+  <rect
+     x="20"
+     y="50"
+     width="410"
+     height="570"
+     rx="12"
+     fill="#f8fbff"
+     stroke="#3a86a8"
+     stroke-width="2"
+     id="rect4" />
+  <text
+     x="225"
+     y="76"
+     text-anchor="middle"
+     class="box-title"
+     fill="#2a5a7a"
+     id="text4">Ideas</text>
+  <text
+     x="225"
+     y="93"
+     text-anchor="middle"
+     class="box-subtitle"
+     fill="#5a7a9a"
+     id="text5">Local Machine  ·  manuscript repo</text>
+  <!-- === INITIALIZE  ·  MONITOR === -->
+  <text
+     x="45"
+     y="120"
+     class="phase-label"
+     id="text6">INITIALIZE</text>
+  <text
+     x="235"
+     y="120"
+     class="phase-label"
+     id="text7">MONITOR</text>
+  <g
+     id="g8">
+    <title
+       id="title7">/bip.ms — Cold-start dashboard for a manuscript session. Scans tracked EPICs across code repos for new results, figures, and findings.</title>
+    <rect
+       x="45"
+       y="130"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect7" />
+    <text
+       x="127"
+       y="154"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text8">/bip.ms</text>
   </g>
-
-  <!-- === MONITOR === -->
-  <text x="45" y="195" class="phase-label">MONITOR</text>
-
-  <g>
-    <title>/bip.ms.poll — Mid-session update: pulls remote repos, runs make targets, checks for new EPIC results. Notifies via ntfy when findings arrive.</title>
-    <rect x="45" y="205" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="229" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.ms.poll</text>
+  <g
+     id="g9">
+    <title
+       id="title8">/bip.ms.poll — Mid-session update: pulls remote repos, runs make targets, checks for new EPIC results. Notifies via ntfy when findings arrive.</title>
+    <rect
+       x="235"
+       y="130"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect8" />
+    <text
+       x="317"
+       y="154"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text9">/bip.ms.poll</text>
   </g>
-
-  <!-- init → monitor -->
-  <line x1="127" y1="168" x2="127" y2="201" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-
-  <!-- === REACT === -->
-  <text x="45" y="270" class="phase-label">REACT</text>
-
-  <g>
-    <title>Draft results and methods text based on new findings from EPIC workers.</title>
-    <rect x="45" y="280" width="165" height="38" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
-    <text x="127" y="304" text-anchor="middle" font-weight="500" fill="#1a2a3a">Draft text</text>
+  <!-- INIT/MONITOR → DISCUSS -->
+  <line
+     x1="127"
+     y1="168"
+     x2="127"
+     y2="201"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line9" />
+  <!-- === DISCUSS === -->
+  <text
+     x="45"
+     y="195"
+     class="phase-label"
+     id="text10">DISCUSS</text>
+  <g
+     id="g11">
+    <title
+       id="title10">High-level discussion with Claude about new findings from EPIC workers: meaning, implications, and what to do next. Outcomes are filed as new GitHub issues via /bip.issue.file.</title>
+    <rect
+       x="45"
+       y="205"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#fef3e2"
+       stroke="#d4a847"
+       stroke-width="1.5"
+       id="rect10" />
+    <text
+       x="127"
+       y="229"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#5a4a2a"
+       id="text11">Discuss</text>
   </g>
-
-  <!-- monitor → react -->
-  <line x1="127" y1="243" x2="127" y2="276" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-
-  <!-- === REVIEW === -->
-  <text x="45" y="345" class="phase-label">REVIEW</text>
-
-  <g>
-    <title>@scientific-tex-editor — Subagent for expert scientific editing of LaTeX. Reviews clarity, style, and adherence to writing guidelines.</title>
-    <rect x="45" y="355" width="185" height="38" rx="6" fill="#f0e6f6" stroke="#8a5fb8" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <text x="137" y="379" text-anchor="middle" font-size="12" fill="#5a3a7a" class="mono">@scientific-tex-editor</text>
-  </g>
-
-  <!-- react → review -->
-  <line x1="127" y1="318" x2="127" y2="351" stroke="#8a5fb8" stroke-width="1.2" marker-end="url(#arr)"/>
-
   <!-- === LITERATURE === -->
-  <text x="45" y="420" class="phase-label">LITERATURE</text>
-
-  <g>
-    <title>/bip.lit — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
-    <rect x="45" y="430" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="448" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.lit</text>
-    <text x="127" y="462" text-anchor="middle" font-size="10" fill="#5a7a9a">asta + local search</text>
+  <text
+     x="45"
+     y="270"
+     class="phase-label"
+     id="text12">LITERATURE</text>
+  <g
+     id="g14">
+    <title
+       id="title12">/bip.lit — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
+    <rect
+       x="45"
+       y="280"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect12" />
+    <text
+       x="127"
+       y="298"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text13">/bip.lit</text>
+    <text
+       x="127"
+       y="312"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a7a9a"
+       id="text14">asta + local search</text>
   </g>
-
-  <!-- === ISSUES === -->
-  <text x="45" y="495" class="phase-label">ISSUES</text>
-
-  <g>
-    <title>/bip.issue.check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
-    <rect x="45" y="505" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="529" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.issue.check</text>
+  <!-- /bip.issue.file (right column, vertically between Discuss and bip.lit) -->
+  <g
+     id="g15">
+    <title
+       id="title14">/bip.issue.file — Create or update a GitHub issue from a local markdown file. Discussion and literature search both feed the issue draft.</title>
+    <rect
+       x="235"
+       y="245"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect14" />
+    <text
+       x="317"
+       y="269"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text15">/bip.issue.file</text>
   </g>
-
-  <g>
-    <title>CONSTITUTION.md — Development principles that bip.issue.check validates against: scope discipline, file-based state, skill-first design.</title>
-    <rect x="235" y="505" width="175" height="38" rx="6" fill="#f0f8f0" stroke="#4a8a5a" stroke-width="1.5"/>
-    <text x="322" y="529" text-anchor="middle" fill="#2a5a3a" class="mono" font-size="11">CONSTITUTION.md</text>
+  <!-- discuss → issue.file (diagonal down-right) -->
+  <line
+     x1="210"
+     y1="232"
+     x2="234"
+     y2="253"
+     stroke="#5a7a9a"
+     stroke-width="1.5"
+     marker-end="url(#arr)"
+     id="line15" />
+  <!-- bip.lit → issue.file (diagonal up-right) -->
+  <line
+     x1="210"
+     y1="292"
+     x2="234"
+     y2="275"
+     stroke="#5a7a9a"
+     stroke-width="1.5"
+     marker-end="url(#arr)"
+     id="line16" />
+  <!-- === VALIDATE === -->
+  <text
+     x="45"
+     y="345"
+     class="phase-label"
+     id="text16">VALIDATE</text>
+  <g
+     id="g17">
+    <title
+       id="title16">/bip.issue.check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
+    <rect
+       x="235"
+       y="355"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect16" />
+    <text
+       x="317"
+       y="379"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text17">/bip.issue.check</text>
   </g>
-
-  <!-- constitution → bip.issue.check -->
-  <line x1="231" y1="524" x2="214" y2="524" stroke="#4a8a5a" stroke-width="1.2" marker-end="url(#arr-green)"/>
-
-  <g>
-    <title>/bip.issue.next — Draft a follow-up GitHub issue from a PR decision or identified gap, review it with /bip.issue.check, and submit.</title>
-    <rect x="45" y="555" width="165" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="127" y="579" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.issue.next</text>
+  <g
+     id="g18">
+    <title
+       id="title17">CONSTITUTION.md — Development principles that bip.issue.check validates against: scope discipline, file-based state, skill-first design.</title>
+    <rect
+       x="45"
+       y="355"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#f0f8f0"
+       stroke="#4a8a5a"
+       stroke-width="1.5"
+       id="rect17" />
+    <text
+       x="127"
+       y="379"
+       text-anchor="middle"
+       fill="#2a5a3a"
+       class="mono"
+       font-size="11"
+       id="text18">CONSTITUTION.md</text>
   </g>
-
-
+  <!-- issue.check → issue.file (validated draft is filed) -->
+  <line
+     x1="317"
+     y1="352"
+     x2="317"
+     y2="286"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line18" />
+  <!-- constitution → issue.check -->
+  <line
+     x1="210"
+     y1="374"
+     x2="231"
+     y2="374"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line19" />
   <!-- ============================================================ -->
   <!-- GITHUB (center transport spine)                               -->
   <!-- ============================================================ -->
-  <rect x="450" y="140" width="70" height="480" rx="8" fill="#fff" stroke="#bbb" stroke-width="1.2" stroke-dasharray="5 3"/>
-  <text x="485" y="385" text-anchor="middle" font-size="13" font-weight="600" fill="#555" letter-spacing="0.5" transform="rotate(-90, 485, 385)">GitHub  ·  Issues  ·  PRs  ·  EPICs</text>
-
+  <rect
+     x="460"
+     y="140"
+     width="40"
+     height="410"
+     rx="8"
+     fill="#fff"
+     stroke="#bbb"
+     stroke-width="1.2"
+     stroke-dasharray="5 3"
+     id="rect19" />
+  <text
+     x="-345"
+     y="484"
+     text-anchor="middle"
+     font-size="13px"
+     font-weight="600"
+     fill="#555555"
+     letter-spacing="0.5"
+     transform="rotate(-90)"
+     id="text19">GitHub · Issues · PRs · EPICs</text>
   <!-- ============================================================ -->
   <!-- GitHub ↔ Local connectors                                     -->
   <!-- ============================================================ -->
   <!-- GitHub → local: ms.poll pulls updates -->
-  <line x1="446" y1="224" x2="214" y2="224" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
-  <!-- Local → GitHub: issue.next files issues -->
-  <line x1="214" y1="574" x2="446" y2="560" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
-
+  <line
+     x1="456"
+     y1="149"
+     x2="404"
+     y2="149"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line20" />
+  <!-- Local → GitHub: issue.file files issues -->
+  <line
+     x1="400"
+     y1="264"
+     x2="456"
+     y2="264"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line21" />
   <!-- ============================================================ -->
   <!-- REMOTE CONDUCTOR                                              -->
   <!-- ============================================================ -->
-  <rect x="540" y="50" width="440" height="650" rx="12" fill="#f0f3f8" stroke="#4a6fa5" stroke-width="2"/>
-  <text x="760" y="76" text-anchor="middle" class="box-title" fill="#2a4a6a">Remote Conductor</text>
-  <text x="760" y="93" text-anchor="middle" class="box-subtitle" fill="#5a6a8a">Code repos on compute server</text>
-
-  <!-- === INITIALIZE === -->
-  <text x="565" y="120" class="phase-label">INITIALIZE</text>
-
-  <g>
-    <title>/bip.epic — Cold-start dashboard for EPIC orchestration. Scans clones, GitHub issues, and EPIC status to establish full context.</title>
-    <rect x="565" y="130" width="170" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="650" y="154" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.epic</text>
+  <rect
+     x="540"
+     y="50"
+     width="440"
+     height="570"
+     rx="12"
+     fill="#f0f3f8"
+     stroke="#4a6fa5"
+     stroke-width="2"
+     id="rect21" />
+  <text
+     x="760"
+     y="76"
+     text-anchor="middle"
+     class="box-title"
+     fill="#2a4a6a"
+     id="text21">Experiments</text>
+  <text
+     x="760"
+     y="93"
+     text-anchor="middle"
+     class="box-subtitle"
+     fill="#5a6a8a"
+     id="text22">Remote Conductor  ·  code repos on compute server</text>
+  <!-- === INITIALIZE  ·  MONITOR === -->
+  <text
+     x="565"
+     y="120"
+     class="phase-label"
+     id="text23">INITIALIZE</text>
+  <text
+     x="755"
+     y="120"
+     class="phase-label"
+     id="text24">MONITOR</text>
+  <g
+     id="g25">
+    <title
+       id="title24">/bip.epic — Cold-start dashboard for EPIC orchestration. Scans clones, GitHub issues, and EPIC status to establish full context.</title>
+    <rect
+       x="565"
+       y="130"
+       width="170"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect24" />
+    <text
+       x="650"
+       y="154"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text25">/bip.epic</text>
   </g>
-
-  <!-- === MONITOR === -->
-  <text x="565" y="195" class="phase-label">MONITOR</text>
-
-  <g>
-    <title>/bip.epic.poll — Mid-session scan of GitHub activity and clone status. Performs housekeeping (prune merged branches, update status).</title>
-    <rect x="565" y="205" width="170" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="650" y="229" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.epic.poll</text>
+  <g
+     id="g26">
+    <title
+       id="title25">/bip.epic.poll — Mid-session scan of GitHub activity and clone status. Performs housekeeping (prune merged branches, update status).</title>
+    <rect
+       x="755"
+       y="130"
+       width="170"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect25" />
+    <text
+       x="840"
+       y="154"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text26">/bip.epic.poll</text>
   </g>
-
-  <g>
-    <title>/bip.epic.tuckin — Persist orchestrator state to files before context reset, so a fresh session can resume seamlessly.</title>
-    <rect x="755" y="205" width="200" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="855" y="229" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.epic.tuckin</text>
-  </g>
-
-  <!-- init → monitor -->
-  <line x1="650" y1="168" x2="650" y2="201" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-
+  <!-- INIT/MONITOR → DISPATCH -->
+  <line
+     x1="650"
+     y1="168"
+     x2="650"
+     y2="201"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line26" />
   <!-- === DISPATCH === -->
-  <text x="565" y="270" class="phase-label">DISPATCH</text>
-
-  <g>
-    <title>/bip.epic.spawn — Spawn a Claude Code worker in a dedicated tmux window for a GitHub issue. Each worker gets its own clone or worktree.</title>
-    <rect x="565" y="280" width="170" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="650" y="304" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.epic.spawn</text>
+  <text
+     x="565"
+     y="195"
+     class="phase-label"
+     id="text27">DISPATCH</text>
+  <g
+     id="g28">
+    <title
+       id="title27">/bip.epic.spawn — Spawn a Claude Code worker in a dedicated tmux window for a GitHub issue. Each worker gets its own clone or worktree.</title>
+    <rect
+       x="565"
+       y="205"
+       width="170"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect27" />
+    <text
+       x="650"
+       y="229"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text28">/bip.epic.spawn</text>
   </g>
-
-  <g>
-    <title>/bip.epic.handoff — Worker self-spawns a follow-up issue and hands off to a new slot when it finishes or discovers adjacent work.</title>
-    <rect x="755" y="280" width="200" height="38" rx="6" fill="#e8f4f8" stroke="#3a86a8" stroke-width="1.5"/>
-    <text x="855" y="304" text-anchor="middle" font-weight="500" fill="#1a2a3a" class="mono" font-size="12">/bip.epic.handoff</text>
+  <g
+     id="g29">
+    <title
+       id="title28">/bip.epic.handoff — Worker self-spawns a follow-up issue and hands off to a new slot when it finishes or discovers adjacent work.</title>
+    <rect
+       x="755"
+       y="205"
+       width="200"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect28" />
+    <text
+       x="855"
+       y="229"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text29">/bip.epic.handoff</text>
   </g>
-
-  <!-- monitor → dispatch -->
-  <line x1="650" y1="243" x2="650" y2="276" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-
+  <!-- dispatch → workers -->
+  <line
+     x1="650"
+     y1="243"
+     x2="650"
+     y2="276"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line29" />
   <!-- === WORK === -->
-  <text x="565" y="345" class="phase-label">WORK</text>
-
-  <g>
-    <title>Clone α — Autonomous Claude Code worker running /bip.issue.work. Implements, tests, and creates a PR for one GitHub issue.</title>
-    <rect x="565" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
-    <text x="622" y="375" text-anchor="middle" fill="#1a2a3a">Clone α</text>
-    <text x="622" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
+  <text
+     x="565"
+     y="270"
+     class="phase-label"
+     id="text30">WORK</text>
+  <g
+     id="g32">
+    <title
+       id="title30">Clone α — Autonomous Claude Code worker running /bip.issue.work. Implements, tests, and creates a PR for one GitHub issue.</title>
+    <rect
+       x="565"
+       y="280"
+       width="115"
+       height="45"
+       rx="6"
+       fill="#dceef8"
+       stroke="#2a6a8a"
+       stroke-width="1.5"
+       id="rect30" />
+    <text
+       x="622"
+       y="300"
+       text-anchor="middle"
+       fill="#1a2a3a"
+       id="text31">Clone α</text>
+    <text
+       x="622"
+       y="318"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a6a8a"
+       class="mono"
+       id="text32">/bip.issue.work</text>
   </g>
-
-  <g>
-    <title>Clone β — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
-    <rect x="695" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
-    <text x="752" y="375" text-anchor="middle" fill="#1a2a3a">Clone β</text>
-    <text x="752" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
+  <g
+     id="g34">
+    <title
+       id="title32">Clone β — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
+    <rect
+       x="695"
+       y="280"
+       width="115"
+       height="45"
+       rx="6"
+       fill="#dceef8"
+       stroke="#2a6a8a"
+       stroke-width="1.5"
+       id="rect32" />
+    <text
+       x="752"
+       y="300"
+       text-anchor="middle"
+       fill="#1a2a3a"
+       id="text33">Clone β</text>
+    <text
+       x="752"
+       y="318"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a6a8a"
+       class="mono"
+       id="text34">/bip.issue.work</text>
   </g>
-
-  <g>
-    <title>Clone γ — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
-    <rect x="825" y="355" width="115" height="45" rx="6" fill="#dceef8" stroke="#2a6a8a" stroke-width="1.5"/>
-    <text x="882" y="375" text-anchor="middle" fill="#1a2a3a">Clone γ</text>
-    <text x="882" y="393" text-anchor="middle" font-size="10" fill="#5a6a8a" class="mono">/bip.issue.work</text>
+  <g
+     id="g36">
+    <title
+       id="title34">Clone γ — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
+    <rect
+       x="825"
+       y="280"
+       width="115"
+       height="45"
+       rx="6"
+       fill="#dceef8"
+       stroke="#2a6a8a"
+       stroke-width="1.5"
+       id="rect34" />
+    <text
+       x="882"
+       y="300"
+       text-anchor="middle"
+       fill="#1a2a3a"
+       id="text35">Clone γ</text>
+    <text
+       x="882"
+       y="318"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a6a8a"
+       class="mono"
+       id="text36">/bip.issue.work</text>
   </g>
-
-  <!-- spawn → workers -->
-  <line x1="650" y1="318" x2="650" y2="351" stroke="#5a7a9a" stroke-width="1.2" marker-end="url(#arr)"/>
-
-  <!-- === EVALUATE === -->
-  <text x="565" y="425" class="phase-label">EVALUATE</text>
-
-  <g>
-    <title>@issue-lead — Fresh-eyes subagent that evaluates worker progress from file-based state. Nudges workers forward or escalates to the human.</title>
-    <rect x="565" y="435" width="185" height="38" rx="6" fill="#f0e6f6" stroke="#8a5fb8" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <text x="657" y="459" text-anchor="middle" font-size="12" fill="#5a3a7a" class="mono">@issue-lead</text>
-  </g>
-
-  <g>
-    <title>@surprising-conclusion-skeptic — Checks for bugs, unfair comparisons, and confounded measurements before accepting surprising or strong results.</title>
-    <rect x="765" y="435" width="195" height="38" rx="6" fill="#f0e6f6" stroke="#8a5fb8" stroke-width="1.5" stroke-dasharray="5 3"/>
-    <text x="862" y="453" text-anchor="middle" font-size="10" fill="#5a3a7a" class="mono">@surprising-</text>
-    <text x="862" y="467" text-anchor="middle" font-size="10" fill="#5a3a7a" class="mono">conclusion-skeptic</text>
-  </g>
-
   <!-- workers → evaluate -->
-  <line x1="752" y1="400" x2="752" y2="431" stroke="#8a5fb8" stroke-width="1.2" marker-end="url(#arr)"/>
-
-  <!-- === QUALITY === -->
-  <text x="565" y="500" class="phase-label">QUALITY</text>
-
-  <g>
-    <title>/bip.pr.check — Quick PR readiness check: clean worktree, good description, squash-ready. Run before /bip.pr.review.</title>
-    <rect x="565" y="510" width="130" height="38" rx="6" fill="#fef3e2" stroke="#d4a847" stroke-width="1.5"/>
-    <text x="630" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/bip.pr.check</text>
+  <line
+     x1="752"
+     y1="325"
+     x2="752"
+     y2="356"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line36" />
+  <!-- === EVALUATE === -->
+  <text
+     x="565"
+     y="350"
+     class="phase-label"
+     id="text37">EVALUATE</text>
+  <g
+     id="g38">
+    <title
+       id="title37">@issue-lead — Fresh-eyes subagent that evaluates worker progress from file-based state. Nudges workers forward or escalates to the human.</title>
+    <rect
+       x="565"
+       y="360"
+       width="185"
+       height="38"
+       rx="6"
+       fill="#f0e6f6"
+       stroke="#8a5fb8"
+       stroke-width="1.5"
+       stroke-dasharray="5 3"
+       id="rect37" />
+    <text
+       x="657"
+       y="384"
+       text-anchor="middle"
+       font-size="12"
+       fill="#5a3a7a"
+       class="mono"
+       id="text38">@issue-lead</text>
   </g>
-
-  <g>
-    <title>/bip.pr.review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
-    <rect x="710" y="510" width="130" height="38" rx="6" fill="#fef3e2" stroke="#d4a847" stroke-width="1.5"/>
-    <text x="775" y="534" text-anchor="middle" fill="#5a4a2a" class="mono" font-size="12">/bip.pr.review</text>
+  <g
+     id="g40">
+    <title
+       id="title38">@surprising-conclusion-skeptic — Checks for bugs, unfair comparisons, and confounded measurements before accepting surprising or strong results.</title>
+    <rect
+       x="765"
+       y="360"
+       width="195"
+       height="38"
+       rx="6"
+       fill="#f0e6f6"
+       stroke="#8a5fb8"
+       stroke-width="1.5"
+       stroke-dasharray="5 3"
+       id="rect38" />
+    <text
+       x="862"
+       y="378"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a3a7a"
+       class="mono"
+       id="text39">@surprising-</text>
+    <text
+       x="862"
+       y="392"
+       text-anchor="middle"
+       font-size="10"
+       fill="#5a3a7a"
+       class="mono"
+       id="text40">conclusion-skeptic</text>
   </g>
-
-  <!-- evaluate → quality -->
-  <line x1="657" y1="473" x2="657" y2="506" stroke="#d4a847" stroke-width="1.2" marker-end="url(#arr-orange)"/>
-
+  <!-- evaluate → pr.review -->
+  <line
+     x1="630"
+     y1="398"
+     x2="630"
+     y2="431"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line40" />
+  <!-- === QUALITY  ·  LAND === -->
+  <text
+     x="565"
+     y="425"
+     class="phase-label"
+     id="text41">QUALITY  ·  LAND</text>
+  <g
+     id="g42">
+    <title
+       id="title41">/bip.pr.review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
+    <rect
+       x="565"
+       y="435"
+       width="130"
+       height="38"
+       rx="6"
+       fill="#fef3e2"
+       stroke="#d4a847"
+       stroke-width="1.5"
+       id="rect41" />
+    <text
+       x="630"
+       y="459"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#5a4a2a"
+       class="mono"
+       font-size="12"
+       id="text42">/bip.pr.review</text>
+  </g>
+  <g
+     id="g43">
+    <title
+       id="title42">/bip.land — Land a PR branch: squash merge, clean up local and remote branches, return to main.</title>
+    <rect
+       x="725"
+       y="435"
+       width="90"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect42" />
+    <text
+       x="770"
+       y="459"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text43">/bip.land</text>
+  </g>
+  <!-- pr.review → bip.land -->
+  <line
+     x1="695"
+     y1="454"
+     x2="721"
+     y2="454"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line43" />
+  <!-- === FOLLOW-UP === -->
+  <text
+     x="565"
+     y="500"
+     class="phase-label"
+     id="text44">FOLLOW-UP</text>
+  <g
+     id="g45">
+    <title
+       id="title44">/bip.issue.next — Draft a follow-up GitHub issue from a PR decision or identified gap. Many landed PRs surface adjacent work that needs filing.</title>
+    <rect
+       x="565"
+       y="510"
+       width="130"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect44" />
+    <text
+       x="630"
+       y="534"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text45">/bip.issue.next</text>
+  </g>
+  <!-- pr.review → issue.next (vertical down) -->
+  <line
+     x1="630"
+     y1="473"
+     x2="630"
+     y2="506"
+     stroke="#5a7a9a"
+     stroke-width="1.2"
+     marker-end="url(#arr)"
+     id="line45" />
   <!-- ============================================================ -->
   <!-- GitHub ↔ Remote connectors                                    -->
   <!-- ============================================================ -->
-  <!-- GitHub → remote: epic reads issues -->
-  <line x1="524" y1="149" x2="561" y2="149" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
-  <!-- GitHub → remote: epic.poll monitors activity -->
-  <line x1="524" y1="224" x2="561" y2="224" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <!-- GitHub → remote: feeds INIT/MONITOR row -->
+  <line
+     x1="504"
+     y1="149"
+     x2="561"
+     y2="149"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line46" />
   <!-- GitHub → remote: epic.spawn reads issues to dispatch -->
-  <line x1="524" y1="299" x2="561" y2="299" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <line
+     x1="504"
+     y1="224"
+     x2="561"
+     y2="224"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line47" />
   <!-- Remote → GitHub: workers push PRs -->
-  <line x1="561" y1="377" x2="524" y2="377" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
+  <line
+     x1="561"
+     y1="302"
+     x2="504"
+     y2="302"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line48" />
   <!-- Remote → GitHub: quality gates update PRs -->
-  <line x1="561" y1="529" x2="524" y2="529" stroke="#bbb" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr-gh)"/>
-
-
-
+  <line
+     x1="561"
+     y1="454"
+     x2="504"
+     y2="454"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line49" />
+  <!-- Remote → GitHub: issue.next files follow-up issues -->
+  <line
+     x1="561"
+     y1="529"
+     x2="504"
+     y2="529"
+     stroke="#bbb"
+     stroke-width="1"
+     stroke-dasharray="4 3"
+     marker-end="url(#arr-gh)"
+     id="line50" />
   <!-- ============================================================ -->
   <!-- PHASE DIVIDERS                                                -->
   <!-- ============================================================ -->
-  <line x1="15" y1="108" x2="985" y2="108" stroke="#e0e4e8" stroke-width="0.5" stroke-dasharray="2 4"/>
-  <line x1="15" y1="183" x2="985" y2="183" stroke="#e0e4e8" stroke-width="0.5" stroke-dasharray="2 4"/>
-  <line x1="15" y1="258" x2="985" y2="258" stroke="#e0e4e8" stroke-width="0.5" stroke-dasharray="2 4"/>
-
+  <line
+     x1="15"
+     y1="108"
+     x2="985"
+     y2="108"
+     stroke="#e0e4e8"
+     stroke-width="0.5"
+     stroke-dasharray="2 4"
+     id="line51" />
+  <line
+     x1="15"
+     y1="183"
+     x2="985"
+     y2="183"
+     stroke="#e0e4e8"
+     stroke-width="0.5"
+     stroke-dasharray="2 4"
+     id="line52" />
+  <line
+     x1="15"
+     y1="258"
+     x2="235"
+     y2="258"
+     stroke="#e0e4e8"
+     stroke-width="0.5"
+     stroke-dasharray="2 4"
+     id="line53" />
+  <line
+     x1="400"
+     y1="258"
+     x2="985"
+     y2="258"
+     stroke="#e0e4e8"
+     stroke-width="0.5"
+     stroke-dasharray="2 4"
+     id="line54" />
   <!-- ============================================================ -->
   <!-- KAIZEN (continuous improvement loop)                          -->
   <!-- ============================================================ -->
-  <g>
-    <title>/bip.kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
-    <rect x="150" y="645" width="700" height="38" rx="19" fill="#f4f7f0" stroke="#7a8a6a" stroke-width="1.5" stroke-dasharray="6 3"/>
-    <text x="500" y="669" text-anchor="middle" font-size="12" font-weight="500" fill="#5a6a4a"><tspan class="mono">/bip.kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
+  <g
+     id="g54">
+    <title
+       id="title54">/bip.kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
+    <rect
+       x="150"
+       y="565"
+       width="700"
+       height="38"
+       rx="19"
+       fill="#f4f7f0"
+       stroke="#7a8a6a"
+       stroke-width="1.5"
+       stroke-dasharray="6 3"
+       id="rect54" />
+    <text
+       x="500"
+       y="589"
+       text-anchor="middle"
+       font-size="12"
+       font-weight="500"
+       fill="#5a6a4a"
+       id="text54"><tspan
+   class="mono"
+   id="tspan54">/bip.kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
   </g>
 </svg>
