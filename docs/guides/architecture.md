@@ -3,35 +3,35 @@
 Bipartite has three main pieces: a **nexus** (your data), the **bip CLI** (operations), and **Claude Code skills** (AI integration).
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                        Your Machine                      │
-│                                                          │
-│  ┌────────────────┐    ┌─────────────────────────────┐   │
-│  │  Claude Code   │    │      Nexus Directory        │   │
+┌────────────────────────────────────────────────────────────┐
+│                        Your Machine                        │
+│                                                            │
+│  ┌────────────────┐    ┌───────────────────────────────┐   │
+│  │  Claude Code   │    │      Nexus Directory          │   │
 │  │                │    │   (configured via nexus_path) │   │
-│  │ ┌────────────┐ │    │                             │   │
-│  │ │  Skills    │─┼────┼─▶ refs.jsonl  (papers)      │   │
-│  │ │            │ │    │   edges.jsonl (graph)       │   │
-│  │ │ /bip.lit   │ │    │   concepts.jsonl            │   │
-│  │ │ /bip.digest│ │    │   servers.yml (scout)       │   │
-│  │ │ /bip.spawn │ │    │   sources.yml (GitHub)     │   │
-│  │ └─────┬──────┘ │    │                             │   │
-│  └───────┼────────┘    │   .bipartite/ (gitignored)  │   │
-│          │             │   └── cache/refs.db         │   │
-│          │             │   └── vectors.gob           │   │
-│          ▼             └─────────────────────────────┘   │
-│  ┌────────────────┐               ▲                      │
-│  │   bip CLI      │               │                      │
-│  │                │───────────────┘                      │
-│  │ bip search     │                                      │
-│  │ bip s2 add     │    ┌─────────────────────────────┐   │
-│  │ bip digest     │◀──▶│      External APIs          │   │
-│  │ bip scout      │    │ • Semantic Scholar          │   │
-│  └────────────────┘    │ • GitHub (gh CLI)           │   │
-│                        │ • Slack                     │   │
-│                        │ • Remote servers (SSH)      │   │
-│                        └─────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
+│  │ ┌────────────┐ │    │                               │   │
+│  │ │  Skills    │─┼────┼─▶ refs.jsonl  (papers)        │   │
+│  │ │            │ │    │   edges.jsonl (graph)         │   │
+│  │ │ /bip.lit   │ │    │   concepts.jsonl              │   │
+│  │ │ /bip.digest│ │    │   servers.yml (scout)         │   │
+│  │ │ /bip.spawn │ │    │   sources.yml (GitHub)        │   │
+│  │ └─────┬──────┘ │    │                               │   │
+│  └───────┼────────┘    │   .bipartite/ (gitignored)    │   │
+│          │             │   └── cache/refs.db           │   │
+│          │             │   └── vectors.gob             │   │
+│          ▼             └───────────────────────────────┘   │
+│  ┌────────────────┐               ▲                        │
+│  │   bip CLI      │               │                        │
+│  │                │───────────────┘                        │
+│  │ bip search     │                                        │
+│  │ bip s2 add     │    ┌─────────────────────────────┐     │
+│  │ bip digest     │◀──▶│      External APIs          │     │
+│  │ bip scout      │    │ • Semantic Scholar          │     │
+│  └────────────────┘    │ • GitHub (gh CLI)           │     │
+│                        │ • Slack                     │     │
+│                        │ • Remote servers (SSH)      │     │
+│                        └─────────────────────────────┘     │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ## The Nexus
