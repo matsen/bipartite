@@ -299,6 +299,23 @@ Both S2 and ASTA accept these identifier formats:
 - `CorpusId:215416146`
 - Raw Semantic Scholar ID (40-char hex)
 
+### Opening a paper page in the browser
+
+To open a Semantic Scholar paper page in Chrome from a corpus ID, DOI, etc., use the **API redirect URL** (`https://api.semanticscholar.org/...`), NOT `https://www.semanticscholar.org/paper/CorpusID:...` (that form does NOT resolve and 404s):
+
+```bash
+# Corpus ID
+open -a "Google Chrome" "https://api.semanticscholar.org/CorpusID:236964352"
+
+# DOI
+open -a "Google Chrome" "https://api.semanticscholar.org/v1/paper/10.1093/sysbio/syy032"
+
+# Raw 40-char SHA paper ID — this form works directly on the website
+open -a "Google Chrome" "https://www.semanticscholar.org/paper/<sha>"
+```
+
+The API URL issues a 302 redirect to the canonical paper page on the website.
+
 ## Concept Nodes (Knowledge Graph)
 
 Build a knowledge graph by creating concepts and linking papers to them.
