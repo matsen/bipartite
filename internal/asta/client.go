@@ -310,28 +310,46 @@ func (c *Client) SnippetSearch(ctx context.Context, query string, limit int, ven
 		return nil, err
 	}
 
-	// Parse snippet search response - format: {"result": {"data": [...]}}
-	var wrapper struct {
-		Result struct {
-			Data []struct {
-				Score float64 `json:"score"`
-				Paper struct {
-					CorpusID string   `json:"corpusId"`
-					Title    string   `json:"title"`
-					Authors  []string `json:"authors"`
-				} `json:"paper"`
-				Snippet struct {
-					Text string `json:"text"`
-				} `json:"snippet"`
-			} `json:"data"`
-		} `json:"result"`
-	}
-	if err := json.Unmarshal(result, &wrapper); err != nil {
-		return nil, fmt.Errorf("%w: parsing snippet results: %v", ErrInvalidResponse, err)
+	// Parse snippet search response - the text content is {"data": [...]}
+	// Try direct format first, then wrapped format for compatibility
+	type snippetData struct {
+		Score float64 `json:"score"`
+		Paper struct {
+			CorpusID string   `json:"corpusId"`
+			Title    string   `json:"title"`
+			Authors  []string `json:"authors"`
+		} `json:"paper"`
+		Snippet struct {
+			Text string `json:"text"`
+		} `json:"snippet"`
 	}
 
-	snippets := make([]ASTASnippet, len(wrapper.Result.Data))
-	for i, r := range wrapper.Result.Data {
+	var data []snippetData
+
+	// Try direct {"data": [...]} format
+	var direct struct {
+		Data []snippetData `json:"data"`
+	}
+	if err := json.Unmarshal(result, &direct); err != nil {
+		return nil, fmt.Errorf("%w: parsing snippet results: %v", ErrInvalidResponse, err)
+	}
+	if direct.Data != nil {
+		data = direct.Data
+	} else {
+		// Try wrapped {"result": {"data": [...]}} format
+		var wrapper struct {
+			Result struct {
+				Data []snippetData `json:"data"`
+			} `json:"result"`
+		}
+		if err := json.Unmarshal(result, &wrapper); err != nil {
+			return nil, fmt.Errorf("%w: parsing snippet results: %v", ErrInvalidResponse, err)
+		}
+		data = wrapper.Result.Data
+	}
+
+	snippets := make([]ASTASnippet, len(data))
+	for i, r := range data {
 		authors := make([]ASTAAuthor, len(r.Paper.Authors))
 		for j, name := range r.Paper.Authors {
 			authors[j] = ASTAAuthor{Name: name}
