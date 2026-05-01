@@ -87,6 +87,8 @@ Suggest creating concepts when you notice:
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
 | Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
+| Import from Paperpile | `bip import --format paperpile <file>` |
+| Import from Zotero | `bip import --format zotero <file>` |
 | Add paper to collection | `bip s2 add DOI:10.1234/...` |
 | Find literature gaps | `bip s2 gaps` |
 | Fast paper search (external) | `bip asta search "query"` |
@@ -255,6 +257,28 @@ See [api-guide.md](api-guide.md) for detailed comparison.
    bip rebuild
    ```
 5. Optionally delete the export file after confirming success
+
+### Update Library from Zotero
+
+1. In Zotero, right-click a collection → Export Collection → CSL-JSON format
+2. Save to ~/Downloads
+3. Find the export file:
+   ```bash
+   ls -t ~/Downloads/*.json | head -1
+   ```
+4. Import (with optional PDF resolution):
+   ```bash
+   bip import --format zotero "<path>"
+   # Or with PDF path resolution from Zotero's database:
+   bip import --format zotero --zotero-db ~/Zotero/zotero.sqlite "<path>"
+   ```
+5. Rebuild the search index:
+   ```bash
+   bip rebuild
+   ```
+6. Optionally delete the export file after confirming success
+
+**Zotero setup**: Set `pdf_root: ~/Zotero/storage` in `.bipartite/config.yml` so `bip open` can find PDFs.
 
 ### Explore Literature
 

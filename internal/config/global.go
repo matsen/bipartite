@@ -18,6 +18,8 @@ type GlobalConfig struct {
 	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
 	GitHubToken   string            `yaml:"github_token,omitempty"`
 	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
+	ZoteroAPIKey  string            `yaml:"zotero_api_key,omitempty"`
+	ZoteroUserID  string            `yaml:"zotero_user_id,omitempty"`
 }
 
 const (
@@ -158,6 +160,18 @@ func MustGetNexusPath() string {
 		os.Exit(2)
 	}
 	return path
+}
+
+// GetZoteroAPIKey returns the Zotero API key from global config.
+func GetZoteroAPIKey() string {
+	cfg, _ := LoadGlobalConfig()
+	return cfg.ZoteroAPIKey
+}
+
+// GetZoteroUserID returns the Zotero user ID from global config.
+func GetZoteroUserID() string {
+	cfg, _ := LoadGlobalConfig()
+	return cfg.ZoteroUserID
 }
 
 // HelpfulConfigMessage returns a helpful message when nexus_path is not configured.
