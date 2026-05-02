@@ -277,7 +277,8 @@ func (c *Client) SearchPapers(ctx context.Context, keyword string, limit int, da
 // isValid distinguishes a real bare element from an empty/error object so
 // stage 3 doesn't silently swallow malformed responses. label is used to
 // build the error message and should match the historical wording for the
-// caller (e.g., "search results", "authors", "citations").
+// caller (e.g., "search results", "authors", "citations"); tests assert on
+// these strings, so keep them stable.
 func unwrapStreamedList[T any](result []byte, isValid func(T) bool, label string) ([]T, error) {
 	var wrapper struct {
 		Result []T `json:"result"`
@@ -287,9 +288,12 @@ func unwrapStreamedList[T any](result []byte, isValid func(T) bool, label string
 		return wrapper.Result, nil
 	}
 
+	// Stage 2: bare array. JSON `null` also parses cleanly into a nil slice;
+	// treat that as "no array shape" rather than success-with-zero so a
+	// stray null body doesn't silently look like an empty result set.
 	var arr []T
 	arrErr := json.Unmarshal(result, &arr)
-	if arrErr == nil {
+	if arrErr == nil && arr != nil {
 		return arr, nil
 	}
 
@@ -298,10 +302,16 @@ func unwrapStreamedList[T any](result []byte, isValid func(T) bool, label string
 		return []T{single}, nil
 	}
 
-	if wrapErr != nil {
+	switch {
+	case wrapErr != nil:
 		return nil, fmt.Errorf("%w: parsing %s: %v", ErrInvalidResponse, label, wrapErr)
+	case arrErr != nil:
+		return nil, fmt.Errorf("%w: parsing %s as array: %v", ErrInvalidResponse, label, arrErr)
+	default:
+		// Both stages 1 and 2 parsed without error but produced no list
+		// (e.g., bare `null` or `{"result":null}`).
+		return nil, fmt.Errorf("%w: parsing %s: empty result", ErrInvalidResponse, label)
 	}
-	return nil, fmt.Errorf("%w: parsing %s as array: %v", ErrInvalidResponse, label, arrErr)
 }
 
 // parseSearchPapersResult parses the raw bytes from a paper-search tool call.
@@ -526,6 +536,8 @@ func (c *Client) SearchAuthors(ctx context.Context, name string, limit int) (*Au
 
 // parseSearchAuthorsResult parses the raw bytes from an author-search tool call.
 func parseSearchAuthorsResult(result []byte) (*AuthorsResponse, error) {
+	// AuthorID is omitempty in ASTAAuthor (an unresolved author may have only a
+	// name); Name is the field that's always present on a real author record.
 	authors, err := unwrapStreamedList(result, func(a ASTAAuthor) bool { return a.Name != "" }, "authors")
 	if err != nil {
 		return nil, err

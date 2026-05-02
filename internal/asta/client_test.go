@@ -119,6 +119,28 @@ func TestParseSearchPapersResult(t *testing.T) {
 			t.Errorf("expected ErrInvalidResponse, got %v", err)
 		}
 	})
+
+	t.Run("empty wrapped result", func(t *testing.T) {
+		resp, err := parseSearchPapersResult([]byte(`{"result":[]}`))
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if resp.Total != 0 || len(resp.Papers) != 0 {
+			t.Errorf("expected empty result, got total=%d len=%d", resp.Total, len(resp.Papers))
+		}
+	})
+
+	t.Run("bare null returns error", func(t *testing.T) {
+		// JSON null parses cleanly into a nil slice. The parser must not silently
+		// treat that as a successful empty list.
+		_, err := parseSearchPapersResult([]byte(`null`))
+		if err == nil {
+			t.Fatal("expected error for bare null, got nil")
+		}
+		if !errors.Is(err, ErrInvalidResponse) {
+			t.Errorf("expected ErrInvalidResponse, got %v", err)
+		}
+	})
 }
 
 func TestParseSearchAuthorsResult(t *testing.T) {
@@ -158,6 +180,17 @@ func TestParseSearchAuthorsResult(t *testing.T) {
 		}
 	})
 
+	t.Run("bare array", func(t *testing.T) {
+		raw := []byte(`[` + authorChunk + `]`)
+		resp, err := parseSearchAuthorsResult(raw)
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if len(resp.Authors) != 1 {
+			t.Fatalf("expected 1 author, got %d", len(resp.Authors))
+		}
+	})
+
 	t.Run("malformed object returns array-parse error", func(t *testing.T) {
 		raw := []byte(`{"foo":"bar"}`)
 		_, err := parseSearchAuthorsResult(raw)
@@ -169,6 +202,13 @@ func TestParseSearchAuthorsResult(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "as array") {
 			t.Errorf("expected array-parse error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		_, err := parseSearchAuthorsResult([]byte(`not json`))
+		if !errors.Is(err, ErrInvalidResponse) {
+			t.Errorf("expected ErrInvalidResponse, got %v", err)
 		}
 	})
 }
@@ -211,6 +251,20 @@ func TestParseAuthorPapersResult(t *testing.T) {
 		}
 	})
 
+	t.Run("bare array", func(t *testing.T) {
+		raw := []byte(`[` + paperChunk + `]`)
+		resp, err := parseAuthorPapersResult(raw, authorID)
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if len(resp.Papers) != 1 {
+			t.Fatalf("expected 1 paper, got %d", len(resp.Papers))
+		}
+		if resp.AuthorID != authorID {
+			t.Errorf("authorID not propagated: got %q", resp.AuthorID)
+		}
+	})
+
 	t.Run("malformed object returns array-parse error", func(t *testing.T) {
 		raw := []byte(`{"foo":"bar"}`)
 		_, err := parseAuthorPapersResult(raw, authorID)
@@ -219,6 +273,13 @@ func TestParseAuthorPapersResult(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "as array") {
 			t.Errorf("expected array-parse error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		_, err := parseAuthorPapersResult([]byte(`not json`), authorID)
+		if !errors.Is(err, ErrInvalidResponse) {
+			t.Errorf("expected ErrInvalidResponse, got %v", err)
 		}
 	})
 }
@@ -264,6 +325,20 @@ func TestParseCitationsResult(t *testing.T) {
 		}
 	})
 
+	t.Run("bare array", func(t *testing.T) {
+		raw := []byte(`[` + citationChunk + `]`)
+		resp, err := parseCitationsResult(raw, paperID)
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		if resp.CitationCount != 1 || len(resp.Citations) != 1 {
+			t.Fatalf("expected 1 citation, got count=%d len=%d", resp.CitationCount, len(resp.Citations))
+		}
+		if resp.PaperID != paperID {
+			t.Errorf("paperID not propagated: got %q", resp.PaperID)
+		}
+	})
+
 	t.Run("malformed object returns array-parse error", func(t *testing.T) {
 		// Object that has neither "result" nor "citingPaper" with a paperId.
 		raw := []byte(`{"foo":"bar"}`)
@@ -273,6 +348,13 @@ func TestParseCitationsResult(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "as array") {
 			t.Errorf("expected array-parse error, got: %v", err)
+		}
+	})
+
+	t.Run("invalid json", func(t *testing.T) {
+		_, err := parseCitationsResult([]byte(`not json`), paperID)
+		if !errors.Is(err, ErrInvalidResponse) {
+			t.Errorf("expected ErrInvalidResponse, got %v", err)
 		}
 	})
 }
