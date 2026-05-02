@@ -262,30 +262,65 @@ func (c *Client) SearchPapers(ctx context.Context, keyword string, limit int, da
 		return nil, err
 	}
 
-	// Response is wrapped in {"result": [...]}
+	return parseSearchPapersResult(result)
+}
+
+// unwrapStreamedList parses an MCP-streamed list result, accommodating the
+// three shapes the server may emit:
+//
+//  1. wrapped: {"result": [...]} — produced by combineStreamingResults when
+//     more than one SSE chunk arrived.
+//  2. bare array: [...] — when the upstream tool returns an array directly.
+//  3. bare single element: {...} — produced by combineStreamingResults when
+//     exactly one SSE chunk arrived (e.g., limit=1, see issue #134).
+//
+// isValid distinguishes a real bare element from an empty/error object so
+// stage 3 doesn't silently swallow malformed responses. label is used to
+// build the error message and should match the historical wording for the
+// caller (e.g., "search results", "authors", "citations"); tests assert on
+// these strings, so keep them stable.
+func unwrapStreamedList[T any](result []byte, isValid func(T) bool, label string) ([]T, error) {
 	var wrapper struct {
-		Result []ASTAPaper `json:"result"`
+		Result []T `json:"result"`
 	}
-	if err := json.Unmarshal(result, &wrapper); err != nil {
-		return nil, fmt.Errorf("%w: parsing search results: %v", ErrInvalidResponse, err)
-	}
-
-	// If result is nil, the wrapper didn't match - try direct array
-	if wrapper.Result == nil {
-		var papers []ASTAPaper
-		if err := json.Unmarshal(result, &papers); err != nil {
-			return nil, fmt.Errorf("%w: parsing search results as array: %v", ErrInvalidResponse, err)
-		}
-		return &SearchResponse{
-			Total:  len(papers),
-			Papers: papers,
-		}, nil
+	wrapErr := json.Unmarshal(result, &wrapper)
+	if wrapErr == nil && wrapper.Result != nil {
+		return wrapper.Result, nil
 	}
 
-	return &SearchResponse{
-		Total:  len(wrapper.Result),
-		Papers: wrapper.Result,
-	}, nil
+	// Stage 2: bare array. JSON `null` also parses cleanly into a nil slice;
+	// treat that as "no array shape" rather than success-with-zero so a
+	// stray null body doesn't silently look like an empty result set.
+	var arr []T
+	arrErr := json.Unmarshal(result, &arr)
+	if arrErr == nil && arr != nil {
+		return arr, nil
+	}
+
+	var single T
+	if err := json.Unmarshal(result, &single); err == nil && isValid(single) {
+		return []T{single}, nil
+	}
+
+	switch {
+	case wrapErr != nil:
+		return nil, fmt.Errorf("%w: parsing %s: %v", ErrInvalidResponse, label, wrapErr)
+	case arrErr != nil:
+		return nil, fmt.Errorf("%w: parsing %s as array: %v", ErrInvalidResponse, label, arrErr)
+	default:
+		// Both stages 1 and 2 parsed without error but produced no list
+		// (e.g., bare `null` or `{"result":null}`).
+		return nil, fmt.Errorf("%w: parsing %s: empty result", ErrInvalidResponse, label)
+	}
+}
+
+// parseSearchPapersResult parses the raw bytes from a paper-search tool call.
+func parseSearchPapersResult(result []byte) (*SearchResponse, error) {
+	papers, err := unwrapStreamedList(result, func(p ASTAPaper) bool { return p.PaperID != "" }, "search results")
+	if err != nil {
+		return nil, err
+	}
+	return &SearchResponse{Total: len(papers), Papers: papers}, nil
 }
 
 // SnippetSearch searches for text snippets within papers.
@@ -416,21 +451,24 @@ func (c *Client) GetCitations(ctx context.Context, paperID string, limit int, da
 		return nil, err
 	}
 
-	// Parse citations response - format: {"result": [{"citingPaper": {...}}, ...]}
-	var wrapper struct {
-		Result []struct {
-			CitingPaper ASTAPaper `json:"citingPaper"`
-		} `json:"result"`
-	}
-	if err := json.Unmarshal(result, &wrapper); err != nil {
-		return nil, fmt.Errorf("%w: parsing citations: %v", ErrInvalidResponse, err)
-	}
+	return parseCitationsResult(result, paperID)
+}
 
-	citations := make([]ASTAPaper, len(wrapper.Result))
-	for i, c := range wrapper.Result {
-		citations[i] = c.CitingPaper
-	}
+// citationEntry matches a single ASTA citation: {"citingPaper": {...}}.
+type citationEntry struct {
+	CitingPaper ASTAPaper `json:"citingPaper"`
+}
 
+// parseCitationsResult parses the raw bytes from a citations tool call.
+func parseCitationsResult(result []byte, paperID string) (*CitationsResponse, error) {
+	entries, err := unwrapStreamedList(result, func(e citationEntry) bool { return e.CitingPaper.PaperID != "" }, "citations")
+	if err != nil {
+		return nil, err
+	}
+	citations := make([]ASTAPaper, len(entries))
+	for i, e := range entries {
+		citations[i] = e.CitingPaper
+	}
 	return &CitationsResponse{
 		PaperID:       paperID,
 		CitationCount: len(citations),
@@ -493,15 +531,18 @@ func (c *Client) SearchAuthors(ctx context.Context, name string, limit int) (*Au
 		return nil, err
 	}
 
-	// Parse response - format: {"result": [...]}
-	var wrapper struct {
-		Result []ASTAAuthor `json:"result"`
-	}
-	if err := json.Unmarshal(result, &wrapper); err != nil {
-		return nil, fmt.Errorf("%w: parsing authors: %v", ErrInvalidResponse, err)
-	}
+	return parseSearchAuthorsResult(result)
+}
 
-	return &AuthorsResponse{Authors: wrapper.Result}, nil
+// parseSearchAuthorsResult parses the raw bytes from an author-search tool call.
+func parseSearchAuthorsResult(result []byte) (*AuthorsResponse, error) {
+	// AuthorID is omitempty in ASTAAuthor (an unresolved author may have only a
+	// name); Name is the field that's always present on a real author record.
+	authors, err := unwrapStreamedList(result, func(a ASTAAuthor) bool { return a.Name != "" }, "authors")
+	if err != nil {
+		return nil, err
+	}
+	return &AuthorsResponse{Authors: authors}, nil
 }
 
 // GetAuthorPapers fetches papers by an author.
@@ -524,16 +565,14 @@ func (c *Client) GetAuthorPapers(ctx context.Context, authorID string, limit int
 		return nil, err
 	}
 
-	// Parse response - format: {"result": [...]}
-	var wrapper struct {
-		Result []ASTAPaper `json:"result"`
-	}
-	if err := json.Unmarshal(result, &wrapper); err != nil {
-		return nil, fmt.Errorf("%w: parsing author papers: %v", ErrInvalidResponse, err)
-	}
+	return parseAuthorPapersResult(result, authorID)
+}
 
-	return &AuthorPapersResponse{
-		AuthorID: authorID,
-		Papers:   wrapper.Result,
-	}, nil
+// parseAuthorPapersResult parses the raw bytes from a get_author_papers tool call.
+func parseAuthorPapersResult(result []byte, authorID string) (*AuthorPapersResponse, error) {
+	papers, err := unwrapStreamedList(result, func(p ASTAPaper) bool { return p.PaperID != "" }, "author papers")
+	if err != nil {
+		return nil, err
+	}
+	return &AuthorPapersResponse{AuthorID: authorID, Papers: papers}, nil
 }
