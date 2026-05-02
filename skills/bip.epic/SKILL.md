@@ -238,52 +238,42 @@ Wait for user confirmation, then run `/bip.epic.spawn` (do NOT improvise tmux/cl
 ### Step 8: Start slot monitor
 
 After the dashboard is built and any spawns are launched, offer to start
-a **persistent Monitor** that watches `.epic-status.json` across all
-active slots. This replaces `/loop 10m /bip.epic.poll` for the most
+the **persistent slot monitor** — `bip epic watch` — which observes
+every slot's `.epic-status.json` and writes phase-transition events to
+`.epic-notifications.log` (JSONL) in the conductor cwd. The log is the
+canonical record; transitions survive watcher restarts and conductor
+compaction. This replaces `/loop 10m /bip.epic.poll` for the most
 time-sensitive signals (phase transitions), while `/bip.epic.poll`
 remains available for full GitHub + slot reconciliation sweeps.
 
-Use the Monitor tool with `persistent: true`:
+Start the watcher in the background:
 
-```
-description: "EPIC slot phase changes"
-persistent: true
-command: |
-  CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-  LOCAL_WT=$(jq -r '.local_worktrees // false' .epic-config.json)
-  touch /tmp/.epic-monitor-baseline
-
-  if [ "$LOCAL_WT" = "true" ]; then
-    WATCH_DIR="$CLONE_ROOT"
-  else
-    WATCH_DIR="$CLONE_ROOT"
-  fi
-
-  fswatch --batch-marker=EOF -r "$WATCH_DIR" --include '.epic-status.json' --exclude '.*' | \
-    while read line; do
-      if [ "$line" = "EOF" ]; then
-        find "$WATCH_DIR" -name '.epic-status.json' -newer /tmp/.epic-monitor-baseline \
-          -exec sh -c '
-            SLOT=$(basename "$(dirname "$1")")
-            PHASE=$(jq -r .phase "$1" 2>/dev/null)
-            SUMMARY=$(jq -r .summary "$1" 2>/dev/null)
-            ISSUE=$(jq -r .issue "$1" 2>/dev/null)
-            echo "$SLOT (i$ISSUE): $PHASE — $SUMMARY"
-          ' _ {} \;
-        touch /tmp/.epic-monitor-baseline
-      fi
-    done
+```bash
+nohup bip epic watch >/dev/null 2>&1 &
 ```
 
-When a notification arrives showing `needs-human` or `completed`, the
+The watcher runs forever, exits cleanly on SIGTERM, and emits one event
+per real phase transition (default filter: `needs-human`, `completed`,
+`awaiting-results`, `quality-gate`). To also receive events as Claude
+Code notifications when that pipeline is reliable, additionally start a
+Monitor with `command: tail -F .epic-notifications.log` and
+`persistent: true`. The notifications log is the contract; Monitor is a
+latency optimization, not a correctness requirement.
+
+When a transition arrives showing `needs-human` or `completed`, the
 conductor should react immediately — read the slot's status, check the
 lead guidance, and either propose the next action or flag it for the user.
 
-> "Slot monitor started — you'll see phase changes as they happen.
-> Use `/bip.epic.poll` for a full reconciliation sweep when needed."
+> "Slot monitor started — phase transitions are streaming to
+> `.epic-notifications.log`. Use `/bip.epic.poll` for a full
+> reconciliation sweep when needed."
 
-**Prerequisites**: Requires `fswatch` (`brew install fswatch` on macOS).
-If not available, fall back to `/loop 10m /bip.epic.poll`.
+On NFS-mounted clone roots where inotify does not fire on remote writes,
+pass `--poll` (defaults to a 2 s stat-loop) instead of fsnotify:
+
+```bash
+nohup bip epic watch --poll >/dev/null 2>&1 &
+```
 
 ## EPIC body update pattern
 

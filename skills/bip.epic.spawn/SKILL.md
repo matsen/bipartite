@@ -444,9 +444,12 @@ Target project repos should gitignore these files (add to `.gitignore`):
 ```
 .epic-status.json
 .epic-worklog.md
+.epic-notifications.log
 ```
 
-These files live in clones, not in bipartite itself.
+`.epic-status.json` and `.epic-worklog.md` live in each clone/worktree.
+`.epic-notifications.log` lives in the conductor cwd and is written by
+`bip epic watch`. None should be checked in.
 
 ## Conventions
 
