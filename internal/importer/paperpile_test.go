@@ -73,7 +73,7 @@ func TestParsePaperpile_ValidEntry(t *testing.T) {
 		]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -155,7 +155,7 @@ func TestParsePaperpile_WithoutNotes(t *testing.T) {
 		"author": [{"first": "John", "last": "Smith"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -172,7 +172,7 @@ func TestParsePaperpile_NoCitekey(t *testing.T) {
 		"author": [{"first": "John", "last": "Smith"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -207,7 +207,7 @@ func TestParsePaperpile_MissingRequiredFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			refs, errs := ParsePaperpile([]byte(tt.data))
+			refs, _, errs := ParsePaperpile([]byte(tt.data), true)
 			if len(errs) == 0 {
 				t.Errorf("ParsePaperpile() expected error for %s, got refs: %+v", tt.name, refs)
 			}
@@ -223,7 +223,7 @@ func TestParsePaperpile_InvalidYear(t *testing.T) {
 		"author": [{"first": "John", "last": "Smith"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) == 0 {
 		t.Errorf("ParsePaperpile() expected error for invalid year, got refs: %+v", refs)
 	}
@@ -238,7 +238,7 @@ func TestParsePaperpile_NumericYearMonth(t *testing.T) {
 		"author": [{"first": "John", "last": "Smith"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -253,7 +253,7 @@ func TestParsePaperpile_NumericYearMonth(t *testing.T) {
 func TestParsePaperpile_InvalidJSON(t *testing.T) {
 	data := []byte(`not valid json`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) == 0 {
 		t.Errorf("ParsePaperpile() expected error for invalid JSON, got refs: %+v", refs)
 	}
@@ -262,7 +262,7 @@ func TestParsePaperpile_InvalidJSON(t *testing.T) {
 func TestParsePaperpile_EmptyArray(t *testing.T) {
 	data := []byte(`[]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -277,7 +277,7 @@ func TestParsePaperpile_MultipleEntries(t *testing.T) {
 		{"_id": "2", "citekey": "B2026", "title": "Paper B", "published": {"year": "2025"}, "author": [{"last": "B"}]}
 	]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -297,7 +297,7 @@ func TestParsePaperpile_PartialErrors(t *testing.T) {
 		{"_id": "3", "citekey": "AlsoValid2026", "title": "Also Valid", "published": {"year": "2025"}, "author": [{"last": "Also"}]}
 	]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(refs) != 2 {
 		t.Errorf("ParsePaperpile() returned %d valid refs, want 2", len(refs))
 	}
@@ -314,7 +314,7 @@ func TestParsePaperpile_RealTestData(t *testing.T) {
 		t.Skipf("Test data file not found: %v", err)
 	}
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Errorf("ParsePaperpile() returned %d errors parsing real test data: %v", len(errs), errs)
 	}
@@ -352,7 +352,7 @@ func TestPaperpileEntry_AuthorWithOnlyLast(t *testing.T) {
 		"author": [{"last": "Corporation"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -376,7 +376,7 @@ func TestParsePaperpile_WithLabelsAndFolders(t *testing.T) {
 		"foldersNamed": ["my papers"]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -399,7 +399,7 @@ func TestParsePaperpile_DuplicateLabelAndFolder(t *testing.T) {
 		"foldersNamed": ["antibody"]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
@@ -417,12 +417,155 @@ func TestParsePaperpile_NoLabelsOrFolders(t *testing.T) {
 		"author": [{"first": "John", "last": "Smith"}]
 	}]`)
 
-	refs, errs := ParsePaperpile(data)
+	refs, _, errs := ParsePaperpile(data, true)
 	if len(errs) > 0 {
 		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
 	}
 	if len(refs[0].Tags) != 0 {
 		t.Errorf("Tags = %v, want empty", refs[0].Tags)
+	}
+}
+
+func TestParsePaperpile_LenientMissingYear(t *testing.T) {
+	// Real-world case from issue #138: eLife reviewed preprint with no year.
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "Sung2025-thrifty",
+		"title": "Thrifty wide-context models of B cell receptor somatic hypermutation",
+		"author": [{"first": "Kevin", "last": "Sung"}],
+		"published": {}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile(lenient) returned errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if refs[0].Published.Year != UnknownYear {
+		t.Errorf("Year = %d, want %d (sentinel)", refs[0].Published.Year, UnknownYear)
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1", len(warnings))
+	}
+	if len(warnings[0].Fields) != 1 || warnings[0].Fields[0] != "published.year" {
+		t.Errorf("warning fields = %v, want [published.year]", warnings[0].Fields)
+	}
+	if warnings[0].ID != "Sung2025-thrifty" {
+		t.Errorf("warning ID = %s, want Sung2025-thrifty", warnings[0].ID)
+	}
+}
+
+func TestParsePaperpile_LenientMissingTitle(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "NoTitle2026",
+		"author": [{"last": "Smith"}],
+		"published": {"year": "2026"}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("returned errors: %v", errs)
+	}
+	if len(refs) != 1 || refs[0].Title != UnknownTitle {
+		t.Errorf("Title = %q, want %q", refs[0].Title, UnknownTitle)
+	}
+	if len(warnings) != 1 || warnings[0].Fields[0] != "title" {
+		t.Errorf("warning fields = %v, want [title]", warnings[0].Fields)
+	}
+}
+
+func TestParsePaperpile_LenientMissingAuthor(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "NoAuthor2026",
+		"title": "Some paper",
+		"published": {"year": "2026"}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("returned errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if len(refs[0].Authors) != 1 || refs[0].Authors[0].Last != UnknownAuthor {
+		t.Errorf("Authors = %+v, want one author with Last=%q", refs[0].Authors, UnknownAuthor)
+	}
+	if len(warnings) != 1 || warnings[0].Fields[0] != "author" {
+		t.Errorf("warning fields = %v, want [author]", warnings[0].Fields)
+	}
+}
+
+func TestParsePaperpile_LenientMultipleMissingFields(t *testing.T) {
+	// Has DOI, so not pure junk — should still import with all three sentinels.
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "OnlyDOI",
+		"doi": "10.1234/whatever",
+		"published": {}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("returned errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1", len(warnings))
+	}
+	if len(warnings[0].Fields) != 3 {
+		t.Errorf("warning fields = %v, want all three (title, author, published.year)", warnings[0].Fields)
+	}
+}
+
+func TestParsePaperpile_LenientJunkEntryDropped(t *testing.T) {
+	// Pure junk: no title, no author, no year, no DOI. Paperpile auto-stub for
+	// an unparsed web page. Even in lenient mode this should be dropped to
+	// avoid flooding the nexus with placeholders.
+	data := []byte(`[{
+		"_id": "abc",
+		"citekey": "noauthor_undated-aa",
+		"published": {}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(refs) != 0 {
+		t.Errorf("got %d refs, want 0 (junk should be dropped)", len(refs))
+	}
+	if len(warnings) != 0 {
+		t.Errorf("got %d warnings, want 0", len(warnings))
+	}
+	if len(errs) != 1 {
+		t.Errorf("got %d errors, want 1 (junk dropped with explanation)", len(errs))
+	}
+}
+
+func TestParsePaperpile_StrictDropsAllMissing(t *testing.T) {
+	// Verify strict mode preserves the original behavior: any missing required
+	// field drops the entry, no fallbacks.
+	data := []byte(`[{
+		"_id": "abc",
+		"citekey": "MissingYear",
+		"title": "Has title",
+		"author": [{"last": "Smith"}],
+		"published": {}
+	}]`)
+
+	refs, warnings, errs := ParsePaperpile(data, true)
+	if len(refs) != 0 {
+		t.Errorf("strict mode: got %d refs, want 0", len(refs))
+	}
+	if len(warnings) != 0 {
+		t.Errorf("strict mode should not produce warnings, got %d", len(warnings))
+	}
+	if len(errs) != 1 {
+		t.Errorf("strict mode: got %d errors, want 1", len(errs))
 	}
 }
 

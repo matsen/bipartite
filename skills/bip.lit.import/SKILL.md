@@ -34,7 +34,7 @@ Always dry-run first to show what will change:
 bip import --format paperpile "<file>" --dry-run --human
 ```
 
-Report the counts (new, updated, skipped) to the user. The skipped entries are typically old Paperpile records missing year or author — expected and not actionable.
+Report the counts (new, updated, skipped, warnings) to the user. By default, entries missing required fields (title, author, published.year) are imported with sentinel placeholders (`[no title]`, `Unknown`, year `0`) and listed under `warnings` so they're not silently dropped — review the warning list and fix the affected Paperpile records when convenient. Entries with no useful metadata at all (no title, author, year, or DOI — typically Paperpile auto-stubs for unparsed web pages) are still skipped and counted under `skipped`. Pass `--strict` to revert to the old behavior of dropping any entry with a missing required field.
 
 ### 3. Import
 
