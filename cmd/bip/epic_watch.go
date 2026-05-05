@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -60,7 +61,7 @@ func init() {
 	epicWatchCmd.Flags().StringVar(&epicWatchSince, "since", "",
 		"Replay log entries newer than DURATION to stdout, then exit (e.g. 30m, 2h)")
 	epicWatchCmd.Flags().StringVar(&epicWatchPoll, "poll", "",
-		"Use stat polling at DURATION instead of fsnotify (default 2s)")
+		"Stat-poll at DURATION instead of fsnotify (omit value to use 2s)")
 	epicWatchCmd.Flags().Lookup("poll").NoOptDefVal = defaultPollInterval
 	epicCmd.AddCommand(epicWatchCmd)
 }
@@ -103,6 +104,11 @@ type watchConfig struct {
 	logPath      string
 	stdout       io.Writer
 	stderr       io.Writer
+	// ready, when non-nil, is closed by runWatcher after the initial
+	// baseline reads complete and any fsnotify watches have been added,
+	// just before the event loop starts. Tests use this to synchronize
+	// on watcher startup so transition writes are not raced.
+	ready chan<- struct{}
 }
 
 func runEpicWatch(cmd *cobra.Command, args []string) error {
@@ -120,6 +126,11 @@ func runEpicWatch(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		exitWithError(ExitConfigError, "%v", err)
 	}
+	if len(slots) == 0 {
+		exitWithError(ExitConfigError,
+			"no slots resolved from %s — in worktree mode, at least one issue-* subdirectory must exist before starting the watcher",
+			epicConfigName)
+	}
 
 	logPath := filepath.Join(cwd, epicNotificationsName)
 
@@ -129,7 +140,7 @@ func runEpicWatch(cmd *cobra.Command, args []string) error {
 			exitWithError(ExitError, "invalid --since duration %q: %v", epicWatchSince, err)
 		}
 		cutoff := time.Now().Add(-dur)
-		return replaySince(logPath, cutoff, os.Stdout)
+		return replaySince(logPath, cutoff, os.Stdout, os.Stderr)
 	}
 
 	var pollInterval time.Duration
@@ -186,8 +197,13 @@ func loadEpicConfig(dir string) (*epicConfig, error) {
 // resolveSlots returns the slots to watch given the config.
 // Clone mode: one slot per entry in clone_names.
 // Worktree mode: one slot per existing issue-* subdirectory of clone_root.
+// Returns an empty slice (no error) if the worktree mode clone_root has no
+// issue-* subdirectories yet — the caller decides whether that is fatal.
 func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
-	cloneRoot := expandPath(cfg.CloneRoot)
+	cloneRoot, err := expandPath(cfg.CloneRoot)
+	if err != nil {
+		return nil, fmt.Errorf("expanding clone_root %q: %w", cfg.CloneRoot, err)
+	}
 	if !filepath.IsAbs(cloneRoot) {
 		cloneRoot = filepath.Join(repoDir, cloneRoot)
 	}
@@ -222,13 +238,16 @@ func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
 }
 
 // expandPath expands a leading ~/ to the user's home directory.
-func expandPath(p string) string {
-	if strings.HasPrefix(p, "~/") {
-		if home, err := os.UserHomeDir(); err == nil {
-			return filepath.Join(home, p[2:])
-		}
+// Returns an error if the home directory cannot be resolved.
+func expandPath(p string) (string, error) {
+	if !strings.HasPrefix(p, "~/") {
+		return p, nil
 	}
-	return p
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, p[2:]), nil
 }
 
 // parsePhasesFilter parses the comma-separated --phases value.
@@ -261,33 +280,11 @@ func readStatus(path string) (*epicStatus, error) {
 	return &s, nil
 }
 
-// seedLastPhases reads the notifications log and returns the most recent
-// new_phase per slot. Missing log returns an empty map.
-func seedLastPhases(logPath string) (map[string]string, error) {
-	last := map[string]string{}
-	f, err := os.Open(logPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return last, nil
-		}
-		return nil, err
-	}
-	defer f.Close()
-
-	dec := json.NewDecoder(f)
-	for dec.More() {
-		var ev epicEvent
-		if err := dec.Decode(&ev); err != nil {
-			break
-		}
-		last[ev.Slot] = ev.NewPhase
-	}
-	return last, nil
-}
-
-// replaySince writes log entries with timestamp >= now-DURATION to w.
-// It does not append to the log.
-func replaySince(logPath string, cutoff time.Time, w io.Writer) error {
+// scanLogLines streams the JSONL log file line-by-line, invoking handle for
+// each successfully parsed entry. Malformed lines are reported to warn (if
+// non-nil) and skipped — they never abort the scan, so a single corrupt entry
+// cannot drop subsequent valid ones.
+func scanLogLines(logPath string, warn io.Writer, handle func(epicEvent)) error {
 	f, err := os.Open(logPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -297,22 +294,78 @@ func replaySince(logPath string, cutoff time.Time, w io.Writer) error {
 	}
 	defer f.Close()
 
-	dec := json.NewDecoder(f)
-	for dec.More() {
+	scanner := bufio.NewScanner(f)
+	// Allow long lines (large summaries with embedded newlines escaped via JSON).
+	scanner.Buffer(make([]byte, 64*1024), 1024*1024)
+	lineNo := 0
+	for scanner.Scan() {
+		lineNo++
+		line := scanner.Bytes()
+		if len(bytesTrimSpace(line)) == 0 {
+			continue
+		}
 		var ev epicEvent
-		if err := dec.Decode(&ev); err != nil {
+		if err := json.Unmarshal(line, &ev); err != nil {
+			if warn != nil {
+				fmt.Fprintf(warn, "warning: %s line %d: %v\n", logPath, lineNo, err)
+			}
+			continue
+		}
+		handle(ev)
+	}
+	return scanner.Err()
+}
+
+// bytesTrimSpace trims ASCII whitespace from a byte slice without allocating
+// a new string.
+func bytesTrimSpace(b []byte) []byte {
+	start, end := 0, len(b)
+	for start < end {
+		c := b[start]
+		if c != ' ' && c != '\t' && c != '\r' && c != '\n' {
 			break
 		}
+		start++
+	}
+	for end > start {
+		c := b[end-1]
+		if c != ' ' && c != '\t' && c != '\r' && c != '\n' {
+			break
+		}
+		end--
+	}
+	return b[start:end]
+}
+
+// seedLastPhases reads the notifications log and returns the most recent
+// new_phase per slot. Missing log returns an empty map. Malformed lines are
+// reported to warn and skipped.
+func seedLastPhases(logPath string, warn io.Writer) (map[string]string, error) {
+	last := map[string]string{}
+	if err := scanLogLines(logPath, warn, func(ev epicEvent) {
+		last[ev.Slot] = ev.NewPhase
+	}); err != nil {
+		return last, err
+	}
+	return last, nil
+}
+
+// replaySince writes log entries with timestamp >= cutoff to w.
+// It does not append to the log.
+func replaySince(logPath string, cutoff time.Time, w io.Writer, warn io.Writer) error {
+	return scanLogLines(logPath, warn, func(ev epicEvent) {
 		ts, err := time.Parse(time.RFC3339, ev.Ts)
 		if err != nil {
-			continue
+			if warn != nil {
+				fmt.Fprintf(warn, "warning: invalid ts %q: %v\n", ev.Ts, err)
+			}
+			return
 		}
 		if ts.Before(cutoff) {
-			continue
+			return
 		}
 		fmt.Fprintln(w, formatEventLine(ev))
-	}
-	return nil
+	})
 }
 
 // formatEventLine renders an event as a single human-readable stdout line.
@@ -332,11 +385,13 @@ func formatEventLine(ev epicEvent) string {
 		ev.Slot, ev.Issue, old, ev.NewPhase, summary)
 }
 
-// runWatcher seeds state from the log, performs an initial baseline
-// read of every slot, and then either polls or uses fsnotify to detect
-// phase transitions until ctx is cancelled.
+// runWatcher seeds state from the log, performs an initial baseline read of
+// every slot, sets up fsnotify (or stat polling) and then dispatches phase
+// transitions until ctx is cancelled. lastPhase is the only mutable state
+// shared across the baseline read and the event loop; it lives entirely
+// inside this single goroutine.
 func runWatcher(ctx context.Context, cfg watchConfig) error {
-	lastPhase, err := seedLastPhases(cfg.logPath)
+	lastPhase, err := seedLastPhases(cfg.logPath, cfg.stderr)
 	if err != nil {
 		fmt.Fprintf(cfg.stderr, "warning: reading notifications log: %v\n", err)
 		lastPhase = map[string]string{}
@@ -353,9 +408,41 @@ func runWatcher(ctx context.Context, cfg watchConfig) error {
 	}
 
 	if cfg.pollInterval > 0 {
+		signalReady(cfg)
 		return runPollLoop(ctx, cfg, lastPhase, logFile)
 	}
-	return runFsnotifyLoop(ctx, cfg, lastPhase, logFile)
+
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return fmt.Errorf("creating fsnotify watcher: %w", err)
+	}
+	defer w.Close()
+
+	parentToSlots := map[string][]slotInfo{}
+	for _, s := range cfg.slots {
+		parent := filepath.Dir(s.statusPath)
+		parentToSlots[parent] = append(parentToSlots[parent], s)
+	}
+	added := 0
+	for parent := range parentToSlots {
+		if err := w.Add(parent); err != nil {
+			fmt.Fprintf(cfg.stderr, "warning: watching %s: %v\n", parent, err)
+			continue
+		}
+		added++
+	}
+	if added == 0 {
+		return fmt.Errorf("no parent directories could be watched (%d slots configured)", len(cfg.slots))
+	}
+
+	signalReady(cfg)
+	return runFsnotifyEvents(ctx, w, parentToSlots, cfg, lastPhase, logFile)
+}
+
+func signalReady(cfg watchConfig) {
+	if cfg.ready != nil {
+		close(cfg.ready)
+	}
 }
 
 // processStatus reads the slot's status file and emits a transition event
@@ -411,24 +498,7 @@ func emitEvent(ev epicEvent, logFile *os.File, stdout, stderr io.Writer) {
 	fmt.Fprintln(stdout, formatEventLine(ev))
 }
 
-func runFsnotifyLoop(ctx context.Context, cfg watchConfig, lastPhase map[string]string, logFile *os.File) error {
-	w, err := fsnotify.NewWatcher()
-	if err != nil {
-		return fmt.Errorf("creating fsnotify watcher: %w", err)
-	}
-	defer w.Close()
-
-	parentToSlots := map[string][]slotInfo{}
-	for _, s := range cfg.slots {
-		parent := filepath.Dir(s.statusPath)
-		parentToSlots[parent] = append(parentToSlots[parent], s)
-	}
-	for parent := range parentToSlots {
-		if err := w.Add(parent); err != nil {
-			fmt.Fprintf(cfg.stderr, "warning: watching %s: %v\n", parent, err)
-		}
-	}
-
+func runFsnotifyEvents(ctx context.Context, w *fsnotify.Watcher, parentToSlots map[string][]slotInfo, cfg watchConfig, lastPhase map[string]string, logFile *os.File) error {
 	for {
 		select {
 		case <-ctx.Done():

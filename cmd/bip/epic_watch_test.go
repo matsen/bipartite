@@ -113,6 +113,7 @@ func startWatcher(t *testing.T, slots []slotInfo, phases map[string]bool, logPat
 	t.Helper()
 	stdout := &syncBuffer{}
 	stderr := &syncBuffer{}
+	ready := make(chan struct{})
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
@@ -123,8 +124,21 @@ func startWatcher(t *testing.T, slots []slotInfo, phases map[string]bool, logPat
 			logPath:      logPath,
 			stdout:       stdout,
 			stderr:       stderr,
+			ready:        ready,
 		})
 	}()
+	// Block until the watcher has finished its baseline reads and (in
+	// fsnotify mode) installed all watches. This makes the subsequent
+	// transition writes deterministic — no race against startup.
+	select {
+	case <-ready:
+	case err := <-done:
+		// runWatcher returned before signaling ready (typically a setup error).
+		t.Fatalf("watcher exited before ready: %v", err)
+	case <-time.After(2 * time.Second):
+		cancel()
+		t.Fatal("watcher did not signal ready within 2s")
+	}
 	return &watcherHandle{cancel: cancel, done: done, stdout: stdout, stderr: stderr}
 }
 
@@ -163,9 +177,6 @@ func TestPhaseTransitionEmits(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
 	defer h.stop(t)
 
-	// Wait for baseline read to complete.
-	time.Sleep(150 * time.Millisecond)
-
 	writeStatus(t, slot.statusPath, 42, "quality-gate", "PR open")
 
 	waitFor(t, 2*time.Second, func() bool {
@@ -202,7 +213,10 @@ func TestFirstReadIsBaselineNoEmit(t *testing.T) {
 	writeStatus(t, slot.statusPath, 1, "needs-human", "stuck")
 
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
-	time.Sleep(200 * time.Millisecond)
+	// startWatcher already blocked on the ready signal, so the baseline read
+	// is complete before this line. A short wait ensures any spurious
+	// post-baseline tick would also have fired.
+	time.Sleep(150 * time.Millisecond)
 	h.stop(t)
 
 	if events := readLogEvents(t, logPath); len(events) != 0 {
@@ -223,8 +237,8 @@ func TestNonMilestoneSuppressed(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
 	defer h.stop(t)
 
-	time.Sleep(150 * time.Millisecond)
 	writeStatus(t, slot.statusPath, 1, "coding", "making changes")
+	// Allow several poll ticks to confirm no spurious event appears.
 	time.Sleep(250 * time.Millisecond)
 
 	if events := readLogEvents(t, logPath); len(events) != 0 {
@@ -242,19 +256,29 @@ func TestRepeatedWriteSamePhase(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
 	defer h.stop(t)
 
-	time.Sleep(150 * time.Millisecond)
-
+	// First write IS a milestone transition (coding → needs-human).
 	writeStatus(t, slot.statusPath, 1, "needs-human", "v1")
 	waitFor(t, 2*time.Second, func() bool {
 		return len(readLogEvents(t, logPath)) >= 1
 	})
 
+	// Subsequent writes with the same phase but different summaries must
+	// NOT emit additional events — the gate is on phase, not on summary.
 	writeStatus(t, slot.statusPath, 1, "needs-human", "v2")
 	writeStatus(t, slot.statusPath, 1, "needs-human", "v3")
 	time.Sleep(200 * time.Millisecond)
 
-	if got := len(readLogEvents(t, logPath)); got != 1 {
-		t.Fatalf("expected exactly one transition event, got %d", got)
+	events := readLogEvents(t, logPath)
+	if len(events) != 1 {
+		t.Fatalf("expected exactly one transition event, got %d: %+v", len(events), events)
+	}
+	got := events[0]
+	if got.NewPhase != "needs-human" || got.OldPhase == nil || *got.OldPhase != "coding" {
+		t.Errorf("unexpected event content: %+v", got)
+	}
+	// Summary must come from the transitioning write, not a later same-phase rewrite.
+	if got.Summary != "v1" {
+		t.Errorf("summary = %q, want %q (transitioning write)", got.Summary, "v1")
 	}
 }
 
@@ -270,7 +294,6 @@ func TestLogLineIsValidJSON(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
 	defer h.stop(t)
 
-	time.Sleep(150 * time.Millisecond)
 	gnarlySummary := "line1\nline2\twith\ttabs\nquoted: \"hello\" — emoji 🎉"
 	writeStatus(t, slot.statusPath, 7, "completed", gnarlySummary)
 	waitFor(t, 2*time.Second, func() bool {
@@ -289,13 +312,14 @@ func TestLogLineIsValidJSON(t *testing.T) {
 		t.Errorf("summary did not round-trip: got %q want %q", got.Summary, gnarlySummary)
 	}
 
-	// The stdout line must be a single line: tabs/newlines collapsed.
+	// The stdout line must be a single line: tabs AND newlines collapsed.
+	// stdoutLines splits on '\n', so the count check catches surviving newlines.
 	lines := stdoutLines(h.stdout)
 	if len(lines) != 1 {
-		t.Fatalf("expected single stdout line, got %d: %v", len(lines), lines)
+		t.Fatalf("expected single stdout line (newlines should be collapsed), got %d: %v", len(lines), lines)
 	}
-	if strings.ContainsAny(lines[0], "\t") {
-		t.Errorf("stdout line still contains tab: %q", lines[0])
+	if strings.ContainsAny(lines[0], "\t\n\r") {
+		t.Errorf("stdout line still contains tab/newline/cr: %q", lines[0])
 	}
 }
 
@@ -307,7 +331,6 @@ func TestNotificationLogPersists(t *testing.T) {
 	writeStatus(t, slot.statusPath, 1, "coding", "")
 
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
-	time.Sleep(150 * time.Millisecond)
 	writeStatus(t, slot.statusPath, 1, "completed", "done")
 	waitFor(t, 2*time.Second, func() bool {
 		return len(readLogEvents(t, logPath)) >= 1
@@ -348,7 +371,8 @@ func TestStateRecoveryFromLog(t *testing.T) {
 	writeStatus(t, slot.statusPath, 99, "quality-gate", "still here")
 
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
-	time.Sleep(200 * time.Millisecond)
+	// Allow several ticks; if seeding worked, no new event should appear.
+	time.Sleep(150 * time.Millisecond)
 	h.stop(t)
 
 	events := readLogEvents(t, logPath)
@@ -386,7 +410,7 @@ func TestSinceFlagReplaysFromLog(t *testing.T) {
 
 	var buf bytes.Buffer
 	cutoff := time.Now().Add(-1 * time.Hour)
-	if err := replaySince(logPath, cutoff, &buf); err != nil {
+	if err := replaySince(logPath, cutoff, &buf, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
@@ -422,11 +446,10 @@ func TestSinceBoundaryFuture(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// --since=-1h pushes the cutoff one hour into the future.
-	dur, _ := time.ParseDuration("-1h")
-	cutoff := time.Now().Add(-dur)
+	// Cutoff one hour in the future — no past entry should match.
+	cutoff := time.Now().Add(time.Hour)
 	var buf bytes.Buffer
-	if err := replaySince(logPath, cutoff, &buf); err != nil {
+	if err := replaySince(logPath, cutoff, &buf, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	if buf.Len() != 0 {
@@ -459,7 +482,7 @@ func TestSinceBoundaryAll(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := replaySince(logPath, time.Now().Add(-1000*time.Hour), &buf); err != nil {
+	if err := replaySince(logPath, time.Now().Add(-1000*time.Hour), &buf, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
@@ -583,11 +606,20 @@ func TestMalformedStatusFileSkipped(t *testing.T) {
 	}
 
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
-	time.Sleep(200 * time.Millisecond)
 
-	// Now write a valid file: baseline read happens, then a transition.
+	// First valid write establishes a baseline (the malformed read produced
+	// a warning but no baseline). The next write is the milestone.
 	writeStatus(t, slot.statusPath, 1, "coding", "")
-	time.Sleep(150 * time.Millisecond)
+	// Give the poll loop time to read the baseline before triggering a transition.
+	waitFor(t, 2*time.Second, func() bool {
+		// Once we see the baseline write applied, h.stderr should contain
+		// at least one warning from the earlier malformed read.
+		return h.stderr.String() != ""
+	})
+	// Small additional pause so the baseline read tick happens before the
+	// transition write (avoids a race where both writes are observed in the
+	// same poll tick and the malformed-then-completed path skips the baseline).
+	time.Sleep(80 * time.Millisecond)
 	writeStatus(t, slot.statusPath, 1, "completed", "done")
 	waitFor(t, 2*time.Second, func() bool {
 		return len(readLogEvents(t, logPath)) >= 1
@@ -595,8 +627,8 @@ func TestMalformedStatusFileSkipped(t *testing.T) {
 
 	h.stop(t)
 
-	if h.stderr.String() == "" {
-		t.Errorf("expected a parse warning on stderr, got empty")
+	if !strings.Contains(h.stderr.String(), "warning") {
+		t.Errorf("expected a parse warning on stderr, got: %q", h.stderr.String())
 	}
 	if events := readLogEvents(t, logPath); len(events) != 1 {
 		t.Fatalf("expected exactly 1 event after recovery, got %d", len(events))
@@ -613,12 +645,9 @@ func TestStatusFileDeletedDuringWatch(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
 	defer h.stop(t)
 
-	time.Sleep(150 * time.Millisecond)
 	if err := os.Remove(slot.statusPath); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(150 * time.Millisecond)
-
 	// Recreate with a milestone phase and verify a transition is emitted.
 	writeStatus(t, slot.statusPath, 1, "completed", "back")
 	waitFor(t, 2*time.Second, func() bool {
@@ -637,22 +666,28 @@ func TestParentDirectoryWatched(t *testing.T) {
 
 	writeStatus(t, slot.statusPath, 1, "coding", "")
 
-	// Use fsnotify (pollInterval=0).
+	// Use fsnotify (pollInterval=0). startWatcher already blocks on ready,
+	// which in fsnotify mode runs after watches are installed.
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 0)
 	defer h.stop(t)
-
-	time.Sleep(200 * time.Millisecond)
 
 	// Delete and recreate: a watch on the file alone would now be dead.
 	if err := os.Remove(slot.statusPath); err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(100 * time.Millisecond)
 	writeStatus(t, slot.statusPath, 1, "completed", "back")
 
 	waitFor(t, 3*time.Second, func() bool {
 		return len(readLogEvents(t, logPath)) >= 1
 	})
+	events := readLogEvents(t, logPath)
+	if len(events) != 1 {
+		t.Fatalf("got %d events, want 1: %+v", len(events), events)
+	}
+	got := events[0]
+	if got.Slot != "alpha" || got.NewPhase != "completed" || got.OldPhase == nil || *got.OldPhase != "coding" {
+		t.Errorf("unexpected event content: %+v", got)
+	}
 }
 
 // --- filter and poll ---
@@ -665,8 +700,6 @@ func TestPhasesFlagOverride(t *testing.T) {
 	writeStatus(t, slot.statusPath, 1, "exploring", "")
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter("coding,testing"), logPath, 50*time.Millisecond)
 	defer h.stop(t)
-
-	time.Sleep(150 * time.Millisecond)
 
 	// Transition to coding (in the override list) — should emit.
 	writeStatus(t, slot.statusPath, 1, "coding", "")
@@ -696,12 +729,15 @@ func TestPollFallback(t *testing.T) {
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 100*time.Millisecond)
 	defer h.stop(t)
 
-	time.Sleep(250 * time.Millisecond)
 	writeStatus(t, slot.statusPath, 1, "completed", "done")
 
 	waitFor(t, 2*time.Second, func() bool {
 		return len(readLogEvents(t, logPath)) >= 1
 	})
+	events := readLogEvents(t, logPath)
+	if len(events) != 1 || events[0].NewPhase != "completed" {
+		t.Fatalf("unexpected events under poll mode: %+v", events)
+	}
 }
 
 func TestSigtermFlushesLog(t *testing.T) {
@@ -714,17 +750,21 @@ func TestSigtermFlushesLog(t *testing.T) {
 
 	writeStatus(t, slot.statusPath, 1, "coding", "")
 	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 30*time.Millisecond)
-	time.Sleep(80 * time.Millisecond)
 
-	// Trigger a transition then cancel almost immediately.
+	// Write a transition and confirm at least one event lands BEFORE cancel.
+	// Without this wait, the test would pass trivially on an empty log.
 	writeStatus(t, slot.statusPath, 1, "completed", "rapid shutdown")
-	time.Sleep(60 * time.Millisecond)
+	waitFor(t, 2*time.Second, func() bool {
+		return len(readLogEvents(t, logPath)) >= 1
+	})
+
 	h.stop(t)
 
 	data, err := os.ReadFile(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+	parsed := 0
 	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
 		if line == "" {
 			continue
@@ -733,6 +773,96 @@ func TestSigtermFlushesLog(t *testing.T) {
 		if err := json.Unmarshal([]byte(line), &ev); err != nil {
 			t.Errorf("torn or unparseable line %q: %v", line, err)
 		}
+		parsed++
+	}
+	if parsed == 0 {
+		t.Fatal("no parseable events on disk after shutdown")
+	}
+}
+
+// --- additional spec coverage from review ---
+
+func TestResolveSlotsWorktreeZeroSlots(t *testing.T) {
+	// Worktree mode with no issue-* subdirectories returns zero slots and
+	// no error. The CLI layer (runEpicWatch) is responsible for treating
+	// that as fatal.
+	dir := t.TempDir()
+	cloneRoot := filepath.Join(dir, "workers")
+	if err := os.MkdirAll(cloneRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &epicConfig{CloneRoot: cloneRoot, LocalWorktrees: true}
+	slots, err := resolveSlots(dir, cfg)
+	if err != nil {
+		t.Fatalf("resolveSlots returned error: %v", err)
+	}
+	if len(slots) != 0 {
+		t.Errorf("expected zero slots, got %+v", slots)
+	}
+}
+
+func TestRunWatcherFailsWhenNoFsnotifyAdd(t *testing.T) {
+	// A slot whose parent directory does not exist makes fsnotify Add fail.
+	// With every Add failing, runWatcher must return an error rather than
+	// silently entering an event loop with no watches.
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "does-not-exist", "alpha")
+	slot := slotInfo{name: "alpha", statusPath: filepath.Join(missing, epicStatusName)}
+	logPath := filepath.Join(dir, epicNotificationsName)
+
+	stderr := &syncBuffer{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	err := runWatcher(ctx, watchConfig{
+		slots:        []slotInfo{slot},
+		phases:       parsePhasesFilter(defaultEpicWatchPhases),
+		pollInterval: 0, // fsnotify mode
+		logPath:      logPath,
+		stdout:       io.Discard,
+		stderr:       stderr,
+	})
+	if err == nil {
+		t.Fatal("expected error when no parent directory could be watched, got nil")
+	}
+	if !strings.Contains(err.Error(), "no parent directories") {
+		t.Errorf("error %q does not mention the unwatched-directory cause", err)
+	}
+}
+
+func TestSeedLastPhasesSkipsCorruptLines(t *testing.T) {
+	// A malformed middle line must NOT silently drop subsequent valid
+	// entries — that would seed stale phase state and cause spurious
+	// re-emissions on watcher restart.
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, epicNotificationsName)
+
+	old := "coding"
+	good1, _ := json.Marshal(epicEvent{
+		Ts: time.Now().UTC().Format(time.RFC3339), Slot: "alpha", Issue: 1,
+		OldPhase: &old, NewPhase: "needs-human", Summary: "first",
+	})
+	good2, _ := json.Marshal(epicEvent{
+		Ts: time.Now().UTC().Format(time.RFC3339), Slot: "beta", Issue: 2,
+		OldPhase: &old, NewPhase: "completed", Summary: "second",
+	})
+	body := string(good1) + "\n{not json\n" + string(good2) + "\n"
+	if err := os.WriteFile(logPath, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	warn := &syncBuffer{}
+	last, err := seedLastPhases(logPath, warn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last["alpha"] != "needs-human" {
+		t.Errorf("alpha not seeded: %v", last)
+	}
+	if last["beta"] != "completed" {
+		t.Errorf("beta not seeded — corrupt middle line dropped subsequent entries: %v", last)
+	}
+	if !strings.Contains(warn.String(), "warning") {
+		t.Errorf("expected a warning for the corrupt line, got: %q", warn.String())
 	}
 }
 
