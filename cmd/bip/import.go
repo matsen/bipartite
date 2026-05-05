@@ -55,6 +55,7 @@ type DryRunResult struct {
 	WouldUpdate int                      `json:"would_update"`
 	WouldSkip   int                      `json:"would_skip"`
 	Warnings    []importer.ImportWarning `json:"warnings,omitempty"`
+	Errors      []string                 `json:"errors"`
 	Details     []ImportDetail           `json:"details,omitempty"`
 }
 
@@ -225,6 +226,7 @@ func reportDryRun(stats importStats, details []ImportDetail, warnings []importer
 			WouldUpdate: stats.updated,
 			WouldSkip:   stats.skipped,
 			Warnings:    warnings,
+			Errors:      errStrs,
 			Details:     details,
 		})
 	}
