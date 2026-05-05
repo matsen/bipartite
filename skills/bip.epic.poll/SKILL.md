@@ -9,12 +9,14 @@ Lightweight mid-session update. Checks what changed on GitHub and in
 active clones since last check. Use this instead of `/bip.epic` when
 you already have context established.
 
-For continuous monitoring, prefer the **persistent slot monitor**
-started by `/bip.epic` (Step 8) — it uses `fswatch` to stream phase
-changes in real time. Use `/bip.epic.poll` for:
+For continuous monitoring, prefer `bip epic watch` (started by
+`/bip.epic` Step 8). It writes phase transitions to
+`.epic-notifications.log` in the conductor cwd; this poll skill reads
+new entries from that log to catch transitions the conductor may have
+missed. Use `/bip.epic.poll` for:
 - Full GitHub reconciliation (merged PRs, new issues, comments)
 - Slot cleanup and EPIC body updates
-- When the slot monitor isn't running
+- Catching up on log entries written while the conductor was idle
 
 For periodic auto-polling: `/loop 10m /bip.epic.poll`
 
@@ -82,6 +84,26 @@ For active slots, check recent commits:
 git -C <slot-path> log --oneline main..HEAD | head -5
 ```
 In worktree mode, `<slot-path>` is `$CLONE_ROOT/issue-<N>`.
+
+#### Notifications log tail
+
+If `bip epic watch` is running, it appends one JSONL line per phase
+transition to `.epic-notifications.log` in the conductor cwd. Read any
+entries that landed since the last poll so the conductor catches
+transitions even when both the watcher and Monitor were down. The
+state file `/tmp/.epic-poll-last-read` records the previous poll time
+as Unix seconds; pass the elapsed window to `--since`:
+
+```bash
+LAST=$(cat /tmp/.epic-poll-last-read 2>/dev/null || echo $(($(date +%s) - 3600)))
+NOW=$(date +%s)
+bip epic watch --since "$((NOW - LAST))s" 2>/dev/null
+echo "$NOW" > /tmp/.epic-poll-last-read
+```
+
+`--since` reads the log and replays matching entries to stdout without
+re-appending them. Surface any `needs-human` / `completed` transitions
+prominently per the section below.
 
 #### New status fields to display
 
