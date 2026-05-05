@@ -77,12 +77,15 @@ type PaperpileEntry struct {
 
 // ImportWarning describes a non-fatal issue with an imported entry.
 // In lenient mode, missing required fields are filled with sentinels and a
-// warning is recorded so the user can see what was defaulted.
+// warning is recorded so the user can see what was defaulted. ID is the
+// imported reference's ID (citekey when present, otherwise Paperpile _id);
+// Title carries the post-fallback title for human identification; Fields
+// names the required fields that hit fallbacks.
 type ImportWarning struct {
-	ID      string   `json:"id"`      // bip ID assigned to the imported reference
-	Citekey string   `json:"citekey"` // Paperpile citekey (may equal ID)
-	Title   string   `json:"title"`   // Title (post-fallback) for human identification
-	Fields  []string `json:"fields"`  // Names of required fields that hit fallbacks
+	ID      string   `json:"id"`
+	Citekey string   `json:"citekey"`
+	Title   string   `json:"title"`
+	Fields  []string `json:"fields"`
 }
 
 // String renders an ImportWarning for human-readable output.
@@ -94,12 +97,17 @@ func (w ImportWarning) String() string {
 	return fmt.Sprintf("entry %s (%q): defaulted %v", w.ID, title, w.Fields)
 }
 
-// Sentinel values used when a required field is missing in lenient mode.
-const (
-	UnknownYear   = 0            // PublicationDate.Year sentinel for "year unknown"
-	UnknownAuthor = "Unknown"    // Author.Last sentinel for "author unknown"
-	UnknownTitle  = "[no title]" // Title sentinel for "title unknown"
-)
+// UnknownYear is the PublicationDate.Year sentinel stored when published.year
+// is missing in lenient mode.
+const UnknownYear = 0
+
+// UnknownAuthor is the Author.Last sentinel stored when no authors are present
+// in lenient mode.
+const UnknownAuthor = "Unknown"
+
+// UnknownTitle is the Title sentinel stored when title is missing in lenient
+// mode.
+const UnknownTitle = "[no title]"
 
 // ParsePaperpile parses a Paperpile JSON export and returns references.
 //

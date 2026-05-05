@@ -113,6 +113,23 @@ func runImport(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// printWarnings writes a human-readable summary of fallback warnings to stderr.
+// Stderr is used so the warnings are visible even when stdout is consumed by
+// `jq` or similar; they're surfaced in both human and JSON modes.
+func printWarnings(warnings []importer.ImportWarning, dryRun bool) {
+	if len(warnings) == 0 {
+		return
+	}
+	verb := "Imported"
+	if dryRun {
+		verb = "Would import"
+	}
+	fmt.Fprintf(os.Stderr, "\n%s %d entries with missing fields filled in (use --strict to drop them instead):\n", verb, len(warnings))
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "  - %s\n", w.String())
+	}
+}
+
 // parseImportFile reads and parses the import file.
 func parseImportFile(path string) ([]reference.Reference, []importer.ImportWarning, []error) {
 	data, err := os.ReadFile(path)
@@ -192,7 +209,7 @@ func reportDryRun(stats importStats, details []ImportDetail, warnings []importer
 		fmt.Printf("  Would add:    %d new references\n", stats.newCount)
 		fmt.Printf("  Would update: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Would skip:   %d (errors or duplicates)\n", stats.skipped)
-		printWarnings(warnings)
+		printWarnings(warnings, true)
 		if len(errStrs) > 0 {
 			fmt.Println("\nParse errors:")
 			for _, e := range errStrs {
@@ -202,7 +219,7 @@ func reportDryRun(stats importStats, details []ImportDetail, warnings []importer
 	} else {
 		// Emit warnings to stderr even in JSON mode so the user sees them at
 		// the terminal. The JSON output also carries them for programmatic use.
-		printWarnings(warnings)
+		printWarnings(warnings, true)
 		outputJSON(DryRunResult{
 			WouldAdd:    stats.newCount,
 			WouldUpdate: stats.updated,
@@ -220,7 +237,7 @@ func reportImportResults(stats importStats, warnings []importer.ImportWarning, e
 		fmt.Printf("  Added:   %d new references\n", stats.newCount)
 		fmt.Printf("  Updated: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Skipped: %d (errors or duplicates)\n", stats.skipped)
-		printWarnings(warnings)
+		printWarnings(warnings, false)
 		if len(errStrs) > 0 {
 			fmt.Println("\nErrors:")
 			for _, e := range errStrs {
@@ -232,7 +249,7 @@ func reportImportResults(stats importStats, warnings []importer.ImportWarning, e
 			fmt.Println("\nRun 'bip rebuild' to update the search index.")
 		}
 	} else {
-		printWarnings(warnings)
+		printWarnings(warnings, false)
 		outputJSON(ImportResult{
 			New:      stats.newCount,
 			Updated:  stats.updated,
@@ -240,19 +257,6 @@ func reportImportResults(stats importStats, warnings []importer.ImportWarning, e
 			Warnings: warnings,
 			Errors:   errStrs,
 		})
-	}
-}
-
-// printWarnings writes a human-readable summary of fallback warnings to stderr.
-// Stderr is used so the warnings are visible even when stdout is consumed by
-// `jq` or similar; they're surfaced in both human and JSON modes.
-func printWarnings(warnings []importer.ImportWarning) {
-	if len(warnings) == 0 {
-		return
-	}
-	fmt.Fprintf(os.Stderr, "\nImported %d entries with missing fields filled in (use --strict to drop them instead):\n", len(warnings))
-	for _, w := range warnings {
-		fmt.Fprintf(os.Stderr, "  - %s\n", w.String())
 	}
 }
 

@@ -314,31 +314,51 @@ func TestParsePaperpile_RealTestData(t *testing.T) {
 		t.Skipf("Test data file not found: %v", err)
 	}
 
-	refs, _, errs := ParsePaperpile(data, true)
-	if len(errs) > 0 {
-		t.Errorf("ParsePaperpile() returned %d errors parsing real test data: %v", len(errs), errs)
+	strictRefs, _, strictErrs := ParsePaperpile(data, true)
+	if len(strictErrs) > 0 {
+		t.Errorf("strict mode returned %d errors parsing real test data: %v", len(strictErrs), strictErrs)
 	}
-	if len(refs) == 0 {
-		t.Error("ParsePaperpile() returned 0 refs from test data")
+	if len(strictRefs) == 0 {
+		t.Error("strict mode returned 0 refs from test data")
 	}
 
-	// Check that the first reference has expected structure
-	if len(refs) > 0 {
-		ref := refs[0]
+	// Check that the first reference has expected structure. The fixture
+	// contains complete entries, so strict-mode results should not contain
+	// sentinel values.
+	if len(strictRefs) > 0 {
+		ref := strictRefs[0]
 		if ref.ID == "" {
 			t.Error("First ref has empty ID")
 		}
-		if ref.Title == "" {
-			t.Error("First ref has empty Title")
+		if ref.Title == "" || ref.Title == UnknownTitle {
+			t.Errorf("First ref Title = %q (sentinel or empty)", ref.Title)
 		}
 		if len(ref.Authors) == 0 {
 			t.Error("First ref has no Authors")
 		}
-		if ref.Published.Year == 0 {
-			t.Error("First ref has zero Year")
+		if ref.Published.Year == UnknownYear {
+			t.Errorf("First ref Year = %d (sentinel)", ref.Published.Year)
 		}
 		if ref.Source.Type != "paperpile" {
 			t.Errorf("First ref Source.Type = %s, want paperpile", ref.Source.Type)
+		}
+	}
+
+	// Lenient mode should never drop more entries than strict and should
+	// produce structurally valid warnings for any entries that hit fallbacks.
+	lenientRefs, lenientWarnings, lenientErrs := ParsePaperpile(data, false)
+	if len(lenientErrs) > len(strictErrs) {
+		t.Errorf("lenient mode returned more errors (%d) than strict (%d)", len(lenientErrs), len(strictErrs))
+	}
+	if len(lenientRefs) < len(strictRefs) {
+		t.Errorf("lenient mode dropped more entries (%d refs) than strict (%d refs)", len(lenientRefs), len(strictRefs))
+	}
+	for i, w := range lenientWarnings {
+		if w.ID == "" {
+			t.Errorf("lenient warning %d has empty ID", i)
+		}
+		if len(w.Fields) == 0 {
+			t.Errorf("lenient warning %d (%s) has no Fields", i, w.ID)
 		}
 	}
 }
@@ -472,8 +492,14 @@ func TestParsePaperpile_LenientMissingTitle(t *testing.T) {
 	if len(refs) != 1 || refs[0].Title != UnknownTitle {
 		t.Errorf("Title = %q, want %q", refs[0].Title, UnknownTitle)
 	}
-	if len(warnings) != 1 || warnings[0].Fields[0] != "title" {
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1", len(warnings))
+	}
+	if len(warnings[0].Fields) != 1 || warnings[0].Fields[0] != "title" {
 		t.Errorf("warning fields = %v, want [title]", warnings[0].Fields)
+	}
+	if warnings[0].ID != "NoTitle2026" {
+		t.Errorf("warning ID = %s, want NoTitle2026", warnings[0].ID)
 	}
 }
 
@@ -495,8 +521,14 @@ func TestParsePaperpile_LenientMissingAuthor(t *testing.T) {
 	if len(refs[0].Authors) != 1 || refs[0].Authors[0].Last != UnknownAuthor {
 		t.Errorf("Authors = %+v, want one author with Last=%q", refs[0].Authors, UnknownAuthor)
 	}
-	if len(warnings) != 1 || warnings[0].Fields[0] != "author" {
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1", len(warnings))
+	}
+	if len(warnings[0].Fields) != 1 || warnings[0].Fields[0] != "author" {
 		t.Errorf("warning fields = %v, want [author]", warnings[0].Fields)
+	}
+	if warnings[0].ID != "NoAuthor2026" {
+		t.Errorf("warning ID = %s, want NoAuthor2026", warnings[0].ID)
 	}
 }
 
@@ -546,26 +578,70 @@ func TestParsePaperpile_LenientJunkEntryDropped(t *testing.T) {
 	}
 }
 
-func TestParsePaperpile_StrictDropsAllMissing(t *testing.T) {
-	// Verify strict mode preserves the original behavior: any missing required
-	// field drops the entry, no fallbacks.
-	data := []byte(`[{
-		"_id": "abc",
-		"citekey": "MissingYear",
-		"title": "Has title",
-		"author": [{"last": "Smith"}],
-		"published": {}
-	}]`)
-
-	refs, warnings, errs := ParsePaperpile(data, true)
-	if len(refs) != 0 {
-		t.Errorf("strict mode: got %d refs, want 0", len(refs))
+func TestParsePaperpile_StrictDropsAnyMissingField(t *testing.T) {
+	// Verify strict mode preserves the original behavior: any of the three
+	// required fields (title, author, year) being missing drops the entry,
+	// with no warnings produced.
+	cases := []struct {
+		name string
+		data string
+	}{
+		{
+			name: "missing year",
+			data: `[{"_id": "a", "citekey": "MissingYear", "title": "T", "author": [{"last": "S"}], "published": {}}]`,
+		},
+		{
+			name: "missing title",
+			data: `[{"_id": "a", "citekey": "MissingTitle", "author": [{"last": "S"}], "published": {"year": "2026"}}]`,
+		},
+		{
+			name: "missing author",
+			data: `[{"_id": "a", "citekey": "MissingAuthor", "title": "T", "published": {"year": "2026"}}]`,
+		},
 	}
-	if len(warnings) != 0 {
-		t.Errorf("strict mode should not produce warnings, got %d", len(warnings))
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			refs, warnings, errs := ParsePaperpile([]byte(tc.data), true)
+			if len(refs) != 0 {
+				t.Errorf("strict mode: got %d refs, want 0", len(refs))
+			}
+			if len(warnings) != 0 {
+				t.Errorf("strict mode should not produce warnings, got %d", len(warnings))
+			}
+			if len(errs) != 1 {
+				t.Errorf("strict mode: got %d errors, want 1", len(errs))
+			}
+		})
+	}
+}
+
+func TestParsePaperpile_LenientMixedArray(t *testing.T) {
+	// Realistic Paperpile shape: one valid entry, one recoverable (missing
+	// year only), one pure junk. Verify that the warning for the recoverable
+	// entry is emitted alongside an error for the junk entry without
+	// corrupting either, and that the valid entry imports cleanly.
+	data := []byte(`[
+		{"_id": "1", "citekey": "Good2026", "title": "Good", "author": [{"last": "G"}], "published": {"year": "2026"}},
+		{"_id": "2", "citekey": "Recoverable", "title": "Recoverable paper", "author": [{"last": "R"}], "published": {}},
+		{"_id": "3", "citekey": "noauthor_undated-zz", "published": {}}
+	]`)
+
+	refs, warnings, errs := ParsePaperpile(data, false)
+	if len(refs) != 2 {
+		t.Fatalf("got %d refs, want 2 (good + recoverable)", len(refs))
+	}
+	if len(warnings) != 1 {
+		t.Fatalf("got %d warnings, want 1 (recoverable only)", len(warnings))
+	}
+	if warnings[0].ID != "Recoverable" {
+		t.Errorf("warning attached to %s, want Recoverable", warnings[0].ID)
+	}
+	if len(warnings[0].Fields) != 1 || warnings[0].Fields[0] != "published.year" {
+		t.Errorf("warning fields = %v, want [published.year]", warnings[0].Fields)
 	}
 	if len(errs) != 1 {
-		t.Errorf("strict mode: got %d errors, want 1", len(errs))
+		t.Errorf("got %d errors, want 1 (junk drop)", len(errs))
 	}
 }
 
