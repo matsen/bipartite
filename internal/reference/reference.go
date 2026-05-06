@@ -24,7 +24,11 @@ type Reference struct {
 	// Import Tracking
 	Source ImportSource `json:"source"`
 
-	// Tags are user-defined labels for organizing references.
+	// Tags are labels for organizing references. Most are user-defined
+	// (e.g. Paperpile labels and folders), but importers may auto-set
+	// namespaced tags of the form `<importer>:<condition>` (e.g.
+	// `paperpile:incomplete` when a required field was filled with a
+	// sentinel) so the entries are queryable via `bip search --tag`.
 	Tags []string `json:"tags,omitempty"`
 
 	// Relationships

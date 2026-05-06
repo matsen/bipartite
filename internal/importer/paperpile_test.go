@@ -645,6 +645,165 @@ func TestParsePaperpile_LenientMixedArray(t *testing.T) {
 	}
 }
 
+func tagsContain(tags []string, want string) bool {
+	for _, t := range tags {
+		if t == want {
+			return true
+		}
+	}
+	return false
+}
+
+func countTag(tags []string, want string) int {
+	n := 0
+	for _, t := range tags {
+		if t == want {
+			n++
+		}
+	}
+	return n
+}
+
+func TestParsePaperpile_LenientFallbackAddsIncompleteTag(t *testing.T) {
+	cases := []struct {
+		name string
+		data string
+	}{
+		{
+			name: "missing year",
+			data: `[{"_id": "a", "citekey": "MissingYear", "title": "T", "author": [{"last": "S"}], "published": {}}]`,
+		},
+		{
+			name: "missing title",
+			data: `[{"_id": "a", "citekey": "MissingTitle", "author": [{"last": "S"}], "published": {"year": "2026"}}]`,
+		},
+		{
+			name: "missing author",
+			data: `[{"_id": "a", "citekey": "MissingAuthor", "title": "T", "published": {"year": "2026"}}]`,
+		},
+		{
+			name: "all three missing (DOI present)",
+			data: `[{"_id": "a", "citekey": "OnlyDOI", "doi": "10.1234/x", "published": {}}]`,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			refs, _, errs := ParsePaperpile([]byte(tc.data), false)
+			if len(errs) > 0 {
+				t.Fatalf("unexpected errors: %v", errs)
+			}
+			if len(refs) != 1 {
+				t.Fatalf("got %d refs, want 1", len(refs))
+			}
+			if !tagsContain(refs[0].Tags, IncompleteTag) {
+				t.Errorf("Tags = %v, want to contain %q", refs[0].Tags, IncompleteTag)
+			}
+		})
+	}
+}
+
+func TestParsePaperpile_StrictCompleteEntryDoesNotGetIncompleteTag(t *testing.T) {
+	// In strict mode no fallbacks fire (entries with missing fields are
+	// dropped, complete entries import without sentinels), so the tag
+	// should never be set.
+	data := []byte(`[{
+		"_id": "abc",
+		"citekey": "Complete2026",
+		"title": "Complete paper",
+		"author": [{"last": "Smith"}],
+		"published": {"year": "2026"}
+	}]`)
+
+	refs, _, errs := ParsePaperpile(data, true)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if tagsContain(refs[0].Tags, IncompleteTag) {
+		t.Errorf("Tags = %v, should not contain %q in strict mode", refs[0].Tags, IncompleteTag)
+	}
+}
+
+func TestParsePaperpile_ValidEntryDoesNotGetIncompleteTag(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc",
+		"citekey": "Complete2026",
+		"title": "Complete paper",
+		"author": [{"last": "Smith"}],
+		"published": {"year": "2026"}
+	}]`)
+
+	refs, _, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if tagsContain(refs[0].Tags, IncompleteTag) {
+		t.Errorf("Tags = %v, should not contain %q for a complete entry", refs[0].Tags, IncompleteTag)
+	}
+}
+
+func TestParsePaperpile_LenientMixedArrayTagsRecoverableOnly(t *testing.T) {
+	data := []byte(`[
+		{"_id": "1", "citekey": "Good2026", "title": "Good", "author": [{"last": "G"}], "published": {"year": "2026"}},
+		{"_id": "2", "citekey": "Recoverable", "title": "Recoverable paper", "author": [{"last": "R"}], "published": {}}
+	]`)
+
+	refs, _, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(refs) != 2 {
+		t.Fatalf("got %d refs, want 2", len(refs))
+	}
+
+	var good, recoverable reference.Reference
+	for _, r := range refs {
+		switch r.ID {
+		case "Good2026":
+			good = r
+		case "Recoverable":
+			recoverable = r
+		}
+	}
+	if tagsContain(good.Tags, IncompleteTag) {
+		t.Errorf("complete entry Tags = %v, should not contain %q", good.Tags, IncompleteTag)
+	}
+	if !tagsContain(recoverable.Tags, IncompleteTag) {
+		t.Errorf("recoverable entry Tags = %v, want to contain %q", recoverable.Tags, IncompleteTag)
+	}
+}
+
+func TestParsePaperpile_LenientUserLabelDedupedWithIncompleteTag(t *testing.T) {
+	// If a Paperpile user has manually labeled an entry "paperpile:incomplete"
+	// AND the entry hits a fallback, the existing dedup `seen` map should
+	// collapse the two into a single occurrence in Tags.
+	data := []byte(`[{
+		"_id": "abc",
+		"citekey": "DoubleTagged",
+		"title": "T",
+		"author": [{"last": "S"}],
+		"published": {},
+		"labelsNamed": ["paperpile:incomplete"]
+	}]`)
+
+	refs, _, errs := ParsePaperpile(data, false)
+	if len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("got %d refs, want 1", len(refs))
+	}
+	if got := countTag(refs[0].Tags, IncompleteTag); got != 1 {
+		t.Errorf("Tags = %v: %q occurs %d times, want 1", refs[0].Tags, IncompleteTag, got)
+	}
+}
+
 // Helper function for comparing references
 func refsEqual(a, b reference.Reference) bool {
 	if a.ID != b.ID || a.DOI != b.DOI || a.Title != b.Title {

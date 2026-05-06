@@ -57,3 +57,13 @@ rm "<file>"
 ### 6. Report
 
 Summarize: new refs added, total count, file deleted. Notes from Paperpile are preserved and searchable via `bip search`.
+
+### 7. Recommend cleanup if warnings fired
+
+If the import reported a non-zero `warnings` count, recommend the cleanup query so the user can fix the upstream Paperpile records when convenient:
+
+```bash
+bip search --tag paperpile:incomplete
+```
+
+Every reference imported with a sentinel field (`[no title]`, `Unknown`, year `0`) is auto-tagged `paperpile:incomplete`. Once the user fixes the entry in Paperpile and re-imports, the next import replaces the stored reference and the tag disappears automatically, so the list shrinks until empty without any manual untagging step.
