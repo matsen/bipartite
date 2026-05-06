@@ -16,6 +16,14 @@ Paperpile import preserves the `notes` field from your Paperpile library. Notes 
 
 By default, entries missing required fields (`title`, `author`, `published.year`) are imported with sentinel placeholders (`[no title]`, `Unknown`, year `0`) and surfaced under `warnings` in the import output, so eLife reviewed preprints and similar entries with incomplete metadata aren't silently dropped. Entries with none of `{title, author, year, doi}` are still skipped to avoid importing Paperpile's web-page auto-stubs. Pass `--strict` to drop any entry with a missing required field instead.
 
+Every reference whose import filled at least one sentinel is auto-tagged `paperpile:incomplete`, so the cleanup queue is queryable later without remembering the sentinel strings:
+
+```bash
+bip search --tag paperpile:incomplete
+```
+
+Fix the entry in Paperpile and re-import; the next update replaces the stored reference and the tag falls off automatically.
+
 `bip rebuild` builds the SQLite query index from the JSONL source files. Run it after pulling changes or if the database gets corrupted.
 
 ## Searching

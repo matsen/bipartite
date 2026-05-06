@@ -109,6 +109,13 @@ const UnknownAuthor = "Unknown"
 // mode.
 const UnknownTitle = "[no title]"
 
+// IncompleteTag is appended to Reference.Tags when any required field hit a
+// fallback in lenient mode, so users can find these entries later via
+// `bip search --tag paperpile:incomplete`. The colon-namespaced shape
+// (`<importer>:<condition>`) reserves room for future auto-tags and reduces
+// the chance of collision with user-defined Paperpile labels.
+const IncompleteTag = "paperpile:incomplete"
+
 // ParsePaperpile parses a Paperpile JSON export and returns references.
 //
 // When strict is true, entries missing any of {title, author, published.year}
@@ -241,6 +248,10 @@ func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Ref
 			tags = append(tags, folder)
 			seen[folder] = true
 		}
+	}
+	if len(fallbackFields) > 0 && !seen[IncompleteTag] {
+		tags = append(tags, IncompleteTag)
+		seen[IncompleteTag] = true
 	}
 
 	// Use citekey as ID, falling back to Paperpile ID if no citekey
