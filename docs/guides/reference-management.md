@@ -14,6 +14,8 @@ bip rebuild
 
 Paperpile import preserves the `notes` field from your Paperpile library. Notes appear in `bip get` output and are searchable via `bip search`.
 
+By default, entries missing required fields (`title`, `author`, `published.year`) are imported with sentinel placeholders (`[no title]`, `Unknown`, year `0`) and surfaced under `warnings` in the import output, so eLife reviewed preprints and similar entries with incomplete metadata aren't silently dropped. Entries with none of `{title, author, year, doi}` are still skipped to avoid importing Paperpile's web-page auto-stubs. Pass `--strict` to drop any entry with a missing required field instead.
+
 `bip rebuild` builds the SQLite query index from the JSONL source files. Run it after pulling changes or if the database gets corrupted.
 
 ## Searching

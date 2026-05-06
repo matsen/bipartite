@@ -75,55 +75,130 @@ type PaperpileEntry struct {
 	FoldersNamed []string `json:"foldersNamed"`
 }
 
+// ImportWarning describes a non-fatal issue with an imported entry.
+// In lenient mode, missing required fields are filled with sentinels and a
+// warning is recorded so the user can see what was defaulted. ID is the
+// imported reference's ID (citekey when present, otherwise Paperpile _id);
+// Title carries the post-fallback title for human identification; Fields
+// names the required fields that hit fallbacks.
+type ImportWarning struct {
+	ID      string   `json:"id"`
+	Citekey string   `json:"citekey"`
+	Title   string   `json:"title"`
+	Fields  []string `json:"fields"`
+}
+
+// String renders an ImportWarning for human-readable output.
+func (w ImportWarning) String() string {
+	title := w.Title
+	if len(title) > 60 {
+		title = title[:57] + "..."
+	}
+	return fmt.Sprintf("entry %s (%q): defaulted %v", w.ID, title, w.Fields)
+}
+
+// UnknownYear is the PublicationDate.Year sentinel stored when published.year
+// is missing in lenient mode.
+const UnknownYear = 0
+
+// UnknownAuthor is the Author.Last sentinel stored when no authors are present
+// in lenient mode.
+const UnknownAuthor = "Unknown"
+
+// UnknownTitle is the Title sentinel stored when title is missing in lenient
+// mode.
+const UnknownTitle = "[no title]"
+
 // ParsePaperpile parses a Paperpile JSON export and returns references.
-func ParsePaperpile(data []byte) ([]reference.Reference, []error) {
+//
+// When strict is true, entries missing any of {title, author, published.year}
+// are dropped and reported in errs. When strict is false, those entries are
+// imported with sentinel values and reported in warnings instead — except for
+// "junk" entries with no useful metadata at all (no title, author, year, or
+// DOI), which are still dropped to avoid flooding the nexus with placeholders.
+func ParsePaperpile(data []byte, strict bool) (refs []reference.Reference, warnings []ImportWarning, errs []error) {
 	var entries []PaperpileEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
-		return nil, []error{fmt.Errorf("parsing Paperpile JSON: %w", err)}
+		return nil, nil, []error{fmt.Errorf("parsing Paperpile JSON: %w", err)}
 	}
 
-	var refs []reference.Reference
-	var errs []error
-
 	for i, entry := range entries {
-		ref, err := paperpileEntryToReference(entry)
+		ref, w, err := paperpileEntryToReference(entry, strict)
 		if err != nil {
 			errs = append(errs, fmt.Errorf("entry %d (%s): %w", i+1, entry.Citekey, err))
 			continue
 		}
 		refs = append(refs, ref)
-	}
-
-	return refs, errs
-}
-
-// paperpileEntryToReference converts a Paperpile entry to our Reference type.
-func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error) {
-	// Validate required fields
-	if entry.Title == "" {
-		return reference.Reference{}, fmt.Errorf("missing required field 'title'")
-	}
-	if len(entry.Author) == 0 {
-		return reference.Reference{}, fmt.Errorf("missing required field 'author'")
-	}
-	if entry.Published.Year.String() == "" {
-		return reference.Reference{}, fmt.Errorf("missing required field 'published.year'")
-	}
-
-	// Convert authors
-	authors := make([]reference.Author, len(entry.Author))
-	for i, a := range entry.Author {
-		authors[i] = reference.Author{
-			First: a.First,
-			Last:  a.Last,
-			ORCID: a.ORCID,
+		if w != nil {
+			warnings = append(warnings, *w)
 		}
 	}
 
-	// Convert publication date
-	year, err := strconv.Atoi(entry.Published.Year.String())
-	if err != nil {
-		return reference.Reference{}, fmt.Errorf("invalid year: %s", entry.Published.Year.String())
+	return refs, warnings, errs
+}
+
+// paperpileEntryToReference converts a Paperpile entry to our Reference type.
+//
+// Returns an error if the entry should be dropped. Returns a non-nil
+// ImportWarning when missing fields were filled with sentinels.
+func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Reference, *ImportWarning, error) {
+	missingTitle := entry.Title == ""
+	missingAuthor := len(entry.Author) == 0
+	missingYear := entry.Published.Year.String() == ""
+
+	if strict {
+		if missingTitle {
+			return reference.Reference{}, nil, fmt.Errorf("missing required field 'title'")
+		}
+		if missingAuthor {
+			return reference.Reference{}, nil, fmt.Errorf("missing required field 'author'")
+		}
+		if missingYear {
+			return reference.Reference{}, nil, fmt.Errorf("missing required field 'published.year'")
+		}
+	} else if missingTitle && missingAuthor && missingYear && entry.DOI == "" {
+		// Junk heuristic: no useful identifying metadata at all (e.g. Paperpile's
+		// auto-generated stubs for unparsed web pages). Skip rather than flood
+		// the nexus with "[no title] / Unknown / 0" placeholders.
+		return reference.Reference{}, nil, fmt.Errorf("entry has no usable metadata (no title, author, year, or DOI)")
+	}
+
+	var fallbackFields []string
+
+	// Title fallback
+	title := entry.Title
+	if missingTitle {
+		title = UnknownTitle
+		fallbackFields = append(fallbackFields, "title")
+	}
+
+	// Author fallback
+	var authors []reference.Author
+	if missingAuthor {
+		authors = []reference.Author{{Last: UnknownAuthor}}
+		fallbackFields = append(fallbackFields, "author")
+	} else {
+		authors = make([]reference.Author, len(entry.Author))
+		for i, a := range entry.Author {
+			authors[i] = reference.Author{
+				First: a.First,
+				Last:  a.Last,
+				ORCID: a.ORCID,
+			}
+		}
+	}
+
+	// Year fallback
+	var year int
+	if missingYear {
+		year = UnknownYear
+		fallbackFields = append(fallbackFields, "published.year")
+	} else {
+		var err error
+		year, err = strconv.Atoi(entry.Published.Year.String())
+		if err != nil {
+			return reference.Reference{}, nil, fmt.Errorf("invalid year: %s", entry.Published.Year.String())
+		}
 	}
 
 	pubDate := reference.PublicationDate{Year: year}
@@ -177,7 +252,7 @@ func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error
 	ref := reference.Reference{
 		ID:              id,
 		DOI:             entry.DOI,
-		Title:           entry.Title,
+		Title:           title,
 		Authors:         authors,
 		Abstract:        entry.Abstract,
 		Venue:           entry.Journal,
@@ -192,5 +267,15 @@ func paperpileEntryToReference(entry PaperpileEntry) (reference.Reference, error
 		},
 	}
 
-	return ref, nil
+	var warning *ImportWarning
+	if len(fallbackFields) > 0 {
+		warning = &ImportWarning{
+			ID:      id,
+			Citekey: entry.Citekey,
+			Title:   title,
+			Fields:  fallbackFields,
+		}
+	}
+
+	return ref, warning, nil
 }

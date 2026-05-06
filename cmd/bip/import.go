@@ -14,11 +14,13 @@ import (
 var (
 	importFormat string
 	importDryRun bool
+	importStrict bool
 )
 
 func init() {
 	importCmd.Flags().StringVar(&importFormat, "format", "", "Import format (paperpile)")
 	importCmd.Flags().BoolVar(&importDryRun, "dry-run", false, "Show what would be imported without writing")
+	importCmd.Flags().BoolVar(&importStrict, "strict", false, "Drop entries with missing required fields (title, author, year) instead of filling sentinels")
 	importCmd.MarkFlagRequired("format")
 	rootCmd.AddCommand(importCmd)
 }
@@ -40,18 +42,21 @@ Supported formats:
 
 // ImportResult represents the result of an import operation.
 type ImportResult struct {
-	New     int      `json:"new"`
-	Updated int      `json:"updated"`
-	Skipped int      `json:"skipped"`
-	Errors  []string `json:"errors"`
+	New      int                      `json:"new"`
+	Updated  int                      `json:"updated"`
+	Skipped  int                      `json:"skipped"`
+	Warnings []importer.ImportWarning `json:"warnings,omitempty"`
+	Errors   []string                 `json:"errors"`
 }
 
 // DryRunResult represents the result of a dry-run import.
 type DryRunResult struct {
-	WouldAdd    int            `json:"would_add"`
-	WouldUpdate int            `json:"would_update"`
-	WouldSkip   int            `json:"would_skip"`
-	Details     []ImportDetail `json:"details,omitempty"`
+	WouldAdd    int                      `json:"would_add"`
+	WouldUpdate int                      `json:"would_update"`
+	WouldSkip   int                      `json:"would_skip"`
+	Warnings    []importer.ImportWarning `json:"warnings,omitempty"`
+	Errors      []string                 `json:"errors"`
+	Details     []ImportDetail           `json:"details,omitempty"`
 }
 
 // ImportDetail describes a single import action.
@@ -78,7 +83,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 	}
 
 	// Parse input file
-	newRefs, parseErrors := parseImportFile(args[0])
+	newRefs, warnings, parseErrors := parseImportFile(args[0])
 
 	// Load existing references
 	refsPath := config.RefsPath(repoRoot)
@@ -96,7 +101,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	// Report results (dry-run or actual)
 	if importDryRun {
-		reportDryRun(stats, details, errStrs)
+		reportDryRun(stats, details, warnings, errStrs)
 		return nil
 	}
 
@@ -105,23 +110,40 @@ func runImport(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitError, "writing refs: %v", err)
 	}
 
-	reportImportResults(stats, errStrs)
+	reportImportResults(stats, warnings, errStrs)
 	return nil
 }
 
+// printWarnings writes a human-readable summary of fallback warnings to stderr.
+// Stderr is used so the warnings are visible even when stdout is consumed by
+// `jq` or similar; they're surfaced in both human and JSON modes.
+func printWarnings(warnings []importer.ImportWarning, dryRun bool) {
+	if len(warnings) == 0 {
+		return
+	}
+	verb := "Imported"
+	if dryRun {
+		verb = "Would import"
+	}
+	fmt.Fprintf(os.Stderr, "\n%s %d entries with missing fields filled in (use --strict to drop them instead):\n", verb, len(warnings))
+	for _, w := range warnings {
+		fmt.Fprintf(os.Stderr, "  - %s\n", w.String())
+	}
+}
+
 // parseImportFile reads and parses the import file.
-func parseImportFile(path string) ([]reference.Reference, []error) {
+func parseImportFile(path string) ([]reference.Reference, []importer.ImportWarning, []error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		exitWithError(ExitError, "reading file: %v", err)
 	}
 
-	newRefs, parseErrors := importer.ParsePaperpile(data)
+	newRefs, warnings, parseErrors := importer.ParsePaperpile(data, importStrict)
 	if len(parseErrors) > 0 && len(newRefs) == 0 {
 		exitWithError(ExitDataError, "failed to parse any references: %v", parseErrors[0])
 	}
 
-	return newRefs, parseErrors
+	return newRefs, warnings, parseErrors
 }
 
 // processImports classifies each reference and builds the action list.
@@ -182,12 +204,13 @@ func errorsToStrings(errs []error) []string {
 }
 
 // reportDryRun outputs the dry-run results.
-func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
+func reportDryRun(stats importStats, details []ImportDetail, warnings []importer.ImportWarning, errStrs []string) {
 	if humanOutput {
 		fmt.Println("Dry run - would import from Paperpile export...")
 		fmt.Printf("  Would add:    %d new references\n", stats.newCount)
 		fmt.Printf("  Would update: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Would skip:   %d (errors or duplicates)\n", stats.skipped)
+		printWarnings(warnings, true)
 		if len(errStrs) > 0 {
 			fmt.Println("\nParse errors:")
 			for _, e := range errStrs {
@@ -195,22 +218,28 @@ func reportDryRun(stats importStats, details []ImportDetail, errStrs []string) {
 			}
 		}
 	} else {
+		// Emit warnings to stderr even in JSON mode so the user sees them at
+		// the terminal. The JSON output also carries them for programmatic use.
+		printWarnings(warnings, true)
 		outputJSON(DryRunResult{
 			WouldAdd:    stats.newCount,
 			WouldUpdate: stats.updated,
 			WouldSkip:   stats.skipped,
+			Warnings:    warnings,
+			Errors:      errStrs,
 			Details:     details,
 		})
 	}
 }
 
 // reportImportResults outputs the actual import results.
-func reportImportResults(stats importStats, errStrs []string) {
+func reportImportResults(stats importStats, warnings []importer.ImportWarning, errStrs []string) {
 	if humanOutput {
 		fmt.Println("Imported from Paperpile export:")
 		fmt.Printf("  Added:   %d new references\n", stats.newCount)
 		fmt.Printf("  Updated: %d existing references (matched by DOI or ID)\n", stats.updated)
 		fmt.Printf("  Skipped: %d (errors or duplicates)\n", stats.skipped)
+		printWarnings(warnings, false)
 		if len(errStrs) > 0 {
 			fmt.Println("\nErrors:")
 			for _, e := range errStrs {
@@ -222,11 +251,13 @@ func reportImportResults(stats importStats, errStrs []string) {
 			fmt.Println("\nRun 'bip rebuild' to update the search index.")
 		}
 	} else {
+		printWarnings(warnings, false)
 		outputJSON(ImportResult{
-			New:     stats.newCount,
-			Updated: stats.updated,
-			Skipped: stats.skipped,
-			Errors:  errStrs,
+			New:      stats.newCount,
+			Updated:  stats.updated,
+			Skipped:  stats.skipped,
+			Warnings: warnings,
+			Errors:   errStrs,
 		})
 	}
 }
