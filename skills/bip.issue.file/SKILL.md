@@ -71,23 +71,9 @@ gh issue create --title "<extracted title>" --body-file <file> --assignee <usern
 - Use `--body-file` (or `-F`) flag exclusively for the body
 - Only add `--assignee` if explicitly mentioned in conversation context
 
-### Step 6: Open the file for review
+### Step 6: Report results
 
-After the gh command succeeds, open the file so the user can review what was submitted (whether called standalone or chained from `/bip.issue.check`):
-
-```bash
-if [ -n "$TMUX" ]; then
-    tmux display-popup -w 80% -h 80% -E -- less <file>
-elif [ "$TERM_PROGRAM" = "zed" ]; then
-    zed <file>
-fi
-```
-
-Then stop and wait for the user. Do not summarize the file contents.
-
-### Step 7: Report results
-
-After the user closes the file (or if neither tmux nor Zed was detected), report:
+Report:
 - Success/failure status
 - Issue number and URL
 - Whether it was a create or update operation
