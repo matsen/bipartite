@@ -32,7 +32,7 @@
   <defs
      id="defs4">
     <style
-       id="style1">500&amp;display=swap');600&amp;family=JetBrains+Mono:wght@400;500;@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;.mono { font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+       id="style1">.mono { font-family: 'Monaspace Neon', 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
 .phase-label { font-size: 10px; font-weight: 600; fill: #8a9aaa; letter-spacing: 1.5px; }
 .box-title { font-size: 15px; font-weight: 600; }
 .box-subtitle { font-size: 11px; }
