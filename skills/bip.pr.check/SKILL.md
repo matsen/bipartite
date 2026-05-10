@@ -88,6 +88,8 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 - Has a test plan or notes section if appropriate
 - Is concise but informative
 
+**Also apply `~/re/bipartite/PROSE-DISCIPLINE.md`** to the body. Flag (and offer to rewrite): buried deliverable, facts repeated across sections, paragraph-form enumerations, pasted code that isn't the change site, exhaustive lists where a count would do, multi-paragraph "why the scope grew" narratives, and test-plan checkboxes with inline 5-line justifications.
+
 If the body looks like historical commit noise or is empty:
 1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`
 2. Draft a clean replacement body in this format:
