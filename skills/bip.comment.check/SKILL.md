@@ -108,7 +108,7 @@ For each claim, assign a verdict:
 
 ### Step 6: Report
 
-Apply `~/re/bipartite/PROSE-DISCIPLINE.md` when writing the verdict. Cite file:line for evidence — do not paste enclosing functions. State each verdict once; don't restate the claim and the evidence twice. Use bullets for the per-claim list (already enforced by the format) and prose only for causal arguments inside a verdict.
+Apply `PROSE-DISCIPLINE.md` (bipartite repo root) when writing the verdict. Cite file:line for evidence — do not paste enclosing functions. State each verdict once; don't restate the claim and the evidence twice. Use bullets for the per-claim list (already enforced by the format) and prose only for causal arguments inside a verdict.
 
 Present findings as a numbered list matching the original review's numbering. For each claim:
 

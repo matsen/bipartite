@@ -120,7 +120,7 @@ should be a short kebab-case summary (e.g., `ISSUE-quartet-timing-instrumentatio
 **Avoid vague language.** Every adjective must have a measurable
 criterion. No "fast", "scalable", "robust" without numbers.
 
-**Apply prose discipline.** Read `~/re/bipartite/PROSE-DISCIPLINE.md` before drafting and apply its rules. Defaults toward shorter: lead with the deliverable, state each fact once, bullets for enumerations, show the change site (not its surroundings), drop non-contested options, list bug-catching tests (not invariants).
+**Apply prose discipline.** Read `PROSE-DISCIPLINE.md` at the bipartite repo root before drafting and apply its rules. Defaults toward shorter: lead with the deliverable, state each fact once, bullets for enumerations, show the change site (not its surroundings), drop non-contested options, list bug-catching tests (not invariants).
 
 **No hard-wrapping.** Write each paragraph as a single long line. Do NOT insert newlines at 70-80 characters within paragraphs or bullet points. Let GitHub's renderer handle line wrapping. Only use newlines for actual structural breaks (between paragraphs, list items, headings).
 

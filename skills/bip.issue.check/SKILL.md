@@ -290,7 +290,7 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
 
 #### Prose discipline
 
-10c. **Apply `~/re/bipartite/PROSE-DISCIPLINE.md`**. Read the file and check the issue against its rules. Flag as **MEDIUM** (or **HIGH** if it materially obscures the deliverable):
+10c. **Apply `PROSE-DISCIPLINE.md`** (bipartite repo root). Read the file and check the issue against its rules. Flag as **MEDIUM** (or **HIGH** if it materially obscures the deliverable):
 
    - **Buried deliverable.** Reader has to consume Motivation + Problem before learning what will exist after the PR.
    - **Facts repeated across sections.** Same fact appears in Motivation, Problem, and Background with different phrasings. Per-phase and issue-level Success criteria sections that restate each other are a special case.
