@@ -290,15 +290,7 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
 
 #### Prose discipline
 
-10c. **Apply `PROSE-DISCIPLINE.md`** (bipartite repo root). Read the file and check the issue against its rules. Flag as **MEDIUM** (or **HIGH** if it materially obscures the deliverable):
-
-   - **Buried deliverable.** Reader has to consume Motivation + Problem before learning what will exist after the PR.
-   - **Facts repeated across sections.** Same fact appears in Motivation, Problem, and Background with different phrasings. Per-phase and issue-level Success criteria sections that restate each other are a special case.
-   - **Enumerations written as paragraphs.** Multi-clause sentence with semicolons or dashes that should be a bullet list.
-   - **Pasted code that isn't the change site.** Surrounding function included for context the reader doesn't need (line numbers + the changed line are sufficient).
-   - **Test-plan items that are mathematical identities.** Checkboxes like "row sums to 1", "entries ≥ 0", "PAM at D=0 is identity" — true by construction, not implementation tests.
-
-   **Recommend:** Name the offending location and propose the trimmed version. For paragraph-form enumerations, write out the bullet-list rewrite.
+10c. **Apply `PROSE-DISCIPLINE.md`** (bipartite repo root). Read the file and check the issue against its rules and reviewer flags. Flag violations as **MEDIUM**, or **HIGH** when they materially obscure the deliverable. Name the offending location and propose the trimmed version; for paragraph-form enumerations, write the bullet-list rewrite.
 
 #### Internal consistency
 
