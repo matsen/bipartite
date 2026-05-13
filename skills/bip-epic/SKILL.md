@@ -106,76 +106,98 @@ git pull --ff-only origin main
 
 If this fails, report the problem and continue with stale state.
 
-### Step 3: Gather issue and PR state from GitHub
+### Step 3: Fan out scanners
 
-Start with the question: **what issues need work?**
+First the cheap structured listing the primary can do directly:
 
 ```bash
-# EPIC issues (project-level tracking)
-gh issue list --search "EPIC in:title" --json number,title,body
-
-# All open issues (the work backlog)
-gh issue list --search "sort:updated-desc" --limit 20 --json number,title,state,labels
-
-# Open PRs (in-flight work nearing completion)
-gh pr list --json number,title,headRefName,state
-
-# Recently merged PRs (what landed since last check)
-gh pr list --search "is:pr is:merged sort:updated-desc" --limit 10 --json number,title,mergedAt
+gh issue list --search "EPIC in:title" --json number,title
 ```
 
-Parse the **Status dashboard** section from each EPIC body to extract
-completed, active, and blocked items.
+Then dispatch three groups of `general-purpose` subagents in parallel
+— single message, multiple `Agent` tool calls. Follow the dispatch
+pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
 
-For every open issue and PR, verify its current state:
-```bash
-gh issue view <N> --json state,stateReason -q '.state + " " + (.stateReason // "")'
-gh pr view <N> --json state,mergedAt -q '.state'
-```
+**Group A: one subagent per EPIC.** Brief:
+
+> Read EPIC `i<N>` and report its current state. Tasks:
+> 1. `gh issue view <N> --json title,body,updatedAt`.
+> 2. Parse the Status dashboard, Key findings, and active clone
+>    assignments table.
+> 3. For each open item with a clone assignment, run `gh issue view
+>    <child-N> --json state,stateReason` to confirm it is still open.
+>
+> Return under 400 words:
+> - `changes_since_baseline`: completed items, new findings, items
+>   newly opened
+> - `active_items`: open work with clone assignments and brief status
+> - `action_candidates`: items the EPIC marks ready but unassigned
+> - `surprises`: contradictions, stale assignments, `RECOMMEND DEEPER
+>   LOOK` flags
+
+**Group B: one PR/issue triage subagent.** Brief:
+
+> Triage the backlog for the conductor. Tasks:
+> 1. `gh issue list --search "sort:updated-desc" --limit 20 --json
+>    number,title,state,labels,body`.
+> 2. `gh pr list --json number,title,headRefName,state`.
+> 3. `gh pr list --search "is:pr is:merged sort:updated-desc"
+>    --limit 10 --json number,title,mergedAt`.
+> 4. For each open issue, check its `depends_on` field and any
+>    blocking context. An issue that depends on an unmerged PR or
+>    unfinished experiment is NOT ready — omit silently.
+> 5. Verify state with `gh issue view <N> --json state` for any
+>    issue you plan to flag — never claim "open" without confirmation.
+>
+> Return under 400 words:
+> - `changes_since_baseline`: PRs merged since last session
+> - `active_items`: open PRs with state/CI status
+> - `action_candidates`: open issues ready to spawn (unblocked,
+>   unassigned, dependencies satisfied), ordered by priority
+> - `surprises`: closed/merged items the EPICs don't reflect yet,
+>   issues with unclear blocker state, `RECOMMEND DEEPER LOOK` flags
+
+**Group C: one slot-collector subagent.** Brief:
+
+> Inventory clones/worktrees. Read `clone_root` and `local_worktrees`
+> from `.epic-config.json`.
+>
+> Clone mode (`local_worktrees` absent or false): iterate
+> `clone_names`; for each, capture branch, last commit, dirty files
+> (max 5), and `.epic-status.json` contents.
+>
+> Worktree mode (`local_worktrees: true`): `find $CLONE_ROOT
+> -maxdepth 1 -name 'issue-*' -type d`; for each, capture last
+> commit, dirty files, and `.epic-status.json`.
+>
+> Also: `tmux list-windows -F "#W"`.
+>
+> Classify each slot:
+> - `occupied`: has tmux window (regardless of agent status — user
+>   may be doing follow-up work)
+> - `stale`: no tmux window, but has `.epic-status.json` or is on
+>   non-main branch
+> - `available`: (clone mode) no tmux window, on `main`, clean
+>
+> Return under 400 words:
+> - `active_items`: per slot: name, phase, summary, scope, stop_reason,
+>   lead_guidance (from `.epic-status.json`), classification
+> - `action_candidates`: stale slots ready for cleanup (clean up
+>   ONLY if no tmux window — never kill tmux windows)
+> - `surprises`: phase migrations (`blocked`/`pr-review`), missing
+>   status files, contradictions
 
 **Never ask the user a question about an issue/PR status that you
-could answer with a `gh` query** — poll first, then present facts.
+could answer with a `gh` query** — verify first, then present facts.
 
-### Step 4: Check clone capacity
+### Step 4: Reconcile issues with clones
 
-Scan clones/worktrees to answer "where can work run?"
+After the Step 3 fan-out, the primary holds three structured reports.
+Compose the reconciliation from them — do not paste subagent prose
+verbatim. The primary sees all three reports; cross-reference them
+yourself.
 
-Check tmux windows: `tmux list-windows -F "#W"`
-
-Read `clone_root` and `local_worktrees` from `.epic-config.json`.
-
-**Clone mode** (`local_worktrees` absent or false): iterate `clone_names`:
-```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-for name in $(jq -r '.clone_names[]' .epic-config.json); do
-  git -C "$CLONE_ROOT/$name" branch --show-current
-  git -C "$CLONE_ROOT/$name" log --oneline -1
-  git -C "$CLONE_ROOT/$name" status --porcelain | head -5
-  cat "$CLONE_ROOT/$name/.epic-status.json" 2>/dev/null
-done
-```
-
-**Worktree mode** (`local_worktrees: true`): discover via `git worktree list`:
-```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d | while read wt; do
-  git -C "$wt" log --oneline -1 2>/dev/null
-  git -C "$wt" status --porcelain 2>/dev/null | head -5
-  cat "$wt/.epic-status.json" 2>/dev/null
-done
-```
-
-For each clone/worktree, note which issue (if any) it's working on. Classify:
-- **occupied**: Has tmux window (regardless of agent status — user may be doing follow-up work)
-- **stale**: No tmux window, but has `.epic-status.json` or is on a non-main branch
-- **available**: (clone mode) No tmux window, on `main`, clean worktree — (worktree mode) N/A, new worktrees are created on demand
-
-**Key rule**: An open tmux window means the clone is in use. The user
-closes the window when they are done. Never kill tmux windows.
-
-### Step 5: Reconcile issues with clones
-
-Cross-reference the two datasets:
+Reconcile across the three reports (Groups A, B, C):
 - If an issue is **CLOSED on GitHub** but a clone is still assigned →
   if the clone has no tmux window, clean it up; if it has a tmux window,
   leave it alone (user may be doing follow-up work)
@@ -183,8 +205,11 @@ Cross-reference the two datasets:
 - Never present an issue as "ready to spawn" or "needs action" without
   confirming it's still OPEN on GitHub
 - Flag anything merged/closed that the EPIC doesn't reflect yet
+- If any group's report has zero `surprises` and zero
+  `changes_since_baseline`, send a follow-up to that subagent with a
+  narrower question before concluding "nothing changed there."
 
-### Step 6: Build status display
+### Step 5: Build status display
 
 The dashboard is **issue-centric**. The user cares about what work
 needs attention and what's ready to start — clones are parenthetical.
@@ -215,7 +240,7 @@ experiment, it is NOT ready — omit it silently.
 This two-section layout is the primary loop: what's running, what's
 next. Keep it tight — the user should be able to scan in 10 seconds.
 
-### Step 7: Propose next action
+### Step 6: Propose next action
 
 First, do housekeeping automatically (no need to ask):
 - **Update EPIC bodies** if anything merged/closed since last update
@@ -235,7 +260,7 @@ Then propose spawning work for ready issues:
 
 Wait for user confirmation, then run `/bip-epic-spawn` (do NOT improvise tmux/claude commands).
 
-### Step 8: Start slot monitor
+### Step 7: Start slot monitor
 
 After the dashboard is built and any spawns are launched, offer to start
 the **persistent slot monitor** — `bip epic watch` — which observes

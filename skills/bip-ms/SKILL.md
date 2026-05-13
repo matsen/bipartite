@@ -86,7 +86,7 @@ Fields:
   - **local_path**: Local checkout of the repo
   - **epics**: EPIC issue numbers to monitor
   - **fetch_cmds**: Shell commands to run **inside `local_path`** to fetch specific result directories from remote. Each command should be selective — pull only the results the manuscript needs, not the entire experiment tree. Uses the repo's own Makefile targets (which know the remote host and rsync config).
-  - **remote_watch** (optional): Configuration for the persistent result monitor (Step 7). Fields:
+  - **remote_watch** (optional): Configuration for the persistent result monitor (Step 5). Fields:
     - **host**: SSH hostname for the remote server
     - **paths**: Remote directories to watch for new results
     - **patterns**: File glob patterns to match (e.g. `*.svg`, `*.html`, `*.tsv`)
@@ -139,73 +139,60 @@ git log --oneline -5
 
 Note any uncommitted changes or recent work.
 
-### Step 2: Scan each tracked repo's EPICs
+### Step 2: Fan out per-repo scanners
 
-For each repo in `tracked_repos`, for each EPIC number:
+For each entry in `tracked_repos`, dispatch one `general-purpose`
+subagent **in parallel** — single message, multiple `Agent` tool calls.
+Follow the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo
+root). Per-repo (not per-EPIC) granularity avoids racing on `git pull`
+when one repo has multiple EPICs.
 
-```bash
-gh issue view <epic-number> --repo <org/repo> --json title,body,updatedAt
-```
+Brief for each subagent:
 
-Parse the EPIC body's **Status dashboard** to extract:
-- Completed items (checked boxes) — especially newly completed since last session
-- Active items (unchecked, assigned to clones)
-- Key findings section — new numbered findings
+> Scan repo `<org/repo>` for the manuscript session. Local path:
+> `<local_path>`. EPIC numbers: `<epics>`. Fetch commands:
+> `<fetch_cmds>`.
+>
+> Tasks:
+> 1. `git -C <local_path> pull --ff-only origin main` (continue on
+>    failure; note it).
+> 2. From `<local_path>`, run each fetch_cmd.
+> 3. For each EPIC, `gh issue view <N> --repo <org/repo> --json
+>    title,body,updatedAt`. Parse Status dashboard, Key findings,
+>    and active clone assignments.
+> 4. `gh pr list --repo <org/repo> --search "is:merged
+>    sort:updated-desc" --limit 10 --json
+>    number,title,mergedAt,body`. Note which produced figures or
+>    quantitative results.
+> 5. Find SVGs and HTMLs under `<local_path>` modified in the last
+>    120 minutes. For each, identify the EPIC or PR that produced
+>    it.
+>
+> Return under 400 words, structured per `SUBAGENT-SCAN.md`:
+> - `changes_since_baseline`: EPIC items newly checked, new key
+>   findings, PRs merged that produced relevant results
+> - `active_items`: clone assignments from EPIC tables, brief status
+> - `new_artifacts`: paths to new SVGs/notebooks with EPIC/PR source
+> - `action_candidates`: figures to import, notebooks to open, text
+>   to draft
+> - `surprises`: anything else, including `RECOMMEND DEEPER LOOK`
+>   flags
+>
+> Quote specific EPIC/PR lines that show what changed — do not paste
+> full bodies. Use Read (not grep excerpts) for any PR body or
+> finding you cite.
 
-### Step 3: Pull and fetch results
+If any report has zero `surprises` *and* zero `changes_since_baseline`,
+dispatch a follow-up with a narrower question ("what changed in the
+last 7 days on this EPIC even if no boxes were checked?") before
+concluding "all quiet" for that repo.
 
-Two-step process for each tracked repo:
+### Step 3: Build status table
 
-**Step 3a: Git pull** — gets committed code, Makefile updates, and any
-committed result files:
-```bash
-LOCAL_PATH=<expanded local_path>
-git -C "$LOCAL_PATH" pull --ff-only origin main
-```
-
-**Step 3b: Selective fetch** — run each command in `fetch_cmds` to pull
-specific result directories from the remote. These are run inside
-`local_path`:
-```bash
-LOCAL_PATH=<expanded local_path>
-cd "$LOCAL_PATH"
-# Run each fetch command from config
-make remote-fetch DIR=experiments/2026-03-benchmark/results
-make artifacts-pull DIR=figures/final
-```
-
-**Important**: Only fetch what's configured. Remote experiment trees can
-be very large — we pull only the specific directories the manuscript
-needs. When a new experiment completes that the manuscript should
-incorporate, add its result path to `fetch_cmds` in `.ms-config.json`.
-
-If `fetch_cmds` is empty or missing, skip the fetch and just work with
-what's already local after the git pull. Warn the user that remote
-results won't be checked.
-
-### Step 4: Identify new artifacts
-
-After fetching, find what's new:
-
-```bash
-LOCAL_PATH=<expanded local_path>
-
-# SVGs (recently modified)
-find "$LOCAL_PATH" -name "*.svg" -mmin -120 | head -20
-
-# HTML notebooks
-find "$LOCAL_PATH" -name "*.html" -mmin -120 | head -20
-```
-
-Cross-reference with EPIC findings and recently merged PRs:
-
-```bash
-gh pr list --repo <org/repo> --search "is:merged sort:updated-desc" --limit 5 --json number,title,body,mergedAt
-```
-
-### Step 5: Build status table
-
-Display a summary of what's happening across all tracked repos:
+Compose from the per-repo subagent reports (do not paste their prose
+verbatim). Cross-reference the reports against each other — the
+primary sees all of them; the subagents don't. Display a summary of
+what's happening across all tracked repos:
 
 | Repo | EPIC | New Results | Active Work | Action Needed |
 |------|------|-------------|-------------|---------------|
@@ -223,7 +210,7 @@ Then list specific new artifacts:
 **New findings to write up:**
 - EPIC i281 finding #7: "Clamping improves convergence by 3x"
 
-### Step 6: Propose actions
+### Step 4: Propose actions
 
 Based on what's new, propose concrete next steps:
 
@@ -235,7 +222,7 @@ Based on what's new, propose concrete next steps:
 
 Wait for user confirmation before taking action.
 
-### Step 7: Start result monitor
+### Step 5: Start result monitor
 
 If any tracked repo has a `remote_watch` configuration, offer to start a
 **persistent Monitor** that watches remote servers for new result files

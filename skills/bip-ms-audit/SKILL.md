@@ -46,70 +46,93 @@ Determine:
 
 If `.ms-config.json` is missing, ask the user for the paper path and code repo path(s) and offer to create the config (see `/bip-ms`).
 
-### Step 2: Extract checkable claims from the paper
+### Step 2: Partition the scope and fan out
 
-Read the paper section(s) in scope. Build a list of **checkable, falsifiable claims**. Focus on:
+The primary partitions the audit scope into independent chunks, then
+dispatches one `general-purpose` subagent per chunk **in parallel** —
+single message, multiple `Agent` tool calls. Follow the dispatch
+pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
 
-- **Tensor / array dimensions**: "tensor of dimension $X \times Y \times Z$"
-- **Formulas**: equations in `align`, `equation`, or display math; especially RNN/aggregation/loss expressions
-- **Algorithm steps**: pseudocode in `algorithm` blocks; described traversal orders
-- **Hyperparameter values**: "we set learning rate to $5 \times 10^{-5}$", "batch size $4$"
-- **Counts / complexity**: "$n - 3$ internal edges", "$O(n \log n)$ time", "200 trees per alignment"
-- **Variable bindings**: "$v$ is the node bounding the current edge on its root side"
-- **Loss / metric definitions**: "we use binary cross entropy", "mask edges incident to leaves"
-- **Data pipeline steps**: "we remove sites containing gaps", "$80\%$ training / $20\%$ testing split"
-- **Theorem / proposition statements**: definitions and the variables they reference
+Partitioning rules:
+- **Whole paper** (default): one subagent per top-level Methods /
+  Algorithms section.
+- **One section** (`/bip-ms-audit Methods`): one subagent per
+  subsection, or per claim cluster (formula + its surrounding text)
+  if subsections are missing.
+- **One formula or label** (`/bip-ms-audit --formula eq:loss`): one
+  subagent.
 
-Skip subjective claims that cannot be verified against code ("our results suggest...", "this is promising...").
+Brief for each audit subagent (the **line-by-line investigation**
+framing is mandatory — this is what separates an audit from a skim):
 
-For each claim, record:
-- The exact paper line number(s)
-- A one-sentence summary of what the paper asserts
-- The code-side concept to look for (function name, file, hyperparameter key, etc.)
+> **Line-by-line investigation** of paper section `<section>`
+> against tracked code repo(s) `<local_path(s)>`. This is not a
+> scan. For every checkable claim in scope, you must read the
+> implementation file in full with the `Read` tool — not a grep
+> excerpt — and cite the specific paper line and code line that
+> back your verdict. A verdict without a `file:line` citation on
+> both sides will be rejected and re-dispatched.
+>
+> Tasks:
+> 1. Read the paper section with `Read`. List every checkable,
+>    falsifiable claim: tensor/array dimensions, formulas
+>    (`align`/`equation`/display math), algorithm steps,
+>    hyperparameter values, counts/complexity, variable bindings,
+>    loss/metric definitions, data pipeline steps, theorem
+>    statements. Skip subjective claims ("our results suggest…").
+>    Record paper `file:line` for each.
+> 2. For each claim, locate the code-side counterpart. Use `rg` to
+>    find files, but then `Read` the file. Common keyword maps:
+>    tensor dims → `torch.zeros`/`np.zeros`/`torch.full`;
+>    formulas → `forward`/`loss`/aggregation; hyperparameters →
+>    `config.yaml`/`Snakefile`/CLI defaults; loss/mask → training
+>    loop; data filtering → preprocessing pipeline/snakemake rules.
+>    If a claim has multiple implementations (e.g., vectorized
+>    batch path + tree-iteration reference path), check **both** —
+>    that's a frequent source of divergence.
+> 3. For each claim, classify with a verdict:
+>    - `MATCH` — paper and code agree
+>    - `MISMATCH` — disagree on a substantive, falsifiable point
+>    - `AMBIGUOUS` — paper is unclear/underspecified; code makes a
+>      specific choice
+>    - `MULTIPLE IMPLS DISAGREE` — two code paths disagree with
+>      each other (and at most one matches the paper)
+>    - `STALE PAPER` — paper describes an earlier code version
+>    - `STALE CODE` — paper describes a fix code hasn't picked up
+>
+> **MATCH is the default.** Most claims are correct. If your
+> report is mostly `MISMATCH`, you are misreading the code — stop
+> and re-check the worst offenders before returning.
+>
+> Return under 500 words, structured:
+> - `findings`: one entry per non-`MATCH` claim with:
+>   - paper quote + `file:line`
+>   - code quote + `file:line` (use Read, not grep excerpts)
+>   - verdict
+>   - one-sentence rationale (why they disagree)
+> - `matches`: count of `MATCH` verdicts (no quotes needed)
+> - `surprises`: claims you couldn't certify a `file:line` for,
+>   variable names that mean different things in different places,
+>   `RECOMMEND DEEPER LOOK` flags
 
-### Step 3: Locate the code-side counterpart
+If a subagent returns a finding without both `file:line` citations,
+re-dispatch with a narrower brief covering just that finding.
 
-For each claim, find the corresponding implementation:
+### Step 3: Primary consolidates findings
 
-```bash
-LOCAL_PATH=<expanded local_path>
-# Search by likely keyword:
-rg -n "<keyword>" "$LOCAL_PATH" --type py --type zig --type go
-# Look in obvious places:
-ls "$LOCAL_PATH"/<package>/
-```
+The primary collects all subagent reports and assembles a single
+working list of non-`MATCH` findings, sorted by verdict severity
+(`MULTIPLE IMPLS DISAGREE` and `MISMATCH` first). No prose pasted
+verbatim from subagents — quote only the paper and code line excerpts
+they cited.
 
-Common keyword maps:
+If any subagent's report has many findings (say >5 in a 10-claim
+section), treat that as the "everything looks like a mismatch"
+failure mode and re-dispatch the subagent with explicit instruction
+to verify each claim by reading the full implementation file before
+classifying.
 
-| Paper claim | Where to look |
-|---|---|
-| Tensor dimension | `*.py` allocation sites — `torch.zeros`, `np.zeros`, `torch.full` |
-| Formula | model `forward`, `loss`, or aggregation function |
-| Algorithm step | function with the matching name; or pseudocode-style helper |
-| Hyperparameter | `config.yaml`, `Snakefile`, CLI defaults, `__init__` signature |
-| Loss / mask | training loop, `loss_fn`, `mask_*` helpers |
-| Data filtering | preprocessing pipeline, snakemake rules |
-
-If a claim has multiple implementations (e.g., a vectorized batch path AND a tree-iteration reference path), check **both** — they are a frequent source of divergence between each other and between either of them and the paper.
-
-### Step 4: Compare in detail
-
-**Read the code with the `Read` tool.** Do not rely on `grep` excerpts for anything more than locating files. The whole skill collapses if you skim. Read enough surrounding context to know what each variable in the formula refers to.
-
-For each claim, classify:
-
-| Verdict | Meaning |
-|---|---|
-| **MATCH** | Paper and code agree. No action. |
-| **MISMATCH** | Paper and code disagree on a substantive, falsifiable point. The user must decide whether to fix the paper, the code, or both. |
-| **AMBIGUOUS** | Paper is unclear/underspecified; code makes a specific choice. Suggest paper clarification. |
-| **MULTIPLE IMPLS DISAGREE** | Two code paths in the same repo disagree with each other (and at most one matches the paper). Highest-priority finding. |
-| **STALE PAPER** | Paper describes an earlier version of the code; the code has moved on. |
-| **STALE CODE** | Paper describes a fix that the code hasn't picked up yet. |
-
-A **MATCH** verdict is the default — most claims are correct most of the time. If everything is `MISMATCH`, you are probably misreading the code. Stop and re-check the worst offenders.
-
-### Step 5: Skeptic confirmation for non-trivial findings
+### Step 4: Skeptic confirmation for non-trivial findings
 
 For any finding that is **not** a `MATCH`, spawn `@surprising-conclusion-skeptic` to independently verify before reporting it. Skip this step only if the user passed `--no-skeptic`.
 
@@ -128,7 +151,7 @@ The skeptic's job is to **try to refute** the finding. If they confirm it surviv
 
 This step is the difference between a useful audit and one that cries wolf. Do not skip it.
 
-### Step 6: Write the report
+### Step 5: Write the report
 
 Produce a markdown report in the manuscript repo as `MS-AUDIT-<ISO-date>.md`. Format:
 
@@ -174,7 +197,7 @@ Allocates `max_n_nodes` ≈ 2n-2 entries, indexed by every non-root node — pap
 
 For each finding include: paper quote + line, code quote + line, skeptic verdict, suggested action. Group by verdict, with `MULTIPLE IMPLS DISAGREE` and `MISMATCH` first.
 
-### Step 7: Hand off
+### Step 6: Hand off
 
 Show the report path. Offer:
 1. Open the report (`zed <path>` or `tmux display-popup -E -- less <path>`).

@@ -10,7 +10,7 @@ active clones since last check. Use this instead of `/bip-epic` when
 you already have context established.
 
 For continuous monitoring, prefer `bip epic watch` (started by
-`/bip-epic` Step 8). It writes phase transitions to
+`/bip-epic` Step 7). It writes phase transitions to
 `.epic-notifications.log` in the conductor cwd; this poll skill reads
 new entries from that log to catch transitions the conductor may have
 missed. Use `/bip-epic-poll` for:
@@ -22,77 +22,13 @@ For periodic auto-polling: `/loop 10m /bip-epic-poll`
 
 ## What to check
 
-### 1. Recently merged PRs
+Two things stay in the primary because they're cheap and structured:
 
-```bash
-gh pr list --search "is:pr is:merged sort:updated-desc" --limit 5 --json number,title,mergedAt
-```
-
-For each new merge: read the PR body (`gh pr view <N> --json body`),
-note key results, check if it closes an issue.
-
-### 2. Open PRs
-
-```bash
-gh pr list --json number,title,headRefName,state
-```
-
-Note any new PRs or CI status changes.
-
-### 3. New issues
-
-```bash
-gh issue list --search "sort:created-desc" --limit 5 --json number,title,state,createdAt
-```
-
-### 4. Issue comments
-
-Check comments on active issues (especially ones with running clones):
-
-```bash
-gh api repos/{owner}/{repo}/issues/{number}/comments --jq '.[-1].body' | head -40
-```
-
-Look for **issue-lead comments** (prefixed with `🤖 **Issue Lead**`) —
-these show worker evaluation results and may indicate workers that need
-attention.
-
-### 5. Slot status
-
-Read `clone_root` and `local_worktrees` from `.epic-config.json`.
-
-**Clone mode** (`local_worktrees` absent or false):
-```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-for name in $(jq -r '.clone_names[]' .epic-config.json); do
-  [ -f "$CLONE_ROOT/$name/.epic-status.json" ] && echo "=== $name ===" && cat "$CLONE_ROOT/$name/.epic-status.json"
-done
-```
-
-**Worktree mode** (`local_worktrees: true`):
-```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d | while read slot; do
-  [ -f "$slot/.epic-status.json" ] && echo "=== $(basename $slot) ===" && cat "$slot/.epic-status.json"
-done
-```
-
-Also check tmux: `tmux list-windows -F "#W"`
-
-For active slots, check recent commits:
-```bash
-git -C <slot-path> log --oneline main..HEAD | head -5
-```
-In worktree mode, `<slot-path>` is `$CLONE_ROOT/issue-<N>`.
-
-#### Notifications log tail
-
-If `bip epic watch` is running, it appends one JSONL line per phase
-transition to `.epic-notifications.log` in the conductor cwd. Read any
-entries that landed since the last poll so the conductor catches
-transitions even when both the watcher and Monitor were down. The
-state file `/tmp/.epic-poll-last-read` records the previous poll time
-as Unix seconds; pass the elapsed window to `--since`:
+**Notifications log tail** — if `bip epic watch` is running, it
+appends one JSONL line per phase transition to
+`.epic-notifications.log` in the conductor cwd. The state file
+`/tmp/.epic-poll-last-read` records the previous poll time as Unix
+seconds; pass the elapsed window to `--since`:
 
 ```bash
 LAST=$(cat /tmp/.epic-poll-last-read 2>/dev/null || echo $(($(date +%s) - 3600)))
@@ -101,31 +37,59 @@ bip epic watch --since "$((NOW - LAST))s" 2>/dev/null
 echo "$NOW" > /tmp/.epic-poll-last-read
 ```
 
-`--since` reads the log and replays matching entries to stdout without
-re-appending them. Surface any `needs-human` / `completed` transitions
-prominently per the section below.
+Surface any `needs-human` / `completed` transitions prominently per
+the section below.
 
-#### New status fields to display
+**Tmux window list** — `tmux list-windows -F "#W"` is one line of
+output and tells the subagent which slots to inspect.
 
-When reading `.epic-status.json`, surface these fields in addition to
-phase and summary:
-- **stop_reason** — the lead's classification of why the worker stopped
-- **lead_guidance** — what the lead told the worker to do next
-- **scope** — the lead's restatement of the issue goal (useful for
-  spotting drift)
+Everything else is delegated. Dispatch one `general-purpose` subagent
+for the combined poll (the poll is lighter than the cold start, so a
+single combined scan keeps round-trips down). Follow the dispatch
+pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 
-#### Phase migration
+> Delta poll for the EPIC conductor since the previous poll. Tmux
+> windows currently open: `<list from tmux list-windows>`. Tasks:
+>
+> 1. `gh pr list --search "is:pr is:merged sort:updated-desc"
+>    --limit 5 --json number,title,mergedAt,body`. For each new
+>    merge: note key results and whether it closes an issue.
+> 2. `gh pr list --json number,title,headRefName,state`. Note new
+>    PRs or CI status changes.
+> 3. `gh issue list --search "sort:created-desc" --limit 5 --json
+>    number,title,state,createdAt`.
+> 4. For each active slot (per the tmux list and any
+>    `.epic-status.json` in `<clone_root>`), check the latest
+>    issue-lead comment: `gh api
+>    repos/<owner>/<repo>/issues/<N>/comments --jq '.[-1].body'`.
+>    Look for the `🤖 **Issue Lead**` prefix.
+> 5. Inventory slots from `.epic-config.json`. Clone mode: iterate
+>    `clone_names`. Worktree mode: `find <clone_root> -maxdepth 1
+>    -name 'issue-*' -type d`. For each slot, read
+>    `.epic-status.json` and surface: phase, summary, scope,
+>    stop_reason, lead_guidance. Migrate legacy phases:
+>    `blocked → needs-human`, `pr-review → quality-gate`.
+> 6. For active slots, `git -C <slot> log --oneline main..HEAD |
+>    head -5` to see recent commits.
+> 7. For slots that look finished or blocked, capture the last 20
+>    lines of tmux: `tmux capture-pane -t <window> -p | tail -20`.
+> 8. Verify state with `gh pr view --json state` / `gh issue view
+>    --json state` for anything you plan to flag — never claim
+>    "open" or "merged" without a live confirmation.
+>
+> Return under 400 words, structured per `SUBAGENT-SCAN.md`:
+> - `changes_since_baseline`: merged PRs, new issues, new
+>   issue-lead comments, slot phase changes
+> - `active_items`: per active slot — clone, issue, phase,
+>   stop_reason, lead assessment (one line each)
+> - `action_candidates`: open issues ready for unassigned slots;
+>   merged PRs that should trigger slot cleanup; EPIC body updates
+>   needed
+> - `surprises`: `needs-human`/`completed` slots, stale status
+>   files, contradictions, `RECOMMEND DEEPER LOOK` flags
 
-Handle legacy phases from older status files:
-- `blocked` → display as `needs-human`
-- `pr-review` → display as `quality-gate`
-
-### 6. Tmux output (if interesting)
-
-For clones that seem to have finished or are blocked:
-```bash
-tmux capture-pane -t <N>-<clone-name> -p | tail -20
-```
+If the report has zero `changes_since_baseline` and zero `surprises`,
+the poll output is one line: "All quiet."
 
 ## After polling
 

@@ -10,7 +10,7 @@ changed in tracked code repos and EPICs since last check, fetches new
 artifacts from remote, and reacts to new results.
 
 For continuous monitoring, prefer the **persistent result monitor**
-started by `/bip-ms` (Step 7) — it uses SSH polling to detect new
+started by `/bip-ms` (Step 5) — it uses SSH polling to detect new
 result files on remote servers in real time. Use `/bip-ms-poll` for:
 - Full GitHub reconciliation (EPIC updates, merged PRs, new issues)
 - Running `fetch_cmds` to pull results locally after the monitor flags them
@@ -29,62 +29,53 @@ to copy FROM remote) are fine — they only modify the local clone.
 
 ## What to check
 
-### 1. EPIC updates
+Fan out one `general-purpose` subagent per entry in `tracked_repos` —
+single message, multiple `Agent` calls in parallel. Follow the
+dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Per-repo
+granularity avoids racing on `git pull` when one repo has multiple
+EPICs.
 
-For each repo/epic in `.ms-config.json`:
+Brief for each subagent:
 
-```bash
-gh issue view <epic-number> --repo <org/repo> --json body,updatedAt
-```
+> Lightweight delta poll for repo `<org/repo>` since the previous
+> manuscript poll. Local path: `<local_path>`. EPIC numbers:
+> `<epics>`. Fetch commands: `<fetch_cmds>`. Last-seen EPIC
+> `updatedAt`: `<timestamps>` (from primary's memory; if unknown,
+> compare against the last 24h).
+>
+> Tasks:
+> 1. For each EPIC, `gh issue view <N> --repo <org/repo> --json
+>    body,updatedAt`. If `updatedAt` is unchanged from baseline,
+>    skip body parsing. Otherwise extract newly checked items, new
+>    key findings, and changes to active clone assignments.
+> 2. `gh pr list --repo <org/repo> --search "is:merged
+>    sort:updated-desc" --limit 5 --json
+>    number,title,body,mergedAt`. Report only PRs newer than the
+>    last poll.
+> 3. `git -C <local_path> pull --ff-only origin main` and run each
+>    fetch_cmd from `<local_path>` (idempotent; safe to re-run).
+> 4. `find <local_path> \( -name "*.svg" -o -name "*.html" \) -mmin
+>    -60`. For each new file, identify the producing EPIC or PR.
+> 5. `gh pr list --repo <org/repo> --json
+>    number,title,headRefName,state`. Note any PRs approaching merge
+>    that will produce results soon.
+>
+> Return under 300 words, structured per `SUBAGENT-SCAN.md`:
+> - `changes_since_baseline`: EPIC deltas, new merges, new findings
+> - `active_items`: PRs approaching merge with brief status
+> - `new_artifacts`: paths to new SVGs/notebooks with source EPIC/PR
+> - `action_candidates`: import figure X, open notebook Y, draft
+>   text for finding Z
+> - `surprises`: anything else, including `RECOMMEND DEEPER LOOK`
+>   flags
+>
+> Use Read (not grep excerpts) for PR bodies or finding text you
+> cite. Do not paste full bodies.
 
-Compare `updatedAt` with last known timestamp. If changed, parse the
-body for:
-- Newly checked boxes (completed items)
-- New key findings
-- Changes to active clone assignments
-
-### 2. Recently merged PRs
-
-```bash
-gh pr list --repo <org/repo> --search "is:merged sort:updated-desc" --limit 5 --json number,title,body,mergedAt
-```
-
-For each new merge since last poll: read the PR body, note key results,
-check if it produced figures or notebooks.
-
-### 3. Pull and selectively fetch results
-
-For each tracked repo in `.ms-config.json`:
-
-```bash
-LOCAL_PATH=<expanded local_path>
-
-# Git pull — picks up committed code and Makefile changes
-git -C "$LOCAL_PATH" pull --ff-only origin main
-
-# Selective fetch — run each fetch_cmd inside the local clone
-cd "$LOCAL_PATH"
-# e.g. make remote-fetch DIR=experiments/2026-03-benchmark/results
-# e.g. make artifacts-pull DIR=figures/final
-```
-
-Only fetch directories listed in `fetch_cmds`. Remote experiment trees
-can be very large — never pull everything. When the EPIC reports a new
-experiment that matters for the manuscript, add its result path to
-`fetch_cmds` in `.ms-config.json`.
-
-After fetching, identify what's new:
-```bash
-find "$LOCAL_PATH" \( -name "*.svg" -o -name "*.html" \) -mmin -60 | head -20
-```
-
-### 4. Open PR activity
-
-```bash
-gh pr list --repo <org/repo> --json number,title,headRefName,state
-```
-
-Note any PRs approaching merge that might produce results soon.
+If every subagent reports zero `changes_since_baseline` and zero
+`surprises`, the poll output is one line: "All quiet across tracked
+repos." Otherwise compose the "React to new artifacts" sections below
+from the structured reports.
 
 ## React to new artifacts
 
