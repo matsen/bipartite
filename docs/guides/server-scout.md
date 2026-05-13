@@ -119,12 +119,12 @@ beetle02  offline
 
 ## Claude Code Skill
 
-Use `/bip.scout` for interactive server queries:
+Use `/bip-scout` for interactive server queries:
 
 ```
-/bip.scout                           # Full summary
-/bip.scout which server has free GPUs?
-/bip.scout where should I run a training job?
+/bip-scout                           # Full summary
+/bip-scout which server has free GPUs?
+/bip-scout where should I run a training job?
 ```
 
 The skill runs `bip scout`, parses the JSON, and answers questions by reasoning over the data.

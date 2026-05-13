@@ -99,7 +99,7 @@ iteration. Every lead invocation re-derives cold from the signals
 | **awaiting-results** | Experiment running, not done | Check partial results: if sufficient to answer the question, tell worker to analyze what's available. Otherwise, the ralph-loop handles polling — each iteration checks and exits if not ready. |
 | **run-production** | Works on test data, not on real data | "Run on production data with the new feature" |
 | **pr-ready** | Work done, no PR yet | Verify topic branch, instruct: push, PR, quality gate |
-| **quality-gate** | PR exists, needs checks | Instruct: run /bip.pr.check, fix all, run /bip.pr.review, fix all, repeat until clean |
+| **quality-gate** | PR exists, needs checks | Instruct: run /bip-pr-check, fix all, run /bip-pr-review, fix all, repeat until clean |
 | **mechanical-blocker** | CI, merge conflict, deps | Provide specific fix instructions |
 | **scope-drift** | Work outside the issue | Redirect firmly to issue scope |
 | **premature-deferral** | Items bucketed as `fold-in` or `premature-punt` in Step 2 | Name each item and tell the worker to complete it in this PR. Framing for fold-in items is neutral ("fold this into the PR"), not punitive. For premature-punts, call out the specific `TODO`/"later" that needs resolving. |
@@ -208,17 +208,17 @@ Otherwise:
    `file-followup` (only this bucket — not `fold-in`, which the
    worker should have already completed in this PR). For each, write
    the item (and rationale, if useful) to a focus tempfile and
-   invoke `/bip.issue.next`:
+   invoke `/bip-issue-next`:
 
    ```bash
    FOCUS=/tmp/issue-next-focus-<issueN>-<idx>.txt
    printf '%s\n\n%s\n' "<item>" "<rationale>" > "$FOCUS"
-   /bip.issue.next <PR-URL> --focus-file "$FOCUS"
+   /bip-issue-next <PR-URL> --focus-file "$FOCUS"
    rm -f "$FOCUS"
    ```
 
    Using a file (not a CLI string) avoids shell-quoting hazards.
-   The skill runs draft → `/bip.issue.check` → `/bip.issue.file` and
+   The skill runs draft → `/bip-issue-check` → `/bip-issue-file` and
    returns a filed issue URL; capture it. If a filing fails, note it
    and continue with the remaining candidates.
 

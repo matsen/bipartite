@@ -131,7 +131,7 @@
   <g
      id="g8">
     <title
-       id="title7">/bip.ms — Cold-start dashboard for a manuscript session. Scans tracked EPICs across code repos for new results, figures, and findings.</title>
+       id="title7">/bip-ms — Cold-start dashboard for a manuscript session. Scans tracked EPICs across code repos for new results, figures, and findings.</title>
     <rect
        x="45"
        y="130"
@@ -150,12 +150,12 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text8">/bip.ms</text>
+       id="text8">/bip-ms</text>
   </g>
   <g
      id="g9">
     <title
-       id="title8">/bip.ms.poll — Mid-session update: pulls remote repos, runs make targets, checks for new EPIC results. Notifies via ntfy when findings arrive.</title>
+       id="title8">/bip-ms-poll — Mid-session update: pulls remote repos, runs make targets, checks for new EPIC results. Notifies via ntfy when findings arrive.</title>
     <rect
        x="235"
        y="130"
@@ -174,7 +174,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text9">/bip.ms.poll</text>
+       id="text9">/bip-ms-poll</text>
   </g>
   <!-- INIT/MONITOR → DISCUSS -->
   <line
@@ -195,7 +195,7 @@
   <g
      id="g11">
     <title
-       id="title10">High-level discussion with Claude about new findings from EPIC workers: meaning, implications, and what to do next. Outcomes are filed as new GitHub issues via /bip.issue.file.</title>
+       id="title10">High-level discussion with Claude about new findings from EPIC workers: meaning, implications, and what to do next. Outcomes are filed as new GitHub issues via /bip-issue-file.</title>
     <rect
        x="45"
        y="205"
@@ -223,7 +223,7 @@
   <g
      id="g14">
     <title
-       id="title12">/bip.lit — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
+       id="title12">/bip-lit — Unified skill for literature search: ASTA for external Semantic Scholar corpus, local search for the ~6k paper JSONL library.</title>
     <rect
        x="45"
        y="280"
@@ -242,7 +242,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text13">/bip.lit</text>
+       id="text13">/bip-lit</text>
     <text
        x="127"
        y="312"
@@ -251,11 +251,11 @@
        fill="#5a7a9a"
        id="text14">asta + local search</text>
   </g>
-  <!-- /bip.issue.file (right column, vertically between Discuss and bip.lit) -->
+  <!-- /bip-issue-file (right column, vertically between Discuss and bip-lit) -->
   <g
      id="g15">
     <title
-       id="title14">/bip.issue.file — Create or update a GitHub issue from a local markdown file. Discussion and literature search both feed the issue draft.</title>
+       id="title14">/bip-issue-file — Create or update a GitHub issue from a local markdown file. Discussion and literature search both feed the issue draft.</title>
     <rect
        x="235"
        y="245"
@@ -274,7 +274,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text15">/bip.issue.file</text>
+       id="text15">/bip-issue-file</text>
   </g>
   <!-- discuss → issue.file (diagonal down-right) -->
   <line
@@ -286,7 +286,7 @@
      stroke-width="1.5"
      marker-end="url(#arr)"
      id="line15" />
-  <!-- bip.lit → issue.file (diagonal up-right) -->
+  <!-- bip-lit → issue.file (diagonal up-right) -->
   <line
      x1="210"
      y1="292"
@@ -305,7 +305,7 @@
   <g
      id="g17">
     <title
-       id="title16">/bip.issue.check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
+       id="title16">/bip-issue-check — Validate issue drafts against CONSTITUTION.md for completeness, scope discipline, and correctness brainstorming before submission.</title>
     <rect
        x="235"
        y="355"
@@ -324,12 +324,12 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text17">/bip.issue.check</text>
+       id="text17">/bip-issue-check</text>
   </g>
   <g
      id="g18">
     <title
-       id="title17">CONSTITUTION.md — Development principles that bip.issue.check validates against: scope discipline, file-based state, skill-first design.</title>
+       id="title17">CONSTITUTION.md — Development principles that bip-issue-check validates against: scope discipline, file-based state, skill-first design.</title>
     <rect
        x="45"
        y="355"
@@ -459,7 +459,7 @@
   <g
      id="g25">
     <title
-       id="title24">/bip.epic — Cold-start dashboard for EPIC orchestration. Scans clones, GitHub issues, and EPIC status to establish full context.</title>
+       id="title24">/bip-epic — Cold-start dashboard for EPIC orchestration. Scans clones, GitHub issues, and EPIC status to establish full context.</title>
     <rect
        x="565"
        y="130"
@@ -478,12 +478,12 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text25">/bip.epic</text>
+       id="text25">/bip-epic</text>
   </g>
   <g
      id="g26">
     <title
-       id="title25">/bip.epic.poll — Mid-session scan of GitHub activity and clone status. Performs housekeeping (prune merged branches, update status).</title>
+       id="title25">/bip-epic-poll — Mid-session scan of GitHub activity and clone status. Performs housekeeping (prune merged branches, update status).</title>
     <rect
        x="755"
        y="130"
@@ -502,7 +502,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text26">/bip.epic.poll</text>
+       id="text26">/bip-epic-poll</text>
   </g>
   <!-- INIT/MONITOR → DISPATCH -->
   <line
@@ -523,7 +523,7 @@
   <g
      id="g28">
     <title
-       id="title27">/bip.epic.spawn — Spawn a Claude Code worker in a dedicated tmux window for a GitHub issue. Each worker gets its own clone or worktree.</title>
+       id="title27">/bip-epic-spawn — Spawn a Claude Code worker in a dedicated tmux window for a GitHub issue. Each worker gets its own clone or worktree.</title>
     <rect
        x="565"
        y="205"
@@ -542,12 +542,12 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text28">/bip.epic.spawn</text>
+       id="text28">/bip-epic-spawn</text>
   </g>
   <g
      id="g29">
     <title
-       id="title28">/bip.epic.handoff — Worker self-spawns a follow-up issue and hands off to a new slot when it finishes or discovers adjacent work.</title>
+       id="title28">/bip-epic-handoff — Worker self-spawns a follow-up issue and hands off to a new slot when it finishes or discovers adjacent work.</title>
     <rect
        x="755"
        y="205"
@@ -566,7 +566,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text29">/bip.epic.handoff</text>
+       id="text29">/bip-epic-handoff</text>
   </g>
   <!-- dispatch → workers -->
   <line
@@ -587,7 +587,7 @@
   <g
      id="g32">
     <title
-       id="title30">Clone α — Autonomous Claude Code worker running /bip.issue.work. Implements, tests, and creates a PR for one GitHub issue.</title>
+       id="title30">Clone α — Autonomous Claude Code worker running /bip-issue-work. Implements, tests, and creates a PR for one GitHub issue.</title>
     <rect
        x="565"
        y="280"
@@ -611,12 +611,12 @@
        font-size="10"
        fill="#5a6a8a"
        class="mono"
-       id="text32">/bip.issue.work</text>
+       id="text32">/bip-issue-work</text>
   </g>
   <g
      id="g34">
     <title
-       id="title32">Clone β — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
+       id="title32">Clone β — Autonomous Claude Code worker running /bip-issue-work in a separate tmux window and git clone.</title>
     <rect
        x="695"
        y="280"
@@ -640,12 +640,12 @@
        font-size="10"
        fill="#5a6a8a"
        class="mono"
-       id="text34">/bip.issue.work</text>
+       id="text34">/bip-issue-work</text>
   </g>
   <g
      id="g36">
     <title
-       id="title34">Clone γ — Autonomous Claude Code worker running /bip.issue.work in a separate tmux window and git clone.</title>
+       id="title34">Clone γ — Autonomous Claude Code worker running /bip-issue-work in a separate tmux window and git clone.</title>
     <rect
        x="825"
        y="280"
@@ -669,7 +669,7 @@
        font-size="10"
        fill="#5a6a8a"
        class="mono"
-       id="text36">/bip.issue.work</text>
+       id="text36">/bip-issue-work</text>
   </g>
   <!-- workers → evaluate -->
   <line
@@ -762,7 +762,7 @@
   <g
      id="g42">
     <title
-       id="title41">/bip.pr.review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
+       id="title41">/bip-pr-review — Comprehensive pre-merge quality checklist: spec compliance, tests, static analysis, doc sync.</title>
     <rect
        x="565"
        y="435"
@@ -781,12 +781,12 @@
        fill="#5a4a2a"
        class="mono"
        font-size="12"
-       id="text42">/bip.pr.review</text>
+       id="text42">/bip-pr-review</text>
   </g>
   <g
      id="g43">
     <title
-       id="title42">/bip.land — Land a PR branch: squash merge, clean up local and remote branches, return to main.</title>
+       id="title42">/bip-pr-land — Land a PR branch: squash merge, clean up local and remote branches, return to main.</title>
     <rect
        x="725"
        y="435"
@@ -805,9 +805,9 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text43">/bip.land</text>
+       id="text43">/bip-pr-land</text>
   </g>
-  <!-- pr.review → bip.land -->
+  <!-- pr.review → bip-pr-land -->
   <line
      x1="695"
      y1="454"
@@ -826,7 +826,7 @@
   <g
      id="g45">
     <title
-       id="title44">/bip.issue.next — Draft a follow-up GitHub issue from a PR decision or identified gap. Many landed PRs surface adjacent work that needs filing.</title>
+       id="title44">/bip-issue-next — Draft a follow-up GitHub issue from a PR decision or identified gap. Many landed PRs surface adjacent work that needs filing.</title>
     <rect
        x="565"
        y="510"
@@ -845,7 +845,7 @@
        fill="#1a2a3a"
        class="mono"
        font-size="12"
-       id="text45">/bip.issue.next</text>
+       id="text45">/bip-issue-next</text>
   </g>
   <!-- pr.review → issue.next (vertical down) -->
   <line
@@ -960,7 +960,7 @@
   <g
      id="g54">
     <title
-       id="title54">/bip.kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
+       id="title54">/bip-kaizen — After any friction, reflect and propose concrete improvements to skills, CLAUDE.md, docs, or workflow.</title>
     <rect
        x="150"
        y="565"
@@ -981,6 +981,6 @@
        fill="#5a6a4a"
        id="text54"><tspan
    class="mono"
-   id="tspan54">/bip.kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
+   id="tspan54">/bip-kaizen</tspan>  ·  reflect on friction → improve skills, docs, workflow</text>
   </g>
 </svg>

@@ -43,8 +43,8 @@ Channels are defined in `sources.yml` via the `"channel"` field on repos. The di
 For prose-style summaries organized by research themes, use the Claude Code skill:
 
 ```
-/bip.narrative dasm2
-/bip.narrative dasm2 --since 2w --verbose
+/bip-narrative dasm2
+/bip-narrative dasm2 --since 2w --verbose
 ```
 
 Output goes to `narrative/{channel}/{YYYY-MM-DD}.md`.
@@ -112,12 +112,12 @@ Requires `SLACK_BOT_TOKEN` with `channels:history`, `channels:read`, and `users:
 
 | Skill | Description |
 |-------|-------------|
-| `/bip.checkin` | Interactive activity check-in |
-| `/bip.narrative <channel>` | Generate themed prose digest |
-| `/bip.digest` | Generate and post Slack digest |
-| `/bip.spawn` | Launch Claude session with context |
-| `/bip.board` | Project board operations |
-| `/bip.tree` | Task hierarchy visualization |
+| `/bip-checkin` | Interactive activity check-in |
+| `/bip-narrative <channel>` | Generate themed prose digest |
+| `/bip-digest` | Generate and post Slack digest |
+| `/bip-spawn` | Launch Claude session with context |
+| `/bip-board` | Project board operations |
+| `/bip-tree` | Task hierarchy visualization |
 
 Skills are installed by symlinking from the bipartite repo:
 
@@ -147,4 +147,4 @@ Coordination commands read from files in your nexus repo:
 
 **Bernadetta**, the PI, pulls the changes and runs `bip rebuild`. Her agent scans the additions against her manuscripts and adds relevant papers to the references.
 
-**Friday afternoon**, an agent runs `/bip.narrative` to generate a themed digest of the week's work across all repos. Bernadetta reviews it and posts to Slack with `bip digest --post`.
+**Friday afternoon**, an agent runs `/bip-narrative` to generate a themed digest of the week's work across all repos. Bernadetta reviews it and posts to Slack with `bip digest --post`.

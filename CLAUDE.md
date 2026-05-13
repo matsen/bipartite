@@ -100,7 +100,7 @@ Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you mu
 
 ## Bip Skill
 
-Use `/bip.lit` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `skills/bip.lit/` and symlinked to `~/.claude/skills/` for global availability.
+Use `/bip-lit` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `skills/bip-lit/` and symlinked to `~/.claude/skills/` for global availability.
 
 ## Paper Lookups (nexus)
 
@@ -135,16 +135,16 @@ bip digest --channel foo --verbose  # Include PR/issue body summaries
 bip tree --open          # View beads hierarchy in browser
 ```
 
-**Claude Code slash commands:** `/bip.checkin`, `/bip.spawn`, `/bip.board`, `/bip.digest`, `/bip.tree`, `/bip.narrative`, `/bip.scout`, `/bip.lit`, `/bip.kaizen`, `/bip.land`, `/bip.plan`
+**Claude Code slash commands:** `/bip-checkin`, `/bip-spawn`, `/bip-board`, `/bip-digest`, `/bip-tree`, `/bip-narrative`, `/bip-scout`, `/bip-lit`, `/bip-kaizen`, `/bip-pr-land`, `/bip-plan`
 
 ### Narrative Digests
 
-Use `/bip.narrative` to generate thematic, prose-style digests:
+Use `/bip-narrative` to generate thematic, prose-style digests:
 
 ```bash
-/bip.narrative dasm2                 # Generate narrative for channel
-/bip.narrative dasm2 --since 2w      # Custom date range
-/bip.narrative dasm2 --verbose       # Include body summaries
+/bip-narrative dasm2                 # Generate narrative for channel
+/bip-narrative dasm2 --since 2w      # Custom date range
+/bip-narrative dasm2 --verbose       # Include body summaries
 ```
 
 Output is written to `narrative/{channel}/{YYYY-MM-DD}.md`. Requires config files:

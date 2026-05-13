@@ -58,34 +58,34 @@
 
   <!-- ===== ROW 1 — Semantic Scholar ===== -->
   <g class="mono">
-    <text x="40" y="125" class="item">/bip.lit</text>
+    <text x="40" y="125" class="item">/bip-lit</text>
     <text x="180" y="125" class="item">bip asta</text>
   </g>
 
   <!-- ===== ROW 2 — SSH ===== -->
   <g class="mono">
-    <text x="40" y="150" class="item">/bip.scout</text>
+    <text x="40" y="150" class="item">/bip-scout</text>
     <text x="180" y="150" class="item">bip scout</text>
   </g>
 
   <!-- ===== ROW 3 — Slack ===== -->
   <g class="mono">
-    <text x="40" y="175" class="item">/bip.digest</text>
+    <text x="40" y="175" class="item">/bip-digest</text>
     <text x="180" y="175" class="item">bip digest</text>
   </g>
 
   <!-- ===== ROWS 4-7 — GitHub ===== -->
   <g class="mono">
-    <text x="40" y="200" class="item">/bip.issue.file</text>
+    <text x="40" y="200" class="item">/bip-issue-file</text>
     <text x="180" y="200" class="item">gh issue</text>
 
-    <text x="40" y="217" class="item">/bip.pr.review</text>
+    <text x="40" y="217" class="item">/bip-pr-review</text>
     <text x="180" y="217" class="item">gh pr</text>
 
-    <text x="40" y="234" class="item">/bip.checkin</text>
+    <text x="40" y="234" class="item">/bip-checkin</text>
     <text x="180" y="234" class="item">bip checkin</text>
 
-    <text x="40" y="251" class="item">/bip.board</text>
+    <text x="40" y="251" class="item">/bip-board</text>
     <text x="180" y="251" class="item">bip board</text>
   </g>
 

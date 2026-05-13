@@ -10,25 +10,25 @@ The workflow runs as two coupled loops, **ideas** and **experiments**, with GitH
 
 ### Ideas Coordination
 
-For a PI, the paper is the unit that ties a team's work together. Manuscript sessions (`/bip.ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive. High-level discussion of findings, grounded in the literature via `/bip.lit`, becomes new issues, which are validated against project conventions before being filed.
+For a PI, the paper is the unit that ties a team's work together. Manuscript sessions (`/bip-ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive. High-level discussion of findings, grounded in the literature via `/bip-lit`, becomes new issues, which are validated against project conventions before being filed.
 
-Key skills: `/bip.ms`, `/bip.ms.poll`, `/bip.lit`, `/bip.issue.file`, `/bip.issue.check`, `/bip.issue.next`
+Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issue-check`, `/bip-issue-next`
 
 ### Agent Orchestration (the experiments side, EPIC workflow)
 
 The experiments side is the **EPIC orchestration system** — a conductor/worker pattern for managing multiple Claude Code sessions across clones and worktrees. A conductor session stays on `main`, scans GitHub for open issues, and spawns workers in dedicated `tmux` windows. Workers implement, test, and create PRs autonomously. Two subagents keep the loop honest: an `issue-lead` evaluates progress from file-based state and escalates only when human judgment is needed, and a `surprising-conclusion-skeptic` interrogates strong or negative claims before they propagate. Quality gates and PR landing close the loop, with follow-up issues flowing back to the ideas side.
 
-Key skills: `/bip.epic`, `/bip.epic.spawn`, `/bip.epic.poll`, `/bip.epic.handoff`, `/bip.pr.review`, `/bip.land`
+Key skills: `/bip-epic`, `/bip-epic-spawn`, `/bip-epic-poll`, `/bip-epic-handoff`, `/bip-pr-review`, `/bip-pr-land`
 
 ### Workflow Coordination
 
 Cross-cutting tools that span both sides of the workflow: themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows for review, Slack integration, and server resource scouting via SSH.
 
-Key skills: `/bip.checkin`, `/bip.digest`, `/bip.narrative`, `/bip.spawn`, `/bip.scout`
+Key skills: `/bip-checkin`, `/bip-digest`, `/bip-narrative`, `/bip-spawn`, `/bip-scout`
 
 ### Reference Management
 
-The library backing `/bip.lit` is an agent-first reference manager with JSON output, a CLI interface, git-backed JSONL storage, and search via Semantic Scholar and Asta. Because the storage format is JSONL, your library is mergeable across collaborators using standard git workflows.
+The library backing `/bip-lit` is an agent-first reference manager with JSON output, a CLI interface, git-backed JSONL storage, and search via Semantic Scholar and Asta. Because the storage format is JSONL, your library is mergeable across collaborators using standard git workflows.
 
 Guide: [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)
 

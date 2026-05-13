@@ -10,7 +10,7 @@ var epicCmd = &cobra.Command{
 	Long: `Commands that support the EPIC multi-slot orchestration workflow.
 
 These commands operate against a repo containing an .epic-config.json file
-(see /bip.epic skill docs) and the .epic-status.json files written by each
+(see /bip-epic skill docs) and the .epic-status.json files written by each
 slot/clone/worktree.`,
 }
 
