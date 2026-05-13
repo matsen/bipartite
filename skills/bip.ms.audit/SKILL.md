@@ -199,7 +199,7 @@ Show the report path. Offer:
 | Cold-start a manuscript session | `/bip.ms` |
 | Mid-session check for new results | `/bip.ms.poll` |
 | Persist manuscript session state | `/bip.ms.tuckin` |
-| Repo-wide code-health weather check | `/bip.audit` |
+| Repo-wide code-health weather check | `/bip.decay.audit` |
 | Per-PR review against guidelines | `/bip.pr.review` |
 | Fact-check a reviewer's comment against code | `/bip.comment.check` |
 | **Cross-check paper claims against code** | **this skill** |
@@ -209,11 +209,11 @@ Show the report path. Offer:
 - **Reads paper as source of truth for *intent*, code as source of truth for *behavior*.** Either can be wrong; the audit's job is to surface the gap.
 - **Skeptic step is non-optional by default.** Without it the skill is a false-positive machine; with it the skill earns its place. The skeptic exists precisely for "the paper says X but the code says Y" claims, and this skill is its highest-yield caller.
 - **Output is a markdown report, not auto-applied edits.** A bad finding propagated as a paper edit is much more expensive than the same finding in a markdown report. The user reads, decides, and dispatches.
-- **No state directory.** Unlike `/bip.audit`, this skill does not maintain a per-repo baseline — papers and code change together, so a "regression since last audit" framing isn't useful here. Re-run as needed; the report is the artifact.
+- **No state directory.** Unlike `/bip.decay.audit`, this skill does not maintain a per-repo baseline — papers and code change together, so a "regression since last audit" framing isn't useful here. Re-run as needed; the report is the artifact.
 
 ## References
 
-- Sibling skills: `/bip.ms`, `/bip.ms.poll`, `/bip.ms.tuckin`, `/bip.audit`, `/bip.comment.check`, `/bip.pr.review`.
+- Sibling skills: `/bip.ms`, `/bip.ms.poll`, `/bip.ms.tuckin`, `/bip.decay.audit`, `/bip.comment.check`, `/bip.pr.review`.
 - Subagents used: `@surprising-conclusion-skeptic` (mandatory for non-MATCH findings).
 - Optional subagents: `@scientific-tex-editor` for follow-up paper edits; `@clean-code-reviewer` for follow-up code review on the code-side of a mismatch.
 - Precipitating case: `dpvt` audit 2026-05-06 — paper said tensor was `(n-3) × N × 4` but code allocated `(2n-2, N, 4)`; vectorized RNN path used both downward features for the downward pass while paper and tree-based path used downward+upward. Both bugs sat in `main.tex` and `models.py` for months because no one read them in parallel.

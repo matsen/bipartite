@@ -1,9 +1,9 @@
 ---
-name: bip.audit
+name: bip.decay.audit
 description: Sweep a repo for the decay modes Armin Ronacher calls out in agent-written codebases — duplicate symbols, monster files, zombie code, scaffolding duplication, test asymmetries — and diff against a previous run. Not a PR reviewer; a whole-repo weather check.
 ---
 
-# /bip.audit
+# /bip.decay.audit
 
 Periodic codebase-health sweep for an agent-written repository.
 
@@ -17,18 +17,18 @@ Agent-written codebases decay monotonically along a small set of axes that Armin
 - **Zombie code.** `TODO`/`FIXME`, disabled tests, and commented-out blocks accrete.
 - **Test asymmetry.** Some modules get heavy regression coverage; new small modules land without tests.
 
-None of these are catastrophic on any single PR. Over months they compound. `/bip.audit` is a cheap, reproducible sweep that makes the compounding visible.
+None of these are catastrophic on any single PR. Over months they compound. `/bip.decay.audit` is a cheap, reproducible sweep that makes the compounding visible.
 
-`/bip.audit` is NOT a PR reviewer (use `/bip.pr.review`), NOT a code reviewer for a diff (use `@clean-code-reviewer`), and NOT an architectural verdict. It produces signals; humans decide what to act on.
+`/bip.decay.audit` is NOT a PR reviewer (use `/bip.pr.review`), NOT a code reviewer for a diff (use `@clean-code-reviewer`), and NOT an architectural verdict. It produces signals; humans decide what to act on.
 
 ## Usage
 
 ```
-/bip.audit                 # sweep current repo, compare to last run
-/bip.audit --baseline      # record this run as the new baseline (first use, or after a refactor)
-/bip.audit --no-compare    # run fresh, don't load previous state
-/bip.audit --src <path>    # sweep a subdirectory (default: src/ if it exists, else repo root)
-/bip.audit --full          # include expensive optional signals
+/bip.decay.audit                 # sweep current repo, compare to last run
+/bip.decay.audit --baseline      # record this run as the new baseline (first use, or after a refactor)
+/bip.decay.audit --no-compare    # run fresh, don't load previous state
+/bip.decay.audit --src <path>    # sweep a subdirectory (default: src/ if it exists, else repo root)
+/bip.decay.audit --full          # include expensive optional signals
 ```
 
 ## Workflow
@@ -138,7 +138,7 @@ Reproduce any number with:
 - `<the exact rg/wc command that produced it>`
 
 Baseline: `.bipartite/audit/baseline.json` (captured <date>, commit <hash>).
-Skill: `/bip.audit` (see skills/bip.audit/SKILL.md).
+Skill: `/bip.decay.audit` (see skills/bip.decay.audit/SKILL.md).
 Principles: Ronacher 2025-06-12 (linked in SKILL.md).
 ```
 
@@ -153,7 +153,7 @@ Write this run's signals as JSON to `.bipartite/audit/history/<ISO-date>.json`. 
 If any metric regressed, list the specific regressions and offer three options:
 1. Run `/bip.kaizen` on the biggest regression.
 2. Draft an issue with `/bip.issue.check` describing the refactor to bring the metric back down.
-3. Promote this run to baseline via `/bip.audit --baseline` (accept the new state).
+3. Promote this run to baseline via `/bip.decay.audit --baseline` (accept the new state).
 
 Do not auto-fix. Do not auto-file. The skill's job ends at the report.
 
@@ -169,7 +169,7 @@ Do not auto-fix. Do not auto-file. The skill's job ends at the report.
 
 ## Why this shape
 
-- **Not a PR reviewer**: `/bip.pr.review` and `@clean-code-reviewer` handle per-diff review. `/bip.audit` looks at whole-repo state, which they cannot.
+- **Not a PR reviewer**: `/bip.pr.review` and `@clean-code-reviewer` handle per-diff review. `/bip.decay.audit` looks at whole-repo state, which they cannot.
 - **Not an LLM-semantic pass**: tempting to run cosine similarity across function bodies to find near-duplicates. Expensive, noisy, and the useful signal ("three CLIs copy-pasted the same `while (i < args.len)` loop") is better caught by a cheap `rg -l "pub fn parseArgs"` count.
 - **State in-repo, not in a DB**: `.bipartite/audit/` is committable (or gitignorable) at the user's discretion. Baselines live in git if kept; deltas show up in `git log`. No bip-side storage required.
 - **Output is markdown, not a dashboard**: agents read markdown; `less` in a popup renders it; humans can paste it into Slack. No web UI to maintain.
