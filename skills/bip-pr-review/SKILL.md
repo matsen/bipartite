@@ -30,10 +30,15 @@ Examine the repository to determine what checks apply:
 | Indicator | Project Type | Agents to Use |
 |-----------|--------------|---------------|
 | `workflow/*.smk` or `Snakefile` | Snakemake pipeline | `snakemake-pipeline-expert` |
-| `*.py` files in `src/` or project root | Python project | `clean-code-reviewer` |
+| `*.py` files in `src/` or project root | Python project | `clean-code-reviewer` + `code-reuse-reviewer` |
 | `build.zig` or `*.zig` files in `src/` | Zig project | `zig-code-reviewer` |
-| `go.mod` | Go project | `clean-code-reviewer` |
-| `package.json` | Node.js project | `clean-code-reviewer` |
+| `go.mod` | Go project | `clean-code-reviewer` + `code-reuse-reviewer` |
+| `package.json` | Node.js project | `clean-code-reviewer` + `code-reuse-reviewer` |
+
+The two reviewers operate in **different modes** and complement each other — run them in parallel:
+
+- `clean-code-reviewer` reads the diff and evaluates each hunk against clean-code principles (naming, function size, single responsibility, DRY-within-hunk).
+- `code-reuse-reviewer` surveys the surrounding codebase *first*, then audits the diff for missed reuse of existing constants, helpers, conventions, and patterns. Its mandatory output tables (inline-import audit vs `pyproject.toml`; function-pair overlap audit) catch things a diff-only reviewer cannot see.
 
 Multiple types can apply (e.g., Snakemake + Python).
 
@@ -91,6 +96,7 @@ Flag anything suspicious for user confirmation before proceeding.
 
 **For all projects with code changes:**
 - Launch `clean-code-reviewer` agent on modified source files (not tests)
+- **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions. The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 
@@ -222,7 +228,8 @@ Present a checklist summary:
 
 ### Agent Reviews
 - [ ] Snakemake review: [findings or ✓]
-- [ ] Code review: [findings or ✓]
+- [ ] Code review (clean-code): [findings or ✓]
+- [ ] Code review (code-reuse): [findings or ✓]
 
 ### Scientific Conclusion Skeptic
 - [ ] Skeptic review: [verdict or "No scientific claims detected — skipped"]
