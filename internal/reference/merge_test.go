@@ -137,6 +137,28 @@ func TestMergeUpdate_PreservesYearOnUndatedImport(t *testing.T) {
 	}
 }
 
+func TestMergeUpdate_IncomingYearReplacesFullExistingDate(t *testing.T) {
+	// Flip side of PreservesYearOnUndatedImport: if incoming has a year (the
+	// merge sentinel for "has a date"), the entire Published struct from
+	// incoming wins — even if it lacks the month/day that existing carried.
+	// Locks in the current behavior: Year is the all-or-nothing trigger; we
+	// do not merge fields within PublicationDate.
+	existing := Reference{
+		ID:        "x",
+		Published: PublicationDate{Year: 2024, Month: 6, Day: 15},
+	}
+	incoming := Reference{
+		ID:        "x",
+		Source:    ImportSource{Type: "paperpile", ID: "uuid"},
+		Published: PublicationDate{Year: 2024}, // year only, no month/day
+	}
+
+	got := MergeUpdate(existing, incoming)
+	if got.Published.Month != 0 || got.Published.Day != 0 {
+		t.Errorf("Month/Day should reset to incoming's zero values, got %+v", got.Published)
+	}
+}
+
 func TestMergeUpdate_NoChangeWhenIncomingMatchesExisting(t *testing.T) {
 	// Stability check: if existing and incoming are equal, the merge result
 	// must be byte-identical when marshaled. Guards against accidental
