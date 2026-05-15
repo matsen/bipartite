@@ -1,0 +1,1 @@
+{"status":"error","http_status":"400","http_status_reason":"Bad Request","errors":[{"message":"All values of query param `ids` must be DOIs.","code":"invalid_dois"}],"request":{"warnings":[],"format":"json","ids":"10.1038/s41586-020-2649-2,32939066"},"response-date":"2026-05-15 13:40:00"}

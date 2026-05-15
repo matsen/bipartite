@@ -92,6 +92,29 @@ bip s2 gaps --min-citations 3              # Require at least 3 local citations
 
 `bip s2 gaps` is particularly useful: it finds papers cited by multiple papers in your collection that you haven't added yet — likely foundational work you should know about.
 
+## Backfilling PMCIDs
+
+Some workflows (notably NIH RPPR / public access compliance) require knowing the PMCID for each paper. Semantic Scholar returns PMCIDs opportunistically and patchily; NCBI's PMC ID Converter is the authoritative source. Use `bip ncbi backfill` to fill in missing PMCIDs from refs that have a DOI or PMID:
+
+```bash
+bip ncbi backfill --dry-run         # Report what would change without writing
+bip ncbi backfill --tag immunology  # Restrict to a subset by tag (partial match)
+bip ncbi backfill --limit 50        # Cap the number of NCBI queries
+bip ncbi backfill --email you@example.com  # Identify yourself to NCBI (recommended)
+```
+
+The command is idempotent: refs that already have a PMCID are not re-queried. After backfill, run `bip rebuild` to refresh the search index.
+
+For one-off lookups:
+
+```bash
+bip ncbi pmcid DOI:10.1038/s41586-020-2649-2
+bip ncbi pmcid PMID:32939066
+bip ncbi pmcid Smith2024-ab    # Resolves a bipartite ref to its DOI/PMID first
+```
+
+**Caveat**: NCBI only knows PMCIDs for papers actually deposited in PMC, a subset of even open-access literature. Absence of a PMCID after backfill is not a signal that the paper is missing — it likely just isn't in PMC.
+
 ## Exporting
 
 ```bash
