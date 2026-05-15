@@ -311,20 +311,20 @@ func classifyImport(existing []reference.Reference, newRef reference.Reference) 
 	return importAction{action: "new"}
 }
 
-// persistImports writes the import results to the refs file.
+// persistImports writes the import results to the refs file. Updates use
+// reference.MergeUpdate to preserve fields the importer didn't populate
+// (notably PMCID/PMID/ArXivID/S2ID from `bip ncbi backfill` and `bip s2`),
+// rather than wholesale-replacing the existing entry.
 func persistImports(path string, existing []reference.Reference, actions []storage.RefWithAction) error {
-	// Build new refs list
 	newRefs := make([]reference.Reference, len(existing))
 	copy(newRefs, existing)
 
-	// Apply updates first
 	for _, a := range actions {
 		if a.Action == "update" {
-			newRefs[a.ExistingIdx] = a.Ref
+			newRefs[a.ExistingIdx] = reference.MergeUpdate(newRefs[a.ExistingIdx], a.Ref)
 		}
 	}
 
-	// Append new entries
 	for _, a := range actions {
 		if a.Action == "new" {
 			newRefs = append(newRefs, a.Ref)

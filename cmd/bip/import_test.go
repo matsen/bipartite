@@ -1,9 +1,11 @@
 package main
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/storage"
 )
 
 func TestClassifyImport(t *testing.T) {
@@ -123,5 +125,67 @@ func TestClassifyImportEmptyExistingList(t *testing.T) {
 
 	if got.action != "new" {
 		t.Errorf("action = %q, want %q", got.action, "new")
+	}
+}
+
+func TestPersistImports_PreservesPostImportFields(t *testing.T) {
+	// Locks in the cross-cutting fix for issue #145: an existing ref's
+	// externally-resolved fields (PMCID, PMID, ArXivID, S2ID) and any PDF
+	// path additions survive a re-import that doesn't carry those fields.
+	// Without reference.MergeUpdate this would regress to the old wholesale
+	// replace, silently wiping every `bip ncbi backfill` result.
+	dir := t.TempDir()
+	path := filepath.Join(dir, "refs.jsonl")
+
+	existing := []reference.Reference{
+		{
+			ID:      "Smith2024-aa",
+			DOI:     "10.1038/foo",
+			Title:   "Foo",
+			Source:  reference.ImportSource{Type: "paperpile", ID: "uuid-1"},
+			PMCID:   "PMC123",
+			PMID:    "456",
+			S2ID:    "abc",
+			PDFPath: "Smith/2024/Smith2024-aa.pdf",
+		},
+	}
+
+	incoming := reference.Reference{
+		ID:     "Smith2024-aa",
+		DOI:    "10.1038/foo",
+		Title:  "Foo (Paperpile re-export)",
+		Source: reference.ImportSource{Type: "paperpile", ID: "uuid-1"},
+	}
+
+	actions := []storage.RefWithAction{
+		{Ref: incoming, Action: "update", ExistingIdx: 0},
+	}
+
+	if err := persistImports(path, existing, actions); err != nil {
+		t.Fatalf("persistImports: %v", err)
+	}
+
+	got, err := storage.ReadAll(path)
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 ref, got %d", len(got))
+	}
+	r := got[0]
+	if r.PMCID != "PMC123" {
+		t.Errorf("PMCID wiped: %q", r.PMCID)
+	}
+	if r.PMID != "456" {
+		t.Errorf("PMID wiped: %q", r.PMID)
+	}
+	if r.S2ID != "abc" {
+		t.Errorf("S2ID wiped: %q", r.S2ID)
+	}
+	if r.PDFPath != "Smith/2024/Smith2024-aa.pdf" {
+		t.Errorf("PDFPath wiped: %q", r.PDFPath)
+	}
+	if r.Title != "Foo (Paperpile re-export)" {
+		t.Errorf("Title should update from incoming: %q", r.Title)
 	}
 }
