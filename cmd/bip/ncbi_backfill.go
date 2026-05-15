@@ -143,14 +143,18 @@ func backfillPMCIDs(ctx context.Context, refsPath string, client Converter, opts
 }
 
 // selectBackfillCandidates returns indices into refs of entries eligible for
-// backfill: have DOI or PMID, no existing PMCID, and (if tag is non-empty)
-// matching the tag substring. limit caps the count when > 0.
+// backfill: have a valid DOI or PMID, no existing PMCID, and (if tag is
+// non-empty) matching the tag substring. limit caps the count when > 0.
+//
+// Validity of DOI is checked via isLikelyDOI because NCBI rejects an entire
+// batch with HTTP 400 if any single ID doesn't match its DOI pattern — one
+// Paperpile sentinel (`XXXXXXX.XXXXXXX`) is enough to poison 6500 refs.
 func selectBackfillCandidates(refs []reference.Reference, tag string, limit int) ([]int, BackfillSummary) {
 	var summary BackfillSummary
 	var candidates []int
 	for i, r := range refs {
 		summary.Scanned++
-		if r.DOI == "" && r.PMID == "" {
+		if !hasConvertibleID(r) {
 			summary.NoConvertible++
 			continue
 		}
@@ -168,6 +172,29 @@ func selectBackfillCandidates(refs []reference.Reference, tag string, limit int)
 	return candidates, summary
 }
 
+// hasConvertibleID reports whether a ref carries something NCBI's converter
+// will accept: either a syntactically valid DOI or a non-empty PMID.
+func hasConvertibleID(r reference.Reference) bool {
+	return isLikelyDOI(r.DOI) || r.PMID != ""
+}
+
+// isLikelyDOI reports whether s looks enough like a DOI for NCBI to accept.
+// Real DOIs are `10.<registrant>/<suffix>` with a non-empty suffix; anything
+// else (empty, sentinels like "XXXXXXX.XXXXXXX", URL fragments, prefix-only
+// strings like "10.1042/") is rejected up-front to keep one garbage entry
+// from poisoning the whole batch.
+func isLikelyDOI(s string) bool {
+	if !strings.HasPrefix(s, "10.") {
+		return false
+	}
+	slash := strings.Index(s, "/")
+	if slash < 0 {
+		return false
+	}
+	// Must have at least one character before AND after the slash.
+	return slash > len("10.") && slash < len(s)-1
+}
+
 // refMatchesTag reports whether any of ref.Tags contains the substring
 // (case-insensitive), matching the `bip search --tag` partial-match semantics
 // in cmd/bip/search.go.
@@ -182,9 +209,12 @@ func refMatchesTag(r reference.Reference, tag string) bool {
 }
 
 // candidateToInput maps a reference to the NCBI Input we'll query for it. DOI
-// is preferred because NCBI's DOI lookup is more reliable; PMID is the fallback.
+// is preferred because NCBI's DOI lookup is more reliable; PMID is the
+// fallback. A syntactically invalid DOI is treated as absent so the PMID
+// fallback fires — selectBackfillCandidates would have rejected the ref
+// entirely if neither was usable.
 func candidateToInput(r reference.Reference) ncbi.Input {
-	if r.DOI != "" {
+	if isLikelyDOI(r.DOI) {
 		return ncbi.Input{Type: ncbi.IDTypeDOI, ID: r.DOI}
 	}
 	return ncbi.Input{Type: ncbi.IDTypePMID, ID: r.PMID}

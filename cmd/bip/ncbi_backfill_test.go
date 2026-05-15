@@ -308,6 +308,62 @@ func TestSelectBackfillCandidates(t *testing.T) {
 	})
 }
 
+func TestSelectBackfillCandidates_RejectsMalformedDOIs(t *testing.T) {
+	// NCBI's converter rejects an entire batch with HTTP 400 if any single
+	// DOI doesn't match its pattern. A real Paperpile library has at least
+	// one sentinel DOI like "XXXXXXX.XXXXXXX". The selector must treat such
+	// values as "no DOI" so they don't poison the batch.
+	refs := []reference.Reference{
+		{ID: "sentinel-doi-only", DOI: "XXXXXXX.XXXXXXX"},
+		{ID: "url-as-doi", DOI: "http://example.com/foo"},
+		{ID: "no-slash", DOI: "10.1234"},
+		{ID: "sentinel-but-has-pmid", DOI: "XXXXXXX.XXXXXXX", PMID: "12345"},
+		{ID: "real-doi", DOI: "10.1038/foo"},
+	}
+	got, summary := selectBackfillCandidates(refs, "", 0)
+
+	// sentinel-doi-only, url-as-doi, no-slash → NoConvertible (no PMID either)
+	if summary.NoConvertible != 3 {
+		t.Errorf("NoConvertible=%d, want 3 (three garbage-DOI refs without PMID)", summary.NoConvertible)
+	}
+	// real-doi + sentinel-but-has-pmid (falls through to PMID) = 2 candidates
+	if len(got) != 2 {
+		t.Errorf("len(candidates)=%d, want 2", len(got))
+	}
+
+	// For the ref with garbage DOI but valid PMID, the input must use PMID.
+	for _, idx := range got {
+		if refs[idx].ID == "sentinel-but-has-pmid" {
+			in := candidateToInput(refs[idx])
+			if in.Type != ncbi.IDTypePMID || in.ID != "12345" {
+				t.Errorf("garbage-DOI ref should fall back to PMID input, got %+v", in)
+			}
+		}
+	}
+}
+
+func TestIsLikelyDOI(t *testing.T) {
+	cases := []struct {
+		in   string
+		want bool
+	}{
+		{"10.1038/foo", true},
+		{"10.1234/abc.def", true},
+		{"", false},
+		{"XXXXXXX.XXXXXXX", false}, // Paperpile sentinel
+		{"http://doi.org/10.1038/foo", false},
+		{"10.1234", false},  // missing slash
+		{"foo/bar", false},  // missing "10." prefix
+		{"10.1042/", false}, // empty suffix (real case found in nexus)
+		{"10./foo", false},  // empty registrant
+	}
+	for _, c := range cases {
+		if got := isLikelyDOI(c.in); got != c.want {
+			t.Errorf("isLikelyDOI(%q)=%v, want %v", c.in, got, c.want)
+		}
+	}
+}
+
 func TestCandidateToInput_PrefersDOI(t *testing.T) {
 	// When a ref has both DOI and PMID, DOI wins because NCBI's DOI lookup is
 	// more reliable. The PMID is kept on the ref untouched.
