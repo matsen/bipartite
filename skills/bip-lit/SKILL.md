@@ -89,6 +89,8 @@ Suggest creating concepts when you notice:
 | Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
 | Add paper to collection | `bip s2 add DOI:10.1234/...` |
 | Find literature gaps | `bip s2 gaps` |
+| Backfill missing PMCIDs from NCBI | `bip ncbi backfill --dry-run` |
+| One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |
 | Fast paper search (external) | `bip asta search "query"` |
 | Find text snippets | `bip asta snippet "query"` |
 | Create concept | `bip concept add <id> --name "Name"` |
@@ -191,9 +193,9 @@ The `bip asta snippet` command can be **slow and unreliable** (timeouts are comm
 - Use MCP `mcp__asta__snippet_search` directly with smaller limits
 - If snippet times out, fall back to `bip asta search`
 
-## S2 vs ASTA: When to Use Which
+## S2 vs ASTA vs NCBI: When to Use Which
 
-Both access Semantic Scholar's paper database but through different APIs:
+S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution service:
 
 | Use Case | Command | Why |
 |----------|---------|-----|
@@ -202,9 +204,10 @@ Both access Semantic Scholar's paper database but through different APIs:
 | Explore without adding | `bip asta *` | Faster, read-only |
 | Find text snippets in papers | `bip asta snippet` | Unique to ASTA |
 | Fast paper search | `bip asta search` | 10x faster rate limit |
-| Get citations/references | Either works | ASTA is faster |
+| Get citations/references | Either S2 or ASTA | ASTA is faster |
+| Backfill PMCIDs (e.g., for NIH RPPR) | `bip ncbi backfill` | NCBI is the canonical source; S2/ASTA do not return PMCIDs reliably |
 
-**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library.
+**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library, `bip ncbi` for authoritative PMCID resolution. NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
 
 See [api-guide.md](api-guide.md) for detailed comparison.
 
