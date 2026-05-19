@@ -80,7 +80,22 @@ You have the Agent tool. Use it. The single biggest predictor of review quality 
 
    **4e. Protocol/ABC cross-reference.** For every Protocol/ABC found in the per-file reports, do TWO greps: (i) the codebase for every concrete implementation, then tabulate signature/default/sentinel mismatches against the Protocol; (ii) the codebase for **other Protocols or ABCs with the same name or the same method signatures in different modules** — duplicate-named Protocols drifting between sibling modules are a recurring smell when a module is extracted/copied from another. Do not skip this second grep just because you only see one Protocol in the diff.
 
-5. **Audit the diff.** Now read the diff hunk by hunk with the survey results loaded. For each non-trivial addition, ask:
+   **4f. Magic-string / path frequency rollup (MANDATORY).** From section 4 of every per-file report, pool every hardcoded path and magic string across the diff into a single table. This pass converts the orphaned section-4 collection into a cross-file frequency check — most repetition smells are invisible to per-file review.
+
+   | Literal | Occurrences (file:line) | Count | Looks like (path / model name / env key / format token / API version / other) | Verdict |
+   |---|---|---|---|---|
+
+   **Flagging rule:** any literal that appears (i) ≥ 3 times across the diff, or (ii) ≥ 2 times with at least one production and one test occurrence, gets a FLAG row asking whether the literal deserves a module-level name. The smell isn't "this string is repeated" — it's "this string has a name and the codebase's convention is to hoist names." Empty FLAG-column rows are fine for one-offs; the discipline is that *every* literal makes the table.
+
+   For any literal classified as "path" in the "looks like" column, add a sub-check: grep the repo for an existing configuration class (Pydantic `BaseModel`, dataclass with `Config` in the name, `viper.Get` / `envconfig` struct, TOML/YAML loader, etc.) and note in the verdict whether one exists — *without prescribing which one*. The point is to surface that there is plumbing the new code could plug into, not to dictate the plumbing. If no config class exists, say so; the verdict is then "FLAG — hardcoded path, no obvious config plumbing to plug into."
+
+   This table is not optional. Produce it explicitly. If the diff introduces zero magic strings or paths, say so in one line.
+
+5. **Audit the diff.** Now read the diff hunk by hunk with the survey results loaded.
+
+   **Before judging any newly-added file**, list its immediate siblings (same directory, same suffix pattern — `*_command.py`, `*_handler.go`, `*Service.ts`, etc.) and read at least two end-to-end. Compare error-handling, argument-parsing, logging, and entry/exit conventions explicitly. The diff-audit step is where within-directory convention checks happen, and they only happen if the sibling read is mandatory rather than implicit.
+
+   For each non-trivial addition, ask:
    - Is there an existing constant, enum, or type that this should reference?
    - Is there an existing function that this is partly or wholly reimplementing?
    - Is there an established convention this is violating (paths, imports, error handling)?
@@ -99,6 +114,8 @@ Structure your review as:
 **Inline-import audit table** (from methodology step 4c): the full table — every inline import, classified against `pyproject.toml`. If there were none, say so explicitly. If you do not include this table, your review is incomplete.
 
 **Function-pair overlap audit** (from methodology step 4d): every overlapping pair you found in the per-file reports, with your verdict (DRY violation vs. independent work). If there were no overlaps, say so explicitly.
+
+**Magic-string / path frequency rollup** (from methodology step 4f): the full table — every hardcoded path and magic string the diff introduces, with occurrence count and FLAG verdict for repeated load-bearing literals. If the diff introduces none, say so explicitly.
 
 **Issues** (numbered): For each finding:
 - **File:line** of the new code
@@ -127,5 +144,6 @@ You are looking for the kind of issue that a generic clean-code reviewer cannot 
 - Hardcoded absolute path in a committed notebook when sibling notebooks use `Path(__file__).resolve().parents[N]`.
 - Protocol declares `head_type: Any = ...` but the concrete implementation uses `None` as the sentinel.
 - Function `foo_stats(df)` reimplements the melt/filter/groupby pipeline that `plot_foo(df)` already performs internally — and the test suite contains a `test_foo_stats_matches_plot_foo` assertion confirming they should agree.
+- A new model identifier, API version, format token, or magic string (e.g. `"v2/predict"`, `"%Y-%m-%dT%H:%M:%S"`, a third-party model name) appears as a bare string in 3+ places across production and tests, with no module-level constant — even though the codebase's convention is to hoist load-bearing identifiers (a `grep -nE '^[A-Z_][A-Z_0-9]* *=' constants*.py` shows the convention exists for analogous identifiers). The frequency rollup makes this visible; the call to hoist follows the codebase's existing constants idiom.
 
 If your draft review contains findings that don't match this calibration, drop them — they belong to other reviewers.
