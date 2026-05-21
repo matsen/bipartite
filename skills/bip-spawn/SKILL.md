@@ -24,6 +24,25 @@ bip spawn org/repo#123 --prompt "Rebase and fix conflicts"
 3. Creates a tmux window named `repo#123`
 4. Launches Claude Code with issue/PR context
 
+## Common modes
+
+There are two distinct ways to use `bip spawn`. **Pick deliberately**:
+
+- **Review** (default, no `--prompt`): opens a Claude session with the
+  issue or PR context loaded and waits at an empty prompt. Use this
+  when *you* will drive the next steps in the spawned window.
+- **Handoff-to-work**: pass `--prompt "/bip-issue-work <N>"` (for
+  issues) or `--prompt "/bip-pr-review"` (for PRs). The spawned Claude
+  starts the workflow autonomously — the right choice when the parent
+  session is delegating implementation and won't be steering.
+
+Example handoff:
+
+    bip spawn matsengrp/phyz#1453 --prompt "/bip-issue-work 1453"
+
+If you're spawning from inside a `/bip-pr-land` or similar handoff
+context, the handoff form is almost always what you want.
+
 ## Requirements
 
 - Must be running inside tmux
