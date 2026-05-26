@@ -48,8 +48,6 @@ new schema silently won't take.
 
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE.md` (gitignored); never commit.
-- `.beads/` (gitignored) holds loose local task tracking. **Optional** — use it if it helps;
-  TodoWrite / the Task tools are equally fine. No mandate either way.
 
 ## Paper lookups (guardrail)
 
