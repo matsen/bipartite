@@ -1,191 +1,73 @@
-# bipartite Development Guidelines
+# bipartite — Claude guidance
 
-## Task Management with Beads (CRITICAL)
+## What this file is
 
-**ALWAYS use `bd` (beads) for task tracking. NEVER use TodoWrite or internal todo lists.**
+**Facts + guardrails** for working in this repo — and *only* those. There are three layers,
+and this is just one of them:
 
-Beads is a Git-backed task tracker designed for AI agents. It provides persistent memory across sessions and proper dependency tracking.
+- **Principles / "why"** live in `CONSTITUTION.md` (numbered articles: skills-are-the-product,
+  file-based state, scope discipline, quality gates). It is **not** auto-loaded — read it when
+  making a design, scope, or quality-gate decision.
+- **Procedures / "how to do X"** are the `bip-*` skills, listed with descriptions in my context
+  every session. **Never catalog or describe a skill here** — duplicating the auto-injected
+  list adds nothing and silently rots (the old `/bip.lit` dot-name drifted for months this
+  way). Invoke skills by name; let their descriptions be canonical.
 
-### Essential Commands
-```bash
-bd ready                    # Show tasks ready to work on (no blockers)
-bd create "Title" -p 0      # Create a priority-0 (highest) task
-bd create "Title" -p 1      # Create a priority-1 task
-bd show <id>                # View task details
-bd update <id> -p 1         # Change priority (use update, not edit)
-bd update <id> -s in_progress  # Update status
-bd close <id>               # Mark task complete
-bd dep add <child> <parent> # Child blocked by parent
-bd list                     # List all tasks
-```
+What's left for *this* file: rules that must hold even when no skill is invoked, plus project
+facts no skill carries.
 
-### Workflow
-1. **Start of work**: Run `bd ready` to see actionable tasks
-2. **Planning**: Create tasks with `bd create`, set dependencies with `bd dep add`
-3. **Working**: Update task status as you progress
-4. **Completion**: Mark done with `bd close <id>`
+## Stack & layout
 
-### Why Beads Over TodoWrite
-- Persists across sessions (stored in `.beads/`, gitignored for local-only use)
-- Tracks dependencies between tasks
-- Prevents merge conflicts with hash-based IDs
-- Designed specifically for AI agent workflows
+- Go (min version in `go.mod`). CLI: spf13/cobra. Storage: modernc.org/sqlite (pure Go, no
+  CGO). Embeddings: Ollama (local), pure-Go vector storage. External refs: Semantic Scholar
+  (`internal/s2`).
+- Data model: JSONL is the source of truth → ephemeral SQLite, rebuilt on `bip rebuild`. The
+  vector index is GOB-serialized, ephemeral, gitignored.
+- `cmd/` CLI commands · `internal/` packages (s2, store, index, flow, …) · `testdata/`
+  fixtures · `tests/` integration tests.
 
-## Active Technologies
+## Build & style
 
-**Go version**: See `go.mod` for minimum version (no cutting-edge features required)
+- `go build -o bip ./cmd/bip && ./bip --help`
+- Run `go fmt ./...` and `go vet ./...` before any PR. Exported symbols get doc comments.
 
-- **CLI**: spf13/cobra
-- **Storage**: modernc.org/sqlite (pure Go, no CGO)
-- **Embeddings**: Ollama for local embeddings, pure Go vector storage
-- **External APIs**: Semantic Scholar (internal/s2 package)
-- **Data model**: JSONL (source of truth) + ephemeral SQLite (rebuilt on `bip rebuild`)
-- **Vector index**: GOB-serialized (ephemeral, gitignored)
+## Database location (easy to get wrong)
 
-## Project Structure
+The DB path comes from `nexus_path` in `~/.config/bip/config.yml`, **not** `~/.bipartite`.
+The actual file:
 
-```text
-cmd/           # Go CLI command implementations (bip)
-internal/      # Go internal packages (s2, store, index, flow, etc.)
-testdata/      # Test fixtures
-tests/         # Go integration tests
-```
-
-## Building
-
-```bash
-go build -o bip ./cmd/bip && ./bip --help
-```
-
-See README.md for full command reference.
-
-## Code Style
-
-Follow standard Go conventions (`go fmt`, `go vet`)
-
-<!-- MANUAL ADDITIONS START -->
-
-## Session Management
-
-- **Continuation prompts**: Save to `_ignore/CONTINUE.md`, never commit
-- The `_ignore/` directory is gitignored for local-only files
-
-## Git Workflow
-
-- **Repository owner**: This repo is `matsen/bipartite`, NOT `matsengrp/bipartite`. Use `matsen` when constructing GitHub URLs or API calls.
-- **PR merge strategy**: Always use squash and merge (`gh pr merge --squash`)
-
-## Database Location
-
-The bip database path is determined by `nexus_path` in `~/.config/bip/config.yml`, NOT `~/.bipartite`. The actual database is at:
 ```
 $NEXUS_PATH/.bipartite/cache/refs.db
 ```
 
-To find the database location:
-```bash
-cat ~/.config/bip/config.yml | grep nexus_path  # e.g., ~/re/nexus
-ls ~/re/nexus/.bipartite/cache/refs.db          # actual database file
-```
+SQLite footgun: `CREATE ... IF NOT EXISTS` does **not** alter an existing table. After a schema
+change you must rebuild the binary, `rm` that `refs.db`, then `./bip rebuild` — otherwise the
+new schema silently won't take.
 
-## SQLite Schema Changes
+## Repo facts
 
-When modifying SQLite schema (e.g., adding columns to FTS5 tables):
+- Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
+- Continuation notes → `_ignore/CONTINUE.md` (gitignored); never commit.
+- `.beads/` (gitignored) holds loose local task tracking. **Optional** — use it if it helps;
+  TodoWrite / the Task tools are equally fine. No mandate either way.
 
-1. **Rebuild the binary**: `go build -o bip ./cmd/bip`
-2. **Delete the old database**: `rm $NEXUS_PATH/.bipartite/cache/refs.db`
-3. **Rebuild the index**: `./bip rebuild`
+## Paper lookups (guardrail)
 
-Note: `CREATE ... IF NOT EXISTS` does not update existing table schemas - you must delete the database file for schema changes to take effect.
-
-## Bip Skill
-
-Use `/bip-lit` for unified CLI guidance including paper search, library management, and S2 vs ASTA command selection. The skill is defined in `skills/bip-lit/` and symlinked to `~/.claude/skills/` for global availability.
-
-## Paper Lookups (nexus)
-
-When looking for papers or adding edges to the knowledge graph:
-
-1. **Search locally first** in nexus using grep on `.bipartite/refs.jsonl`:
-   ```bash
-   grep -i "author_name\|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
-   ```
-
-2. **Ask before using ASTA MCP** - Always ask the user before making ASTA API calls. ASTA should only be used for:
-   - Papers confirmed not in the local database
-   - Discovering new papers via citation/reference graphs
-   - Searching for papers by topic when local search yields no results
-
-3. **Add papers via S2** when rate limits allow: `./bip s2 add DOI:...`
-
-The nexus library has ~6000 papers already imported - most relevant immunology/antibody papers are likely already there. **Always search locally first before proposing ASTA queries.**
-
-## GitHub Activity Commands (bip)
-
-bip includes built-in GitHub activity tracking and project board management. These commands require `nexus_path` configured in `~/.config/bip/config.yml`:
+Search locally first:
 
 ```bash
-bip checkin              # Check recent GitHub activity
-bip board list           # View project boards
-bip spawn org/repo#123   # Spawn tmux window for issue review
-bip spawn --prompt "Explore the clamping question"  # Adhoc session without issue
-bip digest --channel foo # Preview Slack digest (safe default)
-bip digest --channel foo --post  # Actually post to Slack
-bip digest --channel foo --verbose  # Include PR/issue body summaries
-bip tree --open          # View beads hierarchy in browser
+grep -i "name|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
 ```
 
-**Claude Code slash commands:** `/bip-checkin`, `/bip-spawn`, `/bip-board`, `/bip-digest`, `/bip-tree`, `/bip-narrative`, `/bip-scout`, `/bip-lit`, `/bip-kaizen`, `/bip-pr-land`, `/bip-plan`
+~6000 papers are already imported, so most relevant work is present. **Ask before any ASTA MCP
+call** — ASTA is only for papers confirmed absent locally, citation/reference discovery, or
+topic search with no local hit. Add via `./bip s2 add DOI:...` when rate limits allow.
 
-### Narrative Digests
+## Docs conventions
 
-Use `/bip-narrative` to generate thematic, prose-style digests:
-
-```bash
-/bip-narrative dasm2                 # Generate narrative for channel
-/bip-narrative dasm2 --since 2w      # Custom date range
-/bip-narrative dasm2 --verbose       # Include body summaries
-```
-
-Output is written to `narrative/{channel}/{YYYY-MM-DD}.md`. Requires config files:
-- `narrative/preferences.md` - Shared formatting rules
-- `narrative/{channel}.md` - Channel themes and repo context
-
-These commands read configuration from:
-- `sources.yml` - Repository list and board mappings
-- `config.yml` - Local path configuration
-- `context/` - Project context files
-
-## Pre-PR Quality Checklist
-
-Before any pull request, ensure the following workflow is completed:
-
-### Code Quality Foundation
-1. **Format Code**: Run `go fmt ./...` to apply consistent formatting
-2. **Documentation**: Ensure all exported functions and types have doc comments
-
-### Architecture and Implementation Review
-3. **Clean Code Review**: Run `@clean-code-reviewer` agent on all new/modified code for architectural review
-
-### Test Quality Validation
-4. **Test Implementation Audit**: Scan all test files for partially implemented tests or placeholder implementations. All tests must provide real validation
-5. **Run Tests**: Ensure all tests pass: `go test ./...`
-
-### Final Static Analysis
-6. **Vet and Lint**: Run static analysis to verify code quality: `go vet ./...`
-
-### Documentation Sync
-7. **Documentation Update**: If the feature adds new commands or changes user-facing behavior:
-   - `README.md` — Keep short (overview, installation, environment variables only)
-   - `docs/guides/` — Detailed guides with examples, config reference, troubleshooting
-   - `skills/` — Update skill docs for Claude Code integration
-   - **Path verification**: Ensure all directory paths in docs match actual repository structure (e.g., skills are in `./skills/`, not `./.claude/skills/`)
-   - **Cross-file consistency**: Check that installation instructions are consistent across README.md, docs/index.md, and docs/guides/getting-started.md
-
-### Skill Documentation Accuracy
-8. **Verify Skill Docs Match CLI**: Run `./bip <command> --help` to confirm skill documentation accurately reflects:
-   - Command flags and their syntax (no non-existent flags like `--force`)
-   - Workflow steps (e.g., rebuild after import)
-   - Quick reference table entries match actual command signatures
-
-<!-- MANUAL ADDITIONS END -->
+- `README.md` stays short (overview, install, env vars). Detailed guides live in
+  `docs/guides/`. Skills live in `./skills/` (not `./.claude/skills/`).
+- When a change adds or alters a command, run `./bip <cmd> --help` and make the skill docs
+  match the real flags and workflow.
+- The pre-PR process *is* the `/bip-pr-review` skill (with `/bip-pr-check` as a quick gate) —
+  don't restate the checklist here.
