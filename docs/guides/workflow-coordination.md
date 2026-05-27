@@ -106,7 +106,7 @@ bip slack ingest fortnight-goals --store goals
 bip slack ingest fortnight-goals --store goals --create-store  # Create store if needed
 ```
 
-Requires `SLACK_BOT_TOKEN` with `channels:history`, `channels:read`, and `users:read` scopes.
+Requires a Slack bot token with `channels:history`, `channels:read`, and `users:read` scopes — sourced from `BIP_SLACK_TOKEN` (recommended) or `SLACK_BOT_TOKEN`, falling back to `slack_bot_token` in `~/.config/bip/config.yml`.
 
 ## Claude Code Skills
 
@@ -139,7 +139,10 @@ Coordination commands read from files in your nexus repo:
 
 | Variable | Description |
 |----------|-------------|
-| `SLACK_BOT_TOKEN` | Slack bot token (requires `channels:history`, `channels:read`, `users:read` scopes) |
+| `BIP_SLACK_TOKEN` | Slack bot token (recommended; sourced from a secrets manager). Requires `channels:history`, `channels:read`, `users:read` scopes. |
+| `SLACK_BOT_TOKEN` | Slack bot token (compatibility fallback; same scopes). |
+
+If neither is set, `slack_bot_token` from `~/.config/bip/config.yml` is used.
 
 ## A Workflow in Practice
 

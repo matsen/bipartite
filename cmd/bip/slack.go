@@ -18,8 +18,9 @@ var slackCmd = &cobra.Command{
 	Long: `Commands for reading from Slack channels.
 
 Fetch message history, list configured channels, and analyze team activity.
-Requires SLACK_BOT_TOKEN environment variable with channels:history,
-channels:read, and users:read scopes.
+Requires a Slack bot token with channels:history, channels:read, and
+users:read scopes. Sourced from BIP_SLACK_TOKEN (recommended) or
+SLACK_BOT_TOKEN, falling back to slack_bot_token in ~/.config/bip/config.yml.
 
 All commands output JSON by default for agent consumption.
 Use --human flag for human-readable output.`,
