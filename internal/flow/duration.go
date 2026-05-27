@@ -3,6 +3,7 @@ package flow
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -10,7 +11,23 @@ import (
 var (
 	ErrInvalidDuration = errors.New("invalid duration format")
 	ErrUnknownUnit     = errors.New("unknown duration unit")
+	errInvalidInteger  = errors.New("invalid integer format")
 )
+
+// parsePositiveInt parses a string as a positive integer.
+func parsePositiveInt(s string) (int, error) {
+	if s == "" {
+		return 0, errInvalidInteger
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, errInvalidInteger
+	}
+	if n <= 0 {
+		return 0, errInvalidInteger
+	}
+	return n, nil
+}
 
 // ParseDuration parses a duration string like "2d", "12h", "1w".
 // Supported units: d (days), h (hours), w (weeks).
