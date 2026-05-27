@@ -63,7 +63,6 @@ Skills are prompt templates that invoke `bip` commands with appropriate context.
 ├── bip-digest/               # /bip-digest - Activity digests
 ├── bip-spawn/                # /bip-spawn - Spawn tmux sessions
 ├── bip-board/                # /bip-board - Project boards
-├── bip-tree/                 # /bip-tree - Beads hierarchy
 ├── bip-scout/                # /bip-scout - Server availability
 └── bip-narrative/            # /bip-narrative - Prose digests
 ```

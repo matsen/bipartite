@@ -1,5 +1,5 @@
 // Package flow provides functionality for GitHub activity management.
-// It implements the flowc commands (checkin, board, spawn, digest, tree)
+// It implements the flowc commands (checkin, board, spawn, digest)
 // as part of the bip CLI.
 package flow
 
@@ -30,19 +30,6 @@ type SlackChannelConfig struct {
 type RepoEntry struct {
 	Repo    string `yaml:"repo"`
 	Channel string `yaml:"channel,omitempty"`
-}
-
-// Bead represents an issue in .beads/issues.jsonl.
-type Bead struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	Status      string    `json:"status"`
-	Priority    int       `json:"priority"`
-	IssueType   string    `json:"issue_type"`
-	CreatedAt   time.Time `json:"created_at"`
-	CreatedBy   string    `json:"created_by"`
-	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // GitHubRef represents a parsed GitHub reference.

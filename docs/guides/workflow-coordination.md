@@ -58,7 +58,6 @@ bip board list                    # View board items by status
 bip board add org/repo#123        # Add issue to board
 bip board move org/repo#123 Done  # Move to different status
 bip board remove org/repo#123     # Remove from board
-bip board sync                    # Report mismatches with beads
 bip board refresh-cache           # Refresh cached board metadata
 ```
 
@@ -75,16 +74,6 @@ bip spawn --prompt "Explore the clamping question"  # Adhoc session without issu
 ```
 
 Requires tmux. The spawned session gets the issue/PR context so the agent can start working immediately.
-
-## Task Hierarchy
-
-Visualize your beads task tree:
-
-```bash
-bip tree --open                       # Generate and open in browser
-bip tree --output tasks.html          # Write to file
-bip tree --since 2026-01-20           # Highlight recently created beads
-```
 
 ## Slack Integration
 
@@ -117,7 +106,6 @@ Requires a Slack bot token with `channels:history`, `channels:read`, and `users:
 | `/bip-digest` | Generate and post Slack digest |
 | `/bip-spawn` | Launch Claude session with context |
 | `/bip-board` | Project board operations |
-| `/bip-tree` | Task hierarchy visualization |
 
 Skills are installed by symlinking from the bipartite repo:
 

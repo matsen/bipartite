@@ -15,8 +15,6 @@ import (
 // File paths relative to the nexus directory.
 const (
 	SourcesFile = "sources.yml"
-	BeadsDir    = ".beads"
-	BeadsFile   = "issues.jsonl"
 	StateFile   = ".last-checkin.json"
 	CacheFile   = ".flow-cache.json"
 	ConfigFile  = "config.yml"
