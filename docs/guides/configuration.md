@@ -39,9 +39,14 @@ EOF
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
 | `s2_api_key` | Semantic Scholar API key for higher rate limits |
 | `asta_api_key` | ASTA MCP API key |
-| `github_token` | GitHub personal access token ([setup guide](#github-authentication)) |
-| `slack_bot_token` | Slack bot token for reading channel history |
+| `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Also accepts env vars: `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` (in that order). |
+| `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |
+
+> **Note:** Environment variables, when set, take precedence over the
+> corresponding `config.yml` field. This lets you keep secrets out of
+> plaintext on disk by sourcing them from a secrets manager (e.g.
+> 1Password `op run`). Empty env vars are treated as unset.
 
 ### Example: Running bip from Anywhere
 
@@ -123,6 +128,27 @@ If you prefer classic tokens or need compatibility with older GitHub Enterprise 
 github_token: ghp_your-token-here   # classic token
 # or
 github_token: github_pat_your-token-here  # fine-grained token
+```
+
+#### Or supply the token via an environment variable
+
+Environment variables take precedence over `config.yml`, which lets you keep
+the token out of plaintext on disk (e.g., when sourced from a secrets manager
+like 1Password `op run`). bip consults, in order:
+
+1. `BIP_GITHUB_TOKEN` (recommended)
+2. `GITHUB_TOKEN`
+3. `GH_TOKEN`
+4. `github_token` in `~/.config/bip/config.yml`
+
+The `BIP_`-prefixed name is recommended when a globally-exported `GITHUB_TOKEN`
+(e.g., for the `gh` CLI) might have different scopes than what you want bip
+to use. Empty env vars are treated as unset and fall through to the next
+source.
+
+```bash
+# Example: pull from 1Password CLI for a single command
+op run --env-file=<(echo 'BIP_GITHUB_TOKEN=op://Private/bip-github-pat/token') -- bip repo refresh
 ```
 
 ### Which commands need what

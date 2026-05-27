@@ -142,10 +142,17 @@ func TestSlackHistoryMissingToken(t *testing.T) {
 		t.Fatalf("failed to write config: %v", err)
 	}
 
-	// Run command with XDG_CONFIG_HOME pointing to our config
+	// Run command with XDG_CONFIG_HOME pointing to our config.
+	// Strip token env vars (BIP_SLACK_TOKEN, SLACK_BOT_TOKEN) so the env-var
+	// precedence in GetSlackBotToken() doesn't supply a token from the dev shell.
+	// Use a clean cwd (not nexusDir) so godotenv.Load() in cmd/bip/slack.go can't
+	// pick up the nexus's .env and reintroduce SLACK_BOT_TOKEN.
+	env := filterEnv(os.Environ(), "XDG_CONFIG_HOME")
+	env = filterEnv(env, "BIP_SLACK_TOKEN")
+	env = filterEnv(env, "SLACK_BOT_TOKEN")
 	cmd := exec.Command(bp, "slack", "history", "fortnight-goals")
-	cmd.Dir = nexusDir
-	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+tmpConfigDir)
+	cmd.Dir = t.TempDir()
+	cmd.Env = append(env, "XDG_CONFIG_HOME="+tmpConfigDir)
 
 	err := cmd.Run()
 	if err == nil {

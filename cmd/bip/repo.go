@@ -165,9 +165,9 @@ func runRepoAdd(cmd *cobra.Command, args []string) error {
 			case github.ErrRepoNotFound:
 				exitWithError(ExitRepoGitHubError, "GitHub repository not found: %s", githubInput)
 			case github.ErrRateLimited:
-				exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set GITHUB_TOKEN")
+				exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN)")
 			case github.ErrUnauthorized:
-				exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check GITHUB_TOKEN")
+				exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN, or github_token in ~/.config/bip/config.yml)")
 			default:
 				exitWithError(ExitRepoGitHubError, "GitHub API error: %v", err)
 			}
@@ -568,9 +568,9 @@ func runRepoRefresh(cmd *cobra.Command, args []string) error {
 		case github.ErrRepoNotFound:
 			exitWithError(ExitRepoGitHubError, "GitHub repository not found (may have been deleted or made private)")
 		case github.ErrRateLimited:
-			exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set GITHUB_TOKEN")
+			exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN)")
 		case github.ErrUnauthorized:
-			exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check GITHUB_TOKEN")
+			exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN, or github_token in ~/.config/bip/config.yml)")
 		default:
 			exitWithError(ExitRepoGitHubError, "GitHub API error: %v", err)
 		}

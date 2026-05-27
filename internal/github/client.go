@@ -42,7 +42,8 @@ var (
 )
 
 // NewClient creates a new GitHub API client.
-// It reads GITHUB_TOKEN from the environment or global config for authenticated requests.
+// The token is sourced from (in order): $BIP_GITHUB_TOKEN, $GITHUB_TOKEN,
+// $GH_TOKEN, then github_token in the global config file.
 func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{
