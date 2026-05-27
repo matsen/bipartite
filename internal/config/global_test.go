@@ -322,6 +322,169 @@ func TestValidateNexusPath_PathNotExist(t *testing.T) {
 	}
 }
 
+// clearTokenEnv unsets all token env vars that the getters consult, so
+// each subtest starts from a known-clean environment regardless of what
+// the user's shell exports. t.Setenv restores values on cleanup.
+func clearTokenEnv(t *testing.T) {
+	t.Helper()
+	for _, name := range append(append([]string{}, GitHubTokenEnvVars...), SlackBotTokenEnvVars...) {
+		t.Setenv(name, "")
+	}
+}
+
+// writeConfigWithTokens creates a config.yml under XDG_CONFIG_HOME with
+// the given token values and points XDG_CONFIG_HOME at it. Returns the
+// temp dir for cleanup-by-t.TempDir().
+func writeConfigWithTokens(t *testing.T, githubToken, slackToken string) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	cfgData := GlobalConfig{
+		GitHubToken:   githubToken,
+		SlackBotToken: slackToken,
+	}
+	data, _ := yaml.Marshal(cfgData)
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	ResetGlobalConfigCache()
+}
+
+func TestGetGitHubToken_EnvPrecedence(t *testing.T) {
+	cases := []struct {
+		name        string
+		envs        map[string]string
+		configToken string
+		want        string
+	}{
+		{
+			name: "BIP_GITHUB_TOKEN wins over all",
+			envs: map[string]string{
+				"BIP_GITHUB_TOKEN": "from-bip",
+				"GITHUB_TOKEN":     "from-github",
+				"GH_TOKEN":         "from-gh",
+			},
+			configToken: "from-config",
+			want:        "from-bip",
+		},
+		{
+			name: "GITHUB_TOKEN wins when BIP_GITHUB_TOKEN unset",
+			envs: map[string]string{
+				"GITHUB_TOKEN": "from-github",
+				"GH_TOKEN":     "from-gh",
+			},
+			configToken: "from-config",
+			want:        "from-github",
+		},
+		{
+			name: "GH_TOKEN wins when bip and GITHUB_TOKEN unset",
+			envs: map[string]string{
+				"GH_TOKEN": "from-gh",
+			},
+			configToken: "from-config",
+			want:        "from-gh",
+		},
+		{
+			name:        "config used when no env vars set",
+			envs:        nil,
+			configToken: "from-config",
+			want:        "from-config",
+		},
+		{
+			name: "empty env vars treated as unset",
+			envs: map[string]string{
+				"BIP_GITHUB_TOKEN": "",
+				"GITHUB_TOKEN":     "",
+				"GH_TOKEN":         "",
+			},
+			configToken: "from-config",
+			want:        "from-config",
+		},
+		{
+			name:        "empty config and no env returns empty",
+			envs:        nil,
+			configToken: "",
+			want:        "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearTokenEnv(t)
+			writeConfigWithTokens(t, tc.configToken, "")
+			for k, v := range tc.envs {
+				t.Setenv(k, v)
+			}
+			if got := GetGitHubToken(); got != tc.want {
+				t.Errorf("GetGitHubToken() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGetSlackBotToken_EnvPrecedence(t *testing.T) {
+	cases := []struct {
+		name        string
+		envs        map[string]string
+		configToken string
+		want        string
+	}{
+		{
+			name: "BIP_SLACK_TOKEN wins over SLACK_BOT_TOKEN",
+			envs: map[string]string{
+				"BIP_SLACK_TOKEN": "from-bip",
+				"SLACK_BOT_TOKEN": "from-slack",
+			},
+			configToken: "from-config",
+			want:        "from-bip",
+		},
+		{
+			name: "SLACK_BOT_TOKEN wins when BIP_SLACK_TOKEN unset",
+			envs: map[string]string{
+				"SLACK_BOT_TOKEN": "from-slack",
+			},
+			configToken: "from-config",
+			want:        "from-slack",
+		},
+		{
+			name:        "config used when no env vars set",
+			envs:        nil,
+			configToken: "from-config",
+			want:        "from-config",
+		},
+		{
+			name: "empty env vars treated as unset",
+			envs: map[string]string{
+				"BIP_SLACK_TOKEN": "",
+				"SLACK_BOT_TOKEN": "",
+			},
+			configToken: "from-config",
+			want:        "from-config",
+		},
+		{
+			name:        "empty config and no env returns empty",
+			envs:        nil,
+			configToken: "",
+			want:        "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearTokenEnv(t)
+			writeConfigWithTokens(t, "", tc.configToken)
+			for k, v := range tc.envs {
+				t.Setenv(k, v)
+			}
+			if got := GetSlackBotToken(); got != tc.want {
+				t.Errorf("GetSlackBotToken() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestValidateNexusPath_Valid(t *testing.T) {
 	ResetGlobalConfigCache()
 	defer ResetGlobalConfigCache()

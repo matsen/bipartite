@@ -33,11 +33,13 @@ type SlackClient struct {
 	userCache  map[string]string
 }
 
-// NewSlackClient creates a new SlackClient from SLACK_BOT_TOKEN environment variable or global config.
+// NewSlackClient creates a new SlackClient. The token is sourced from
+// (in order): $BIP_SLACK_TOKEN, $SLACK_BOT_TOKEN, then slack_bot_token
+// in the global config file.
 func NewSlackClient() (*SlackClient, error) {
 	token := config.GetSlackBotToken()
 	if token == "" {
-		return nil, fmt.Errorf("SLACK_BOT_TOKEN not configured; set environment variable or add to %s", config.GlobalConfigPath())
+		return nil, fmt.Errorf("Slack bot token not configured; set BIP_SLACK_TOKEN (or SLACK_BOT_TOKEN) or add slack_bot_token to %s", config.GlobalConfigPath())
 	}
 
 	return &SlackClient{

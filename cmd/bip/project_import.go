@@ -396,7 +396,7 @@ func processRepoImport(repoSpec, projectID, now string, ghClient *github.Client,
 				}
 			case github.ErrRateLimited:
 				result.ReposFailed++
-				result.Warnings = append(result.Warnings, "GitHub rate limit exceeded; try --no-fetch or set GITHUB_TOKEN")
+				result.Warnings = append(result.Warnings, "GitHub rate limit exceeded; try --no-fetch or set BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN)")
 				return RepoImportAction{
 					ID:        repoID,
 					ProjectID: projectID,

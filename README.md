@@ -97,6 +97,19 @@ github_token: ghp_...
 slack_bot_token: xoxb-...
 ```
 
+Tokens may also be supplied via environment variables, which take precedence
+over the config file — useful for secrets managers (e.g. `op run` from
+1Password):
+
+| Token  | Env vars consulted (in order)                             |
+|--------|-----------------------------------------------------------|
+| GitHub | `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN`            |
+| Slack  | `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN`                      |
+
+The `BIP_`-prefixed names are recommended when a globally-exported
+`GITHUB_TOKEN` (e.g. for the `gh` CLI) might have different scopes than
+what you want `bip` to use.
+
 See the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/) for all options.
 
 ## Who Is This For?

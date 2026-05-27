@@ -96,14 +96,51 @@ func GetASTAAPIKey() string {
 	return cfg.ASTAAPIKey
 }
 
-// GetSlackBotToken returns the Slack bot token from global config.
+// GitHubTokenEnvVars lists the environment variables consulted by
+// GetGitHubToken, in precedence order. BIP_GITHUB_TOKEN is the
+// recommended bip-specific name; GITHUB_TOKEN and GH_TOKEN are honored
+// as fallbacks for compatibility with the gh CLI and existing setups.
+var GitHubTokenEnvVars = []string{"BIP_GITHUB_TOKEN", "GITHUB_TOKEN", "GH_TOKEN"}
+
+// SlackBotTokenEnvVars lists the environment variables consulted by
+// GetSlackBotToken, in precedence order. BIP_SLACK_TOKEN is the
+// recommended bip-specific name; SLACK_BOT_TOKEN is the conventional
+// fallback.
+var SlackBotTokenEnvVars = []string{"BIP_SLACK_TOKEN", "SLACK_BOT_TOKEN"}
+
+// GetSlackBotToken returns the Slack bot token.
+//
+// Precedence:
+//  1. $BIP_SLACK_TOKEN
+//  2. $SLACK_BOT_TOKEN
+//  3. slack_bot_token in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
 func GetSlackBotToken() string {
+	for _, name := range SlackBotTokenEnvVars {
+		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
 	cfg, _ := LoadGlobalConfig()
 	return cfg.SlackBotToken
 }
 
-// GetGitHubToken returns the GitHub token from global config.
+// GetGitHubToken returns the GitHub token.
+//
+// Precedence:
+//  1. $BIP_GITHUB_TOKEN
+//  2. $GITHUB_TOKEN
+//  3. $GH_TOKEN
+//  4. github_token in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
 func GetGitHubToken() string {
+	for _, name := range GitHubTokenEnvVars {
+		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
 	cfg, _ := LoadGlobalConfig()
 	return cfg.GitHubToken
 }
