@@ -111,13 +111,20 @@ func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 			// Simple string entry: "matsengrp/repo"
 			entries = append(entries, RepoEntry{Repo: v})
 		case map[string]interface{}:
-			// Object entry: {repo: "...", channel: "..."}
+			// Object entry: {repo: "...", channel: "...", layout: {...}}
 			entry := RepoEntry{}
 			if repo, ok := v["repo"].(string); ok {
 				entry.Repo = repo
 			}
 			if channel, ok := v["channel"].(string); ok {
 				entry.Channel = channel
+			}
+			if raw, ok := v["layout"]; ok {
+				layout, err := parseLayoutMap(raw)
+				if err != nil {
+					return nil, fmt.Errorf("invalid layout for repo %q: %w", entry.Repo, err)
+				}
+				entry.Layout = layout
 			}
 			if entry.Repo == "" {
 				return nil, fmt.Errorf("invalid repo entry: missing 'repo' field")
@@ -129,6 +136,27 @@ func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// parseLayoutMap decodes the per-repo layout block from sources.yml. The
+// underlying value comes from yaml.v3's untyped interface{} decode, so we
+// round-trip via YAML to leverage standard struct decoding (and catch the
+// "layout: 7" / "layout: 'worktree'" malformed cases).
+func parseLayoutMap(raw interface{}) (*config.LayoutConfig, error) {
+	if _, ok := raw.(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("expected mapping, got %T", raw)
+	}
+	data, err := yaml.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	var layout config.LayoutConfig
+	dec := yaml.NewDecoder(strings.NewReader(string(data)))
+	dec.KnownFields(true)
+	if err := dec.Decode(&layout); err != nil {
+		return nil, err
+	}
+	return &layout, nil
 }
 
 // LoadAllRepos returns all repos from sources.yml in the given nexus directory.
@@ -343,38 +371,24 @@ func ExtractRepoName(orgRepo string) string {
 	return orgRepo
 }
 
-// GetRepoLocalPath maps a GitHub repo (org/name) to its local path.
-// Returns the path and whether the repo was found in sources.yml.
+// GetRepoLocalPath maps a GitHub repo (org/name) to its canonical clone
+// path, ignoring any `layout:` configuration. Returns the path and whether
+// the repo was found in sources.yml.
+//
+// Kept as a thin wrapper over ResolveRepoPath for read-only callers
+// (bip checkin, bip board, bip scout) that only need the canonical clone.
+// Worktree-aware callers should use ResolveRepoPath directly so they receive
+// the worktree path and the IsNew/Branch hints.
 func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
-	sources, err := LoadSources(nexusPath)
+	rp, err := ResolveRepoPath(nexusPath, orgRepo, ResolveContext{})
 	if err != nil {
 		return "", false
 	}
-
-	cfg, err := LoadConfig(nexusPath)
-	if err != nil {
-		return "", false
-	}
-
-	repoName := ExtractRepoName(orgRepo)
-
-	// Check writing repos first
-	for _, entry := range sources.Writing {
-		if entry.Repo == orgRepo {
-			writingPath := config.ExpandTilde(cfg.Paths.Writing)
-			return filepath.Join(writingPath, repoName), true
-		}
-	}
-
-	// Check code repos
-	for _, entry := range sources.Code {
-		if entry.Repo == orgRepo {
-			codePath := config.ExpandTilde(cfg.Paths.Code)
-			return filepath.Join(codePath, repoName), true
-		}
-	}
-
-	return "", false
+	// With an empty ResolveContext, worktree mode falls back to the canonical
+	// clone (FellBack=true, Mode=clone); clone mode returns the canonical
+	// directly. Either way Path is the canonical clone — byte-identical to
+	// the pre-issue-149 behavior when no `layout:` block is configured.
+	return rp.Path, true
 }
 
 // GetRepoContextPath returns the context file path for a repo if defined.

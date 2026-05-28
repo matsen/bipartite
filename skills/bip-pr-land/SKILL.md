@@ -14,6 +14,16 @@ Squash-merge the current branch's PR and clean up.
 /bip-pr-land #42       # Land PR #42 (if not on that branch)
 ```
 
+## Worktree mode
+
+If `bip spawn` created the working tree as a linked git worktree (because
+the user opted into the global `layout: { mode: worktree }` block in
+`~/.config/bip/config.yml`), this skill detects that in Step 7a and
+performs the base-branch pull from the primary clone, then removes the
+worktree in Step 8 before deleting the branch. In the common clone-mode
+case (no `layout:` block) every step runs as it always has — the worktree
+detection is a no-op.
+
 ## Workflow
 
 ### Step 1: Check for uncommitted work
@@ -97,6 +107,27 @@ gh pr merge --squash --body ""
 
 Follow the squash merge conventions from global CLAUDE.md — PR title becomes the commit message, body is minimal.
 
+### Step 7a: Detect worktree mode
+
+Before pulling the base branch, check whether you are landing from a
+linked git worktree (created by `bip spawn` in worktree mode):
+
+```bash
+LAND_DIR=$(pwd -P)
+if PRIMARY=$(bip worktree primary 2>/dev/null); then
+    echo "Landing from worktree $LAND_DIR (primary: $PRIMARY)"
+    cd "$PRIMARY"
+fi
+```
+
+`bip worktree primary` exits 0 and prints the primary clone path **only**
+when the current directory is a linked worktree. In every other case
+(primary clone, non-bip checkout, non-git directory) it exits non-zero
+with no stdout — `$PRIMARY` remains empty and the `cd` is skipped.
+
+If `$PRIMARY` was set, Steps 7 and 7.5 below run in the primary clone;
+otherwise they run in `$LAND_DIR` exactly as today.
+
 ### Step 7: Return to base branch and pull
 
 ```bash
@@ -104,12 +135,15 @@ git checkout <base>
 git pull
 ```
 
-### Step 7.5: Sync the primary clone
+### Step 7.5: Sync the primary clone (clone-mode only)
 
-If you landed from a scratch clone (EPIC worker, `bip spawn`, or any
-working copy that isn't the canonical one in `sources.yml`), the primary
-clone is now behind `origin/<base>`. Pull it forward so the canonical
-checkout matches `main`.
+**Skip this step if Step 7a already `cd`'d to the primary** — Step 7 has
+already pulled it.
+
+If you landed from a scratch clone (EPIC worker, `bip spawn` without
+worktree mode, or any working copy that isn't the canonical one in
+`sources.yml`), the primary clone is now behind `origin/<base>`. Pull
+it forward so the canonical checkout matches `main`.
 
 1. Resolve the primary clone path the way `bip spawn` does (mirrors
    `flow.GetRepoLocalPath`: `nexus_path` from `~/.config/bip/config.yml`,
@@ -123,7 +157,21 @@ checkout matches `main`.
 
 3. Report what you did in Step 10.
 
-### Step 8: Delete local branch
+### Step 8: Remove worktree (if applicable) and delete branch
+
+If Step 7a found that you were landing from a linked worktree, remove
+the worktree **before** deleting its branch — git refuses to delete a
+branch that still has a worktree checked out on it:
+
+```bash
+if [ -n "$PRIMARY" ] && [ -n "$LAND_DIR" ] && [ "$LAND_DIR" != "$PRIMARY" ]; then
+    bip worktree remove "$LAND_DIR"
+fi
+```
+
+`bip worktree remove` defaults to `--force`, which is required because
+the squash-merge leaves the worktree carrying commits unreachable from
+the merged branch. Then delete the local branch:
 
 ```bash
 git branch -d <branch>
@@ -159,3 +207,5 @@ Report: "Landed #42. On `<base>`, up to date, worktree clean. Branch `<branch>` 
 If any files were moved to `_ignore/`, list them.
 If the primary clone was synced in Step 7.5, say so:
 "Primary clone `<path>` pulled."
+If Step 8 removed a linked worktree, say so:
+"Worktree `<path>` removed."

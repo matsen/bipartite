@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/spf13/cobra"
 )
 
@@ -186,7 +187,10 @@ func loadEpicConfig(dir string) (*epicConfig, error) {
 		return nil, fmt.Errorf("%s: clone_root is required", path)
 	}
 	if cfg.LocalWorktrees && len(cfg.CloneNames) > 0 {
-		return nil, fmt.Errorf("%s: local_worktrees and clone_names are mutually exclusive", path)
+		// Deprecation hint: the `.epic-config.json` mutex case predates the
+		// global `layout:` block (issue #149). Existing EPICs keep working,
+		// but the error message points users toward the new YAML form.
+		return nil, fmt.Errorf("%s: local_worktrees and clone_names are mutually exclusive (deprecated: prefer the `layout:` block in ~/.config/bip/config.yml; see docs/guides/layout.md)", path)
 	}
 	if !cfg.LocalWorktrees && len(cfg.CloneNames) == 0 {
 		return nil, fmt.Errorf("%s: must set local_worktrees: true or clone_names: [...]", path)
@@ -216,7 +220,10 @@ func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
 		var slots []slotInfo
 		for _, e := range entries {
 			name := e.Name()
-			if !e.IsDir() || !strings.HasPrefix(name, "issue-") {
+			// Share the issue-* prefix with flow.DefaultSlotTemplate so a
+			// change to the convention has a single edit point — see
+			// config.WorktreeSlotPrefix.
+			if !e.IsDir() || !strings.HasPrefix(name, config.WorktreeSlotPrefix) {
 				continue
 			}
 			slots = append(slots, slotInfo{

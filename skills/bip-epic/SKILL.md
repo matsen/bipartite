@@ -415,3 +415,11 @@ Legacy phases from older `.epic-status.json` files:
 - **Not in tmux**: Warn — tmux required for spawning
 - **No EPIC issues found**: Report and offer to create one
 - **gh not authenticated**: Suggest `gh auth login`
+
+## Layout config (issue #149)
+
+`.epic-config.json`'s `clone_root` / `clone_names` / `local_worktrees`
+keep working untouched. The newer way to configure worktree mode (for
+non-EPIC `bip spawn` use) is the `layout:` block in
+`~/.config/bip/config.yml` — see `docs/guides/layout.md`. EPIC
+orchestration still reads `.epic-config.json` for now.

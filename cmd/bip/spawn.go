@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/flow/spawn"
+	"github.com/matsen/bipartite/internal/gitx"
 	"github.com/spf13/cobra"
 )
 
@@ -85,27 +87,38 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Resolve working directory
+	// Resolve working directory. Three paths:
+	//   --dir override: skip the resolver entirely.
+	//   default:        early-resolve to validate the repo is in sources.yml
+	//                   and the canonical clone exists on disk, then (after
+	//                   data fetch) re-resolve with a full context so
+	//                   worktree mode can pick a per-issue directory.
 	var repoPath string
+	var canonicalClone string // primary clone; equals repoPath in clone mode.
 	if spawnDir != "" {
 		repoPath = mustValidateDir(spawnDir)
+		canonicalClone = repoPath
 		fmt.Fprintf(os.Stderr, "Using custom directory: %s\n", repoPath)
 	} else {
-		// Validate repo is in sources.yml and has local clone
-		var found bool
-		repoPath, found = flow.GetRepoLocalPath(nexusPath, ref.Repo)
-		if !found {
-			fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
-			fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
+		earlyResolve, err := flow.ResolveRepoPath(nexusPath, ref.Repo, flow.ResolveContext{})
+		if err != nil {
+			if errors.Is(err, flow.ErrRepoNotInSources) {
+				fmt.Fprintf(os.Stderr, "Error: Repo %s not found in sources.yml\n", ref.Repo)
+				fmt.Fprintf(os.Stderr, "Add it to sources.yml under 'code' or 'writing' category\n")
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stderr, "Error: resolving repo path: %v\n", err)
 			os.Exit(1)
 		}
-
-		// Check local clone exists
-		if _, err := os.Stat(repoPath); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", repoPath)
-			fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, repoPath)
+		// earlyResolve.Path is always the canonical clone (worktree mode
+		// with an empty context falls back to canonical).
+		canonicalClone = earlyResolve.Path
+		if _, err := os.Stat(canonicalClone); os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Error: Local clone not found at %s\n", canonicalClone)
+			fmt.Fprintf(os.Stderr, "Clone it with: git clone git@github.com:%s.git %s\n", ref.Repo, canonicalClone)
 			os.Exit(1)
 		}
+		// repoPath is filled in below once we know the issue/PR context.
 	}
 
 	// Detect item type if not known from URL
@@ -132,6 +145,35 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Final path resolution: now we have a title (and so a slug) plus a
+	// confirmed item type. The resolver picks the canonical clone in clone
+	// mode (matching today's behavior) and worktree.root/issue-N in
+	// worktree mode. We only do this when --dir was not used.
+	if spawnDir == "" {
+		rctx := flow.ResolveContext{Slug: flow.SlugifyTitle(data.Title)}
+		if itemType == "pr" {
+			rctx.PRNumber = ref.Number
+		} else {
+			rctx.IssueNumber = ref.Number
+		}
+		resolved, err := flow.ResolveRepoPath(nexusPath, ref.Repo, rctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: resolving repo path: %v\n", err)
+			os.Exit(1)
+		}
+		if resolved.FellBack {
+			fmt.Fprintf(os.Stderr, "Note: worktree mode is configured but this spawn has no issue/PR context; using canonical clone %s\n", resolved.Path)
+		}
+		if resolved.Mode == config.LayoutModeWorktree && resolved.IsNew {
+			fmt.Fprintf(os.Stderr, "Creating worktree at %s on branch %s\n", resolved.Path, resolved.Branch)
+			if err := gitx.AddWorktree(canonicalClone, resolved.Path, resolved.Branch); err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+		}
+		repoPath = resolved.Path
 	}
 
 	// Build window name

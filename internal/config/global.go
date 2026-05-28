@@ -18,6 +18,11 @@ type GlobalConfig struct {
 	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
 	GitHubToken   string            `yaml:"github_token,omitempty"`
 	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
+
+	// Layout, when set, is the per-machine default for repo working-directory
+	// resolution. Read by flow.ResolveRepoPath. Optional; an absent block
+	// leaves bip in its pre-issue-149 clone-mode behavior.
+	Layout *LayoutConfig `yaml:"layout,omitempty"`
 }
 
 const (
