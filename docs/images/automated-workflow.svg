@@ -349,6 +349,31 @@
        font-size="11"
        id="text18">CONSTITUTION.md</text>
   </g>
+  <!-- /bip-ms-audit (oval; manuscript-vs-implementation validation) -->
+  <g
+     id="g-ms-audit">
+    <title
+       id="title-ms-audit">/bip-ms-audit — Audit a manuscript against its implementation(s): read paper and code in parallel and find where formulas, algorithms, dimensions, or complexity claims diverge from what the code actually does. Confirms surprising findings with the skeptic agent before reporting.</title>
+    <rect
+       x="45"
+       y="420"
+       width="165"
+       height="38"
+       rx="6"
+       fill="#e8f4f8"
+       stroke="#3a86a8"
+       stroke-width="1.5"
+       id="rect-ms-audit" />
+    <text
+       x="127"
+       y="444"
+       text-anchor="middle"
+       font-weight="500"
+       fill="#1a2a3a"
+       class="mono"
+       font-size="12"
+       id="text-ms-audit">/bip-ms-audit</text>
+  </g>
   <!-- issue.check → issue.file (validated draft is filed) -->
   <line
      x1="317"
