@@ -41,7 +41,9 @@ func setupResolverFixture(t *testing.T, sourcesYAML, flowConfigYAML, globalYAML 
 	}
 	t.Setenv("XDG_CONFIG_HOME", cfgHome)
 	config.ResetGlobalConfigCache()
+	ResetFileCache()
 	t.Cleanup(config.ResetGlobalConfigCache)
+	t.Cleanup(ResetFileCache)
 	return nexus
 }
 
@@ -316,5 +318,129 @@ func TestParseLayoutUnknownField(t *testing.T) {
 	_, err := LoadSources(nexus)
 	if err == nil {
 		t.Fatal("expected error for unknown layout field, got nil")
+	}
+}
+
+func TestListWorktreeSlots(t *testing.T) {
+	// ListWorktreeSlots enumerates issue-* subdirs and ignores everything
+	// else (files, non-prefix dirs). Names are sorted for determinism so
+	// EPIC's slot list is stable across runs.
+	root := t.TempDir()
+	for _, sub := range []string{"issue-200", "issue-100", "scratch", "issue-150"} {
+		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(root, "issue-not-a-dir"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ListWorktreeSlots(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"issue-100", "issue-150", "issue-200"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i, g := range got {
+		if g != want[i] {
+			t.Errorf("slot[%d] = %q, want %q", i, g, want[i])
+		}
+	}
+}
+
+func TestListWorktreeSlots_MissingRoot(t *testing.T) {
+	// Reading a missing root is the caller's signal that the EPIC clone_root
+	// itself doesn't exist — surface as an error, not an empty slice.
+	_, err := ListWorktreeSlots(filepath.Join(t.TempDir(), "nope"))
+	if err == nil {
+		t.Fatal("expected error for missing root, got nil")
+	}
+}
+
+func TestResolveRepoPath_ParseErrorSurfacesDetail(t *testing.T) {
+	// Pre-#149, spawn called GetRepoLocalPath which swallowed config parse
+	// errors and reported "repo not found in sources.yml" — confusing when
+	// the real problem was malformed YAML. After #149, spawn calls
+	// ResolveRepoPath directly so the parse error reaches the user. This
+	// test pins that behavior: a malformed sources.yml must yield an error
+	// whose message names the file, distinct from ErrRepoNotInSources.
+	sourcesYAML := "code: [unterminated\n"
+	nexus := setupResolverFixture(t, sourcesYAML, "", "")
+
+	_, err := ResolveRepoPath(nexus, "matsen/bipartite", ResolveContext{})
+	if err == nil {
+		t.Fatal("expected parse error, got nil")
+	}
+	if errors.Is(err, ErrRepoNotInSources) {
+		t.Errorf("parse error must NOT collapse to ErrRepoNotInSources: %v", err)
+	}
+	if !strings.Contains(err.Error(), "sources.yml") {
+		t.Errorf("error %q should name sources.yml", err)
+	}
+}
+
+func TestLoadSources_CachedAcrossCalls(t *testing.T) {
+	// Repeated LoadSources for the same nexus must not re-parse the file
+	// (the resolver calls it on every bip spawn / bip checkin invocation
+	// and we want one read per command). We assert this by mutating the
+	// file in place to a *broken* YAML and verifying the second call
+	// returns the originally-cached value rather than the parse error.
+	sourcesYAML := `code:
+  - repo: matsen/bipartite
+`
+	nexus := setupResolverFixture(t, sourcesYAML, "", "")
+
+	first, err := LoadSources(nexus)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(first.Code) != 1 || first.Code[0].Repo != "matsen/bipartite" {
+		t.Fatalf("first load: %+v", first)
+	}
+
+	// Overwrite with broken YAML but preserve mtime+size by writing the
+	// same number of bytes and resetting mtime. The cache key matches, so
+	// the broken read should never happen.
+	path := filepath.Join(nexus, "sources.yml")
+	info, _ := os.Stat(path)
+	broken := []byte("code: [\n") // 8 bytes; original is 31 bytes
+	// Pad to the same size so mtime+size key is unchanged. (Length match
+	// matters more than mtime for the cache hit assertion since file
+	// systems may coalesce sub-microsecond writes.)
+	for len(broken) < int(info.Size()) {
+		broken = append(broken, ' ')
+	}
+	if err := os.WriteFile(path, broken, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, info.ModTime(), info.ModTime()); err != nil {
+		t.Fatal(err)
+	}
+
+	second, err := LoadSources(nexus)
+	if err != nil {
+		t.Fatalf("expected cache hit, got parse error: %v", err)
+	}
+	if len(second.Code) != 1 || second.Code[0].Repo != "matsen/bipartite" {
+		t.Fatalf("second load returned stale-but-different parse: %+v", second)
+	}
+
+	// Sanity check: ResetFileCache must invalidate, surfacing the bad YAML.
+	ResetFileCache()
+	if _, err := LoadSources(nexus); err == nil {
+		t.Fatal("expected parse error after cache reset, got nil")
+	}
+}
+
+func TestListWorktreeSlots_EmptyRoot(t *testing.T) {
+	// An empty (but existing) root means EPIC has been configured but no
+	// workers have spawned yet — empty slice, no error.
+	got, err := ListWorktreeSlots(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 0 {
+		t.Errorf("expected zero slots, got %v", got)
 	}
 }

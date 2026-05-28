@@ -235,6 +235,35 @@ func pathExists(p string) bool {
 	return err == nil
 }
 
+// ListWorktreeSlots scans root and returns the names of immediate
+// subdirectories that match the worktree slot convention
+// (config.WorktreeSlotPrefix, e.g. "issue-"). Results are sorted for
+// deterministic test ordering.
+//
+// This is the inverse of the forward mapping ResolveRepoPath performs
+// in worktree mode: ResolveRepoPath builds <root>/<slot> for a known
+// issue, ListWorktreeSlots enumerates what is actually on disk. EPIC
+// watch composes both: ResolveRepoPath (eventually, once .epic-config.json
+// is deprecated) provides the root, ListWorktreeSlots enumerates the
+// active issues.
+//
+// Returns an empty slice (no error) when root has no matching subdirs;
+// returns an error when root cannot be read.
+func ListWorktreeSlots(root string) ([]string, error) {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return nil, err
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() && strings.HasPrefix(e.Name(), config.WorktreeSlotPrefix) {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+	return names, nil
+}
+
 // templateVarRE matches {name} placeholders where name is a Go-identifier.
 var templateVarRE = regexp.MustCompile(`\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
 
