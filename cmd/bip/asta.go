@@ -20,14 +20,17 @@ Use --human flag for human-readable output.
 
 Environment Variables (take precedence over asta_api_key in config.yml):
   BIP_ASTA_API_KEY  Your ASTA API key (recommended, bip-scoped)
-  ASTA_API_KEY      Your ASTA API key (fallback; also loaded from a .env file)
+  ASTA_API_KEY      Your ASTA API key (fallback)
+
+Either variable may also be set in a local .env file, which is loaded
+automatically.
 
 Without a key, requests are sent anonymously: the cheap endpoints work, but
 the search endpoint may time out. Register at https://allenai.org/asta/resources/mcp`,
 }
 
 func init() {
-	// Load .env file if present (for ASTA_API_KEY)
+	// Load .env file if present (for BIP_ASTA_API_KEY / ASTA_API_KEY)
 	_ = godotenv.Load()
 
 	astaCmd.PersistentFlags().BoolVar(&astaHuman, "human", false, "Output human-readable format instead of JSON")

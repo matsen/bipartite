@@ -72,6 +72,22 @@ func TestParseSSEResponse_ToolError(t *testing.T) {
 	}
 }
 
+func TestParseSSEResponse_ToolErrorNoMessage(t *testing.T) {
+	// isError:true with no text content must still yield a non-empty,
+	// readable APIError message rather than a dangling "code tool_error): ".
+	body := "event: message\n" +
+		`data: {"jsonrpc":"2.0","id":1,"result":{"content":[],"isError":true}}` + "\n"
+
+	_, err := parseSSEResponse(strings.NewReader(body))
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *APIError, got %T: %v", err, err)
+	}
+	if apiErr.Message == "" {
+		t.Error("expected a non-empty fallback message for an empty tool error")
+	}
+}
+
 func TestParseSSEResponse_Success(t *testing.T) {
 	// isError:false (and absent) must still return the content text,
 	// skipping ping/comment lines.

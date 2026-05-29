@@ -163,9 +163,13 @@ func parseSSEResponse(body io.Reader) ([]string, error) {
 							msg.WriteString(content.Text)
 						}
 					}
+					message := msg.String()
+					if message == "" {
+						message = "tool reported an error with no message"
+					}
 					return nil, &APIError{
 						Code:    "tool_error",
-						Message: msg.String(),
+						Message: message,
 					}
 				}
 
