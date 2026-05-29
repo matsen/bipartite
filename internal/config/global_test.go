@@ -327,31 +327,128 @@ func TestValidateNexusPath_PathNotExist(t *testing.T) {
 // the user's shell exports. t.Setenv restores values on cleanup.
 func clearTokenEnv(t *testing.T) {
 	t.Helper()
-	for _, name := range append(append([]string{}, GitHubTokenEnvVars...), SlackBotTokenEnvVars...) {
+	names := append([]string{}, GitHubTokenEnvVars...)
+	names = append(names, SlackBotTokenEnvVars...)
+	names = append(names, ASTAAPIKeyEnvVars...)
+	for _, name := range names {
 		t.Setenv(name, "")
 	}
 }
 
-// writeConfigWithTokens creates a config.yml under XDG_CONFIG_HOME with
-// the given token values and points XDG_CONFIG_HOME at it. Returns the
-// temp dir for cleanup-by-t.TempDir().
-func writeConfigWithTokens(t *testing.T, githubToken, slackToken string) {
+// writeRawConfig writes raw bytes to config.yml under a fresh
+// XDG_CONFIG_HOME (bypassing yaml.Marshal so malformed content can be
+// tested), points XDG_CONFIG_HOME at it, and resets the config cache.
+func writeRawConfig(t *testing.T, content string) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, "bip")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		t.Fatal(err)
 	}
-	cfgData := GlobalConfig{
-		GitHubToken:   githubToken,
-		SlackBotToken: slackToken,
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
 	}
-	data, _ := yaml.Marshal(cfgData)
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	ResetGlobalConfigCache()
+}
+
+// TestGetters_MalformedConfig ensures a config.yml that fails to parse
+// makes the key/token getters return "" rather than panicking on a nil
+// config (LoadGlobalConfig returns (nil, err) on a parse failure).
+func TestGetters_MalformedConfig(t *testing.T) {
+	clearTokenEnv(t)
+	writeRawConfig(t, "asta_api_key: [unterminated\n")
+	getters := map[string]func() string{
+		"GetS2APIKey":      GetS2APIKey,
+		"GetASTAAPIKey":    GetASTAAPIKey,
+		"GetGitHubToken":   GetGitHubToken,
+		"GetSlackBotToken": GetSlackBotToken,
+	}
+	for name, get := range getters {
+		t.Run(name, func(t *testing.T) {
+			if got := get(); got != "" {
+				t.Errorf("%s() = %q, want \"\" on malformed config", name, got)
+			}
+		})
+	}
+}
+
+// writeGlobalConfig marshals cfg to config.yml under a fresh
+// XDG_CONFIG_HOME, points XDG_CONFIG_HOME at it, and resets the config
+// cache so the next load reads the file.
+func writeGlobalConfig(t *testing.T, cfg GlobalConfig) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := yaml.Marshal(cfg)
 	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 	ResetGlobalConfigCache()
+}
+
+func TestGetASTAAPIKey_EnvPrecedence(t *testing.T) {
+	cases := []struct {
+		name      string
+		envs      map[string]string
+		configKey string
+		want      string
+	}{
+		{
+			name: "BIP_ASTA_API_KEY wins over ASTA_API_KEY",
+			envs: map[string]string{
+				"BIP_ASTA_API_KEY": "from-bip",
+				"ASTA_API_KEY":     "from-asta",
+			},
+			configKey: "from-config",
+			want:      "from-bip",
+		},
+		{
+			name: "ASTA_API_KEY wins when BIP_ASTA_API_KEY unset",
+			envs: map[string]string{
+				"ASTA_API_KEY": "from-asta",
+			},
+			configKey: "from-config",
+			want:      "from-asta",
+		},
+		{
+			name:      "config used when no env vars set",
+			envs:      nil,
+			configKey: "from-config",
+			want:      "from-config",
+		},
+		{
+			name: "empty env vars treated as unset",
+			envs: map[string]string{
+				"BIP_ASTA_API_KEY": "",
+				"ASTA_API_KEY":     "",
+			},
+			configKey: "from-config",
+			want:      "from-config",
+		},
+		{
+			name:      "empty config and no env returns empty",
+			envs:      nil,
+			configKey: "",
+			want:      "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearTokenEnv(t)
+			writeGlobalConfig(t, GlobalConfig{ASTAAPIKey: tc.configKey})
+			for k, v := range tc.envs {
+				t.Setenv(k, v)
+			}
+			if got := GetASTAAPIKey(); got != tc.want {
+				t.Errorf("GetASTAAPIKey() = %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
 
 func TestGetGitHubToken_EnvPrecedence(t *testing.T) {
@@ -414,7 +511,7 @@ func TestGetGitHubToken_EnvPrecedence(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearTokenEnv(t)
-			writeConfigWithTokens(t, tc.configToken, "")
+			writeGlobalConfig(t, GlobalConfig{GitHubToken: tc.configToken})
 			for k, v := range tc.envs {
 				t.Setenv(k, v)
 			}
@@ -474,7 +571,7 @@ func TestGetSlackBotToken_EnvPrecedence(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			clearTokenEnv(t)
-			writeConfigWithTokens(t, "", tc.configToken)
+			writeGlobalConfig(t, GlobalConfig{SlackBotToken: tc.configToken})
 			for k, v := range tc.envs {
 				t.Setenv(k, v)
 			}

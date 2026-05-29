@@ -84,16 +84,48 @@ func ResetGlobalConfigCache() {
 	globalConfigCache = nil
 }
 
+// firstEnvOrConfig returns the first non-empty environment variable named in
+// names, falling back to configValue. Empty env vars are treated as unset.
+func firstEnvOrConfig(names []string, configValue string) string {
+	for _, name := range names {
+		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
+	return configValue
+}
+
 // GetS2APIKey returns the Semantic Scholar API key from global config.
 func GetS2APIKey() string {
-	cfg, _ := LoadGlobalConfig()
+	cfg, err := LoadGlobalConfig()
+	if err != nil || cfg == nil {
+		return ""
+	}
 	return cfg.S2APIKey
 }
 
-// GetASTAAPIKey returns the ASTA API key from global config.
+// ASTAAPIKeyEnvVars lists the environment variables consulted by
+// GetASTAAPIKey, in precedence order. BIP_ASTA_API_KEY is the
+// recommended bip-specific name; ASTA_API_KEY is the conventional
+// fallback advertised in `bip asta --help` and loaded from a local
+// .env file by cmd/bip/asta.go.
+var ASTAAPIKeyEnvVars = []string{"BIP_ASTA_API_KEY", "ASTA_API_KEY"}
+
+// GetASTAAPIKey returns the ASTA API key.
+//
+// Precedence:
+//  1. $BIP_ASTA_API_KEY
+//  2. $ASTA_API_KEY
+//  3. asta_api_key in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
 func GetASTAAPIKey() string {
 	cfg, _ := LoadGlobalConfig()
-	return cfg.ASTAAPIKey
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.ASTAAPIKey
+	}
+	return firstEnvOrConfig(ASTAAPIKeyEnvVars, configValue)
 }
 
 // GitHubTokenEnvVars lists the environment variables consulted by
@@ -117,13 +149,12 @@ var SlackBotTokenEnvVars = []string{"BIP_SLACK_TOKEN", "SLACK_BOT_TOKEN"}
 //
 // Empty env vars are treated as unset.
 func GetSlackBotToken() string {
-	for _, name := range SlackBotTokenEnvVars {
-		if v := os.Getenv(name); v != "" {
-			return v
-		}
-	}
 	cfg, _ := LoadGlobalConfig()
-	return cfg.SlackBotToken
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.SlackBotToken
+	}
+	return firstEnvOrConfig(SlackBotTokenEnvVars, configValue)
 }
 
 // GetGitHubToken returns the GitHub token.
@@ -136,13 +167,12 @@ func GetSlackBotToken() string {
 //
 // Empty env vars are treated as unset.
 func GetGitHubToken() string {
-	for _, name := range GitHubTokenEnvVars {
-		if v := os.Getenv(name); v != "" {
-			return v
-		}
-	}
 	cfg, _ := LoadGlobalConfig()
-	return cfg.GitHubToken
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.GitHubToken
+	}
+	return firstEnvOrConfig(GitHubTokenEnvVars, configValue)
 }
 
 // GetSlackWebhook returns the Slack webhook URL for a channel from global config.
