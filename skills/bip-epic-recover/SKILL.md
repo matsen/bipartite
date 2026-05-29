@@ -59,7 +59,7 @@ Turn each row into a short human label, e.g. `#1481 → clade-matched ASR parity
 
 ### Step 3: Present the choices and confirm
 
-Show a compact labeled table (last-active, clone, label, short session-id) sorted newest first. Recommend the live-at-reboot set (newest per clone, plus the distinct main-clone sessions) but let the user choose. **Do not spawn anything before the user confirms which sessions to resume.**
+Show a compact labeled table (last-active, clone, label, short session-id) sorted newest first. Recommend the live-at-reboot set (newest per clone, plus the distinct main-clone sessions) but let the user choose. Always offer an explicit **Recover all** option alongside the per-session picks (and "Recommended set" / "Cancel"); when the user picks **Recover all**, pass *every* listed session-id to `--resume` in one call. **Do not spawn anything before the user confirms which sessions to resume.**
 
 ### Step 4: Resume the chosen sessions
 
