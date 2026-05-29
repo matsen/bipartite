@@ -144,11 +144,12 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 Scout connects to each server in parallel (max 5 concurrent) and runs:
 
 ```bash
-# Top CPU users (>1% usage)
-ps -eo user:20,%cpu --no-headers | awk '{cpu[$1]+=$2} END {for (u in cpu) if (cpu[u]>1.0) printf "%s %.1f\n",u,cpu[u]}' | sort -k2 -rn
-
-# CPU usage
-top -bn1 | grep -i "cpu(s)" | awk '{print $2}' | cut -d'%' -f1
+# Per-user CPU and overall CPU (one shared 0.5s sample). The remote command only
+# dumps raw data — full usernames via `stat -c %U` (untruncated, LDAP-aware) plus
+# two snapshots of /proc/stat and every /proc/<pid>/stat, 0.5s apart:
+echo "CLK $(getconf CLK_TCK) SID $(cut -d' ' -f6 /proc/$$/stat) SSHD $PPID"
+stat -c '%U %n' /proc/[0-9]*
+cat /proc/stat /proc/[0-9]*/stat ; sleep 0.5 ; cat /proc/stat /proc/[0-9]*/stat
 
 # Memory usage
 free -m | awk '/^Mem:/ {printf "%.1f", ($3/$2) * 100}'
@@ -161,4 +162,10 @@ nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits
 ```
 
-GPU metrics are only collected for servers with `has_gpu: true`. Failed commands are non-fatal — partial output is still parsed.
+`parseProcSample` (in `internal/scout/metrics.go`) does all the arithmetic in Go:
+per-user CPU from each process's `(utime+stime)` jiffy delta (100% == one core,
+unlike `ps %cpu`'s lifetime average), and overall CPU from `/proc/stat`'s aggregate
+line as `(Δtotal − Δidle)/Δtotal` (total busy, including system/IO — not just the
+user fraction `top` reports). Scout's own session and serving sshd are excluded so
+its measurement overhead isn't counted. GPU metrics are only collected for servers
+with `has_gpu: true`. Failed commands are non-fatal — partial output is still parsed.
