@@ -1,6 +1,6 @@
 ---
 name: bip-epic-recover
-description: Recover bip-epic Claude sessions after a host reboot — find the killed sessions, label them, and resume each into a tmux window. Use when a box running a bip-epic fleet rebooted and the tmux sessions are gone.
+description: Recover bip-epic Claude sessions after a host reboot — replay a planned-reboot manifest if one exists, else find the killed sessions by scanning jsonl, label them, and resume each into a tmux window. Use when a box running a bip-epic fleet rebooted and the tmux sessions are gone.
 allowed-tools: Bash, Read
 ---
 
@@ -30,7 +30,36 @@ It needs GNU `date` (or `gdate`), `stat`, bash ≥ 4, and `jq`: it runs on Linux
 
 Start tmux the usual way first (e.g. `eval $(keychain --eval id_rsa) && tmux`) so the server holds your ssh-agent; windows the helper creates inherit that env.
 
-## Workflow
+## Two recovery paths
+
+If the reboot was **planned** and `/bip-epic-prepare-reboot` parked the host first, a host-wide manifest at `~/.epic-recover/manifest.json` records every session/window with its exact `session_id`. Replaying it is deterministic and lossless — prefer it. Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot set from file mtimes.
+
+### Step 0: Check for a planned-reboot manifest
+
+```bash
+"$HELPER" --manifest-status
+```
+
+- **Exit 0 (`VALID …`)** — a manifest exists, was parked *before* the current boot, and is not yet consumed. Use the **manifest path** (Step M) and skip the scan entirely.
+- **Exit 1 (`none` / `stale` / `invalid`)** — no usable manifest (none written, parked *after* this boot, already consumed, or unparseable). Fall through to the **scan path** (Step 1). This is project-specific, so `cd` to the project's main clone first.
+
+### Step M: Replay the manifest
+
+```bash
+"$HELPER" --manifest-list      # TSV: session, index, window, cwd, session_id, method, confidence, issue, candidates
+```
+
+Present the plan grouped by session (real names, windows in order). Most windows resume straight to their recorded id. For any window with `confidence=ambiguous`, show its `candidates` and **ask the user which id to resume** (or to leave it a plain shell) — do not guess. Then replay:
+
+```bash
+"$HELPER" --manifest-resume \
+  ["<session>:<index>=<chosen-id>" ...] \    # one per ambiguous window the user resolved
+  ["<session>:<index>=skip" ...]             # leave that window a plain shell
+```
+
+This rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their ids, shell windows as bare shells — and reports "(from manifest)". Ambiguous windows not given an explicit pick are left as plain shells. On success it stamps the manifest consumed (renames it `manifest.<boot>.done`) so a later *unplanned* reboot does not replay a stale park. Then nudge resumed workers per **Step 5**.
+
+## Scan path (no usable manifest)
 
 ### Step 1: Enumerate the killed sessions
 
@@ -81,6 +110,17 @@ Auto-`send-keys` timing against claude's resume-load is unreliable, so prompt th
 
 ## Notes
 
-- `--list` mutates nothing; only `--resume` (and the helper's bare interactive mode) create tmux windows. Re-running is safe.
+- `--list`, `--manifest-status`, and `--manifest-list` mutate nothing; only `--resume`, `--manifest-resume`, and the bare interactive mode create tmux windows. Re-running the read-only modes is safe.
+- The manifest modes are **host-wide and project-agnostic** — they do not need `.epic-config.json` and rebuild every session in the manifest, not just one project's clones. The scan modes (`--list`, `--resume`, interactive) still require `.epic-config.json` in the cwd.
+- For a planned reboot, write that manifest first with `/bip-epic-prepare-reboot` — it captures exact session ids from live processes, which is lossless where the mtime scan only infers.
 - Driving a remote rebooted box from elsewhere: prefix the helper calls with `ssh <host> 'cd <main-clone> && bash <skill-dir>/epic-recover …'`, but resuming into tmux is cleanest run from a shell already inside that host's tmux.
 - For a no-Claude recovery, run the helper directly with no args (`bash <skill-dir>/epic-recover`) for an interactive numbered picker over the same data — less smart labeling, same engine. Symlink it onto your `PATH` if you want it as a bare command.
+
+## Manual verification
+
+The manifest data paths are pure JSON logic and worth exercising after a change; the live-tmux/process parts of the partner skill are verified the same way (see `bip-epic-prepare-reboot`). Both helpers ship without a unit-test suite, matching this repo's shell-helper convention.
+
+1. **Staleness** — a manifest whose `parked_at` is *after* the current boot → `--manifest-status` reports `stale` and exits 1 (recover falls back to the scan).
+2. **Consumed** — after `--manifest-resume`, the manifest is renamed `manifest.<boot>.done`; a fresh `--manifest-status` reports `none`.
+3. **Fallback** — with no manifest, `--manifest-status` exits 1 and the scan path behaves exactly as before.
+4. **Ambiguity** — an `ambiguous` window is left a plain shell unless an explicit `<session>:<index>=<id>` pick resumes it.
