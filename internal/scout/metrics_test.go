@@ -11,7 +11,7 @@ func TestBuildCommand_NoGPU(t *testing.T) {
 	if containsStr(cmd, "nvidia-smi") {
 		t.Error("command for non-GPU server should not contain nvidia-smi")
 	}
-	if !containsStr(cmd, "top -bn1") {
+	if !containsStr(cmd, "top -bn2") {
 		t.Error("command should contain top")
 	}
 	if !containsStr(cmd, "free -m") {

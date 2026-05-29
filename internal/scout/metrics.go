@@ -28,10 +28,14 @@ const (
 // All metric commands are joined with delimiters for single-session execution.
 func BuildCommand(server Server) string {
 	cmds := []string{
-		// Top CPU users — runs first to avoid counting scout's own commands
-		`ps -eo user:20,%cpu --no-headers | awk '{cpu[$1]+=$2} END {for (u in cpu) if (cpu[u]>1.0) printf "%s %.1f\n",u,cpu[u]}' | sort -k2 -rn`,
-		// CPU usage
-		`top -bn1 | grep -i "cpu(s)" | awk '{print $2}' | cut -d'%' -f1`,
+		// Top CPU users. The etimes>10 filter drops processes alive under 10s,
+		// excluding the sshd/systemd-user that serve scout's own session — their
+		// tiny elapsed-time denominator otherwise inflates ps's lifetime-average
+		// %cpu to ~20% each, summing to a spurious per-user "~220%" floor.
+		`ps -eo user:20,%cpu,etimes --no-headers | awk '$3 > 10 {cpu[$1]+=$2} END {for (u in cpu) if (cpu[u]>1.0) printf "%s %.1f\n",u,cpu[u]}' | sort -k2 -rn`,
+		// CPU usage. Two iterations 0.5s apart so top reports a real delta; its
+		// first iteration has no prior sample and would report since-boot stats.
+		`top -bn2 -d 0.5 | grep -i "cpu(s)" | tail -1 | awk '{print $2}' | cut -d'%' -f1`,
 		// Memory usage
 		`free -m | awk '/^Mem:/ {printf "%.1f", ($3/$2) * 100}'`,
 		// Load average
@@ -87,7 +91,7 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 	metrics := &ServerMetrics{}
 
 	// Parse top users — non-fatal on failure
-	// (runs first on the server to avoid counting scout's own commands)
+	// (the etimes filter in BuildCommand excludes scout's own short-lived procs)
 	if users, err := parseTopUsers(sections[sectionTopUsers]); err == nil {
 		metrics.TopUsers = users
 	}
