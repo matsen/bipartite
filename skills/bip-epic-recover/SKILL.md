@@ -20,7 +20,7 @@ The deterministic engine is the bundled `epic-recover` shell helper; this skill 
 
 ## Prerequisite: install the helper on the recovery host
 
-The helper lives at `skills/bip-epic-recover/epic-recover` (Linux-targeted; uses GNU `date` and `jq`). On the host that runs the fleet:
+The helper lives at `skills/bip-epic-recover/epic-recover` (Linux-targeted; uses GNU `date`, bash ≥ 4, and `jq` — it exits 2 with a clear message if run on macOS or old bash). On the host that runs the fleet:
 
 ```bash
 install -m755 skills/bip-epic-recover/epic-recover ~/bin/epic-recover   # ~/bin on PATH

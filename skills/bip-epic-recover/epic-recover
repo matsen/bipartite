@@ -19,7 +19,20 @@ PROJ=$HOME/.claude/projects
 CFG=.epic-config.json
 
 [ -f "$CFG" ] || { echo "No $CFG here — run from an EPIC project's main clone." >&2; exit 1; }
-command -v jq >/dev/null || { echo "jq required" >&2; exit 1; }
+command -v jq >/dev/null || { echo "epic-recover: jq is required." >&2; exit 1; }
+
+# This helper targets the Linux fleet host (GNU date, bash >= 4). Fail clearly elsewhere
+# rather than emitting cryptic errors — recovery is meant to run on the box that rebooted.
+if ! date -d @0 +%s >/dev/null 2>&1; then
+  echo "epic-recover: needs GNU date (Linux). It runs on the rebooted fleet host, not macOS." >&2
+  echo "  From a Mac:  ssh <host> 'cd <main-clone> && epic-recover [--list|--resume <id>...]'" >&2
+  exit 2
+fi
+command -v mapfile >/dev/null 2>&1 || {
+  echo "epic-recover: needs bash >= 4 (mapfile); found bash ${BASH_VERSION:-unknown}." >&2
+  echo "  On macOS install a newer bash, or run on the Linux fleet host." >&2
+  exit 2
+}
 
 main_dir=$PWD
 proj=$(basename "$PWD")
