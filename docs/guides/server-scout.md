@@ -144,11 +144,12 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 Scout connects to each server in parallel (max 5 concurrent) and runs:
 
 ```bash
-# Top CPU users (>1% usage). Samples /proc/<pid>/stat twice 0.5s apart and
-# aggregates the (utime+stime) jiffy deltas by uid — a true instantaneous reading
-# (100% == one core), unlike `ps %cpu` which is a lifetime average. uids resolve via
-# `getent passwd` (LDAP-aware) and scout's own process group is excluded. See the
-# `topUsersCmd` awk program in internal/scout/metrics.go for the full sampler.
+# Top CPU users (>1% usage). The remote command only dumps raw data — full
+# usernames via `stat -c %U` (untruncated, LDAP-aware) plus two snapshots of every
+# /proc/<pid>/stat 0.5s apart. Go (parseProcUserCPU in internal/scout/metrics.go)
+# differences the (utime+stime) jiffies per user for a true instantaneous reading
+# (100% == one core), unlike `ps %cpu` which is a lifetime average. Scout's own
+# session and serving sshd are excluded so its measurement overhead isn't counted.
 
 # CPU usage (two iterations 0.5s apart so top reports a real delta, not since-boot)
 top -bn2 -d 0.5 | grep -i "cpu(s)" | tail -1 | awk '{print $2}' | cut -d'%' -f1

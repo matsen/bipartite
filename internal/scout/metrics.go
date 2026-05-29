@@ -2,6 +2,7 @@ package scout
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -13,57 +14,52 @@ const delimiter = "___SCOUT_DELIM___"
 // maxConcurrent is the bounded semaphore size for parallel server checks.
 const maxConcurrent = 5
 
-// topUsersCmd computes per-user CPU usage by sampling /proc/<pid>/stat twice
-// 0.5s apart and aggregating the (utime+stime) jiffy deltas by uid. This gives a
-// true instantaneous reading where 100% == one fully-used core (matching ps's
-// %cpu unit), without ps's two failure modes: ps %cpu is a lifetime average, so
-// (a) the short-lived sshd/systemd-user serving scout's own session report ~20%
-// each (tiny elapsed-time denominator), summing to a spurious "~220%" floor, and
-// (b) a process that ran hot hours ago but is now idle keeps over-reporting.
+// procSampleSeconds is the gap between the two /proc snapshots taken to measure
+// per-user CPU. It must match the `sleep` in topUsersCmd (both derive from it).
+const procSampleSeconds = 0.5
+
+// userCPUThreshold is the minimum per-user CPU percent (100 == one full core) to
+// report, dropping the long tail of near-idle accounts.
+const userCPUThreshold = 1.0
+
+// procSnapMarker separates the three blocks of topUsersCmd's output: the header
+// + uid→name map, then the two /proc snapshots. It must not contain the section
+// delimiter, and parseProcUserCPU splits the section on it.
+const procSnapMarker = "@@SCOUT_SNAP@@"
+
+// topUsersCmd dumps the raw data needed to compute true instantaneous per-user
+// CPU, doing no arithmetic on the remote host — parseProcUserCPU does that in Go.
+// It emits, in one section:
 //
-// Details that matter:
-//   - jiffies→percent: delta / (CLK_TCK * dt) * 100. CLK_TCK is read at runtime.
-//   - uid→name uses `getent passwd <uid>`, not /etc/passwd, so cluster users
-//     served by LDAP/SSS resolve (only the few users above threshold are looked up).
-//   - the comm field (field 2 of /proc/<pid>/stat) can contain spaces and ')',
-//     so we split on the text after the *last* ')'.
-//   - MYPGID is scout's own process-group id; processes in it are skipped. The
-//     awk reader itself burns CPU walking /proc during the interval, which would
-//     otherwise be charged to the scout user — the same self-measurement artifact,
-//     just smaller. Excluding the process group drops the whole scout pipeline.
-const topUsersCmd = `PGID=$(cut -d' ' -f5 /proc/self/stat); awk -v CLK=$(getconf CLK_TCK) -v DT=0.5 -v MYPGID=$PGID '
-function readstat(p,  line,i,pos,parts,n){
-  G_ok=0
-  if((getline line < ("/proc/" p "/stat"))<=0){close("/proc/" p "/stat");return}
-  close("/proc/" p "/stat")
-  pos=0; for(i=length(line);i>=1;i--) if(substr(line,i,1)==")"){pos=i;break}
-  n=split(substr(line,pos+2),parts," ")
-  G_pgrp=parts[3]; G_jiff=parts[12]+parts[13]; G_ok=1
-}
-function puid(p,  line,a){
-  while((getline line < ("/proc/" p "/status"))>0)
-    if(substr(line,1,4)=="Uid:"){split(line,a,/[ \t]+/);close("/proc/" p "/status");return a[2]}
-  close("/proc/" p "/status"); return "?"
-}
-function resolve(uid,  line,a,cmd){
-  cmd="getent passwd " uid
-  if((cmd|getline line)>0){close(cmd);split(line,a,":");return a[1]}
-  close(cmd); return uid
-}
-BEGIN{
-  while(("ls /proc"|getline p)>0) if(p~/^[0-9]+$/) pids[np++]=p
-  close("ls /proc")
-  for(i=0;i<np;i++){p=pids[i];readstat(p);if(G_ok){t0[p]=G_jiff;uid0[p]=puid(p)}}
-  system("sleep " DT)
-  for(i=0;i<np;i++){
-    p=pids[i]; if(!(p in t0)) continue
-    readstat(p); if(!G_ok) continue
-    if(G_pgrp==MYPGID) continue
-    d=G_jiff-t0[p]; if(d<=0) continue
-    cpu[uid0[p]]+=d
-  }
-  for(u in cpu){pct=cpu[u]/(CLK*DT)*100; if(pct>1.0) printf "%s %.1f\n",resolve(u),pct}
-}' | sort -k2 -rn`
+//	CLK <clk_tck> SID <our_session> SSHD <serving_sshd_pid>
+//	<user> /proc/<pid>        (one per process, full LDAP names via stat(1))
+//	@@SCOUT_SNAP@@
+//	<contents of every /proc/<pid>/stat>     (snapshot 1)
+//	@@SCOUT_SNAP@@
+//	<contents of every /proc/<pid>/stat>     (snapshot 2, taken sleep later)
+//
+// Sampling /proc/<pid>/stat twice and differencing (utime+stime) jiffies gives a
+// current reading (100% == one core, matching ps's %cpu unit) without ps's two
+// failure modes: ps %cpu is a lifetime average, so (a) the short-lived sshd the
+// SSH session spawns reports a large % from a tiny elapsed-time denominator,
+// summing to a spurious per-user floor, and (b) a process that ran hot hours ago
+// but is now idle keeps over-reporting. `stat -c %U` is used for names rather than
+// top's USER column because top truncates to 8 chars + '+', merging distinct users
+// (systemd-resolve/systemd-timesync both become "systemd+").
+//
+// SID and SSHD identify scout's own footprint so parseProcUserCPU can exclude it:
+// SID (our login session — field 6 of the shell's own /proc/$$/stat) covers the
+// shell and the cat/stat pipeline, and SSHD ($PPID) is the sshd serving the
+// connection. That sshd sits in a *different* session, so SID alone misses it, yet
+// the CPU it spends streaming this (sizeable) output back would otherwise be
+// mis-charged to the ssh user.
+var topUsersCmd = fmt.Sprintf(
+	`echo "CLK $(getconf CLK_TCK) SID $(cut -d' ' -f6 /proc/$$/stat) SSHD $PPID"; `+
+		`stat -c '%%U %%n' /proc/[0-9]* 2>/dev/null; echo '%s'; `+
+		`cat /proc/[0-9]*/stat 2>/dev/null; echo '%s'; `+
+		`sleep %.1f; cat /proc/[0-9]*/stat 2>/dev/null`,
+	procSnapMarker, procSnapMarker, procSampleSeconds,
+)
 
 // Section indices for ParseMetrics output splitting.
 // These must match the command order in BuildCommand.
@@ -80,7 +76,7 @@ const (
 // All metric commands are joined with delimiters for single-session execution.
 func BuildCommand(server Server) string {
 	cmds := []string{
-		// Top CPU users (true instantaneous, via /proc delta sampling).
+		// Top CPU users — raw /proc snapshots; parseProcUserCPU does the math.
 		topUsersCmd,
 		// CPU usage. Two iterations 0.5s apart so top reports a real delta; its
 		// first iteration has no prior sample and would report since-boot stats.
@@ -140,8 +136,8 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 	metrics := &ServerMetrics{}
 
 	// Parse top users — non-fatal on failure
-	// (topUsersCmd excludes scout's own process group via MYPGID)
-	if users, err := parseTopUsers(sections[sectionTopUsers]); err == nil {
+	// (the snapshot data identifies and excludes scout's own process group)
+	if users, err := parseProcUserCPU(sections[sectionTopUsers]); err == nil {
 		metrics.TopUsers = users
 	}
 
@@ -254,27 +250,122 @@ func parseGPUMemory(output string) ([][2]int, error) {
 	return vals, nil
 }
 
-// parseTopUsers parses "username 42.1" lines into a slice of UserCPU.
-// Returns nil slice for empty input (no users above threshold).
-func parseTopUsers(output string) ([]UserCPU, error) {
-	lines := splitNonEmpty(output)
-	if len(lines) == 0 {
-		return nil, nil
+// procStat is the subset of a /proc/<pid>/stat line we care about.
+type procStat struct {
+	session string
+	jiffies int64 // utime + stime, in clock ticks
+}
+
+// parseProcUserCPU turns topUsersCmd's output (header + uid→name map + two
+// /proc/<pid>/stat snapshots, separated by procSnapMarker) into per-user CPU.
+// For each process present in both snapshots and not part of scout's own session
+// or serving sshd, it differences the (utime+stime) jiffies; the per-user totals
+// become a percentage where 100 == one fully-used core (delta / (clkTck * dt) *
+// 100), matching ps's %cpu unit. Users at or below userCPUThreshold are dropped,
+// and results are sorted by CPU descending.
+func parseProcUserCPU(section string) ([]UserCPU, error) {
+	blocks := strings.Split(section, procSnapMarker)
+	if len(blocks) != 3 {
+		return nil, fmt.Errorf("expected 3 blocks separated by %q, got %d", procSnapMarker, len(blocks))
 	}
 
-	var users []UserCPU
-	for _, line := range lines {
-		fields := strings.Fields(line)
-		if len(fields) < 2 {
-			return nil, fmt.Errorf("parsing user CPU line: expected 2 fields, got %d (raw: %q)", len(fields), line)
-		}
-		pct, err := strconv.ParseFloat(fields[1], 64)
-		if err != nil {
-			return nil, fmt.Errorf("parsing user CPU percent: %w (raw: %q)", err, fields[1])
-		}
-		users = append(users, UserCPU{User: fields[0], CPUPercent: pct})
+	clkTck, ownSession, sshdPID, pidUser, err := parseProcHeader(blocks[0])
+	if err != nil {
+		return nil, err
 	}
+	before := parseProcSnapshot(blocks[1])
+	after := parseProcSnapshot(blocks[2])
+
+	jiffiesByUser := make(map[string]int64)
+	for pid, a := range after {
+		b, seenBefore := before[pid]
+		if !seenBefore || a.session == ownSession || pid == sshdPID {
+			continue
+		}
+		delta := a.jiffies - b.jiffies
+		if delta <= 0 {
+			continue
+		}
+		user := pidUser[pid]
+		if user == "" {
+			user = "?"
+		}
+		jiffiesByUser[user] += delta
+	}
+
+	denom := float64(clkTck) * procSampleSeconds
+	var users []UserCPU
+	for user, jiffies := range jiffiesByUser {
+		pct := float64(jiffies) * 100 / denom
+		if pct > userCPUThreshold {
+			users = append(users, UserCPU{User: user, CPUPercent: pct})
+		}
+	}
+	sort.Slice(users, func(i, j int) bool { return users[i].CPUPercent > users[j].CPUPercent })
 	return users, nil
+}
+
+// parseProcHeader parses the first block of topUsersCmd's output: a
+// "CLK <n> SID <n> SSHD <n>" line followed by "<user> /proc/<pid>" mapping lines.
+func parseProcHeader(block string) (clkTck int64, ownSession, sshdPID string, pidUser map[string]string, err error) {
+	lines := splitNonEmpty(block)
+	if len(lines) == 0 {
+		return 0, "", "", nil, fmt.Errorf("empty per-user CPU header")
+	}
+	hdr := strings.Fields(lines[0])
+	if len(hdr) != 6 || hdr[0] != "CLK" || hdr[2] != "SID" || hdr[4] != "SSHD" {
+		return 0, "", "", nil, fmt.Errorf("malformed per-user CPU header (raw: %q)", lines[0])
+	}
+	clkTck, err = strconv.ParseInt(hdr[1], 10, 64)
+	if err != nil {
+		return 0, "", "", nil, fmt.Errorf("parsing CLK_TCK: %w (raw: %q)", err, hdr[1])
+	}
+	if clkTck <= 0 {
+		return 0, "", "", nil, fmt.Errorf("non-positive CLK_TCK: %d", clkTck)
+	}
+	ownSession, sshdPID = hdr[3], hdr[5]
+
+	pidUser = make(map[string]string)
+	for _, line := range lines[1:] {
+		// "<user> /proc/<pid>" — usernames have no spaces, so two fields.
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		pid := fields[1][strings.LastIndexByte(fields[1], '/')+1:]
+		pidUser[pid] = fields[0]
+	}
+	return clkTck, ownSession, sshdPID, pidUser, nil
+}
+
+// parseProcSnapshot parses a block of /proc/<pid>/stat lines into pid → procStat.
+// Malformed lines are skipped (processes come and go between snapshots).
+func parseProcSnapshot(block string) map[string]procStat {
+	out := make(map[string]procStat)
+	for _, line := range splitNonEmpty(block) {
+		// Format: "<pid> (comm) <state> <ppid> <pgrp> ... <utime> <stime> ...".
+		// comm can contain spaces and ')', so the pid is the text before the
+		// first space and the remaining fields start after the *last* ')'.
+		sp := strings.IndexByte(line, ' ')
+		rp := strings.LastIndexByte(line, ')')
+		if sp < 0 || rp < 0 || rp+1 >= len(line) {
+			continue
+		}
+		pid := line[:sp]
+		// Fields after comm (0-indexed): state(0) ppid(1) pgrp(2) session(3) ...
+		// utime(11) stime(12).
+		f := strings.Fields(line[rp+1:])
+		if len(f) < 13 {
+			continue
+		}
+		utime, err1 := strconv.ParseInt(f[11], 10, 64)
+		stime, err2 := strconv.ParseInt(f[12], 10, 64)
+		if err1 != nil || err2 != nil {
+			continue
+		}
+		out[pid] = procStat{session: f[3], jiffies: utime + stime}
+	}
+	return out
 }
 
 // splitNonEmpty splits a string by newlines and returns only non-empty lines.
