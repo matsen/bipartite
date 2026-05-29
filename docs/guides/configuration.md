@@ -38,7 +38,7 @@ EOF
 |-------|-------------|
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
 | `s2_api_key` | Semantic Scholar API key for higher rate limits |
-| `asta_api_key` | ASTA MCP API key |
+| `asta_api_key` | ASTA MCP API key ([register here](https://allenai.org/asta/resources/mcp)). Also accepts env vars: `BIP_ASTA_API_KEY`, `ASTA_API_KEY` (in that order). |
 | `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Also accepts env vars: `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` (in that order). |
 | `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |

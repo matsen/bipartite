@@ -327,8 +327,88 @@ func TestValidateNexusPath_PathNotExist(t *testing.T) {
 // the user's shell exports. t.Setenv restores values on cleanup.
 func clearTokenEnv(t *testing.T) {
 	t.Helper()
-	for _, name := range append(append([]string{}, GitHubTokenEnvVars...), SlackBotTokenEnvVars...) {
+	names := append([]string{}, GitHubTokenEnvVars...)
+	names = append(names, SlackBotTokenEnvVars...)
+	names = append(names, ASTAAPIKeyEnvVars...)
+	for _, name := range names {
 		t.Setenv(name, "")
+	}
+}
+
+// writeConfigWithASTAKey creates a config.yml under XDG_CONFIG_HOME with
+// the given asta_api_key and points XDG_CONFIG_HOME at it.
+func writeConfigWithASTAKey(t *testing.T, astaKey string) {
+	t.Helper()
+	tmpDir := t.TempDir()
+	configDir := filepath.Join(tmpDir, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := yaml.Marshal(GlobalConfig{ASTAAPIKey: astaKey})
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("XDG_CONFIG_HOME", tmpDir)
+	ResetGlobalConfigCache()
+}
+
+func TestGetASTAAPIKey_EnvPrecedence(t *testing.T) {
+	cases := []struct {
+		name      string
+		envs      map[string]string
+		configKey string
+		want      string
+	}{
+		{
+			name: "BIP_ASTA_API_KEY wins over ASTA_API_KEY",
+			envs: map[string]string{
+				"BIP_ASTA_API_KEY": "from-bip",
+				"ASTA_API_KEY":     "from-asta",
+			},
+			configKey: "from-config",
+			want:      "from-bip",
+		},
+		{
+			name: "ASTA_API_KEY wins when BIP_ASTA_API_KEY unset",
+			envs: map[string]string{
+				"ASTA_API_KEY": "from-asta",
+			},
+			configKey: "from-config",
+			want:      "from-asta",
+		},
+		{
+			name:      "config used when no env vars set",
+			envs:      nil,
+			configKey: "from-config",
+			want:      "from-config",
+		},
+		{
+			name: "empty env vars treated as unset",
+			envs: map[string]string{
+				"BIP_ASTA_API_KEY": "",
+				"ASTA_API_KEY":     "",
+			},
+			configKey: "from-config",
+			want:      "from-config",
+		},
+		{
+			name:      "empty config and no env returns empty",
+			envs:      nil,
+			configKey: "",
+			want:      "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearTokenEnv(t)
+			writeConfigWithASTAKey(t, tc.configKey)
+			for k, v := range tc.envs {
+				t.Setenv(k, v)
+			}
+			if got := GetASTAAPIKey(); got != tc.want {
+				t.Errorf("GetASTAAPIKey() = %q, want %q", got, tc.want)
+			}
+		})
 	}
 }
 

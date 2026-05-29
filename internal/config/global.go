@@ -90,8 +90,27 @@ func GetS2APIKey() string {
 	return cfg.S2APIKey
 }
 
-// GetASTAAPIKey returns the ASTA API key from global config.
+// ASTAAPIKeyEnvVars lists the environment variables consulted by
+// GetASTAAPIKey, in precedence order. BIP_ASTA_API_KEY is the
+// recommended bip-specific name; ASTA_API_KEY is the conventional
+// fallback advertised in `bip asta --help` and loaded from a local
+// .env file by cmd/bip/asta.go.
+var ASTAAPIKeyEnvVars = []string{"BIP_ASTA_API_KEY", "ASTA_API_KEY"}
+
+// GetASTAAPIKey returns the ASTA API key.
+//
+// Precedence:
+//  1. $BIP_ASTA_API_KEY
+//  2. $ASTA_API_KEY
+//  3. asta_api_key in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
 func GetASTAAPIKey() string {
+	for _, name := range ASTAAPIKeyEnvVars {
+		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
 	cfg, _ := LoadGlobalConfig()
 	return cfg.ASTAAPIKey
 }

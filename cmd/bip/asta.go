@@ -18,8 +18,12 @@ powerful text snippet search capabilities.
 All commands output JSON by default for agent consumption.
 Use --human flag for human-readable output.
 
-Environment Variables:
-  ASTA_API_KEY  Your ASTA API key (required)`,
+Environment Variables (take precedence over asta_api_key in config.yml):
+  BIP_ASTA_API_KEY  Your ASTA API key (recommended, bip-scoped)
+  ASTA_API_KEY      Your ASTA API key (fallback; also loaded from a .env file)
+
+Without a key, requests are sent anonymously: the cheap endpoints work, but
+the search endpoint may time out. Register at https://allenai.org/asta/resources/mcp`,
 }
 
 func init() {

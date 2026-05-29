@@ -60,6 +60,7 @@ nav:
   - Home: index.md
   - Guides:
     - Getting Started: guides/getting-started.md
+    - Configuration: guides/configuration.md
     - Reference Management: guides/reference-management.md
     - Knowledge Graph: guides/knowledge-graph.md
     - Workflow Coordination: guides/workflow-coordination.md

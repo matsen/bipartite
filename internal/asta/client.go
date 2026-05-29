@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -94,7 +96,26 @@ func NewClient(opts ...ClientOption) *Client {
 		opt(c)
 	}
 
+	// Warn once per process if we are operating without an API key. The
+	// cheap endpoints (paper, citations, ...) accept anonymous calls, so a
+	// missing key stays invisible until `search` trips the SSE timeout.
+	if c.apiKey == "" {
+		warnNoAPIKey()
+	}
+
 	return c
+}
+
+// anonymousWarnOnce ensures the no-key warning is emitted at most once per
+// process, regardless of how many clients are constructed.
+var anonymousWarnOnce sync.Once
+
+func warnNoAPIKey() {
+	anonymousWarnOnce.Do(func() {
+		fmt.Fprintln(os.Stderr, "bip: ASTA API key not configured; falling back to anonymous access "+
+			"(the search endpoint may time out). Set BIP_ASTA_API_KEY or see "+
+			"https://allenai.org/asta/resources/mcp")
+	})
 }
 
 // parseSSEResponse extracts text content from an SSE/MCP response stream.
