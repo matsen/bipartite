@@ -18,13 +18,15 @@ The deterministic engine is the bundled `epic-recover` shell helper; this skill 
 
 `project` is a path to a bip-epic project's **main clone** (the dir holding `.epic-config.json`), or its basename. Defaults to the current directory.
 
-## Prerequisite: install the helper on the recovery host
+## The bundled helper
 
-The helper lives at `skills/bip-epic-recover/epic-recover` (Linux-targeted; uses GNU `date`, bash ≥ 4, and `jq` — it exits 2 with a clear message if run on macOS or old bash). On the host that runs the fleet:
+This skill ships the `epic-recover` shell helper next to `SKILL.md` — no separate install. At the start of the run, set `HELPER` to its absolute path (this skill's base directory, given at invocation, + `/epic-recover`) and use `"$HELPER"` in every command below:
 
 ```bash
-install -m755 skills/bip-epic-recover/epic-recover ~/bin/epic-recover   # ~/bin on PATH
+HELPER="<this-skill-dir>/epic-recover"
 ```
+
+It needs GNU `date` (or `gdate`), `stat`, bash ≥ 4, and `jq`: it runs on Linux out of the box, and on macOS with `brew install coreutils bash`. It exits 2 with guidance if a prerequisite is missing.
 
 Start tmux the usual way first (e.g. `eval $(keychain --eval id_rsa) && tmux`) so the server holds your ssh-agent; windows the helper creates inherit that env.
 
@@ -36,7 +38,7 @@ From the project's main clone, run the helper's list mode:
 
 ```bash
 cd <project-main-clone>
-epic-recover --list
+"$HELPER" --list
 ```
 
 This emits one TSV row per Claude session whose cwd is the main clone **or any worker clone** and whose jsonl was active in the window before the last reboot (default 36h; `EPIC_RECOVER_SINCE_HOURS` to widen). Columns: `last_active  clone  branch  issue  phase  session  first_prompt`. There is intentionally **no git-branch filter** — a worker clone often returns to `main` while its conversation continues, and the main clone hosts several concurrent sessions (conductor, planning, topic coordination).
@@ -64,7 +66,7 @@ Show a compact labeled table (last-active, clone, label, short session-id) sorte
 Pass the selected session-ids to the helper. Run this from inside the project's tmux session so windows are added to it (the helper detects `$TMUX`):
 
 ```bash
-epic-recover --resume <id1> <id2> ...
+"$HELPER" --resume <id1> <id2> ...
 ```
 
 Each becomes a window named `<issue>-<clone>` (workers) or the clone basename (main-clone sessions), running `claude --dangerously-skip-permissions --resume <id>`.
@@ -80,5 +82,5 @@ Auto-`send-keys` timing against claude's resume-load is unreliable, so prompt th
 ## Notes
 
 - `--list` mutates nothing; only `--resume` (and the helper's bare interactive mode) create tmux windows. Re-running is safe.
-- Driving a remote rebooted box from elsewhere: prefix the helper calls with `ssh <host> 'cd <main-clone> && epic-recover …'`, but resuming into tmux is cleanest run from a shell already inside that host's tmux.
-- For a no-Claude recovery, `epic-recover` with no args gives an interactive numbered picker over the same data — less smart labeling, same engine.
+- Driving a remote rebooted box from elsewhere: prefix the helper calls with `ssh <host> 'cd <main-clone> && bash <skill-dir>/epic-recover …'`, but resuming into tmux is cleanest run from a shell already inside that host's tmux.
+- For a no-Claude recovery, run the helper directly with no args (`bash <skill-dir>/epic-recover`) for an interactive numbered picker over the same data — less smart labeling, same engine. Symlink it onto your `PATH` if you want it as a bare command.
