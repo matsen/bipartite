@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+# epic-recover — recover bip-epic Claude sessions after a reboot.
+# Run from a project's MAIN clone (the dir holding .epic-config.json).
+#
+#   epic-recover            interactive: list sessions, pick numbers, spawn windows
+#   epic-recover --list     emit TSV of candidate sessions (for the bip-epic-recover skill)
+#   epic-recover --resume <id> [<id>...]   spawn a window per session-id into current tmux
+#
+# Enumerates ALL Claude sessions (cwd = main clone OR any worker clone) whose jsonl
+# was active within SINCE_HOURS before the last reboot — no git-branch filter, because
+# a clone often returns to main while its conversation continues. When run inside tmux
+# ($TMUX set) it ADDS windows to the current session, preserving the keychain/ssh-agent
+# env of the running tmux server; otherwise it builds a detached session named for the project.
+set -euo pipefail
+
+SINCE_HOURS=${EPIC_RECOVER_SINCE_HOURS:-36}
+CLAUDE="claude --dangerously-skip-permissions"
+PROJ=$HOME/.claude/projects
+CFG=.epic-config.json
+
+[ -f "$CFG" ] || { echo "No $CFG here — run from an EPIC project's main clone." >&2; exit 1; }
+command -v jq >/dev/null || { echo "epic-recover: jq is required." >&2; exit 1; }
+
+# Pick a GNU `date` (needs `-d @epoch`). macOS /bin/date is BSD; Homebrew coreutils ships `gdate`.
+if date -d @0 +%s >/dev/null 2>&1; then DATE=date
+elif command -v gdate >/dev/null 2>&1 && gdate -d @0 +%s >/dev/null 2>&1; then DATE=gdate
+else
+  echo "epic-recover: needs GNU date (for -d @epoch). Install it (brew install coreutils → gdate)" >&2
+  echo "  or run on the Linux fleet host." >&2
+  exit 2
+fi
+command -v mapfile >/dev/null 2>&1 || {
+  echo "epic-recover: needs bash >= 4 (mapfile); found bash ${BASH_VERSION:-unknown}." >&2
+  echo "  On macOS: brew install bash (picked up via /usr/bin/env bash), or run on the Linux host." >&2
+  exit 2
+}
+
+# Portable file-mtime epoch: GNU stat, then BSD/macOS stat.
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
+
+main_dir=$PWD
+proj=$(basename "$PWD")
+clone_root=$(jq -r '.clone_root' "$CFG"); clone_root=${clone_root/#\~/$HOME}
+mapfile -t clone_names < <(jq -r '.clone_names[]?' "$CFG")
+
+# directories to scan: main clone + each worker clone
+dirs=("$main_dir")
+for n in "${clone_names[@]}"; do [ -d "$clone_root/$n" ] && dirs+=("$clone_root/$n"); done
+
+# cutoff = boot - SINCE_HOURS. boot via `uptime -s` (Linux) or kern.boottime (macOS); else now.
+boot_epoch() {
+  local b
+  if b=$(uptime -s 2>/dev/null) && [ -n "$b" ]; then "$DATE" -d "$b" +%s; return; fi
+  if b=$(sysctl -n kern.boottime 2>/dev/null); then  # "{ sec = N, usec = M } ..." — anchor on sec, not usec
+    printf '%s\n' "$b" | sed -n 's/^{ *sec *= *\([0-9][0-9]*\).*/\1/p'; return
+  fi
+  date +%s
+}
+boot=$(boot_epoch); [ -n "$boot" ] || boot=$(date +%s)
+cutoff=$(( boot - SINCE_HOURS*3600 ))
+
+enc() { printf '%s' "$1" | sed 's#/#-#g'; }
+
+first_prompt() { # $1=jsonl -> short human hint (tags stripped, command names kept)
+  jq -rs '[.[]|select(.type=="user")| .message.content
+            | if type=="string" then . elif type=="array" then (.[]|select(.type=="text")|.text) else empty end]
+          | map(select(test("tool_result|tool_use_id")|not)) | map(select(length>0)) | .[0] // ""' "$1" 2>/dev/null \
+    | tr '\n\r\t' '   ' | sed -E 's#<[^>]+># #g; s#  +# #g; s#^ ##' | cut -c1-88
+}
+
+# Collect candidates -> arrays  IDS[] CWDS[] (TSV cache in $rows)
+IDS=(); CWDS=(); rows=""
+collect() {
+  local d enc f id mt mth br cwd st issue phase fp
+  for cwd in "${dirs[@]}"; do
+    d=$PROJ/$(enc "$cwd"); [ -d "$d" ] || continue
+    for f in "$d"/*.jsonl; do
+      [ -e "$f" ] || continue
+      mt=$(mtime "$f"); [ -n "$mt" ] || continue; [ "$mt" -ge "$cutoff" ] || continue
+      id=$(basename "$f" .jsonl); mth=$("$DATE" -d @"$mt" "+%m-%d_%H:%M")
+      br=$(jq -rs '[.[].gitBranch // empty]|last' "$f" 2>/dev/null)
+      issue="-"; phase="-"; st="$cwd/.epic-status.json"
+      if [ -f "$st" ]; then issue=$(jq -r '.issue // "-"' "$st" 2>/dev/null); phase=$(jq -r '.phase // "-"' "$st" 2>/dev/null); fi
+      fp=$(first_prompt "$f")
+      IDS+=("$id"); CWDS+=("$cwd")
+      rows+="$mt"$'\t'"$mth"$'\t'"$(basename "$cwd")"$'\t'"${br:-?}"$'\t'"$issue"$'\t'"$phase"$'\t'"$id"$'\t'"$fp"$'\n'
+    done
+  done
+}
+
+cwd_for() { local id="$1" cwd d; for cwd in "${dirs[@]}"; do d=$PROJ/$(enc "$cwd"); [ -e "$d/$id"*.jsonl ] && { echo "$cwd"; return; }; done; }
+
+label_for() { # $1=cwd -> window-name base
+  local cwd="$1" st="$1/.epic-status.json"
+  if [ -f "$st" ]; then local i; i=$(jq -r '.issue // empty' "$st" 2>/dev/null); [ -n "$i" ] && { echo "$i-$(basename "$cwd")"; return; }; fi
+  basename "$cwd"
+}
+
+spawn_one() { # $1=session-id  $2=optional window-name
+  local id="$1" name="${2:-}" cwd
+  cwd=$(cwd_for "$id") || true
+  [ -n "$cwd" ] || { echo "  ! no clone found for session $id — skipped" >&2; return; }
+  [ -n "$name" ] || name=$(label_for "$cwd")
+  local cmd="$CLAUDE --resume $id"
+  if [ -n "${TMUX:-}" ]; then
+    tmux new-window -n "$name" -c "$cwd"
+    tmux send-keys -t "$name" "$cmd" Enter
+  else
+    tmux has-session -t "$proj" 2>/dev/null || tmux new-session -d -s "$proj" -n "$name" -c "$cwd" \; send-keys -t "$proj:$name" "$cmd" Enter && { echo "  + $name ($id) [new session '$proj']"; return; }
+    tmux new-window -t "$proj" -n "$name" -c "$cwd"; tmux send-keys -t "$proj:$name" "$cmd" Enter
+  fi
+  echo "  + $name  ($id)  $cwd"
+}
+
+case "${1:-}" in
+  --list)
+    collect
+    printf 'last_active\tclone\tbranch\tissue\tphase\tsession\tfirst_prompt\n'
+    printf '%s' "$rows" | sort -t$'\t' -k1,1nr | cut -f2-
+    ;;
+  --resume)
+    shift; [ $# -gt 0 ] || { echo "usage: epic-recover --resume <id>..." >&2; exit 1; }
+    echo "Spawning ${#@} window(s) into ${TMUX:+current tmux}${TMUX:-session '$proj'}:"
+    for id in "$@"; do spawn_one "$id"; done
+    [ -z "${TMUX:-}" ] && echo "Attach: tmux attach -t $proj"
+    ;;
+  ""|--interactive)
+    collect
+    [ ${#IDS[@]} -gt 0 ] || { echo "No sessions active in the ${SINCE_HOURS}h before boot ($("$DATE" -d @"$boot" '+%m-%d %H:%M'))."; exit 0; }
+    # sorted display
+    mapfile -t sorted < <(printf '%s' "$rows" | sort -t$'\t' -k1,1nr)
+    echo "Sessions for '$proj' active before reboot ($("$DATE" -d @"$boot" '+%m-%d %H:%M')):"; echo
+    declare -a MENU_ID
+    i=0
+    for line in "${sorted[@]}"; do
+      mth=$(cut -f2 <<<"$line"); clone=$(cut -f3 <<<"$line"); iss=$(cut -f5 <<<"$line"); ph=$(cut -f6 <<<"$line"); sid=$(cut -f7 <<<"$line"); fp=$(cut -f8 <<<"$line")
+      i=$((i+1)); MENU_ID[$i]=$sid
+      tag=""; [ "$iss" != "-" ] && tag="#$iss/$ph"
+      printf "  [%2d] %-11s %-10s %-12s %-9s %s\n" "$i" "$mth" "$clone" "$tag" "${sid:0:8}" "$fp"
+    done
+    echo
+    printf "Resume which? (numbers, 'a'=all, 'q'=quit): "; read -r ans
+    [ "$ans" = q ] && exit 0
+    sel=(); if [ "$ans" = a ]; then for n in $(seq 1 $i); do sel+=("${MENU_ID[$n]}"); done; else for n in $ans; do [ -n "${MENU_ID[$n]:-}" ] && sel+=("${MENU_ID[$n]}"); done; fi
+    [ ${#sel[@]} -gt 0 ] || { echo "nothing selected"; exit 0; }
+    echo; for id in "${sel[@]}"; do spawn_one "$id"; done
+    [ -z "${TMUX:-}" ] && echo "Attach: tmux attach -t $proj"
+    ;;
+  *) echo "usage: epic-recover [--list | --resume <id>... | (no args = interactive)]" >&2; exit 1;;
+esac
