@@ -15,12 +15,27 @@ func procStatLine(pid int, comm, session string, jiffies int) string {
 	return fmt.Sprintf("%d (%s) S 1 0 %s 0 -1 0 0 0 0 0 %d 0", pid, comm, session, jiffies)
 }
 
-// procSection assembles the output of topUsersCmd from its three blocks.
-func procSection(clk, sid, sshd string, nameLines, snap1, snap2 []string) string {
+// cpuStatLine builds a /proc/stat aggregate "cpu" line (user nice system idle
+// iowait, then zeros for irq/softirq/steal).
+func cpuStatLine(user, nice, system, idle, iowait int) string {
+	return fmt.Sprintf("cpu %d %d %d %d %d 0 0 0", user, nice, system, idle, iowait)
+}
+
+// procSectionCPU assembles procSampleCmd's output, prepending the given /proc/stat
+// "cpu" lines to each snapshot block.
+func procSectionCPU(clk, sid, sshd, cpuBefore, cpuAfter string, nameLines, snap1, snap2 []string) string {
 	header := append([]string{"CLK " + clk + " SID " + sid + " SSHD " + sshd}, nameLines...)
 	return strings.Join(header, "\n") + "\n" + procSnapMarker + "\n" +
-		strings.Join(snap1, "\n") + "\n" + procSnapMarker + "\n" +
-		strings.Join(snap2, "\n")
+		strings.Join(append([]string{cpuBefore}, snap1...), "\n") + "\n" + procSnapMarker + "\n" +
+		strings.Join(append([]string{cpuAfter}, snap2...), "\n")
+}
+
+// procSection assembles procSampleCmd's output with default /proc/stat lines that
+// yield 0% overall CPU (idle-only delta), for tests that only care about per-user.
+func procSection(clk, sid, sshd string, nameLines, snap1, snap2 []string) string {
+	return procSectionCPU(clk, sid, sshd,
+		cpuStatLine(0, 0, 0, 100, 0), cpuStatLine(0, 0, 0, 200, 0),
+		nameLines, snap1, snap2)
 }
 
 func TestBuildCommand_NoGPU(t *testing.T) {
@@ -28,8 +43,8 @@ func TestBuildCommand_NoGPU(t *testing.T) {
 	if containsStr(cmd, "nvidia-smi") {
 		t.Error("command for non-GPU server should not contain nvidia-smi")
 	}
-	if !containsStr(cmd, "top -bn2") {
-		t.Error("command should contain top")
+	if containsStr(cmd, "top ") {
+		t.Error("command should no longer shell out to top (overall CPU comes from /proc/stat)")
 	}
 	if !containsStr(cmd, "free -m") {
 		t.Error("command should contain free")
@@ -37,14 +52,14 @@ func TestBuildCommand_NoGPU(t *testing.T) {
 	if !containsStr(cmd, "uptime") {
 		t.Error("command should contain uptime")
 	}
-	if !containsStr(cmd, "cat /proc/[0-9]*/stat") {
-		t.Error("command should contain the /proc per-user CPU sampler")
+	if !containsStr(cmd, "cat /proc/stat /proc/[0-9]*/stat") {
+		t.Error("command should sample /proc/stat and every /proc/<pid>/stat")
 	}
 	if !containsStr(cmd, "stat -c") {
-		t.Error("per-user CPU sampler should resolve names via stat (full, LDAP-aware)")
+		t.Error("sampler should resolve names via stat (full, LDAP-aware)")
 	}
 	if !containsStr(cmd, procSnapMarker) {
-		t.Error("per-user CPU sampler should delimit its snapshots with procSnapMarker")
+		t.Error("sampler should delimit its snapshots with procSnapMarker")
 	}
 }
 
@@ -57,13 +72,14 @@ func TestBuildCommand_WithGPU(t *testing.T) {
 
 func TestParseMetrics_NoGPU(t *testing.T) {
 	// alice: delta 21 jiffies / (100*0.5) * 100 = 42.0%; bob: delta 5 = 10.0%.
-	users := procSection("100", "999", "0",
+	// Overall: Δtotal=100, Δidle=50 → 50% busy.
+	sample := procSectionCPU("100", "999", "0",
+		cpuStatLine(0, 0, 0, 100, 0), cpuStatLine(30, 0, 20, 150, 0),
 		[]string{"alice /proc/10", "bob /proc/20"},
 		[]string{procStatLine(10, "bash", "10", 0), procStatLine(20, "python", "20", 0)},
 		[]string{procStatLine(10, "bash", "10", 21), procStatLine(20, "python", "20", 5)},
 	)
-	output := users + delimiter +
-		"12.5" + delimiter +
+	output := sample + delimiter +
 		"45.3" + delimiter +
 		" 0.52, 0.48, 0.41"
 
@@ -72,8 +88,8 @@ func TestParseMetrics_NoGPU(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if metrics.CPUPercent != 12.5 {
-		t.Errorf("CPU: expected 12.5, got %f", metrics.CPUPercent)
+	if metrics.CPUPercent != 50.0 {
+		t.Errorf("CPU: expected 50.0, got %f", metrics.CPUPercent)
 	}
 	if metrics.MemoryPercent != 45.3 {
 		t.Errorf("Memory: expected 45.3, got %f", metrics.MemoryPercent)
@@ -99,13 +115,14 @@ func TestParseMetrics_NoGPU(t *testing.T) {
 }
 
 func TestParseMetrics_WithGPU(t *testing.T) {
-	charlie := procSection("100", "999", "0",
+	// Overall: Δtotal=100, Δidle=10 → 90% busy.
+	sample := procSectionCPU("100", "999", "0",
+		cpuStatLine(0, 0, 0, 100, 0), cpuStatLine(80, 0, 10, 110, 0),
 		[]string{"charlie /proc/30"},
 		[]string{procStatLine(30, "matlab", "30", 0)},
 		[]string{procStatLine(30, "matlab", "30", 44)},
 	)
-	output := charlie + delimiter +
-		"9.8" + delimiter +
+	output := sample + delimiter +
 		"26.1" + delimiter +
 		" 5.41, 5.43, 5.20" + delimiter +
 		"100\n100" + delimiter +
@@ -116,8 +133,8 @@ func TestParseMetrics_WithGPU(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if metrics.CPUPercent != 9.8 {
-		t.Errorf("CPU: expected 9.8, got %f", metrics.CPUPercent)
+	if metrics.CPUPercent != 90.0 {
+		t.Errorf("CPU: expected 90.0, got %f", metrics.CPUPercent)
 	}
 	if len(metrics.GPUs) != 2 {
 		t.Fatalf("expected 2 GPUs, got %d", len(metrics.GPUs))
@@ -147,8 +164,16 @@ func TestParseMetrics_InsufficientSections(t *testing.T) {
 	}
 }
 
+// validSample is a well-formed sample section yielding 0 users and 0% overall CPU.
+func validSample() string {
+	return procSection("100", "999", "0", nil, nil, nil)
+}
+
 func TestParseMetrics_BadCPU(t *testing.T) {
-	output := "" + delimiter + "not_a_number" + delimiter + "45.3" + delimiter + "0.52, 0.48, 0.41"
+	// /proc/stat cpu line has non-numeric fields.
+	sample := procSectionCPU("100", "999", "0",
+		"cpu x y z 100 0", "cpu x y z 200 0", nil, nil, nil)
+	output := sample + delimiter + "45.3" + delimiter + "0.52, 0.48, 0.41"
 	_, err := ParseMetrics(output, false)
 	if err == nil {
 		t.Fatal("expected error for bad CPU value")
@@ -156,7 +181,7 @@ func TestParseMetrics_BadCPU(t *testing.T) {
 }
 
 func TestParseMetrics_BadMemory(t *testing.T) {
-	output := "" + delimiter + "12.5" + delimiter + "bad" + delimiter + "0.52, 0.48, 0.41"
+	output := validSample() + delimiter + "bad" + delimiter + "0.52, 0.48, 0.41"
 	_, err := ParseMetrics(output, false)
 	if err == nil {
 		t.Fatal("expected error for bad memory value")
@@ -164,7 +189,7 @@ func TestParseMetrics_BadMemory(t *testing.T) {
 }
 
 func TestParseMetrics_BadLoadAvg(t *testing.T) {
-	output := "" + delimiter + "12.5" + delimiter + "45.3" + delimiter + "0.52, bad, 0.41"
+	output := validSample() + delimiter + "45.3" + delimiter + "0.52, bad, 0.41"
 	_, err := ParseMetrics(output, false)
 	if err == nil {
 		t.Fatal("expected error for bad load avg value")
@@ -173,8 +198,7 @@ func TestParseMetrics_BadLoadAvg(t *testing.T) {
 
 func TestParseMetrics_MissingGPUGraceful(t *testing.T) {
 	// GPU server where nvidia-smi output is empty/missing
-	output := "" + delimiter + // empty user section
-		"9.8" + delimiter +
+	output := validSample() + delimiter +
 		"26.1" + delimiter +
 		" 5.41, 5.43, 5.20" + delimiter +
 		"" + delimiter + // empty GPU util
@@ -185,8 +209,8 @@ func TestParseMetrics_MissingGPUGraceful(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Should still return metrics, just without GPU data
-	if metrics.CPUPercent != 9.8 {
-		t.Errorf("CPU: expected 9.8, got %f", metrics.CPUPercent)
+	if metrics.CPUPercent != 0.0 {
+		t.Errorf("CPU: expected 0.0, got %f", metrics.CPUPercent)
 	}
 	if metrics.GPUs != nil {
 		t.Error("expected nil GPUs when nvidia-smi output is empty")
@@ -233,7 +257,7 @@ func TestParseProcUserCPU_Deltas(t *testing.T) {
 		[]string{procStatLine(10, "bash", "10", 100), procStatLine(20, "py", "20", 0)},
 		[]string{procStatLine(10, "bash", "10", 130), procStatLine(20, "py", "20", 5)},
 	)
-	got, err := parseProcUserCPU(section)
+	got, _, err := parseProcSample(section)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +280,7 @@ func TestParseProcUserCPU_CommWithSpacesAndParens(t *testing.T) {
 		[]string{procStatLine(40, "weird ) name", "40", 0)},
 		[]string{procStatLine(40, "weird ) name", "40", 7)},
 	)
-	got, err := parseProcUserCPU(section)
+	got, _, err := parseProcSample(section)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +297,7 @@ func TestParseProcUserCPU_ExcludesOwnSession(t *testing.T) {
 		[]string{procStatLine(10, "bash", "10", 0), procStatLine(50, "cat", "999", 0)},
 		[]string{procStatLine(10, "bash", "10", 5), procStatLine(50, "cat", "999", 9999)},
 	)
-	got, err := parseProcUserCPU(section)
+	got, _, err := parseProcSample(section)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +315,7 @@ func TestParseProcUserCPU_ExcludesServingSshd(t *testing.T) {
 		[]string{procStatLine(10, "bash", "10", 0), procStatLine(50, "sshd", "777", 0)},
 		[]string{procStatLine(10, "bash", "10", 5), procStatLine(50, "sshd", "777", 9999)},
 	)
-	got, err := parseProcUserCPU(section)
+	got, _, err := parseProcSample(section)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,7 +332,7 @@ func TestParseProcUserCPU_ThresholdAndUnknownUser(t *testing.T) {
 		[]string{procStatLine(60, "a", "60", 0), procStatLine(80, "b", "80", 0), procStatLine(70, "c", "70", 0)},
 		[]string{procStatLine(60, "a", "60", 3), procStatLine(80, "b", "80", 10), procStatLine(70, "c", "70", 25)},
 	)
-	got, err := parseProcUserCPU(section)
+	got, _, err := parseProcSample(section)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +358,7 @@ func TestParseProcUserCPU_Malformed(t *testing.T) {
 		{"bad clk", "CLK x SID 1 SSHD 1\n" + procSnapMarker + "\n" + procSnapMarker},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, err := parseProcUserCPU(tc.input); err == nil {
+			if _, _, err := parseProcSample(tc.input); err == nil {
 				t.Errorf("expected error for %q", tc.input)
 			}
 		})
@@ -371,7 +395,10 @@ func (m *mockSSHClient) Close() error { return nil }
 
 func TestCheckServer_Online(t *testing.T) {
 	client := newMockSSHClient()
-	client.outputs["test"] = "" + delimiter + "12.5" + delimiter + "45.3" + delimiter + "0.52, 0.48, 0.41"
+	// Δtotal=200, Δidle=175 → 12.5% busy.
+	sample := procSectionCPU("100", "999", "0",
+		"cpu 0 0 0 100 0", "cpu 25 0 0 275 0", nil, nil, nil)
+	client.outputs["test"] = sample + delimiter + "45.3" + delimiter + "0.52, 0.48, 0.41"
 
 	status := CheckServer(client, Server{Name: "test"})
 	if status.Status != "online" {
@@ -407,7 +434,7 @@ func TestCheckAllServers_Parallel(t *testing.T) {
 	for i := range servers {
 		name := fmt.Sprintf("server%02d", i)
 		servers[i] = Server{Name: name}
-		client.outputs[name] = "" + delimiter + "1.0" + delimiter + "2.0" + delimiter + "0.1, 0.2, 0.3"
+		client.outputs[name] = validSample() + delimiter + "2.0" + delimiter + "0.1, 0.2, 0.3"
 	}
 
 	result := CheckAllServers(client, servers)
@@ -440,7 +467,7 @@ func TestCheckAllServers_BoundedConcurrency(t *testing.T) {
 	for i := range servers {
 		name := fmt.Sprintf("server%02d", i)
 		servers[i] = Server{Name: name}
-		client.outputs[name] = "" + delimiter + "1.0" + delimiter + "2.0" + delimiter + "0.1, 0.2, 0.3"
+		client.outputs[name] = validSample() + delimiter + "2.0" + delimiter + "0.1, 0.2, 0.3"
 	}
 
 	result := CheckAllServers(client, servers)
