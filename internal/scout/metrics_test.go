@@ -20,8 +20,11 @@ func TestBuildCommand_NoGPU(t *testing.T) {
 	if !containsStr(cmd, "uptime") {
 		t.Error("command should contain uptime")
 	}
-	if !containsStr(cmd, "ps -eo") {
-		t.Error("command should contain ps")
+	if !containsStr(cmd, "/proc/self/stat") {
+		t.Error("command should contain the /proc per-user CPU sampler")
+	}
+	if !containsStr(cmd, "getent passwd") {
+		t.Error("per-user CPU sampler should resolve uids via getent (LDAP-aware)")
 	}
 }
 

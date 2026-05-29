@@ -144,8 +144,11 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 Scout connects to each server in parallel (max 5 concurrent) and runs:
 
 ```bash
-# Top CPU users (>1% usage; etimes>10 drops scout's own short-lived ssh procs)
-ps -eo user:20,%cpu,etimes --no-headers | awk '$3 > 10 {cpu[$1]+=$2} END {for (u in cpu) if (cpu[u]>1.0) printf "%s %.1f\n",u,cpu[u]}' | sort -k2 -rn
+# Top CPU users (>1% usage). Samples /proc/<pid>/stat twice 0.5s apart and
+# aggregates the (utime+stime) jiffy deltas by uid — a true instantaneous reading
+# (100% == one core), unlike `ps %cpu` which is a lifetime average. uids resolve via
+# `getent passwd` (LDAP-aware) and scout's own process group is excluded. See the
+# `topUsersCmd` awk program in internal/scout/metrics.go for the full sampler.
 
 # CPU usage (two iterations 0.5s apart so top reports a real delta, not since-boot)
 top -bn2 -d 0.5 | grep -i "cpu(s)" | tail -1 | awk '{print $2}' | cut -d'%' -f1

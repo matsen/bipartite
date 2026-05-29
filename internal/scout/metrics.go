@@ -13,6 +13,58 @@ const delimiter = "___SCOUT_DELIM___"
 // maxConcurrent is the bounded semaphore size for parallel server checks.
 const maxConcurrent = 5
 
+// topUsersCmd computes per-user CPU usage by sampling /proc/<pid>/stat twice
+// 0.5s apart and aggregating the (utime+stime) jiffy deltas by uid. This gives a
+// true instantaneous reading where 100% == one fully-used core (matching ps's
+// %cpu unit), without ps's two failure modes: ps %cpu is a lifetime average, so
+// (a) the short-lived sshd/systemd-user serving scout's own session report ~20%
+// each (tiny elapsed-time denominator), summing to a spurious "~220%" floor, and
+// (b) a process that ran hot hours ago but is now idle keeps over-reporting.
+//
+// Details that matter:
+//   - jiffies→percent: delta / (CLK_TCK * dt) * 100. CLK_TCK is read at runtime.
+//   - uid→name uses `getent passwd <uid>`, not /etc/passwd, so cluster users
+//     served by LDAP/SSS resolve (only the few users above threshold are looked up).
+//   - the comm field (field 2 of /proc/<pid>/stat) can contain spaces and ')',
+//     so we split on the text after the *last* ')'.
+//   - MYPGID is scout's own process-group id; processes in it are skipped. The
+//     awk reader itself burns CPU walking /proc during the interval, which would
+//     otherwise be charged to the scout user — the same self-measurement artifact,
+//     just smaller. Excluding the process group drops the whole scout pipeline.
+const topUsersCmd = `PGID=$(cut -d' ' -f5 /proc/self/stat); awk -v CLK=$(getconf CLK_TCK) -v DT=0.5 -v MYPGID=$PGID '
+function readstat(p,  line,i,pos,parts,n){
+  G_ok=0
+  if((getline line < ("/proc/" p "/stat"))<=0){close("/proc/" p "/stat");return}
+  close("/proc/" p "/stat")
+  pos=0; for(i=length(line);i>=1;i--) if(substr(line,i,1)==")"){pos=i;break}
+  n=split(substr(line,pos+2),parts," ")
+  G_pgrp=parts[3]; G_jiff=parts[12]+parts[13]; G_ok=1
+}
+function puid(p,  line,a){
+  while((getline line < ("/proc/" p "/status"))>0)
+    if(substr(line,1,4)=="Uid:"){split(line,a,/[ \t]+/);close("/proc/" p "/status");return a[2]}
+  close("/proc/" p "/status"); return "?"
+}
+function resolve(uid,  line,a,cmd){
+  cmd="getent passwd " uid
+  if((cmd|getline line)>0){close(cmd);split(line,a,":");return a[1]}
+  close(cmd); return uid
+}
+BEGIN{
+  while(("ls /proc"|getline p)>0) if(p~/^[0-9]+$/) pids[np++]=p
+  close("ls /proc")
+  for(i=0;i<np;i++){p=pids[i];readstat(p);if(G_ok){t0[p]=G_jiff;uid0[p]=puid(p)}}
+  system("sleep " DT)
+  for(i=0;i<np;i++){
+    p=pids[i]; if(!(p in t0)) continue
+    readstat(p); if(!G_ok) continue
+    if(G_pgrp==MYPGID) continue
+    d=G_jiff-t0[p]; if(d<=0) continue
+    cpu[uid0[p]]+=d
+  }
+  for(u in cpu){pct=cpu[u]/(CLK*DT)*100; if(pct>1.0) printf "%s %.1f\n",resolve(u),pct}
+}' | sort -k2 -rn`
+
 // Section indices for ParseMetrics output splitting.
 // These must match the command order in BuildCommand.
 const (
@@ -28,11 +80,8 @@ const (
 // All metric commands are joined with delimiters for single-session execution.
 func BuildCommand(server Server) string {
 	cmds := []string{
-		// Top CPU users. The etimes>10 filter drops processes alive under 10s,
-		// excluding the sshd/systemd-user that serve scout's own session — their
-		// tiny elapsed-time denominator otherwise inflates ps's lifetime-average
-		// %cpu to ~20% each, summing to a spurious per-user "~220%" floor.
-		`ps -eo user:20,%cpu,etimes --no-headers | awk '$3 > 10 {cpu[$1]+=$2} END {for (u in cpu) if (cpu[u]>1.0) printf "%s %.1f\n",u,cpu[u]}' | sort -k2 -rn`,
+		// Top CPU users (true instantaneous, via /proc delta sampling).
+		topUsersCmd,
 		// CPU usage. Two iterations 0.5s apart so top reports a real delta; its
 		// first iteration has no prior sample and would report since-boot stats.
 		`top -bn2 -d 0.5 | grep -i "cpu(s)" | tail -1 | awk '{print $2}' | cut -d'%' -f1`,
@@ -91,7 +140,7 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 	metrics := &ServerMetrics{}
 
 	// Parse top users — non-fatal on failure
-	// (the etimes filter in BuildCommand excludes scout's own short-lived procs)
+	// (topUsersCmd excludes scout's own process group via MYPGID)
 	if users, err := parseTopUsers(sections[sectionTopUsers]); err == nil {
 		metrics.TopUsers = users
 	}
