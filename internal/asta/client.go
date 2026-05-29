@@ -152,6 +152,23 @@ func parseSSEResponse(body io.Reader) ([]string, error) {
 			}
 
 			if mcpResp.Result != nil {
+				// A tool-level error: Content carries a plain-text message,
+				// not the tool's normal JSON output. Surface it as an error
+				// instead of passing the message downstream, where a typed
+				// JSON parse would fail with a cryptic "invalid character".
+				if mcpResp.Result.IsError {
+					var msg strings.Builder
+					for _, content := range mcpResp.Result.Content {
+						if content.Type == "text" {
+							msg.WriteString(content.Text)
+						}
+					}
+					return nil, &APIError{
+						Code:    "tool_error",
+						Message: msg.String(),
+					}
+				}
+
 				for _, content := range mcpResp.Result.Content {
 					if content.Type == "text" && content.Text != "" {
 						allTextContent = append(allTextContent, content.Text)

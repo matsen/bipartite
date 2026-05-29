@@ -50,6 +50,45 @@ func TestCombineStreamingResults(t *testing.T) {
 	})
 }
 
+func TestParseSSEResponse_ToolError(t *testing.T) {
+	// A tool-level error: JSON-RPC succeeded but the tool reports isError
+	// with a plain-text message instead of JSON. Previously this message
+	// leaked downstream and surfaced as "invalid character 'E'" (#153).
+	body := "event: message\n" +
+		`data: {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text",` +
+		`"text":"Error executing tool get_paper: Paper with id 10.1126/science.1058040 not found"}],` +
+		`"isError":true}}` + "\n"
+
+	_, err := parseSSEResponse(strings.NewReader(body))
+	if err == nil {
+		t.Fatal("expected an error for isError:true response, got nil")
+	}
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("expected *APIError, got %T: %v", err, err)
+	}
+	if !strings.Contains(apiErr.Message, "Paper with id 10.1126/science.1058040 not found") {
+		t.Errorf("server message not preserved, got: %q", apiErr.Message)
+	}
+}
+
+func TestParseSSEResponse_Success(t *testing.T) {
+	// isError:false (and absent) must still return the content text,
+	// skipping ping/comment lines.
+	body := ": ping - 2026-05-29\n" +
+		"event: message\n" +
+		`data: {"jsonrpc":"2.0","id":1,"result":{"content":[{"type":"text",` +
+		`"text":"{\"paperId\":\"abc123\"}"}],"isError":false}}` + "\n"
+
+	content, err := parseSSEResponse(strings.NewReader(body))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(content) != 1 || content[0] != `{"paperId":"abc123"}` {
+		t.Errorf("unexpected content: %#v", content)
+	}
+}
+
 func TestParseSearchPapersResult(t *testing.T) {
 	paperChunk := loadFixture(t, "paper_single_chunk.json")
 

@@ -25,9 +25,13 @@ type MCPResponse struct {
 	Error   *MCPError  `json:"error,omitempty"`  // Error result
 }
 
-// MCPResult contains successful tool results.
+// MCPResult contains tool results. IsError marks a tool-level failure: the
+// JSON-RPC call itself succeeded (no MCPError), but the tool reported an
+// error and Content holds a plain-text message rather than the tool's
+// normal JSON output.
 type MCPResult struct {
 	Content []MCPContent `json:"content"` // Array of content blocks
+	IsError bool         `json:"isError"` // Tool-level error flag
 }
 
 // MCPContent represents a content block in the result.
