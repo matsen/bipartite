@@ -1,24 +1,36 @@
 #!/usr/bin/env bash
 # epic-recover — recover bip-epic Claude sessions after a reboot.
-# Run from a project's MAIN clone (the dir holding .epic-config.json).
 #
-#   epic-recover            interactive: list sessions, pick numbers, spawn windows
-#   epic-recover --list     emit TSV of candidate sessions (for the bip-epic-recover skill)
-#   epic-recover --resume <id> [<id>...]   spawn a window per session-id into current tmux
+# Two recovery sources:
 #
-# Enumerates ALL Claude sessions (cwd = main clone OR any worker clone) whose jsonl
-# was active within SINCE_HOURS before the last reboot — no git-branch filter, because
-# a clone often returns to main while its conversation continues. When run inside tmux
-# ($TMUX set) it ADDS windows to the current session, preserving the keychain/ssh-agent
-# env of the running tmux server; otherwise it builds a detached session named for the project.
+#   MANIFEST (planned reboot) — if bip-epic-prepare-reboot parked the host, a
+#   host-wide manifest records every session/window with its exact session id.
+#   Recover replays it deterministically by real name, in order. Project-agnostic.
+#     epic-recover --manifest-status                 is there a valid manifest to replay?
+#     epic-recover --manifest-list                   TSV of the manifest's windows
+#     epic-recover --manifest-resume [PICK ...]      rebuild every session from the manifest
+#       PICK = "<session>:<index>=<id>"   resume an ambiguous window with this id
+#            | "<session>:<index>=skip"   leave it a plain shell
+#
+#   SCAN (unplanned reboot) — no/stale manifest: enumerate Claude sessions whose
+#   cwd is a project clone and whose jsonl was active before boot. Run from the
+#   project's MAIN clone (the dir holding .epic-config.json).
+#     epic-recover            interactive: list sessions, pick numbers, spawn windows
+#     epic-recover --list     emit TSV of candidate sessions (for the skill)
+#     epic-recover --resume <id> [<id>...]   spawn a window per session-id into current tmux
+#
+# When run inside tmux ($TMUX set) the SCAN modes ADD windows to the current
+# session (preserving its keychain/ssh-agent env); otherwise they build a detached
+# session named for the project. MANIFEST mode always builds named sessions.
 set -euo pipefail
 
 SINCE_HOURS=${EPIC_RECOVER_SINCE_HOURS:-36}
 CLAUDE="claude --dangerously-skip-permissions"
 PROJ=$HOME/.claude/projects
 CFG=.epic-config.json
+RECOVER_DIR=${EPIC_RECOVER_DIR:-$HOME/.epic-recover}
+MANIFEST="$RECOVER_DIR/manifest.json"
 
-[ -f "$CFG" ] || { echo "No $CFG here — run from an EPIC project's main clone." >&2; exit 1; }
 command -v jq >/dev/null || { echo "epic-recover: jq is required." >&2; exit 1; }
 
 # Pick a GNU `date` (needs `-d @epoch`). macOS /bin/date is BSD; Homebrew coreutils ships `gdate`.
@@ -37,15 +49,7 @@ command -v mapfile >/dev/null 2>&1 || {
 
 # Portable file-mtime epoch: GNU stat, then BSD/macOS stat.
 mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
-
-main_dir=$PWD
-proj=$(basename "$PWD")
-clone_root=$(jq -r '.clone_root' "$CFG"); clone_root=${clone_root/#\~/$HOME}
-mapfile -t clone_names < <(jq -r '.clone_names[]?' "$CFG")
-
-# directories to scan: main clone + each worker clone
-dirs=("$main_dir")
-for n in "${clone_names[@]}"; do [ -d "$clone_root/$n" ] && dirs+=("$clone_root/$n"); done
+enc() { printf '%s' "$1" | sed 's#/#-#g'; }
 
 # cutoff = boot - SINCE_HOURS. boot via `uptime -s` (Linux) or kern.boottime (macOS); else now.
 boot_epoch() {
@@ -56,10 +60,125 @@ boot_epoch() {
   fi
   date +%s
 }
-boot=$(boot_epoch); [ -n "$boot" ] || boot=$(date +%s)
-cutoff=$(( boot - SINCE_HOURS*3600 ))
 
-enc() { printf '%s' "$1" | sed 's#/#-#g'; }
+# ---------------------------------------------------------------------------
+# MANIFEST mode (planned-reboot replay) — project-agnostic, host-wide.
+# ---------------------------------------------------------------------------
+
+# Is there a manifest worth replaying? Echoes a verdict; exit 0 if VALID else 1.
+# Valid = parseable, parked_at strictly before the current boot, and not yet
+# consumed (a consumed manifest was renamed to manifest.<boot>.done).
+manifest_status() {
+  [ -f "$MANIFEST" ] || { echo "none: no manifest at $MANIFEST"; return 1; }
+  local parked boot parked_e
+  parked=$(jq -r '.parked_at // empty' "$MANIFEST" 2>/dev/null) || { echo "invalid: $MANIFEST is not valid JSON"; return 1; }
+  [ -n "$parked" ] || { echo "invalid: $MANIFEST has no parked_at"; return 1; }
+  parked_e=$("$DATE" -d "$parked" +%s 2>/dev/null) || { echo "invalid: unparseable parked_at '$parked'"; return 1; }
+  boot=$(boot_epoch)
+  if [ -n "$boot" ] && [ "$parked_e" -ge "$boot" ]; then
+    echo "stale: parked_at ($parked) is not before this boot ($("$DATE" -d @"$boot" '+%Y-%m-%dT%H:%M:%SZ')) — ignoring; use the scan instead"
+    return 1
+  fi
+  local ns nw na
+  ns=$(jq '.sessions|length' "$MANIFEST" 2>/dev/null)
+  nw=$(jq '[.sessions[].windows[]]|length' "$MANIFEST" 2>/dev/null)
+  na=$(jq '[.sessions[].windows[]|select(.confidence=="ambiguous")]|length' "$MANIFEST" 2>/dev/null)
+  printf 'VALID\t%s\t%s\t%s sessions\t%s windows\t%s ambiguous\n' "$MANIFEST" "$parked" "$ns" "$nw" "$na"
+  return 0
+}
+
+# TSV of every window in the manifest, for the skill to present.
+manifest_list() {
+  manifest_status >/dev/null || { manifest_status >&2; exit 1; }
+  printf 'session\tindex\twindow\tcwd\tsession_id\tmethod\tconfidence\tissue\tcandidates\n'
+  jq -r '.sessions[] as $s | $s.windows[] |
+    [$s.name, (.index|tostring), .name, .cwd, (.session_id // "-"),
+     .method, .confidence, (.issue|tostring),
+     ((.candidates // [])|join("|"))] | @tsv' "$MANIFEST"
+}
+
+# Rebuild every session from the manifest. PICK args override ambiguous windows.
+manifest_resume() {
+  manifest_status >/dev/null || { manifest_status >&2; exit 1; }
+
+  declare -A PICK   # "session:index" -> id | "skip"
+  shift  # drop --manifest-resume
+  for p in "$@"; do
+    case "$p" in *=*) PICK["${p%%=*}"]="${p#*=}" ;; *) echo "epic-recover: bad pick '$p' (want session:index=id|skip)" >&2; exit 1 ;; esac
+  done
+
+  local nsess; nsess=$(jq '.sessions|length' "$MANIFEST")
+  echo "Replaying $MANIFEST ($(jq -r .host "$MANIFEST"), parked $(jq -r .parked_at "$MANIFEST")):"
+
+  local s w
+  for s in $(seq 0 $((nsess-1))); do
+    local sname nwin
+    sname=$(jq -r ".sessions[$s].name" "$MANIFEST")
+    nwin=$(jq ".sessions[$s].windows|length" "$MANIFEST")
+    local fresh_session=0
+    tmux has-session -t "$sname" 2>/dev/null || fresh_session=1
+    echo "  session '$sname' ($nwin windows):"
+    for w in $(seq 0 $((nwin-1))); do
+      local wname cwd sid conf idx key eff cmd
+      wname=$(jq -r ".sessions[$s].windows[$w].name" "$MANIFEST")
+      cwd=$(jq -r ".sessions[$s].windows[$w].cwd" "$MANIFEST")
+      sid=$(jq -r ".sessions[$s].windows[$w].session_id // \"-\"" "$MANIFEST")
+      conf=$(jq -r ".sessions[$s].windows[$w].confidence" "$MANIFEST")
+      idx=$(jq -r ".sessions[$s].windows[$w].index" "$MANIFEST")
+      key="$sname:$idx"
+
+      # Resolve which id (if any) to resume this window with.
+      eff="$sid"
+      if [ -n "${PICK[$key]:-}" ]; then
+        eff="${PICK[$key]}"
+      elif [ "$conf" = ambiguous ]; then
+        eff="skip"   # ambiguous and not explicitly picked → leave a plain shell
+      fi
+
+      if [ "$eff" = "-" ] || [ "$eff" = skip ] || [ "$eff" = null ]; then
+        cmd=""   # plain shell window
+      else
+        cmd="$CLAUDE --resume $eff"
+      fi
+
+      if [ "$fresh_session" = 1 ] && [ "$w" = 0 ]; then
+        tmux new-session -d -s "$sname" -n "$wname" -c "$cwd"
+      else
+        tmux new-window -t "$sname" -n "$wname" -c "$cwd"
+      fi
+      if [ -n "$cmd" ]; then
+        tmux send-keys -t "$sname:$wname" "$cmd" Enter
+        echo "    + [$idx] $wname  →  resume ${eff:0:8}"
+      else
+        local note="shell"; [ "$conf" = ambiguous ] && note="shell (ambiguous — pick to resume)"
+        echo "    + [$idx] $wname  →  $note  $cwd"
+      fi
+    done
+  done
+
+  # Stamp consumed so a later unplanned reboot doesn't replay this stale park.
+  local boot; boot=$(boot_epoch)
+  mv "$MANIFEST" "$RECOVER_DIR/manifest.${boot}.done"
+  echo
+  echo "Rebuilt $nsess session(s) from manifest (from manifest). Marked consumed: manifest.${boot}.done"
+  echo "Attach: tmux attach -t $(jq -r '.sessions[0].name' "$RECOVER_DIR/manifest.${boot}.done")"
+}
+
+# ---------------------------------------------------------------------------
+# SCAN mode (unplanned reboot) — needs .epic-config.json in the cwd.
+# ---------------------------------------------------------------------------
+
+need_cfg_and_setup() {
+  [ -f "$CFG" ] || { echo "No $CFG here — run from an EPIC project's main clone (or use --manifest-* for a planned-reboot manifest)." >&2; exit 1; }
+  main_dir=$PWD
+  proj=$(basename "$PWD")
+  clone_root=$(jq -r '.clone_root' "$CFG"); clone_root=${clone_root/#\~/$HOME}
+  mapfile -t clone_names < <(jq -r '.clone_names[]?' "$CFG")
+  dirs=("$main_dir")
+  for n in "${clone_names[@]}"; do [ -d "$clone_root/$n" ] && dirs+=("$clone_root/$n"); done
+  boot=$(boot_epoch); [ -n "$boot" ] || boot=$(date +%s)
+  cutoff=$(( boot - SINCE_HOURS*3600 ))
+}
 
 first_prompt() { # $1=jsonl -> short human hint (tags stripped, command names kept)
   jq -rs '[.[]|select(.type=="user")| .message.content
@@ -113,18 +232,24 @@ spawn_one() { # $1=session-id  $2=optional window-name
 }
 
 case "${1:-}" in
+  --manifest-status) manifest_status ;;
+  --manifest-list)   manifest_list ;;
+  --manifest-resume) manifest_resume "$@" ;;
   --list)
+    need_cfg_and_setup
     collect
     printf 'last_active\tclone\tbranch\tissue\tphase\tsession\tfirst_prompt\n'
     printf '%s' "$rows" | sort -t$'\t' -k1,1nr | cut -f2-
     ;;
   --resume)
+    need_cfg_and_setup
     shift; [ $# -gt 0 ] || { echo "usage: epic-recover --resume <id>..." >&2; exit 1; }
     echo "Spawning ${#@} window(s) into ${TMUX:+current tmux}${TMUX:-session '$proj'}:"
     for id in "$@"; do spawn_one "$id"; done
     [ -z "${TMUX:-}" ] && echo "Attach: tmux attach -t $proj"
     ;;
   ""|--interactive)
+    need_cfg_and_setup
     collect
     [ ${#IDS[@]} -gt 0 ] || { echo "No sessions active in the ${SINCE_HOURS}h before boot ($("$DATE" -d @"$boot" '+%m-%d %H:%M'))."; exit 0; }
     # sorted display
@@ -146,5 +271,5 @@ case "${1:-}" in
     echo; for id in "${sel[@]}"; do spawn_one "$id"; done
     [ -z "${TMUX:-}" ] && echo "Attach: tmux attach -t $proj"
     ;;
-  *) echo "usage: epic-recover [--list | --resume <id>... | (no args = interactive)]" >&2; exit 1;;
+  *) echo "usage: epic-recover [--manifest-status|--manifest-list|--manifest-resume [PICK...] | --list | --resume <id>... | (no args = interactive)]" >&2; exit 1;;
 esac

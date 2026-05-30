@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+# epic-prepare-reboot — quiesce the whole tmux host before a PLANNED reboot.
+#
+# Run ONCE, host-wide, while tmux is still alive. It walks every pane on the
+# host, resolves each claude window's exact session id from ground truth
+# (process cmdline / start-time correlation), optionally checkpoints epic
+# workers, and writes a manifest that bip-epic-recover replays after the reboot
+# to rebuild the workspace deterministically — preserving your real session
+# names, window names, order, and cwds.
+#
+#   epic-prepare-reboot                  checkpoint workers, write the manifest
+#   epic-prepare-reboot --dry-run        print the resolved table, write nothing
+#   epic-prepare-reboot --no-checkpoint  skip quiescing workers
+#   epic-prepare-reboot --shutdown       after the manifest is on disk, tmux kill-server
+#
+# Resolution priority per claude window:
+#   1. cmdline   — `--resume <id>` in the claude process args (exact; resumed sessions)
+#   2. starttime — claude process start time correlated to the cwd's jsonl that
+#                  *began* closest (fresh sessions, incl. two fresh in one cwd)
+#   3. newest    — newest jsonl for the cwd (last resort)
+# Windows that two jsonls fit nearly equally are flagged `ambiguous` so recover
+# asks rather than guessing. Non-claude windows are recorded as plain shells.
+#
+# Linux uses /proc first; macOS falls back to `ps`. Needs bash >= 4, jq, and a
+# GNU `date` (or `gdate` via `brew install coreutils`).
+set -euo pipefail
+
+RECOVER_DIR=${EPIC_RECOVER_DIR:-$HOME/.epic-recover}
+MANIFEST="$RECOVER_DIR/manifest.json"
+PROJ=$HOME/.claude/projects
+AMBIG_GAP=${EPIC_PREPARE_AMBIG_GAP:-5}          # 2nd-closest jsonl within Ns of closest -> ambiguous
+CHECKPOINT_WAIT=${EPIC_PREPARE_CHECKPOINT_WAIT:-20}
+
+UUID_RE='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+
+command -v jq >/dev/null   || { echo "epic-prepare-reboot: jq is required." >&2; exit 1; }
+command -v tmux >/dev/null || { echo "epic-prepare-reboot: tmux is required." >&2; exit 1; }
+tmux list-panes -a >/dev/null 2>&1 || { echo "epic-prepare-reboot: no running tmux server — nothing to park." >&2; exit 1; }
+
+# GNU date (needs -d). macOS ships BSD date; Homebrew coreutils provides gdate.
+if date -d @0 +%s >/dev/null 2>&1; then DATE=date
+elif command -v gdate >/dev/null 2>&1 && gdate -d @0 +%s >/dev/null 2>&1; then DATE=gdate
+else
+  echo "epic-prepare-reboot: needs GNU date (for -d). Install it (brew install coreutils -> gdate)" >&2
+  echo "  or run on the Linux fleet host." >&2
+  exit 2
+fi
+command -v mapfile >/dev/null 2>&1 || {
+  echo "epic-prepare-reboot: needs bash >= 4 (mapfile); found bash ${BASH_VERSION:-unknown}." >&2
+  echo "  On macOS: brew install bash, or run on the Linux host." >&2
+  exit 2
+}
+
+DRY=0; CHECKPOINT=1; SHUTDOWN=0
+for a in "$@"; do
+  case "$a" in
+    --dry-run)       DRY=1 ;;
+    --no-checkpoint) CHECKPOINT=0 ;;
+    --shutdown)      SHUTDOWN=1 ;;
+    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
+    *) echo "epic-prepare-reboot: unknown arg '$a'" >&2; exit 1 ;;
+  esac
+done
+
+enc() { printf '%s' "$1" | sed 's#/#-#g'; }
+mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
+
+# claude descendant pid of a pane's shell pid (BFS over the process tree).
+claude_pid_under() {
+  local root=$1 cur comm args
+  local queue=("$root")
+  while [ ${#queue[@]} -gt 0 ]; do
+    cur=${queue[0]}; queue=("${queue[@]:1}")
+    comm=$(ps -o comm= -p "$cur" 2>/dev/null || true)
+    args=$(ps -o args= -p "$cur" 2>/dev/null || true)
+    if [ "${comm##*/}" = claude ] || case "$args" in *claude\ --*|*/claude\ *) true ;; *) false ;; esac; then
+      echo "$cur"; return
+    fi
+    local kids; mapfile -t kids < <(pgrep -P "$cur" 2>/dev/null || true)
+    queue+=("${kids[@]}")
+  done
+}
+
+# Exact session id if `--resume <id>` is in the claude process args.
+resume_id_from() {
+  local pid=$1 cl=""
+  [ -r "/proc/$pid/cmdline" ] && cl=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+  [ -n "$cl" ] || cl=$(ps -o args= -p "$pid" 2>/dev/null || true)
+  case "$cl" in *--resume*) ;; *) return ;; esac
+  printf '%s\n' "$cl" | grep -oiE "$UUID_RE" | head -1
+}
+
+# Process start time in epoch seconds: Linux /proc first, ps lstart fallback.
+proc_start_epoch() {
+  local pid=$1 st btime hz ls
+  if [ -r "/proc/$pid/stat" ]; then
+    # strip "PID (comm) " (comm may contain spaces/parens), then field 20 is starttime ticks.
+    st=$(sed -E 's/^[0-9]+ \(.*\) //' "/proc/$pid/stat" 2>/dev/null | awk '{print $20}')
+    if [ -n "$st" ]; then
+      btime=$(awk '/^btime/{print $2}' /proc/stat 2>/dev/null)
+      hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
+      [ -n "$btime" ] && { echo $(( btime + st / hz )); return; }
+    fi
+  fi
+  ls=$(ps -o lstart= -p "$pid" 2>/dev/null || true)
+  [ -n "$ls" ] && "$DATE" -d "$ls" +%s 2>/dev/null
+}
+
+# Epoch of a session's first record (when the session began); falls back to mtime.
+jsonl_begin_epoch() {
+  local f=$1 ts
+  ts=$(head -20 "$f" 2>/dev/null | jq -rs '[.[]|.timestamp // empty]|.[0] // empty' 2>/dev/null || true)
+  [ -n "$ts" ] && { "$DATE" -d "$ts" +%s 2>/dev/null && return; }
+  mtime "$f"
+}
+
+issue_for() {
+  local cwd=$1 st="$cwd/.epic-status.json" i
+  [ -f "$st" ] && i=$(jq -r '.issue // empty' "$st" 2>/dev/null) && [ -n "$i" ] && { echo "$i"; return; }
+  echo "-"
+}
+
+# ---- Pass 1: enumerate panes, resolve cmdline ids, note which jsonls are claimed ----
+# ROW fields (tab-separated): session index name cwd pane_pid claude_pid sid method conf issue candidates
+ROWS=()
+declare -A CLAIMED            # jsonl-id -> 1 once a cmdline resume locks it
+declare -A FRESH_IDX          # index into ROWS for windows needing start-time resolution
+
+readarray -t PANES < <(tmux list-panes -a -F '#{session_name}	#{window_index}	#{window_name}	#{pane_current_path}	#{pane_pid}')
+
+i=0
+for line in "${PANES[@]}"; do
+  IFS=$'\t' read -r sess widx wname cwd ppid <<<"$line"
+  cpid=$(claude_pid_under "$ppid" || true)
+  issue=$(issue_for "$cwd")
+  if [ -z "$cpid" ]; then
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	-	-	shell	none	$issue	")
+    i=$((i+1)); continue
+  fi
+  rid=$(resume_id_from "$cpid" || true)
+  if [ -n "$rid" ]; then
+    CLAIMED["$rid"]=1
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	$rid	cmdline	high	$issue	")
+  else
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	-	pending	pending	$issue	")
+    FRESH_IDX["$i"]=1
+  fi
+  i=$((i+1))
+done
+
+# ---- Pass 2: start-time correlation for fresh windows (skipping cmdline-claimed jsonls) ----
+for idx in "${!FRESH_IDX[@]}"; do
+  IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand <<<"${ROWS[$idx]}"
+  pstart=$(proc_start_epoch "$cpid" || true)
+  d=$PROJ/$(enc "$cwd")
+  best=""; bestdiff=""; second_diff=""; second_id=""; newest=""; newest_mt=""
+  if [ -n "$pstart" ] && [ -d "$d" ]; then
+    for f in "$d"/*.jsonl; do
+      [ -e "$f" ] || continue
+      fid=$(basename "$f" .jsonl)
+      [ -n "${CLAIMED[$fid]:-}" ] && continue          # already locked by a cmdline window
+      mt=$(mtime "$f"); [ -n "$mt" ] || continue
+      if [ -z "$newest_mt" ] || [ "$mt" -gt "$newest_mt" ]; then newest=$fid; newest_mt=$mt; fi
+      bid=$(jsonl_begin_epoch "$f"); [ -n "$bid" ] || continue
+      diff=$(( pstart>bid ? pstart-bid : bid-pstart ))
+      if [ -z "$bestdiff" ] || [ "$diff" -lt "$bestdiff" ]; then
+        second_diff=$bestdiff; second_id=$best; best=$fid; bestdiff=$diff
+      elif [ -z "$second_diff" ] || [ "$diff" -lt "$second_diff" ]; then
+        second_diff=$diff; second_id=$fid
+      fi
+    done
+  fi
+  if [ -n "$best" ]; then
+    if [ -n "$second_diff" ] && [ $(( second_diff - bestdiff )) -le "$AMBIG_GAP" ]; then
+      # two sessions fit this process nearly equally — let recover ask.
+      sid=$best; method=starttime; conf=ambiguous; cand="$best|$second_id"
+    else
+      sid=$best; method=starttime; conf=medium; cand=""
+    fi
+    CLAIMED["$sid"]=1
+  elif [ -n "$newest" ]; then
+    sid=$newest; method=newest; conf=low; cand=""
+    CLAIMED["$sid"]=1
+  else
+    sid="-"; method=none; conf=none; cand=""
+  fi
+  ROWS[$idx]="$sess	$widx	$wname	$cwd	$ppid	$cpid	$sid	$method	$conf	$issue	$cand"
+done
+
+# ---- Report ----
+nwin=${#ROWS[@]}; nclaude=0; namb=0
+print_table() {
+  printf '%-14s %-3s %-16s %-9s %-10s %s\n' SESSION IDX WINDOW METHOD CONF SESSION_ID/CWD
+  for r in "${ROWS[@]}"; do
+    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand <<<"$r"
+    local shown="$sid"; [ "$sid" = "-" ] && shown="(shell) $cwd"
+    printf '%-14s %-3s %-16s %-9s %-10s %s\n' "$sess" "$widx" "${wname:0:16}" "$method" "$conf" "$shown"
+  done
+}
+for r in "${ROWS[@]}"; do
+  IFS=$'\t' read -r _ _ _ _ _ cpid sid method conf _ _ <<<"$r"
+  [ "$method" = shell ] || nclaude=$((nclaude+1))
+  [ "$conf" = ambiguous ] && namb=$((namb+1))
+done
+
+print_table
+echo
+echo "Host: $(hostname)   windows: $nwin   claude: $nclaude   ambiguous: $namb"
+
+if [ "$DRY" = 1 ]; then
+  echo "(--dry-run: no checkpoint, no manifest, no shutdown.)"
+  exit 0
+fi
+
+# ---- Optionally checkpoint epic workers (claude windows whose cwd has .epic-status.json) ----
+if [ "$CHECKPOINT" = 1 ]; then
+  msg="Planned host reboot imminent. Checkpoint now: commit any WIP, then flush .epic-status.json and .epic-worklog.md. You do not need to finish the task — just persist state."
+  sent=0
+  for r in "${ROWS[@]}"; do
+    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand <<<"$r"
+    [ "$method" = shell ] && continue
+    [ -f "$cwd/.epic-status.json" ] || continue
+    tmux send-keys -t "$sess:$widx" "$msg" 2>/dev/null && tmux send-keys -t "$sess:$widx" Enter 2>/dev/null && sent=$((sent+1))
+  done
+  if [ "$sent" -gt 0 ]; then
+    echo "Checkpoint sent to $sent worker window(s); waiting ${CHECKPOINT_WAIT}s for flush..."
+    sleep "$CHECKPOINT_WAIT"
+  else
+    echo "No epic workers to checkpoint."
+  fi
+else
+  echo "(--no-checkpoint: workers not quiesced.)"
+fi
+
+# ---- Write the manifest ----
+mkdir -p "$RECOVER_DIR"
+parked_at=$("$DATE" -u +%Y-%m-%dT%H:%M:%SZ)
+host=$(hostname)
+
+printf '%s\n' "${ROWS[@]}" | jq -R -s --arg host "$host" --arg parked "$parked_at" '
+  split("\n") | map(select(length>0)) | map(split("\t")) |
+  map(. as $f | {
+    session: $f[0],
+    win: ({
+      index:      ($f[1]|tonumber),
+      name:       $f[2],
+      cwd:        $f[3],
+      session_id: (if $f[6]=="-" then null else $f[6] end),
+      method:     $f[7],
+      confidence: $f[8],
+      issue:      (if $f[9]=="-" then null else ($f[9]|tonumber) end)
+    } | if (($f[10]? // "")|length) > 0 then .candidates = ($f[10]|split("|")) else . end)
+  }) |
+  reduce .[] as $r ([];
+    if any(.[]; .name == $r.session)
+    then map(if .name == $r.session then .windows += [$r.win] else . end)
+    else . + [{name: $r.session, windows: [$r.win]}] end) |
+  {host: $host, parked_at: $parked, sessions: .}' > "$MANIFEST"
+
+echo "Wrote $MANIFEST ($(jq '.sessions|length' "$MANIFEST") sessions, $nwin windows)."
+
+if [ "$SHUTDOWN" = 1 ]; then
+  echo "Manifest on disk — killing the tmux server now."
+  tmux kill-server
+fi

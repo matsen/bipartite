@@ -26,11 +26,16 @@ updates, use `/bip-epic-poll`. To spawn work, use `/bip-epic-spawn`.
 The conductor session stays on `main` and does NOT do feature work.
 It orchestrates: scans, updates EPICs, spawns clones.
 
-### Recovery after a reboot
-If the host reboots and the tmux fleet is lost, use `/bip-epic-recover` from a
-project's main clone to find the killed Claude sessions and resume each into a
-tmux window (`claude --resume`). It reads each session's own jsonl, so workers
-that returned to `main` and concurrent main-clone sessions are all recoverable.
+### Reboots: parking and recovery
+For a **planned** reboot, run `/bip-epic-prepare-reboot` first (host-wide, while
+tmux is alive): it resolves each Claude window's exact session id, optionally
+checkpoints workers, and writes a manifest so the workspace returns
+deterministically. For an **unplanned** reboot (or if no manifest was written),
+use `/bip-epic-recover` from a project's main clone to find the killed Claude
+sessions and resume each into a tmux window (`claude --resume`). Recover replays
+the manifest when one exists and otherwise reads each session's own jsonl, so
+workers that returned to `main` and concurrent main-clone sessions are all
+recoverable.
 
 **Numbered issues → spawn**: If work is tied to a GitHub issue (`iN`),
 always use `/bip-epic-spawn` to assign it to a clone — even if the fix
