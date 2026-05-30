@@ -22,6 +22,10 @@ Requires a Slack bot token with channels:history, channels:read, and
 users:read scopes. Sourced from BIP_SLACK_TOKEN (recommended) or
 SLACK_BOT_TOKEN, falling back to slack_bot_token in ~/.config/bip/config.yml.
 
+The 'resolve' subcommand is a token-free stdin/stdout filter that rewrites
+channel-mention markup (<#CXXXX>) to #channel-name using sources.yml; pipe
+any Slack-derived text through it for human-readable channel references.
+
 All commands output JSON by default for agent consumption.
 Use --human flag for human-readable output.`,
 }

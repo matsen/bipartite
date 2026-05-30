@@ -17,6 +17,9 @@ type Sources struct {
 // SlackConfig represents the slack section of sources.yml.
 type SlackConfig struct {
 	Channels map[string]SlackChannelConfig `yaml:"channels"`
+	// ProjectChannels maps channel ID -> name directly, for channels that are
+	// referenced by mention markup but not configured for history fetching.
+	ProjectChannels map[string]string `yaml:"project_channels"`
 }
 
 // SlackChannelConfig is a configured Slack channel from sources.yml.

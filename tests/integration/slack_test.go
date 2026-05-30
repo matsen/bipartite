@@ -456,3 +456,118 @@ func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
 		TmpConfigDir: tmpConfigDir,
 	}
 }
+
+// setupResolveEnv creates a hermetic XDG_CONFIG_HOME + nexus with a controlled
+// sources.yml for testing `bip slack resolve`. Unlike setupTempDirWithSlackConfig,
+// it does not read the real nexus or require a Slack token, so these tests always
+// run. It returns the XDG config dir to pass via XDG_CONFIG_HOME.
+func setupResolveEnv(t *testing.T) string {
+	t.Helper()
+
+	nexusDir := t.TempDir()
+	// .bipartite marks the directory as a bipartite nexus.
+	if err := os.MkdirAll(filepath.Join(nexusDir, ".bipartite"), 0755); err != nil {
+		t.Fatalf("failed to create .bipartite dir: %v", err)
+	}
+
+	// Both maps present, with C03T8U5RATY appearing only in project_channels and
+	// C044B4JUE5U reachable via the reversed channels map. C123 is shared between
+	// the two maps to exercise the override rule.
+	sourcesContent := `slack:
+  channels:
+    antigen:
+      id: C044B4JUE5U
+      purpose: collab
+    old-name:
+      id: C123
+      purpose: legacy
+  project_channels:
+    C08JB3LRDU2: flu-mut-rates
+    C03T8U5RATY: multidms
+    C123: new-name
+`
+	if err := os.WriteFile(filepath.Join(nexusDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
+
+	configHome := t.TempDir()
+	configDir := filepath.Join(configHome, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create bip config dir: %v", err)
+	}
+	cfgYAML := fmt.Sprintf("nexus_path: %s\n", nexusDir)
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	return configHome
+}
+
+// runResolve runs `bip slack resolve` with the given stdin and hermetic config,
+// returning stdout. It fails the test if the command errors.
+func runResolve(t *testing.T, bp, configHome, stdin string) string {
+	t.Helper()
+	cmd := exec.Command(bp, "slack", "resolve")
+	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+configHome)
+	cmd.Stdin = strings.NewReader(stdin)
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("resolve failed (exit %d): %s", exitErr.ExitCode(), string(exitErr.Stderr))
+		}
+		t.Fatalf("resolve failed: %v", err)
+	}
+	return string(out)
+}
+
+// TestSlackResolve_EndToEnd drives the full stdin/stdout filter, no token required.
+func TestSlackResolve_EndToEnd(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"known project ID", "• <#C03T8U5RATY>: iterate on spike data", "• #multidms: iterate on spike data"},
+		{"reversed channels ID", "<#C044B4JUE5U>", "#antigen"},
+		{"empty alias on reversed ID", "<#C044B4JUE5U|>", "#antigen"},
+		{"override prefers project_channels", "<#C123>", "#new-name"},
+		{"unknown ID passes through", "<#CZZZZ99>", "<#CZZZZ99>"},
+		{"alias fallback for unknown", "<#CZZZZ99|fallback>", "#fallback"},
+		{"adjacent markup", "<#C08JB3LRDU2><#C03T8U5RATY>", "#flu-mut-rates#multidms"},
+		{"no trailing newline preserved", "prefix <#C03T8U5RATY>", "prefix #multidms"},
+		{"trailing punctuation", "see <#C03T8U5RATY>.", "see #multidms."},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := runResolve(t, bp, configHome, tc.in); got != tc.want {
+				t.Errorf("resolve(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestSlackResolve_EmptyStdin verifies empty input yields empty output, exit 0.
+func TestSlackResolve_EmptyStdin(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	if got := runResolve(t, bp, configHome, ""); got != "" {
+		t.Errorf("expected empty output, got %q", got)
+	}
+}
+
+// TestSlackResolve_PreservesNonMentionText verifies the filter only touches mentions.
+func TestSlackResolve_PreservesNonMentionText(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	in := "line one\nline two with #literal-hashtag and a <#C03T8U5RATY> mention\nline three\n"
+	want := "line one\nline two with #literal-hashtag and a #multidms mention\nline three\n"
+	if got := runResolve(t, bp, configHome, in); got != want {
+		t.Errorf("resolve multi-line = %q, want %q", got, want)
+	}
+}
