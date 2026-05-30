@@ -274,8 +274,6 @@ func TestSlackIngestJSONFormat(t *testing.T) {
 
 	bp := getBPBinary(t)
 	setup := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(setup.TmpDir)
-	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// Run ingest with --create-store to create a new store
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "test_slack_msgs", "--create-store", "--limit", "5", "--days", "7")
@@ -333,8 +331,6 @@ func TestSlackIngestIdempotency(t *testing.T) {
 
 	bp := getBPBinary(t)
 	setup := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(setup.TmpDir)
-	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// First ingest - creates store and ingests messages
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--create-store", "--limit", "3", "--days", "7")
@@ -394,86 +390,61 @@ type testEnvSetup struct {
 	TmpConfigDir string // Temp XDG_CONFIG_HOME directory
 }
 
-// setupTempDirWithSlackConfig creates a temp directory with sources.yml and a temp global config.
-// Returns paths for cleanup. The caller is responsible for cleanup with os.RemoveAll.
-func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
-	t.Helper()
-
-	// Create temp nexus directory
-	tmpDir, err := os.MkdirTemp("", "slack-test-nexus-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-
-	nexusDir := getNexusDir(t)
-	if !hasSlackConfig(nexusDir) {
-		os.RemoveAll(tmpDir)
-		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
-	}
-
-	// Create .bipartite directory structure (required for FindRepository)
-	bipartiteDir := filepath.Join(tmpDir, ".bipartite")
-	if err := os.MkdirAll(bipartiteDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to create .bipartite dir: %v", err)
-	}
-
-	// Copy sources.yml
-	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.yml"))
-	if err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to read sources.yml: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), sourcesData, 0644); err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to write sources.yml: %v", err)
-	}
-
-	// Create temp config directory with nexus_path and slack_bot_token
-	tmpConfigDir, err := os.MkdirTemp("", "slack-test-config-*")
-	if err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to create temp config dir: %v", err)
-	}
-	configDir := filepath.Join(tmpConfigDir, "bip")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
-		os.RemoveAll(tmpConfigDir)
-		t.Fatalf("failed to create bip config dir: %v", err)
-	}
-
-	// Get slack_bot_token from current config
-	slackToken := config.GetSlackBotToken()
-	cfgYAML := fmt.Sprintf("nexus_path: %s\nslack_bot_token: %s\n", tmpDir, slackToken)
-	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
-		os.RemoveAll(tmpDir)
-		os.RemoveAll(tmpConfigDir)
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	return &testEnvSetup{
-		TmpDir:       tmpDir,
-		TmpConfigDir: tmpConfigDir,
-	}
-}
-
-// setupResolveEnv creates a hermetic XDG_CONFIG_HOME + nexus with a controlled
-// sources.yml for testing `bip slack resolve`. Unlike setupTempDirWithSlackConfig,
-// it does not read the real nexus or require a Slack token, so these tests always
-// run. It returns the XDG config dir to pass via XDG_CONFIG_HOME.
-func setupResolveEnv(t *testing.T) string {
+// writeTestNexus builds a hermetic test environment: a temp nexus directory
+// (marked with .bipartite) holding the given sources.yml content, plus a temp
+// XDG_CONFIG_HOME whose bip/config.yml points nexus_path at it. A non-empty
+// token is written as slack_bot_token. Both directories are registered for
+// automatic cleanup via t.TempDir, so callers need no manual os.RemoveAll.
+func writeTestNexus(t *testing.T, sourcesContent, token string) *testEnvSetup {
 	t.Helper()
 
 	nexusDir := t.TempDir()
-	// .bipartite marks the directory as a bipartite nexus.
+	// .bipartite marks the directory as a bipartite nexus (required for FindRepository).
 	if err := os.MkdirAll(filepath.Join(nexusDir, ".bipartite"), 0755); err != nil {
 		t.Fatalf("failed to create .bipartite dir: %v", err)
 	}
+	if err := os.WriteFile(filepath.Join(nexusDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
 
-	// Both maps present, with C03T8U5RATY appearing only in project_channels and
-	// C044B4JUE5U reachable via the reversed channels map. C123 is shared between
-	// the two maps to exercise the override rule.
-	sourcesContent := `slack:
+	configHome := t.TempDir()
+	configDir := filepath.Join(configHome, "bip")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		t.Fatalf("failed to create bip config dir: %v", err)
+	}
+	cfgYAML := fmt.Sprintf("nexus_path: %s\n", nexusDir)
+	if token != "" {
+		cfgYAML += fmt.Sprintf("slack_bot_token: %s\n", token)
+	}
+	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	return &testEnvSetup{TmpDir: nexusDir, TmpConfigDir: configHome}
+}
+
+// setupTempDirWithSlackConfig builds a test nexus from a copy of the real
+// sources.yml and the configured Slack token, for tests that exercise the live
+// Slack API. It skips when no Slack config is present.
+func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
+	t.Helper()
+
+	nexusDir := getNexusDir(t)
+	if !hasSlackConfig(nexusDir) {
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
+	}
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.yml"))
+	if err != nil {
+		t.Fatalf("failed to read sources.yml: %v", err)
+	}
+	return writeTestNexus(t, string(sourcesData), config.GetSlackBotToken())
+}
+
+// hermeticSourcesYML is a controlled sources.yml for API-free tests. C03T8U5RATY
+// appears only in project_channels, C044B4JUE5U is reachable via the reversed
+// channels map, and C123 is shared between the two maps to exercise the override
+// rule (project_channels wins).
+const hermeticSourcesYML = `slack:
   channels:
     antigen:
       id: C044B4JUE5U
@@ -486,21 +457,13 @@ func setupResolveEnv(t *testing.T) string {
     C03T8U5RATY: multidms
     C123: new-name
 `
-	if err := os.WriteFile(filepath.Join(nexusDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
-		t.Fatalf("failed to write sources.yml: %v", err)
-	}
 
-	configHome := t.TempDir()
-	configDir := filepath.Join(configHome, "bip")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		t.Fatalf("failed to create bip config dir: %v", err)
-	}
-	cfgYAML := fmt.Sprintf("nexus_path: %s\n", nexusDir)
-	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
-		t.Fatalf("failed to write config: %v", err)
-	}
-
-	return configHome
+// setupResolveEnv creates a hermetic environment for `bip slack resolve` tests.
+// It needs no real nexus and no Slack token, so these tests always run. Returns
+// the XDG config dir to pass via XDG_CONFIG_HOME.
+func setupResolveEnv(t *testing.T) string {
+	t.Helper()
+	return writeTestNexus(t, hermeticSourcesYML, "").TmpConfigDir
 }
 
 // runResolve runs `bip slack resolve` with the given stdin and hermetic config,
