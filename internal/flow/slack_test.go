@@ -299,6 +299,136 @@ func TestGetSlackChannel_NotFound(t *testing.T) {
 	}
 }
 
+func TestResolveChannelMentions(t *testing.T) {
+	idToName := map[string]string{
+		"C08JB3LRDU2": "flu-mut-rates",
+		"C03T8U5RATY": "multidms",
+		"C044B4JUE5U": "antigen",
+	}
+
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"known ID", "<#C08JB3LRDU2>", "#flu-mut-rates"},
+		{"alias form prefers map", "<#C08JB3LRDU2|whatever>", "#flu-mut-rates"},
+		{"alias-only fallback", "<#CZZZZ99|fallback-name>", "#fallback-name"},
+		{"empty alias on known ID", "<#C044B4JUE5U|>", "#antigen"},
+		{"empty alias on unknown ID passes through", "<#CZZZZ99|>", "<#CZZZZ99|>"},
+		{"adjacent markup", "<#C08JB3LRDU2><#C03T8U5RATY>", "#flu-mut-rates#multidms"},
+		{"end of input no newline", "prefix <#C03T8U5RATY>", "prefix #multidms"},
+		{"inside backticks", "`<#C03T8U5RATY>`", "`#multidms`"},
+		{"lowercase ID passes through", "<#c03t8u5raty>", "<#c03t8u5raty>"},
+		{"trailing punctuation", "see <#C03T8U5RATY>.", "see #multidms."},
+		{"multiple IDs one line", "<#C08JB3LRDU2> and <#C03T8U5RATY>", "#flu-mut-rates and #multidms"},
+		{"empty input", "", ""},
+		{"no mentions", "plain text with #hashtag", "plain text with #hashtag"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := ResolveChannelMentions(tc.in, idToName); got != tc.want {
+				t.Errorf("ResolveChannelMentions(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestLoadChannelIDMap_Merged(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	sourcesContent := `slack:
+  channels:
+    fortnight-goals:
+      id: C123
+      purpose: goals
+  project_channels:
+    C08JB3LRDU2: flu-mut-rates
+    C03T8U5RATY: multidms
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
+
+	idToName, err := LoadChannelIDMap(tmpDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	want := map[string]string{
+		"C123":        "fortnight-goals", // reversed from channels
+		"C08JB3LRDU2": "flu-mut-rates",
+		"C03T8U5RATY": "multidms",
+	}
+	for id, name := range want {
+		if idToName[id] != name {
+			t.Errorf("id %s: got %q, want %q", id, idToName[id], name)
+		}
+	}
+	if len(idToName) != len(want) {
+		t.Errorf("expected %d entries, got %d: %v", len(want), len(idToName), idToName)
+	}
+}
+
+func TestLoadChannelIDMap_ProjectChannelsOverride(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Same ID in both maps: project_channels must win.
+	sourcesContent := `slack:
+  channels:
+    old-name:
+      id: C03T8U5RATY
+      purpose: goals
+  project_channels:
+    C03T8U5RATY: multidms
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
+
+	idToName, err := LoadChannelIDMap(tmpDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if idToName["C03T8U5RATY"] != "multidms" {
+		t.Errorf("expected project_channels to win (multidms), got %q", idToName["C03T8U5RATY"])
+	}
+}
+
+func TestLoadChannelIDMap_ProjectChannelsOnly(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// No slack.channels block at all — project_channels alone must resolve.
+	sourcesContent := `slack:
+  project_channels:
+    C03T8U5RATY: multidms
+`
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
+
+	idToName, err := LoadChannelIDMap(tmpDir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if idToName["C03T8U5RATY"] != "multidms" {
+		t.Errorf("expected multidms, got %q", idToName["C03T8U5RATY"])
+	}
+}
+
+func TestLoadChannelIDMap_Empty(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), []byte(`boards: {}`), 0644); err != nil {
+		t.Fatalf("failed to write sources.yml: %v", err)
+	}
+
+	if _, err := LoadChannelIDMap(tmpDir); err == nil {
+		t.Error("expected error when both channel maps are empty")
+	}
+}
+
 func TestMessage_JSONFields(t *testing.T) {
 	msg := Message{
 		Timestamp: "1737990123.000100",

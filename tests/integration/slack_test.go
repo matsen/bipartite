@@ -274,8 +274,6 @@ func TestSlackIngestJSONFormat(t *testing.T) {
 
 	bp := getBPBinary(t)
 	setup := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(setup.TmpDir)
-	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// Run ingest with --create-store to create a new store
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "test_slack_msgs", "--create-store", "--limit", "5", "--days", "7")
@@ -333,8 +331,6 @@ func TestSlackIngestIdempotency(t *testing.T) {
 
 	bp := getBPBinary(t)
 	setup := setupTempDirWithSlackConfig(t)
-	defer os.RemoveAll(setup.TmpDir)
-	defer os.RemoveAll(setup.TmpConfigDir)
 
 	// First ingest - creates store and ingests messages
 	cmd := exec.Command(bp, "slack", "ingest", "fortnight-goals", "--store", "idem_test_store", "--create-store", "--limit", "3", "--days", "7")
@@ -394,65 +390,147 @@ type testEnvSetup struct {
 	TmpConfigDir string // Temp XDG_CONFIG_HOME directory
 }
 
-// setupTempDirWithSlackConfig creates a temp directory with sources.yml and a temp global config.
-// Returns paths for cleanup. The caller is responsible for cleanup with os.RemoveAll.
-func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
+// writeTestNexus builds a hermetic test environment: a temp nexus directory
+// (marked with .bipartite) holding the given sources.yml content, plus a temp
+// XDG_CONFIG_HOME whose bip/config.yml points nexus_path at it. A non-empty
+// token is written as slack_bot_token. Both directories are registered for
+// automatic cleanup via t.TempDir, so callers need no manual os.RemoveAll.
+func writeTestNexus(t *testing.T, sourcesContent, token string) *testEnvSetup {
 	t.Helper()
 
-	// Create temp nexus directory
-	tmpDir, err := os.MkdirTemp("", "slack-test-nexus-*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-
-	nexusDir := getNexusDir(t)
-	if !hasSlackConfig(nexusDir) {
-		os.RemoveAll(tmpDir)
-		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
-	}
-
-	// Create .bipartite directory structure (required for FindRepository)
-	bipartiteDir := filepath.Join(tmpDir, ".bipartite")
-	if err := os.MkdirAll(bipartiteDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
+	nexusDir := t.TempDir()
+	// .bipartite marks the directory as a bipartite nexus (required for FindRepository).
+	if err := os.MkdirAll(filepath.Join(nexusDir, ".bipartite"), 0755); err != nil {
 		t.Fatalf("failed to create .bipartite dir: %v", err)
 	}
-
-	// Copy sources.yml
-	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.yml"))
-	if err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to read sources.yml: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "sources.yml"), sourcesData, 0644); err != nil {
-		os.RemoveAll(tmpDir)
+	if err := os.WriteFile(filepath.Join(nexusDir, "sources.yml"), []byte(sourcesContent), 0644); err != nil {
 		t.Fatalf("failed to write sources.yml: %v", err)
 	}
 
-	// Create temp config directory with nexus_path and slack_bot_token
-	tmpConfigDir, err := os.MkdirTemp("", "slack-test-config-*")
-	if err != nil {
-		os.RemoveAll(tmpDir)
-		t.Fatalf("failed to create temp config dir: %v", err)
-	}
-	configDir := filepath.Join(tmpConfigDir, "bip")
+	configHome := t.TempDir()
+	configDir := filepath.Join(configHome, "bip")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
-		os.RemoveAll(tmpDir)
-		os.RemoveAll(tmpConfigDir)
 		t.Fatalf("failed to create bip config dir: %v", err)
 	}
-
-	// Get slack_bot_token from current config
-	slackToken := config.GetSlackBotToken()
-	cfgYAML := fmt.Sprintf("nexus_path: %s\nslack_bot_token: %s\n", tmpDir, slackToken)
+	cfgYAML := fmt.Sprintf("nexus_path: %s\n", nexusDir)
+	if token != "" {
+		cfgYAML += fmt.Sprintf("slack_bot_token: %s\n", token)
+	}
 	if err := os.WriteFile(filepath.Join(configDir, "config.yml"), []byte(cfgYAML), 0644); err != nil {
-		os.RemoveAll(tmpDir)
-		os.RemoveAll(tmpConfigDir)
 		t.Fatalf("failed to write config: %v", err)
 	}
 
-	return &testEnvSetup{
-		TmpDir:       tmpDir,
-		TmpConfigDir: tmpConfigDir,
+	return &testEnvSetup{TmpDir: nexusDir, TmpConfigDir: configHome}
+}
+
+// setupTempDirWithSlackConfig builds a test nexus from a copy of the real
+// sources.yml and the configured Slack token, for tests that exercise the live
+// Slack API. It skips when no Slack config is present.
+func setupTempDirWithSlackConfig(t *testing.T) *testEnvSetup {
+	t.Helper()
+
+	nexusDir := getNexusDir(t)
+	if !hasSlackConfig(nexusDir) {
+		t.Skip("No slack.channels configured in nexus sources.yml, skipping test")
+	}
+	sourcesData, err := os.ReadFile(filepath.Join(nexusDir, "sources.yml"))
+	if err != nil {
+		t.Fatalf("failed to read sources.yml: %v", err)
+	}
+	return writeTestNexus(t, string(sourcesData), config.GetSlackBotToken())
+}
+
+// hermeticSourcesYML is a controlled sources.yml for API-free tests. C03T8U5RATY
+// appears only in project_channels, C044B4JUE5U is reachable via the reversed
+// channels map, and C123 is shared between the two maps to exercise the override
+// rule (project_channels wins).
+const hermeticSourcesYML = `slack:
+  channels:
+    antigen:
+      id: C044B4JUE5U
+      purpose: collab
+    old-name:
+      id: C123
+      purpose: legacy
+  project_channels:
+    C08JB3LRDU2: flu-mut-rates
+    C03T8U5RATY: multidms
+    C123: new-name
+`
+
+// setupResolveEnv creates a hermetic environment for `bip slack resolve` tests.
+// It needs no real nexus and no Slack token, so these tests always run. Returns
+// the XDG config dir to pass via XDG_CONFIG_HOME.
+func setupResolveEnv(t *testing.T) string {
+	t.Helper()
+	return writeTestNexus(t, hermeticSourcesYML, "").TmpConfigDir
+}
+
+// runResolve runs `bip slack resolve` with the given stdin and hermetic config,
+// returning stdout. It fails the test if the command errors.
+func runResolve(t *testing.T, bp, configHome, stdin string) string {
+	t.Helper()
+	cmd := exec.Command(bp, "slack", "resolve")
+	cmd.Env = append(filterEnv(os.Environ(), "XDG_CONFIG_HOME"), "XDG_CONFIG_HOME="+configHome)
+	cmd.Stdin = strings.NewReader(stdin)
+	out, err := cmd.Output()
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			t.Fatalf("resolve failed (exit %d): %s", exitErr.ExitCode(), string(exitErr.Stderr))
+		}
+		t.Fatalf("resolve failed: %v", err)
+	}
+	return string(out)
+}
+
+// TestSlackResolve_EndToEnd drives the full stdin/stdout filter, no token required.
+func TestSlackResolve_EndToEnd(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"known project ID", "• <#C03T8U5RATY>: iterate on spike data", "• #multidms: iterate on spike data"},
+		{"reversed channels ID", "<#C044B4JUE5U>", "#antigen"},
+		{"empty alias on reversed ID", "<#C044B4JUE5U|>", "#antigen"},
+		{"override prefers project_channels", "<#C123>", "#new-name"},
+		{"unknown ID passes through", "<#CZZZZ99>", "<#CZZZZ99>"},
+		{"alias fallback for unknown", "<#CZZZZ99|fallback>", "#fallback"},
+		{"adjacent markup", "<#C08JB3LRDU2><#C03T8U5RATY>", "#flu-mut-rates#multidms"},
+		{"no trailing newline preserved", "prefix <#C03T8U5RATY>", "prefix #multidms"},
+		{"trailing punctuation", "see <#C03T8U5RATY>.", "see #multidms."},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := runResolve(t, bp, configHome, tc.in); got != tc.want {
+				t.Errorf("resolve(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestSlackResolve_EmptyStdin verifies empty input yields empty output, exit 0.
+func TestSlackResolve_EmptyStdin(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	if got := runResolve(t, bp, configHome, ""); got != "" {
+		t.Errorf("expected empty output, got %q", got)
+	}
+}
+
+// TestSlackResolve_PreservesNonMentionText verifies the filter only touches mentions.
+func TestSlackResolve_PreservesNonMentionText(t *testing.T) {
+	bp := getBPBinary(t)
+	configHome := setupResolveEnv(t)
+
+	in := "line one\nline two with #literal-hashtag and a <#C03T8U5RATY> mention\nline three\n"
+	want := "line one\nline two with #literal-hashtag and a #multidms mention\nline three\n"
+	if got := runResolve(t, bp, configHome, in); got != want {
+		t.Errorf("resolve multi-line = %q, want %q", got, want)
 	}
 }

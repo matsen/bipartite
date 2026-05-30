@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -504,4 +505,66 @@ func (c *SlackClient) ResolveUserName(userID string) string {
 		return name
 	}
 	return userID
+}
+
+// channelMentionRe matches Slack channel-mention markup. Slack channel IDs are
+// uppercase (`C` followed by uppercase letters and digits), so the pattern is
+// anchored to uppercase to leave malformed lowercase markup untouched. The
+// optional `|alias` group captures the human-readable alias Slack sometimes
+// embeds (it may be the empty string, e.g. `<#C…|>`).
+var channelMentionRe = regexp.MustCompile(`<#(C[A-Z0-9]+)(?:\|([^>]*))?>`)
+
+// LoadChannelIDMap loads a merged channel ID -> name map from sources.yml in the
+// given nexus directory. It reads two maps:
+//
+//   - slack.channels (name -> {id, purpose}), reversed to id -> name.
+//   - slack.project_channels (id -> name), used directly.
+//
+// When an ID appears in both, the project_channels value wins. Unlike
+// LoadSlackChannels, this does not require a slack.channels block: a sources.yml
+// with only project_channels still resolves. It returns an error only when both
+// maps are empty.
+func LoadChannelIDMap(nexusPath string) (map[string]string, error) {
+	sources, err := LoadSources(nexusPath)
+	if err != nil {
+		return nil, err
+	}
+
+	idToName := make(map[string]string)
+	for name, ch := range sources.Slack.Channels {
+		if ch.ID != "" {
+			idToName[ch.ID] = name
+		}
+	}
+	// project_channels takes precedence over reversed channels.
+	for id, name := range sources.Slack.ProjectChannels {
+		idToName[id] = name
+	}
+
+	if len(idToName) == 0 {
+		return nil, fmt.Errorf("no 'slack.channels' or 'slack.project_channels' entries in sources.yml")
+	}
+
+	return idToName, nil
+}
+
+// ResolveChannelMentions substitutes Slack channel-mention markup in text with
+// `#channel-name`, using idToName as the only data source. Resolution priority
+// for each mention is: mapped name, then a non-empty alias from the markup, then
+// the original markup left unchanged (so an unknown ID with no usable alias
+// passes through rather than emitting a bare `#`). The function is pure and
+// makes no assumptions about Markdown structure: markup inside code fences is
+// resolved like any other.
+func ResolveChannelMentions(text string, idToName map[string]string) string {
+	return channelMentionRe.ReplaceAllStringFunc(text, func(match string) string {
+		m := channelMentionRe.FindStringSubmatch(match)
+		id, alias := m[1], m[2]
+		if name, ok := idToName[id]; ok {
+			return "#" + name
+		}
+		if alias != "" {
+			return "#" + alias
+		}
+		return match
+	})
 }
