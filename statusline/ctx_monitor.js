@@ -99,19 +99,44 @@ function getGitBranch() {
   }
 }
 
-// Find the newest main-context entry by timestamp (not file order)
-function newestMainUsageByTimestamp() {
+// Read the transcript file into lines. Returns null when not configured or
+// unreadable; callers treat that the same as an empty transcript.
+function readTranscriptLines() {
   if (!transcript) return null;
-  let latestTs = -Infinity;
-  let latestUsage = null;
-
-  let lines;
   try {
-    lines = fs.readFileSync(transcript, "utf8").split(/\r?\n/);
+    return fs.readFileSync(transcript, "utf8").split(/\r?\n/);
   } catch {
     return null;
   }
+}
 
+// Timestamp of the most recent compaction summary in the transcript, or
+// -Infinity if none. The summary appears as a user-role entry with
+// `isCompactSummary: true` at the top level (sibling of `type`/`message`).
+// Returning -Infinity rather than null lets callers use it as a plain
+// numeric threshold with the file's `parseTs` sentinel convention.
+function latestCompactTs(lines) {
+  let result = -Infinity;
+  for (const line of lines) {
+    const s = line.trim();
+    if (!s) continue;
+    let j;
+    try { j = JSON.parse(s); } catch { continue; }
+    if (j.isCompactSummary === true) {
+      const ts = parseTs(j);
+      if (ts > result) result = ts;
+    }
+  }
+  return result;
+}
+
+// Newest main-context assistant `usage` with timestamp strictly after `minTs`
+// (not file order). Pass `-Infinity` to keep the pre-compaction-aware behavior.
+// The `ts > minTs` guard is what stops a pre-compact assistant turn from being
+// reported after `/compact` runs but before the next user prompt.
+function newestMainUsageAfter(lines, minTs) {
+  let latestTs = -Infinity;
+  let latestUsage = null;
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
     if (!line) continue;
@@ -134,6 +159,8 @@ function newestMainUsageByTimestamp() {
       continue;
 
     const ts = parseTs(j);
+    if (ts <= minTs) continue;
+
     if (ts > latestTs) {
       latestTs = ts;
       latestUsage = u;
@@ -150,11 +177,16 @@ const dirName = `\x1b[94m${getDirName(cwd)}\x1b[0m`;
 const gitBranch = getGitBranch();
 const dirInfo = gitBranch ? `${dirName} ${gitBranch}` : dirName;
 
-const usage = newestMainUsageByTimestamp();
+const lines = readTranscriptLines();
+const compactTs = lines ? latestCompactTs(lines) : -Infinity;
+const usage = lines ? newestMainUsageAfter(lines, compactTs) : null;
 if (!usage) {
-  console.log(
-    `${name} | ${dirInfo} | \x1b[36mcontext window usage starts after your first question.\x1b[0m`
-  );
+  // Compaction with no later assistant turn = the user just ran `/compact`
+  // and hasn't sent the next prompt; the empty-state message reflects that.
+  const msg = compactTs > -Infinity
+    ? "post-compact: usage refreshes on next turn."
+    : "context window usage starts after your first question.";
+  console.log(`${name} | ${dirInfo} | \x1b[36m${msg}\x1b[0m`);
   process.exit(0);
 }
 
