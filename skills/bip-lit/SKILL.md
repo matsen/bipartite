@@ -304,20 +304,25 @@ Both S2 and ASTA accept these identifier formats:
 
 ### Opening a paper page in the browser
 
-To open a Semantic Scholar paper page in Chrome from a corpus ID, DOI, etc., use the **API redirect URL** (`https://api.semanticscholar.org/...`), NOT `https://www.semanticscholar.org/paper/CorpusID:...` (that form does NOT resolve and 404s):
+The reliable way to open an S2 paper page in Chrome is to resolve the
+identifier to the 40-char paper ID, then open the **website** URL. The
+`https://api.semanticscholar.org/...` redirect form is NOT reliable — Chrome
+often gets a JSON/non-navigable response instead of the rendered page.
 
 ```bash
-# Corpus ID
-open -a "Google Chrome" "https://api.semanticscholar.org/CorpusID:236964352"
+# From a DOI: resolve to paperId, then open the website page
+doi="10.1093/sysbio/syy032"
+pid=$(curl -s "https://api.semanticscholar.org/graph/v1/paper/DOI:$doi?fields=title" \
+  | sed -n 's/.*"paperId": *"\([^"]*\)".*/\1/p')
+open -a "Google Chrome" "https://www.semanticscholar.org/paper/$pid"
 
-# DOI
-open -a "Google Chrome" "https://api.semanticscholar.org/v1/paper/10.1093/sysbio/syy032"
-
-# Raw 40-char SHA paper ID — this form works directly on the website
+# If you already have the 40-char SHA paper ID, open it directly:
 open -a "Google Chrome" "https://www.semanticscholar.org/paper/<sha>"
 ```
 
-The API URL issues a 302 redirect to the canonical paper page on the website.
+Note: the bare `https://www.semanticscholar.org/paper/CorpusID:...` form does
+NOT resolve (404s) — you must use the SHA paper ID. To resolve a CorpusId
+instead of a DOI, swap `DOI:$doi` above for `CorpusId:236964352`.
 
 ## Concept Nodes (Knowledge Graph)
 
