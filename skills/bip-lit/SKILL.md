@@ -15,7 +15,10 @@ A CLI tool for managing academic references with local storage and external pape
 
 **ALWAYS search locally before using external APIs. NEVER call ASTA without explicit user permission.**
 
-**When answering questions about papers, READ THE ACTUAL PAPER PDF.** Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library. Use the pdf-navigator MCP tools to search and read the PDF directly.
+**When answering questions about papers, READ THE ACTUAL PAPER PDF.** Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library. Reach for the right reader for the job:
+
+- **Text and search → pdf-navigator MCP (MuPDF).** Use `search_pdf_text` to jump to the relevant pages, then `read_pdf_text` / `read_pdf_page`. MuPDF keeps reading order across columns and inline math intact, and the text is searchable. This is the default.
+- **Figures, panels, rendered equations, tables → built-in `Read` with a narrow `pages` range.** The built-in reader renders pages as *images* (token-heavy, not searchable), so use it only for the 1–3 pages that hold the visual you need — never the whole paper.
 
 The nexus library has ~6000 papers. Most relevant papers are already there.
 
@@ -37,7 +40,7 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
    ```bash
    bip get <id> --human   # Get PDF path
    ```
-   Then use `mcp__pdf-navigator__search_pdf_text` or `mcp__pdf-navigator__read_pdf_page` to find the answer directly in the paper. The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
+   Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper. For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead. The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
 
 4. **Only if not found locally AND user confirms**, use ASTA:
    ```
@@ -230,10 +233,15 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 
 3. **Read the actual paper** to answer questions:
    ```bash
-   # Search for specific text in the PDF
+   # Text: search to the relevant page (MuPDF — searchable, clean reading order)
    mcp__pdf-navigator__search_pdf_text(file_path, "phage display")
-   # Or read specific pages
-   mcp__pdf-navigator__read_pdf_page(file_path, 2)
+   mcp__pdf-navigator__read_pdf_text(file_path, 2, 3)
+   ```
+   For a **figure, panel, or rendered equation** you need to *see*, use the
+   built-in `Read` tool on a narrow page range instead (it renders pages as
+   images — token-heavy, so read only the page(s) with the visual):
+   ```
+   Read(file_path, pages="4")
    ```
    **Always prefer reading the paper over relying on abstracts or external metadata.**
 
