@@ -167,6 +167,16 @@ func runSpawn(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Note: worktree mode is configured but this spawn has no issue/PR context; using canonical clone %s\n", resolved.Path)
 		}
 		if resolved.Mode == config.LayoutModeWorktree && resolved.IsNew {
+			// IsNew is filesystem-based (the directory is absent). If git
+			// still has it registered as a worktree — e.g. the directory was
+			// deleted by hand instead of via `bip worktree remove` — then
+			// `git worktree add` would fail with an arcane message. Detect
+			// that and point the user at the fix.
+			if registered, _ := gitx.WorktreeExists(canonicalClone, resolved.Path); registered {
+				fmt.Fprintf(os.Stderr, "Error: %s is registered as a worktree but its directory is missing.\n", resolved.Path)
+				fmt.Fprintf(os.Stderr, "Run `git -C %s worktree prune` (or `bip worktree remove %s`) and retry.\n", canonicalClone, resolved.Path)
+				os.Exit(1)
+			}
 			fmt.Fprintf(os.Stderr, "Creating worktree at %s on branch %s\n", resolved.Path, resolved.Branch)
 			if err := gitx.AddWorktree(canonicalClone, resolved.Path, resolved.Branch); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)

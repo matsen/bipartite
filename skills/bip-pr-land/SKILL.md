@@ -146,7 +146,7 @@ worktree mode, or any working copy that isn't the canonical one in
 it forward so the canonical checkout matches `main`.
 
 1. Resolve the primary clone path the way `bip spawn` does (mirrors
-   `flow.GetRepoLocalPath`: `nexus_path` from `~/.config/bip/config.yml`,
+   `flow.ResolveRepoPath`: `nexus_path` from `~/.config/bip/config.yml`,
    repo from `git remote get-url origin`, then `sources.yml` +
    `config.yml` paths). If `$(pwd -P)` already equals it, or the repo
    isn't listed, skip this step.

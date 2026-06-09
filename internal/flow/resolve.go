@@ -88,6 +88,15 @@ func ResolveRepoPath(nexusPath, orgRepo string, ctx ResolveContext) (ResolvedPat
 	if mode == "" {
 		mode = config.LayoutModeClone
 	}
+	// Reject typos rather than letting any unrecognized string fall through
+	// to worktree mode (the non-default, side-effecting path).
+	switch mode {
+	case config.LayoutModeClone, config.LayoutModeWorktree:
+		// valid
+	default:
+		return ResolvedPath{}, fmt.Errorf("unknown layout mode %q (valid: %q, %q)",
+			mode, config.LayoutModeClone, config.LayoutModeWorktree)
+	}
 
 	if mode == config.LayoutModeClone {
 		return ResolvedPath{
@@ -151,6 +160,16 @@ func ResolveRepoPath(nexusPath, orgRepo string, ctx ResolveContext) (ResolvedPat
 		"pr":     prStr,
 		"slug":   ctx.Slug,
 		"branch": branch,
+	}
+	// Guard against a slot template whose referenced variable is empty in
+	// this context — e.g. the default "issue-{issue}" applied to a PR (no
+	// issue number) would otherwise silently create a directory named
+	// "issue-". Surface it as an actionable config error instead.
+	if empty := emptyReferencedVars(slotTmpl, slotVars); len(empty) > 0 {
+		return ResolvedPath{}, fmt.Errorf(
+			"worktree slot template %q references variable(s) %s that are empty in this context; "+
+				"configure layout.worktree.slot (e.g. \"{branch}\") for this kind of spawn",
+			slotTmpl, strings.Join(empty, ", "))
 	}
 	slotExpanded, err := expandTemplate(slotTmpl, slotVars)
 	if err != nil {
@@ -287,6 +306,20 @@ func expandTemplate(tmpl string, vars map[string]string) (string, error) {
 		return "", fmt.Errorf("unknown template variable(s): %s", strings.Join(dedupSorted(unknown), ", "))
 	}
 	return out, nil
+}
+
+// emptyReferencedVars returns the names of variables that tmpl references via
+// {name} but whose value in vars is the empty string. A referenced-but-empty
+// variable would expand to a malformed path component, so callers reject it.
+func emptyReferencedVars(tmpl string, vars map[string]string) []string {
+	var empty []string
+	for _, m := range templateVarRE.FindAllStringSubmatch(tmpl, -1) {
+		if v, ok := vars[m[1]]; ok && v == "" {
+			empty = append(empty, m[1])
+		}
+	}
+	sort.Strings(empty)
+	return dedupSorted(empty)
 }
 
 // dedupSorted removes consecutive duplicates from an already-sorted slice.

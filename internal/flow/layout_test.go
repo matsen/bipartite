@@ -226,6 +226,79 @@ func TestResolveRepoPath_PerRepoPartialOverride(t *testing.T) {
 	}
 }
 
+func TestResolveRepoPath_UnknownModeErrors(t *testing.T) {
+	// A typo in layout.mode must error rather than silently falling through
+	// to the side-effecting worktree path.
+	sourcesYAML := `code:
+  - repo: matsen/bipartite
+`
+	flowCfgYAML := `paths:
+  code: /tmp/code
+`
+	globalYAML := `layout:
+  mode: wirktree
+`
+	nexus := setupResolverFixture(t, sourcesYAML, flowCfgYAML, globalYAML)
+	_, err := ResolveRepoPath(nexus, "matsen/bipartite", ResolveContext{IssueNumber: 1})
+	if err == nil {
+		t.Fatal("expected error for unknown mode, got nil")
+	}
+	if !strings.Contains(err.Error(), "wirktree") {
+		t.Errorf("error did not name the bad mode: %v", err)
+	}
+}
+
+func TestResolveRepoPath_PRWorktreeDefaultSlotErrors(t *testing.T) {
+	// Worktree mode + a PR context + the default issue-only slot template
+	// would expand to "issue-" (empty issue number). That must be a clear
+	// config error, not a silently-created directory named "issue-".
+	sourcesYAML := `code:
+  - repo: matsen/bipartite
+`
+	flowCfgYAML := `paths:
+  code: /tmp/code
+`
+	globalYAML := `layout:
+  mode: worktree
+`
+	nexus := setupResolverFixture(t, sourcesYAML, flowCfgYAML, globalYAML)
+	_, err := ResolveRepoPath(nexus, "matsen/bipartite", ResolveContext{PRNumber: 99, Slug: "fix"})
+	if err == nil {
+		t.Fatal("expected error for PR + issue-only slot, got nil")
+	}
+	if !strings.Contains(err.Error(), "issue") {
+		t.Errorf("error should name the empty {issue} variable: %v", err)
+	}
+}
+
+func TestResolveRepoPath_PRWorktreeBranchSlot(t *testing.T) {
+	// With a {branch}-based slot template, a PR spawn resolves cleanly —
+	// branch is always populated, so the empty-var guard does not trip.
+	sourcesYAML := `code:
+  - repo: matsen/bipartite
+`
+	flowCfgYAML := `paths:
+  code: /tmp/code
+`
+	globalYAML := `layout:
+  mode: worktree
+  worktree:
+    root: "/tmp/wt/{repo}-workers"
+    slot: "{branch}"
+`
+	nexus := setupResolverFixture(t, sourcesYAML, flowCfgYAML, globalYAML)
+	rp, err := ResolveRepoPath(nexus, "matsen/bipartite", ResolveContext{PRNumber: 99, Slug: "fix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "/tmp/wt/bipartite-workers/pr-99-fix"; rp.Path != want {
+		t.Errorf("Path = %q, want %q", rp.Path, want)
+	}
+	if want := "pr-99-fix"; rp.Branch != want {
+		t.Errorf("Branch = %q, want %q", rp.Branch, want)
+	}
+}
+
 func TestResolveRepoPath_RepoNotInSources(t *testing.T) {
 	sourcesYAML := `code:
   - repo: matsen/bipartite

@@ -16,7 +16,8 @@ var slugMultiDash = regexp.MustCompile(`-+`)
 // Rules: ASCII letters are lowercased; ASCII digits are kept; everything else
 // (whitespace, punctuation, non-ASCII) becomes "-"; runs of "-" collapse to a
 // single dash; leading and trailing dashes are trimmed; the result is
-// truncated to slugMaxLen runes (with any trailing dash trimmed again).
+// truncated to slugMaxLen bytes — the output is ASCII, so bytes equal
+// characters (with any trailing dash trimmed again).
 // Empty input returns "".
 func SlugifyTitle(s string) string {
 	if s == "" {

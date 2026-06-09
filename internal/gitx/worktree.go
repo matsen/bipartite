@@ -119,17 +119,19 @@ func realpath(p string) string {
 }
 
 // runGit invokes git in dir and returns trimmed stdout, with stderr folded
-// into the returned error on failure.
+// into the returned error on failure. The working directory is passed via
+// git's own `-C` flag (matching the convention in internal/git) rather than
+// cmd.Dir, so the failing command is fully reconstructable from the args.
 func runGit(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
+	fullArgs := append([]string{"-C", dir}, args...)
+	cmd := exec.Command("git", fullArgs...)
 	out, err := cmd.Output()
 	if err != nil {
 		stderr := ""
 		if ee, ok := err.(*exec.ExitError); ok {
 			stderr = strings.TrimSpace(string(ee.Stderr))
 		}
-		return "", fmt.Errorf("git %s: %w (%s)", strings.Join(args, " "), err, stderr)
+		return "", fmt.Errorf("git %s: %w (%s)", strings.Join(fullArgs, " "), err, stderr)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
@@ -137,8 +139,8 @@ func runGit(dir string, args ...string) (string, error) {
 // runGitCombined returns combined stdout+stderr as a single string, useful
 // when reporting the failure context for write operations.
 func runGitCombined(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
+	fullArgs := append([]string{"-C", dir}, args...)
+	cmd := exec.Command("git", fullArgs...)
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
