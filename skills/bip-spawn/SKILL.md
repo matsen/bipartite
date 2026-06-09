@@ -51,3 +51,26 @@ context, the handoff form is almost always what you want.
 ## Options
 
 - `--prompt "..."` — Custom prompt instead of default review prompt
+
+## Worktree mode (opt-in)
+
+By default, `bip spawn` opens its tmux window in the canonical clone of
+the repo — every spawn shares one working tree. To get one linked git
+worktree per issue instead (so concurrent spawns don't share a branch
+checkout), add a `layout:` block to `~/.config/bip/config.yml`:
+
+```yaml
+layout:
+  mode: worktree
+  worktree:
+    root: "~/re/{repo}-workers"   # {repo} = matsen/bipartite -> "bipartite"
+    slot: "issue-{issue}"          # supports {issue}, {pr}, {branch}, {slug}
+```
+
+Per-repo overrides live in `sources.yml` (see `docs/guides/layout.md`).
+With no `layout:` block, behavior is identical to before issue #149.
+
+When worktree mode fires, `bip spawn` runs `git worktree add` from the
+canonical clone on a fresh branch named `<N>-<slug>`, and the spawned
+tmux window opens in the new worktree. `bip pr-land` later detects the
+worktree, lands the PR from the primary clone, and removes the worktree.

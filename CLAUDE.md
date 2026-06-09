@@ -52,6 +52,9 @@ new schema silently won't take.
   `~/.config/bip/config.yml`. Order — GitHub: `BIP_GITHUB_TOKEN` → `GITHUB_TOKEN` → `GH_TOKEN`
   → config; Slack: `BIP_SLACK_TOKEN` → `SLACK_BOT_TOKEN` → config. Prefer the `BIP_*` names,
   sourced from a secrets manager (e.g. 1Password `op run` / `op read`).
+- Per-issue git worktrees are opt-in via a `layout:` block in `~/.config/bip/config.yml`
+  (per-repo overrides in `sources.yml`). Absent block = today's clone-per-repo behavior.
+  Schema and precedence: `docs/guides/layout.md`. The resolver is `flow.ResolveRepoPath`.
 
 ## Paper lookups (guardrail)
 

@@ -112,6 +112,9 @@ what you want `bip` to use.
 
 See the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/) for all options.
 
+To opt into per-issue git worktrees for `bip spawn` (instead of one
+shared clone per repo), see [docs/guides/layout.md](docs/guides/layout.md).
+
 ## Who Is This For?
 
 Bipartite isn't just for people who hold the official PI title. It's for anyone who wants to work with a team of agents the way a PI works with a team of researchers — directing the science at a high level while detailed work runs across many parallel sessions.

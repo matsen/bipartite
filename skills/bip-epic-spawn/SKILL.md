@@ -456,3 +456,9 @@ Target project repos should gitignore these files (add to `.gitignore`):
 Same as `/bip-epic`: `iN`/`pN` prefixes. Tmux windows named `NNN-YYY`
 where NNN is the issue number and YYY is the clone/slot name
 (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
+
+## Layout config (issue #149)
+
+`.epic-config.json` keeps working. The newer global `layout:` block in
+`~/.config/bip/config.yml` configures worktree mode for non-EPIC `bip
+spawn`; see `docs/guides/layout.md`.

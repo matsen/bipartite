@@ -3,7 +3,11 @@
 // as part of the bip CLI.
 package flow
 
-import "time"
+import (
+	"time"
+
+	"github.com/matsen/bipartite/internal/config"
+)
 
 // Sources represents the sources.yml configuration file.
 type Sources struct {
@@ -30,9 +34,15 @@ type SlackChannelConfig struct {
 
 // RepoEntry represents a repository entry in sources.yml.
 // It can be either a string (repo name only) or an object with channel info.
+//
+// Layout is an optional per-repo override of the global layout block in
+// ~/.config/bip/config.yml; a non-nil pointer means "this repo opted in
+// (or opted out) explicitly," and a nil pointer means "inherit from
+// global." Each leaf field overrides independently — see flow.ResolveRepoPath.
 type RepoEntry struct {
-	Repo    string `yaml:"repo"`
-	Channel string `yaml:"channel,omitempty"`
+	Repo    string               `yaml:"repo"`
+	Channel string               `yaml:"channel,omitempty"`
+	Layout  *config.LayoutConfig `yaml:"layout,omitempty"`
 }
 
 // GitHubRef represents a parsed GitHub reference.

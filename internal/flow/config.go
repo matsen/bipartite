@@ -58,8 +58,21 @@ type sourcesYAML struct {
 }
 
 // LoadSources loads and parses sources.yml from the given nexus directory.
+// Result is cached by (path, mtime, size) — see internal/flow/cache.go.
 func LoadSources(nexusPath string) (*Sources, error) {
-	data, err := os.ReadFile(SourcesPath(nexusPath))
+	path := SourcesPath(nexusPath)
+	val, err := cachedLoad(path, func() (interface{}, error) {
+		return parseSourcesFile(path)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return val.(*Sources), nil
+}
+
+// parseSourcesFile is the un-cached read+parse pathway for sources.yml.
+func parseSourcesFile(path string) (*Sources, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("reading sources.yml: %w", err)
 	}
@@ -111,13 +124,20 @@ func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 			// Simple string entry: "matsengrp/repo"
 			entries = append(entries, RepoEntry{Repo: v})
 		case map[string]interface{}:
-			// Object entry: {repo: "...", channel: "..."}
+			// Object entry: {repo: "...", channel: "...", layout: {...}}
 			entry := RepoEntry{}
 			if repo, ok := v["repo"].(string); ok {
 				entry.Repo = repo
 			}
 			if channel, ok := v["channel"].(string); ok {
 				entry.Channel = channel
+			}
+			if raw, ok := v["layout"]; ok {
+				layout, err := parseLayoutMap(raw)
+				if err != nil {
+					return nil, fmt.Errorf("invalid layout for repo %q: %w", entry.Repo, err)
+				}
+				entry.Layout = layout
 			}
 			if entry.Repo == "" {
 				return nil, fmt.Errorf("invalid repo entry: missing 'repo' field")
@@ -129,6 +149,27 @@ func parseRepoEntriesYAML(items []interface{}) ([]RepoEntry, error) {
 	}
 
 	return entries, nil
+}
+
+// parseLayoutMap decodes the per-repo layout block from sources.yml. The
+// underlying value comes from yaml.v3's untyped interface{} decode, so we
+// round-trip via YAML to leverage standard struct decoding (and catch the
+// "layout: 7" / "layout: 'worktree'" malformed cases).
+func parseLayoutMap(raw interface{}) (*config.LayoutConfig, error) {
+	if _, ok := raw.(map[string]interface{}); !ok {
+		return nil, fmt.Errorf("expected mapping, got %T", raw)
+	}
+	data, err := yaml.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	var layout config.LayoutConfig
+	dec := yaml.NewDecoder(strings.NewReader(string(data)))
+	dec.KnownFields(true)
+	if err := dec.Decode(&layout); err != nil {
+		return nil, err
+	}
+	return &layout, nil
 }
 
 // LoadAllRepos returns all repos from sources.yml in the given nexus directory.
@@ -311,7 +352,23 @@ func GetBoardsMapping(nexusPath string) (map[string]string, error) {
 
 // LoadConfig loads config.yml from the given nexus directory.
 // Returns defaults if config.yml doesn't exist.
+// Result is cached by (path, mtime, size) — see internal/flow/cache.go.
+// The "missing file" defaults path is not cached (cachedLoad sees a stat
+// failure and skips the fast path), which is fine because os.ReadFile of a
+// missing file is already cheap.
 func LoadConfig(nexusPath string) (*Config, error) {
+	path := ConfigPath(nexusPath)
+	val, err := cachedLoad(path, func() (interface{}, error) {
+		return parseConfigFile(path)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return val.(*Config), nil
+}
+
+// parseConfigFile is the un-cached read+parse pathway for config.yml.
+func parseConfigFile(path string) (*Config, error) {
 	cfg := &Config{
 		Paths: ConfigPaths{
 			Code:    DefaultCodePath,
@@ -319,7 +376,7 @@ func LoadConfig(nexusPath string) (*Config, error) {
 		},
 	}
 
-	data, err := os.ReadFile(ConfigPath(nexusPath))
+	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return cfg, nil
 	}
@@ -343,38 +400,28 @@ func ExtractRepoName(orgRepo string) string {
 	return orgRepo
 }
 
-// GetRepoLocalPath maps a GitHub repo (org/name) to its local path.
-// Returns the path and whether the repo was found in sources.yml.
+// GetRepoLocalPath maps a GitHub repo (org/name) to its canonical clone
+// path, ignoring any `layout:` configuration. Returns the path and whether
+// the repo was found in sources.yml. All errors (missing sources.yml,
+// malformed YAML, repo absent) collapse to ok=false.
+//
+// This is the legacy (string, bool) signature; it has no live in-tree
+// callers in cmd/bip — every command now resolves via ResolveRepoPath
+// directly so config-parse errors surface with detail rather than being
+// hidden behind a generic "not found in sources.yml" message. We keep it
+// for the backward-compat assertion in
+// TestResolveRepoPath_AbsentLayoutMatchesGetRepoLocalPath and for any
+// downstream consumer (a script or kaizen) that imports flow as a library.
 func GetRepoLocalPath(nexusPath, orgRepo string) (string, bool) {
-	sources, err := LoadSources(nexusPath)
+	rp, err := ResolveRepoPath(nexusPath, orgRepo, ResolveContext{})
 	if err != nil {
 		return "", false
 	}
-
-	cfg, err := LoadConfig(nexusPath)
-	if err != nil {
-		return "", false
-	}
-
-	repoName := ExtractRepoName(orgRepo)
-
-	// Check writing repos first
-	for _, entry := range sources.Writing {
-		if entry.Repo == orgRepo {
-			writingPath := config.ExpandTilde(cfg.Paths.Writing)
-			return filepath.Join(writingPath, repoName), true
-		}
-	}
-
-	// Check code repos
-	for _, entry := range sources.Code {
-		if entry.Repo == orgRepo {
-			codePath := config.ExpandTilde(cfg.Paths.Code)
-			return filepath.Join(codePath, repoName), true
-		}
-	}
-
-	return "", false
+	// With an empty ResolveContext, worktree mode falls back to the canonical
+	// clone (FellBack=true, Mode=clone); clone mode returns the canonical
+	// directly. Either way Path is the canonical clone — byte-identical to
+	// the pre-issue-149 behavior when no `layout:` block is configured.
+	return rp.Path, true
 }
 
 // GetRepoContextPath returns the context file path for a repo if defined.

@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/flow"
 	"github.com/spf13/cobra"
 )
 
@@ -186,7 +188,10 @@ func loadEpicConfig(dir string) (*epicConfig, error) {
 		return nil, fmt.Errorf("%s: clone_root is required", path)
 	}
 	if cfg.LocalWorktrees && len(cfg.CloneNames) > 0 {
-		return nil, fmt.Errorf("%s: local_worktrees and clone_names are mutually exclusive", path)
+		// Deprecation hint: the `.epic-config.json` mutex case predates the
+		// global `layout:` block (issue #149). Existing EPICs keep working,
+		// but the error message points users toward the new YAML form.
+		return nil, fmt.Errorf("%s: local_worktrees and clone_names are mutually exclusive (deprecated: prefer the `layout:` block in ~/.config/bip/config.yml; see docs/guides/layout.md)", path)
 	}
 	if !cfg.LocalWorktrees && len(cfg.CloneNames) == 0 {
 		return nil, fmt.Errorf("%s: must set local_worktrees: true or clone_names: [...]", path)
@@ -196,29 +201,26 @@ func loadEpicConfig(dir string) (*epicConfig, error) {
 
 // resolveSlots returns the slots to watch given the config.
 // Clone mode: one slot per entry in clone_names.
-// Worktree mode: one slot per existing issue-* subdirectory of clone_root.
+// Worktree mode: one slot per existing issue-* subdirectory of clone_root,
+// discovered via flow.ListWorktreeSlots (which shares the slot-prefix
+// convention with flow.ResolveRepoPath — see issue #149).
 // Returns an empty slice (no error) if the worktree mode clone_root has no
 // issue-* subdirectories yet — the caller decides whether that is fatal.
 func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
-	cloneRoot, err := expandPath(cfg.CloneRoot)
-	if err != nil {
-		return nil, fmt.Errorf("expanding clone_root %q: %w", cfg.CloneRoot, err)
-	}
+	// config.ExpandTilde is the same expansion ResolveRepoPath uses for
+	// worktree.root, so EPIC and bip spawn agree on how "~/re/foo" resolves.
+	cloneRoot := config.ExpandTilde(cfg.CloneRoot)
 	if !filepath.IsAbs(cloneRoot) {
 		cloneRoot = filepath.Join(repoDir, cloneRoot)
 	}
 
 	if cfg.LocalWorktrees {
-		entries, err := os.ReadDir(cloneRoot)
+		names, err := flow.ListWorktreeSlots(cloneRoot)
 		if err != nil {
 			return nil, fmt.Errorf("reading clone_root %s: %w", cloneRoot, err)
 		}
 		var slots []slotInfo
-		for _, e := range entries {
-			name := e.Name()
-			if !e.IsDir() || !strings.HasPrefix(name, "issue-") {
-				continue
-			}
+		for _, name := range names {
 			slots = append(slots, slotInfo{
 				name:       name,
 				statusPath: filepath.Join(cloneRoot, name, epicStatusName),
@@ -235,19 +237,6 @@ func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
 		})
 	}
 	return slots, nil
-}
-
-// expandPath expands a leading ~/ to the user's home directory.
-// Returns an error if the home directory cannot be resolved.
-func expandPath(p string) (string, error) {
-	if !strings.HasPrefix(p, "~/") {
-		return p, nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, p[2:]), nil
 }
 
 // parsePhasesFilter parses the comma-separated --phases value.
