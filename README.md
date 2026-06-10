@@ -2,6 +2,8 @@
 
 **Agentic hacking like a PI.**
 
+> For motivation and a walkthrough of the workflow, see the blog post: [Bipartite: manuscript-driven development with a team of agents](https://matsen.group/general/2026/06/06/bipartite.html).
+
 Computational PIs have always worked at a high level: directing teams of researchers, framing problems, choosing which experiments are worth running, and weaving the results into papers. Bipartite is a platform for bringing that workflow into the agentic age — a `bip` CLI and a library of Claude Code skills that coordinate teams of agents across GitHub issues, code repositories, manuscripts, and the literature.
 
 The workflow runs as two coupled loops, **ideas** and **experiments**, with GitHub as the shared transport layer. On the ideas side, manuscript sessions surface new results, situate them in the literature, and turn them into well-scoped issues. On the experiments side, those issues are picked up by autonomous workers in dedicated clones, implemented, reviewed, and landed — surfacing fresh results back for discussion. Two human touchpoints anchor the otherwise-autonomous flow: high-level discussion of new findings on the ideas side, and pre-merge review on the experiments side.
