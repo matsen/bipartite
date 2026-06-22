@@ -43,6 +43,9 @@ func TestPaperIdentifierIsExternalID(t *testing.T) {
 		{"ARXIV", true},
 		{"S2", true},
 		{"PMID", true},
+		{"CorpusId", true},
+		{"MAG", true},
+		{"ACL", true},
 		{"LOCAL", false},
 	}
 	for _, tt := range tests {

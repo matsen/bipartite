@@ -35,10 +35,10 @@ func TestSplitAuthorName(t *testing.T) {
 
 func TestParsePublicationDate(t *testing.T) {
 	tests := []struct {
-		name             string
-		year             int
-		dateStr          string
-		wantY, wantM, wD int
+		name                string
+		year                int
+		dateStr             string
+		wantY, wantM, wantD int
 	}{
 		{"year only, no date string", 2018, "", 2018, 0, 0},
 		{"full date overrides year", 2018, "2019-03-15", 2019, 3, 15},
@@ -57,8 +57,8 @@ func TestParsePublicationDate(t *testing.T) {
 			if pub.Month != tt.wantM {
 				t.Errorf("Month = %d, want %d", pub.Month, tt.wantM)
 			}
-			if pub.Day != tt.wD {
-				t.Errorf("Day = %d, want %d", pub.Day, tt.wD)
+			if pub.Day != tt.wantD {
+				t.Errorf("Day = %d, want %d", pub.Day, tt.wantD)
 			}
 		})
 	}

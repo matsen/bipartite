@@ -110,6 +110,12 @@ func TestGetPaperHappyPath(t *testing.T) {
 	if paper.Title != "A Great Paper" {
 		t.Errorf("Title = %q", paper.Title)
 	}
+	if paper.Year != 2018 {
+		t.Errorf("Year = %d, want 2018", paper.Year)
+	}
+	if paper.Venue != "Nature" {
+		t.Errorf("Venue = %q, want Nature", paper.Venue)
+	}
 	if paper.ExternalIDs.DOI != "10.1038/nature12373" {
 		t.Errorf("DOI = %q", paper.ExternalIDs.DOI)
 	}

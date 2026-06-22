@@ -1,7 +1,7 @@
 package git
 
 import (
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/matsen/bipartite/internal/reference"
@@ -12,20 +12,8 @@ func ids(refs []reference.Reference) []string {
 	for i, r := range refs {
 		out[i] = r.ID
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
-}
-
-func equalIDs(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func TestDiffRefs(t *testing.T) {
@@ -77,10 +65,10 @@ func TestDiffRefs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			diff := diffRefs(tt.old, tt.current)
-			if gotAdded := ids(diff.Added); !equalIDs(gotAdded, tt.wantAdded) {
+			if gotAdded := ids(diff.Added); !slices.Equal(gotAdded, tt.wantAdded) {
 				t.Errorf("Added = %v, want %v", gotAdded, tt.wantAdded)
 			}
-			if gotRemoved := ids(diff.Removed); !equalIDs(gotRemoved, tt.wantRemoved) {
+			if gotRemoved := ids(diff.Removed); !slices.Equal(gotRemoved, tt.wantRemoved) {
 				t.Errorf("Removed = %v, want %v", gotRemoved, tt.wantRemoved)
 			}
 		})

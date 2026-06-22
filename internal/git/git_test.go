@@ -1,9 +1,11 @@
 package git
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -87,22 +89,16 @@ func newTestRepo(t *testing.T) (root, sha string) {
 		t.Fatal(err)
 	}
 	run("add", GetRefsJSONLPath())
-	run("commit", "-q", "-m", "Add first paper")
+	// Disable signing so a global commit.gpgsign=true (with no key) can't fail the commit.
+	run("-c", "commit.gpgsign=false", "commit", "-q", "-m", "Add first paper")
 
 	cmd := exec.Command("git", "-C", root, "rev-parse", "HEAD")
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("rev-parse HEAD: %v", err)
 	}
-	sha = trimNL(string(out))
+	sha = strings.TrimSpace(string(out))
 	return root, sha
-}
-
-func trimNL(s string) string {
-	for len(s) > 0 && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r') {
-		s = s[:len(s)-1]
-	}
-	return s
 }
 
 func TestFindRepoRootAndIsGitRepo(t *testing.T) {
@@ -128,7 +124,7 @@ func TestFindRepoRootAndIsGitRepo(t *testing.T) {
 	if IsGitRepo(notRepo) {
 		t.Error("IsGitRepo on non-repo = true, want false")
 	}
-	if _, err := FindRepoRoot(notRepo); err != ErrNotGitRepo {
+	if _, err := FindRepoRoot(notRepo); !errors.Is(err, ErrNotGitRepo) {
 		t.Errorf("FindRepoRoot on non-repo err = %v, want ErrNotGitRepo", err)
 	}
 }
@@ -139,10 +135,8 @@ func TestIsFileTracked(t *testing.T) {
 		t.Error("IsFileTracked = false, want true (refs.jsonl committed)")
 	}
 
-	// Fresh repo with no commits: file not tracked.
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not in PATH")
-	}
+	// Fresh repo with no commits: file not tracked. git is present here
+	// (newTestRepo above would have skipped otherwise).
 	empty := t.TempDir()
 	if err := exec.Command("git", "-C", empty, "init", "-q").Run(); err != nil {
 		t.Fatalf("git init: %v", err)
@@ -163,7 +157,7 @@ func TestValidateCommit(t *testing.T) {
 		t.Errorf("ValidateCommit(HEAD) = %q, want %q", resolved, sha)
 	}
 
-	if _, err := ValidateCommit(root, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); err != ErrCommitNotFound {
+	if _, err := ValidateCommit(root, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef"); !errors.Is(err, ErrCommitNotFound) {
 		t.Errorf("ValidateCommit(bogus) err = %v, want ErrCommitNotFound", err)
 	}
 }
@@ -183,7 +177,7 @@ func TestFindCommitThatAdded(t *testing.T) {
 	root, sha := newTestRepo(t)
 	commits := []CommitInfo{{SHA: sha}}
 
-	// Paper present at the only commit -> returns shortSHA of earliest commit.
+	// Paper present at the only commit in range -> returns that commit's short SHA.
 	got := findCommitThatAdded(root, "Zhang2018-vi", commits)
 	if got != shortSHA(sha) {
 		t.Errorf("findCommitThatAdded(present) = %q, want %q", got, shortSHA(sha))
