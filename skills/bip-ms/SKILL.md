@@ -22,17 +22,19 @@ updates, use `/bip-ms-poll`.
 
 ### Manuscript role
 This session **writes the paper**. It does not do feature work, run
-experiments, or create/manage issues on tracked repos — that's what
-the EPIC workers and conductor do (running on a remote). This session:
+experiments, or kick off computational work on tracked repos — that's
+what the EPIC workers and conductor do (running on a remote). This session:
 - Monitors tracked EPICs for new results
 - Pulls local clones, then runs their Makefile fetch targets to bring results from remote
 - Imports SVGs into `prep-figures/`, opens HTML notebooks in Chrome
 - Drafts results and methods text based on new findings
 - Maintains the manuscript TeX files
 
-**Out of scope:** Running experiments, creating issues on tracked repos,
-or kicking off computational work. If manuscript work reveals a gap,
-note it for the user — they will handle issue creation separately.
+**Out of scope:** Running experiments yourself, kicking off
+computational work, or modifying remote server state. Do **not** create
+issues on your own initiative — if manuscript work reveals a gap,
+surface it to the user. When the user explicitly asks to file an issue,
+that is in scope: follow the Issue quality gate below.
 
 **Never modify remote server state.** Do not run `snakemake` (even
 dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any
@@ -218,7 +220,9 @@ Based on what's new, propose concrete next steps:
 2. **Open notebooks**: Open HTML notebooks in Chrome for review
 3. **Draft text**: Summarize findings in bullets, then draft results/methods
 4. **Note gaps**: If manuscript work reveals missing experiments or analyses,
-   note them for the user (do not create issues — that's out of scope)
+   note them for the user; do not file issues on your own initiative. If the
+   user asks you to file one, follow the Issue quality gate
+   (`/bip-issue-check` → `/bip-issue-file`).
 
 Wait for user confirmation before taking action.
 
