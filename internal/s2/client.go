@@ -285,7 +285,7 @@ func checkResponse(resp *http.Response) error {
 				apiErr.RetryAfter = secs
 			}
 		}
-		return fmt.Errorf("%w: %v", ErrRateLimited, apiErr)
+		return fmt.Errorf("%w: %w", ErrRateLimited, apiErr)
 	}
 
 	return apiErr
