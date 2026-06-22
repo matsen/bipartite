@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -132,9 +133,9 @@ func outputGenericNotFound(paperID, message string) error {
 
 // outputGenericRateLimited outputs a rate limit error in both human and JSON format and exits.
 func outputGenericRateLimited(err error) error {
-	apiErr, _ := err.(*s2.APIError)
+	var apiErr *s2.APIError
 	retryAfter := 300
-	if apiErr != nil && apiErr.RetryAfter > 0 {
+	if errors.As(err, &apiErr) && apiErr.RetryAfter > 0 {
 		retryAfter = apiErr.RetryAfter
 	}
 

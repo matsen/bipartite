@@ -54,11 +54,14 @@ func TestCheckResponse(t *testing.T) {
 		if !IsRateLimited(err) {
 			t.Fatalf("checkResponse(429): IsRateLimited = false, want true (err=%v)", err)
 		}
-		// The 429 path wraps ErrRateLimited (with %w) and embeds the
-		// formatted *APIError (with %v), so the parsed Retry-After surfaces
-		// in the message rather than as a retrievable *APIError.
-		if !strings.Contains(err.Error(), "retry after 42s") {
-			t.Errorf("error message = %q, want it to mention retry after 42s", err.Error())
+		// The 429 path multi-wraps both ErrRateLimited and the *APIError,
+		// so the structured error and its parsed Retry-After are recoverable.
+		var apiErr *APIError
+		if !errors.As(err, &apiErr) {
+			t.Fatalf("checkResponse(429) does not unwrap to *APIError: %v", err)
+		}
+		if apiErr.RetryAfter != 42 {
+			t.Errorf("RetryAfter = %d, want 42", apiErr.RetryAfter)
 		}
 	})
 
