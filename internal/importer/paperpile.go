@@ -55,6 +55,7 @@ type PaperpileEntry struct {
 	Title     string `json:"title"`
 	Abstract  string `json:"abstract"`
 	Journal   string `json:"journal"`
+	Booktitle string `json:"booktitle"`
 	Published struct {
 		Year  FlexibleString `json:"year"`
 		Month FlexibleString `json:"month"`
@@ -260,13 +261,19 @@ func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Ref
 		id = entry.ID
 	}
 
+	// Conference papers carry the venue in booktitle, not journal.
+	venue := entry.Journal
+	if venue == "" {
+		venue = entry.Booktitle
+	}
+
 	ref := reference.Reference{
 		ID:              id,
 		DOI:             entry.DOI,
 		Title:           title,
 		Authors:         authors,
 		Abstract:        entry.Abstract,
-		Venue:           entry.Journal,
+		Venue:           venue,
 		Note:            entry.Note,
 		Tags:            tags,
 		Published:       pubDate,
