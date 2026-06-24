@@ -165,6 +165,17 @@ BRANCH: Create branch N-short-name from main.
 AUTONOMY: Do the work. Do not ask the user whether to proceed with
 implementation steps, run experiments, or set up tests — just do them.
 
+HUMAN INTERRUPT — The AUTONOMY rule governs YOUR decisions, not the
+human steering. If a human interrupts to ask a question, discuss, or
+change direction, that supersedes the loop: PAUSE it FIRST
+(/ralph-loop:cancel-ralph, or rm .claude/ralph-loop.local.md) so the
+stop hook stops re-injecting "continue working", then engage. Do NOT
+grind stale work between their messages just to satisfy the hook. When
+the discussion resolves, either RESTART the loop with an updated prompt
+reflecting the new direction, or — if the task is done or handed off —
+confirm completion and wind down. Never silently drop autonomy or keep
+running the old prompt against a changed plan.
+
 EXPERIMENTS ARE MANDATORY: If the issue specifies running an experiment,
 benchmark, or analysis, you MUST run it before considering the work done.
 Writing code is not enough — the issue is not complete until every
