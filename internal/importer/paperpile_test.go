@@ -146,6 +146,58 @@ func TestParsePaperpile_ValidEntry(t *testing.T) {
 	}
 }
 
+func TestParsePaperpile_Venue(t *testing.T) {
+	// Conference papers carry the venue in booktitle (empty journal); articles
+	// carry it in journal. Journal wins when both are present.
+	tests := []struct {
+		name      string
+		data      string
+		wantVenue string
+	}{
+		{
+			name: "conference paper uses booktitle",
+			data: `[{
+				"_id": "abc", "citekey": "Prillo2024-bn", "title": "Conf paper",
+				"published": {"year": "2024"}, "author": [{"last": "Prillo"}],
+				"booktitle": "The Thirty-eighth Annual Conference on Neural Information Processing Systems"
+			}]`,
+			wantVenue: "The Thirty-eighth Annual Conference on Neural Information Processing Systems",
+		},
+		{
+			name: "journal wins when both present",
+			data: `[{
+				"_id": "abc", "citekey": "Both2024", "title": "Paper",
+				"published": {"year": "2024"}, "author": [{"last": "Smith"}],
+				"journal": "Real Journal", "booktitle": "Some Proceedings"
+			}]`,
+			wantVenue: "Real Journal",
+		},
+		{
+			name: "neither present yields empty venue",
+			data: `[{
+				"_id": "abc", "citekey": "None2024", "title": "Paper",
+				"published": {"year": "2024"}, "author": [{"last": "Smith"}]
+			}]`,
+			wantVenue: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refs, _, errs := ParsePaperpile([]byte(tt.data), true)
+			if len(errs) > 0 {
+				t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+			}
+			if len(refs) != 1 {
+				t.Fatalf("got %d refs, want 1", len(refs))
+			}
+			if refs[0].Venue != tt.wantVenue {
+				t.Errorf("Venue = %q, want %q", refs[0].Venue, tt.wantVenue)
+			}
+		})
+	}
+}
+
 func TestParsePaperpile_WithoutNotes(t *testing.T) {
 	data := []byte(`[{
 		"_id": "abc123",

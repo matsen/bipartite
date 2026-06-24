@@ -547,5 +547,31 @@
       "http://dx.doi.org/10.1016/s0195-6698(89)80009-5"
     ],
     "volume": "10"
+  },
+  {
+    "_id": "f1d2c3b4-a5e6-0789-abcd-ef0123456789",
+    "abstract": "We present a method for ancestral sequence reconstruction that scales to large protein families.",
+    "author": [
+      {
+        "first": "Sebastian",
+        "last": "Prillo",
+        "initials": "S",
+        "formatted": "Prillo S"
+      }
+    ],
+    "booktitle": "The Thirty-eighth Annual Conference on Neural Information Processing Systems",
+    "citekey": "Prillo2024-bn",
+    "doi": "10.5555/prillo2024",
+    "incomplete": 0,
+    "labels": [],
+    "owner": "4C91C6462CF411E3AEA40CBD9AB9BFFD",
+    "published": {
+      "year": "2024"
+    },
+    "pubtype": "PP_CONFERENCE_PAPER",
+    "title": "Scalable ancestral sequence reconstruction",
+    "url": [
+      "https://example.org/prillo2024"
+    ]
   }
 ]
