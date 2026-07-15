@@ -32,7 +32,8 @@ func WindowExists(windowName string) bool {
 }
 
 // CreateWindow creates a tmux window and runs Claude Code with the given prompt.
-func CreateWindow(windowName, repoPath, prompt, url string) error {
+// model, if non-empty, is passed through as claude's --model flag.
+func CreateWindow(windowName, repoPath, prompt, url, model string) error {
 	// Write prompt to temp file
 	promptFile, err := os.CreateTemp("", fmt.Sprintf("review-%s-*.txt", windowName))
 	if err != nil {
@@ -60,13 +61,14 @@ func CreateWindow(windowName, repoPath, prompt, url string) error {
 	if url != "" {
 		urlLine = fmt.Sprintf("echo '%s'\necho ''\n", url)
 	}
+	claudeInvocation := buildClaudeInvocation(model)
 	launcherContent := fmt.Sprintf(`#!/bin/bash
 %scat '%s'
 echo '---'
 prompt=$(<'%s')
 rm -f '%s' '%s'
-claude --dangerously-skip-permissions "$prompt"
-`, urlLine, promptPath, promptPath, promptPath, launcherPath)
+%s
+`, urlLine, promptPath, promptPath, promptPath, launcherPath, claudeInvocation)
 
 	if _, err := launcherFile.WriteString(launcherContent); err != nil {
 		os.Remove(promptPath)
@@ -104,6 +106,16 @@ claude --dangerously-skip-permissions "$prompt"
 	}
 
 	return nil
+}
+
+// buildClaudeInvocation returns the shell command that launches claude, with
+// --model injected only when model is non-empty. Empty model must produce a
+// byte-identical command to the pre-existing behavior.
+func buildClaudeInvocation(model string) string {
+	if model == "" {
+		return `claude --dangerously-skip-permissions "$prompt"`
+	}
+	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' "$prompt"`, model)
 }
 
 // BuildWindowName creates a window name from repo and number.

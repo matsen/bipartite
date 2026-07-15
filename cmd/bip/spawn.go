@@ -42,6 +42,7 @@ var spawnPrompt string
 var spawnPromptFile string
 var spawnDir string
 var spawnName string
+var spawnModel string
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
@@ -49,6 +50,7 @@ func init() {
 	spawnCmd.Flags().StringVar(&spawnPromptFile, "prompt-file", "", "Read prompt from file (avoids shell expansion issues)")
 	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
 	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
+	spawnCmd.Flags().StringVar(&spawnModel, "model", "", "Model to pass to the claude launcher (default: unspecified)")
 }
 
 func resolvePrompt() string {
@@ -219,7 +221,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 
 	// Create tmux window
 	url := flow.GitHubURL(ref.Repo, ref.Number, itemType)
-	spawnWindow(windowName, repoPath, prompt, url)
+	spawnWindow(windowName, repoPath, prompt, url, spawnModel)
 
 	// Print URL as last line for easy clicking
 	fmt.Println(url)
@@ -242,7 +244,7 @@ func runAdhocSpawn() {
 		}
 	}
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
-	spawnWindow(windowName, workDir, spawnPrompt, "")
+	spawnWindow(windowName, workDir, spawnPrompt, "", spawnModel)
 }
 
 func mustValidateDir(dir string) string {
@@ -264,7 +266,7 @@ func mustValidateDir(dir string) string {
 }
 
 // spawnWindow validates tmux, checks for duplicates, and creates the window.
-func spawnWindow(windowName, workDir, prompt, url string) {
+func spawnWindow(windowName, workDir, prompt, url, model string) {
 	if !spawn.IsInTmux() {
 		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
 		os.Exit(1)
@@ -275,7 +277,7 @@ func spawnWindow(windowName, workDir, prompt, url string) {
 		return
 	}
 
-	if err := spawn.CreateWindow(windowName, workDir, prompt, url); err != nil {
+	if err := spawn.CreateWindow(windowName, workDir, prompt, url, model); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
