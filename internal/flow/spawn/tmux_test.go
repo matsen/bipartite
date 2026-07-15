@@ -50,3 +50,31 @@ func TestIsInTmux(t *testing.T) {
 	// The actual result depends on the test environment.
 	_ = IsInTmux()
 }
+
+func TestBuildClaudeInvocation(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		want  string
+	}{
+		{
+			name:  "empty model is unchanged from pre-existing behavior",
+			model: "",
+			want:  `claude --dangerously-skip-permissions "$prompt"`,
+		},
+		{
+			name:  "model is passed through as --model",
+			model: "opus",
+			want:  `claude --dangerously-skip-permissions --model 'opus' "$prompt"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildClaudeInvocation(tt.model)
+			if got != tt.want {
+				t.Errorf("buildClaudeInvocation(%q) = %q, want %q", tt.model, got, tt.want)
+			}
+		})
+	}
+}
