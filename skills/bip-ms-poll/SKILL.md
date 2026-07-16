@@ -164,6 +164,14 @@ view --json state`) rather than relying on earlier poll results or
 conversation memory. Stale state leads to confusing reports (e.g.,
 reporting a merged PR as "open").
 
+When a claim rests on a PR/issue *body* or comments — especially an
+absence claim ("reports no result", "no mention of Y") — read the full
+text. Do not pipe `gh ... --json body` through `head`/`tail`: Results
+and conclusions usually sit at the bottom, which is exactly what a
+truncated read drops. To narrow, `grep -n -i -A30` for the section
+rather than chopping at a line count; never assert absence from output
+you truncated yourself.
+
 ### Keep it brief
 
 This is a poll, not a cold start. Only report what changed. If nothing
