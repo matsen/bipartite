@@ -52,8 +52,16 @@ Brief for each subagent:
 >    sort:updated-desc" --limit 5 --json
 >    number,title,body,mergedAt`. Report only PRs newer than the
 >    last poll.
-> 3. `git -C <local_path> pull --ff-only origin main` and run each
->    fetch_cmd from `<local_path>` (idempotent; safe to re-run).
+> 3. `git -C <local_path> fetch origin` (read-only — never `git
+>    pull`), then report `main` vs `origin/main` from `git -C
+>    <local_path> rev-list --left-right --count main...origin/main`
+>    (local-ahead / remote-ahead). Clones are often checked out on a
+>    feature branch, so do NOT `pull --ff-only origin main`: that
+>    fast-forwards the *current* branch and fails whenever it isn't
+>    main — a failure that is NOT main diverging. Call main
+>    "diverged" only when both counts are nonzero; "0 / N" is a clean
+>    fast-forward. Then run each fetch_cmd from `<local_path>`
+>    (idempotent; safe to re-run).
 > 4. `find <local_path> \( -name "*.svg" -o -name "*.html" \) -mmin
 >    -60`. For each new file, identify the producing EPIC or PR.
 > 5. `gh pr list --repo <org/repo> --json
