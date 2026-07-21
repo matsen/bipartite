@@ -332,7 +332,12 @@ Now read the issue and begin work:
 ```
 - Use make remote-sync + make remote-tmux for running on remote servers
 - Use /bip-scout to find an available server before remote operations
-- Always rebuild after sync: make remote-tmux REMOTE_HOST=... CMD='zig build -Doptimize=ReleaseFast'
+- ALWAYS pass REMOTE_DIR=<remote_root>/<this-slot's-dir-name> on every
+  make remote-sync / remote-tmux call (clone mode: the fruit name;
+  worktree mode: issue-<N> -- create it remotely first if it doesn't
+  exist yet). The config default is shared by every slot -- using it
+  lets concurrent workers clobber each other's remote checkout.
+- Always rebuild after sync: make remote-tmux REMOTE_HOST=... REMOTE_DIR=... CMD='zig build -Doptimize=ReleaseFast'
 - Wrap the experiment in a Snakemake workflow
 ```
 
