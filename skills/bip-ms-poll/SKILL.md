@@ -6,8 +6,11 @@ description: Quick poll of tracked EPICs and code repos for new manuscript-relev
 # /bip-ms-poll
 
 Lightweight mid-session update for a manuscript session. Checks what
-changed in tracked code repos and EPICs since last check, fetches new
-artifacts from remote, and reacts to new results.
+changed in tracked code repos and EPICs since last check and fetches new
+artifacts from remote, so you can react to new results **as a scientific
+discussant**: judge what each result means and orchestrate what happens next
+(through issues and PRs). Per `/bip-ms`, the paper itself is updated when a
+thread of research *completes*, not on every incremental result surfaced here.
 
 For continuous monitoring, prefer the **persistent result monitor**
 started by `/bip-ms` (Step 5) — it uses SSH polling to detect new
@@ -120,15 +123,22 @@ After they review, ask which plots or findings to incorporate.
 ### New key findings in EPICs
 
 When an EPIC body has new findings (numbered items in the Key Findings
-section that weren't there before):
+section that weren't there before), react as a discussant first, not as a
+transcriber:
 
-1. Quote the finding
-2. Read the relevant PR or experiment that produced it
-3. Present the key points as a **bullet-point summary**
-4. Ask the user which to include and where in the manuscript
-5. After confirmation, draft the paragraph(s) in LaTeX
-6. Run the `@scientific-tex-editor` agent on the new text for style review
-7. Present the edited draft for final approval
+1. Quote the finding.
+2. Read the relevant PR or experiment that produced it (full body, not a
+   truncated read).
+3. Present the key points as a **bullet-point summary**, with your read on
+   whether the result holds up, what it means, and how it sits against what
+   the manuscript already claims.
+4. Decide with the user what happens next. Usually this is orchestration —
+   request a follow-up analysis on the PR, draft an issue for a gap (via the
+   Issue quality gate), or log an open question — because the paper is updated
+   when a thread of research *completes*, not per finding.
+5. **Only when a thread is complete**, draft it into the manuscript: propose
+   placement, write the LaTeX, run the `@scientific-tex-editor` agent on the
+   new text, and present the edited draft for final approval.
 
 ### Issue creation
 

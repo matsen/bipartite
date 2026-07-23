@@ -60,6 +60,11 @@ Update the auto-memory files to reflect the session's work:
    - Update open issue list
    - Note the current bottleneck
    - Record any key decisions made this session
+   - Record **in-flight research threads**: analyses requested on PRs/issues
+     this session, open scientific questions, and what each thread is waiting
+     on — so the next session resumes the orchestration, not just the
+     manuscript. (A thread that has *completed* is what triggers a paper
+     update; one still open stays here.)
 
 2. **`project_pending_decisions.md`** (if it exists):
    - Remove resolved decisions
