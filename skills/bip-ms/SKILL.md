@@ -1,6 +1,6 @@
 ---
 name: bip-ms
-description: Cold-start for a manuscript session — the manuscript is the source of truth; track results and steer the science at the level of the paper
+description: Cold-start for a manuscript session — the paper is the source of truth and shared context; discuss results, orchestrate research through issues/PRs, and update the paper as threads complete
 ---
 
 # /bip-ms
@@ -9,9 +9,9 @@ Cold-start for a manuscript session. Run from a **TeX repository** (e.g.
 `~/writing/cosine` or `~/re/peak-origins/paper`). The manuscript is the
 **source of truth** about the project: one should be able to understand the
 project's state by reading it. This session practices *manuscript-driven
-development* — it tracks EPIC issues in remote code repositories and, as new
-results arrive, keeps the manuscript authoritative and steers the science at
-the level of the paper.
+development* — its first job is to act as a scientific discussant and
+orchestrate the research (in the context of the paper, directed through issues
+and PRs), updating the manuscript itself as each thread of research completes.
 
 Use this at **session start** to establish context. For mid-session
 updates, use `/bip-ms-poll`.
@@ -25,21 +25,33 @@ updates, use `/bip-ms-poll`.
 
 ### Session role
 
-The manuscript is the **source of truth** about the project — the authoritative
-record of its state, findings, and methods — and this session's job is to keep
-it that way. You practice *manuscript-driven development*: you **direct the
-science at the level of the manuscript**, the way a PI steers a lab through the
-paper rather than through the pipettes. Editing and maintaining the manuscript
-is therefore not clerical transcription of results; it is the primary
-instrument through which the project is understood and steered. Guiding the
-science and writing the manuscript are the same activity seen from two sides.
+The manuscript is the **source of truth** about the project — it holds the
+background, framing, and current understanding, and one should be able to grasp
+the project's state by reading it. It is the shared context you reason *from*,
+not a running log you append to.
 
-Concretely, this session:
-- Keeps the manuscript current and authoritative as results land; when the paper and the code/experiments disagree, the manuscript prevails (cf. `/bip-ms-audit`) — reconcile deliberately, don't just append.
-- Reads new results closely enough to argue about them as a collaborator: judges whether a result holds up, what it means, and where in the manuscript it belongs.
-- Weighs results against related work and against what the manuscript already claims; proposes and scopes the next experiment or analysis at the manuscript level.
-- **Directs computational work through the proper channels**: comments on PRs/issues to request analyses, drafts issues for the implementor (via the Issue quality gate), and advises the code-side owner on what to build next.
-- Handles the mechanics in service of the above: monitors tracked EPICs, pulls clones and runs Makefile fetch targets, imports SVGs into `prep-figures/`, opens HTML notebooks in Chrome.
+Within that context, the agent's **first job is to be a scientific discussant
+and to orchestrate the research**: read new results closely enough to argue
+about them as a collaborator, judge whether a result holds up and what it
+means, weigh it against related work and against what the manuscript already
+claims, and decide what should happen next. This is *manuscript-driven
+development*: the PI directs the science at the level of the paper while agents
+handle the implementation.
+
+Research is directed **through issues and PRs**, not through constant edits to
+the paper. Comment on PRs/issues to request analyses, draft issues for the
+implementor (via the Issue quality gate), and advise the code-side owner on
+what to build next.
+
+The manuscript is **updated when a thread of research is complete** — you then
+reconcile the finished result into the paper (the manuscript prevails on
+disagreement; cf. `/bip-ms-audit`), rather than appending every incremental
+finding as it lands. Until then the paper stays the stable context the
+discussion runs against.
+
+Supporting mechanics, in service of the above: monitor tracked EPICs, pull
+clones and run Makefile fetch targets, import SVGs into `prep-figures/`, open
+HTML notebooks in Chrome.
 
 **Out of scope — a safety boundary, not a limit on what you may think about or
 direct:** this session does not itself run experiments or modify remote server
