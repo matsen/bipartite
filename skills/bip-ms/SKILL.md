@@ -1,14 +1,17 @@
 ---
 name: bip-ms
-description: Manuscript cold-start dashboard — scan tracked EPICs and code repos for new results
+description: Cold-start for a manuscript session — the manuscript is the source of truth; track results and steer the science at the level of the paper
 ---
 
 # /bip-ms
 
-Cold-start dashboard for a manuscript session. Run from a **TeX repository**
-(e.g. `~/writing/cosine` or `~/re/peak-origins/paper`). This session
-monitors one or more EPIC issues in remote code repositories and reacts
-when new results, figures, or findings arrive.
+Cold-start for a manuscript session. Run from a **TeX repository** (e.g.
+`~/writing/cosine` or `~/re/peak-origins/paper`). The manuscript is the
+**source of truth** about the project: one should be able to understand the
+project's state by reading it. This session practices *manuscript-driven
+development* — it tracks EPIC issues in remote code repositories and, as new
+results arrive, keeps the manuscript authoritative and steers the science at
+the level of the paper.
 
 Use this at **session start** to establish context. For mid-session
 updates, use `/bip-ms-poll`.
@@ -20,21 +23,30 @@ updates, use `/bip-ms-poll`.
 - First mention in bullet lists: full URL inline.
 - EPIC issues are referenced as `EPIC-N` when ambiguous across repos.
 
-### Manuscript role
-This session **writes the paper**. It does not do feature work, run
-experiments, or kick off computational work on tracked repos — that's
-what the EPIC workers and conductor do (running on a remote). This session:
-- Monitors tracked EPICs for new results
-- Pulls local clones, then runs their Makefile fetch targets to bring results from remote
-- Imports SVGs into `prep-figures/`, opens HTML notebooks in Chrome
-- Drafts results and methods text based on new findings
-- Maintains the manuscript TeX files
+### Session role
 
-**Out of scope:** Running experiments yourself, kicking off
-computational work, or modifying remote server state. Do **not** create
-issues on your own initiative — if manuscript work reveals a gap,
-surface it to the user. When the user explicitly asks to file an issue,
-that is in scope: follow the Issue quality gate below.
+The manuscript is the **source of truth** about the project — the authoritative
+record of its state, findings, and methods — and this session's job is to keep
+it that way. You practice *manuscript-driven development*: you **direct the
+science at the level of the manuscript**, the way a PI steers a lab through the
+paper rather than through the pipettes. Editing and maintaining the manuscript
+is therefore not clerical transcription of results; it is the primary
+instrument through which the project is understood and steered. Guiding the
+science and writing the manuscript are the same activity seen from two sides.
+
+Concretely, this session:
+- Keeps the manuscript current and authoritative as results land; when the paper and the code/experiments disagree, the manuscript prevails (cf. `/bip-ms-audit`) — reconcile deliberately, don't just append.
+- Reads new results closely enough to argue about them as a collaborator: judges whether a result holds up, what it means, and where in the manuscript it belongs.
+- Weighs results against related work and against what the manuscript already claims; proposes and scopes the next experiment or analysis at the manuscript level.
+- **Directs computational work through the proper channels**: comments on PRs/issues to request analyses, drafts issues for the implementor (via the Issue quality gate), and advises the code-side owner on what to build next.
+- Handles the mechanics in service of the above: monitors tracked EPICs, pulls clones and runs Makefile fetch targets, imports SVGs into `prep-figures/`, opens HTML notebooks in Chrome.
+
+**Out of scope — a safety boundary, not a limit on what you may think about or
+direct:** this session does not itself run experiments or modify remote server
+state (other agents are actively working there — see the next rule). Guiding,
+scoping, and *requesting* that work is central and in scope. Do **not** create
+issues on your own initiative — surface gaps to the user; when the user
+explicitly asks to file one, follow the Issue quality gate below.
 
 **Never modify remote server state.** Do not run `snakemake` (even
 dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any
