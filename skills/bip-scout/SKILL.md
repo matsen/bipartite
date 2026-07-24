@@ -102,6 +102,27 @@ After presenting results, briefly note that the user can ask follow-up questions
 - "Which of these has the most free GPU memory?"
 - "Run my job on the least-loaded GPU server"
 
+## Running After Scouting
+
+Once you've picked a host, two rules keep remote runs from silently breaking or
+clobbering a neighbor:
+
+- **Scope the remote checkout to your own clone/worktree.** Pass `REMOTE_DIR`
+  explicitly on every `make remote-sync`/`remote-run`/`remote-tmux` call (or ssh to
+  an explicit path). The config-derived default (`~/.config/dasm2/config.yaml`) is the
+  *same directory for every clone/worktree on the box*, so concurrent runs overwrite
+  each other's checkout — the rule `bip-epic-spawn` states for EPIC slots applies to
+  any remote run, not just EPIC workers. Don't trust that default to be non-empty
+  either: the Makefile resolves it with a bare `python3` that may lack the project's
+  deps and silently return `""` (`cd ` → "not a git repository").
+- **Invoke through a login shell.** Use `make remote-tmux` (its tmux window is a login
+  shell) or `ssh <host> 'bash -lc "…"'` — not a bare
+  `ssh <host> "source .venv/bin/activate && …"`. A non-login shell skips lmod module
+  init, so a venv Python built against a module-provided libpython dies with
+  `libpython3.XX.so.1.0: cannot open shared object file`. In a long ssh command
+  string `cd` is easy to drop — prefer absolute paths (e.g. the full
+  `.venv/bin/activate` path).
+
 ## Error Handling
 
 - **bip not found**: Report error, suggest building with `go build -o bip ./cmd/bip`
