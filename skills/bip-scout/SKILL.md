@@ -104,24 +104,46 @@ After presenting results, briefly note that the user can ask follow-up questions
 
 ## Running After Scouting
 
-Once you've picked a host, two rules keep remote runs from silently breaking or
+Once you've picked a host, three rules keep remote runs from silently breaking or
 clobbering a neighbor:
 
-- **Scope the remote checkout to your own clone/worktree.** Pass `REMOTE_DIR`
-  explicitly on every `make remote-sync`/`remote-run`/`remote-tmux` call (or ssh to
-  an explicit path). The config-derived default (`~/.config/dasm2/config.yaml`) is the
-  *same directory for every clone/worktree on the box*, so concurrent runs overwrite
-  each other's checkout — the rule `bip-epic-spawn` states for EPIC slots applies to
-  any remote run, not just EPIC workers. Don't trust that default to be non-empty
-  either: the Makefile resolves it with a bare `python3` that may lack the project's
-  deps and silently return `""` (`cd ` → "not a git repository").
+- **Never write `cd` in an ssh command string — pin the directory as a flag.** This is
+  a *hard mechanical rule*, not advice: composing `ssh host "cd /long/path && <cmd>"`,
+  the `cd /long/path && ` prefix gets silently dropped from what actually runs, so the
+  command executes in `$HOME` (→ "not a git repository", the wrong project resolved,
+  etc.). This recurs *every session* and prose warnings have not stopped it — the fix
+  is structural: make the working directory an un-droppable argument.
+  - **Single command → use the tool's dir flag:** `git -C <dir> …`,
+    `uv run --directory <dir> …`, `make -C <dir> …`, `tar -C <dir> …`,
+    `snakemake --directory <dir> …`.
+  - **Multi-step → write a script on the remote and run *that*.** Inside a here-doc'd
+    file, `cd` sits on its own line where it cannot be dropped:
+    ```bash
+    ssh host 'cat > ~/run.sh <<"EOF"
+    #!/bin/bash -l
+    cd /home/you/re/<repo>/experiments/<exp>
+    uv run snakemake <rule> --cores N
+    EOF'
+    ssh host 'tmux new-session -d -s job "bash ~/run.sh > ~/job.log 2>&1"'
+    ```
+  - A bare inline `cd …` in the ssh argument string is *only* acceptable inside a
+    here-doc'd script body or a `make remote-tmux` window — never as a prefix you hand-compose.
+- **Scope the remote checkout to the clone corresponding to *your* repo.** Pass
+  `REMOTE_DIR` explicitly on every `make remote-sync`/`remote-run`/`remote-tmux` call
+  (or ssh to an explicit path). The config-derived default (`~/.config/dasm2/config.yaml`)
+  is the *same directory for every clone/worktree on the box*, so concurrent runs
+  overwrite each other's checkout — the rule `bip-epic-spawn` states for EPIC slots
+  applies to any remote run. Don't trust that default to be non-empty either: the
+  Makefile resolves it with a bare `python3` that may lack the project's deps and
+  silently return `""` (`cd ` → "not a git repository"). **Before syncing, check the
+  target clone isn't dirty with unrelated in-progress work** (`git -C <dir> status`); if
+  it is, verify the changes are already in history (`git -C <dir> diff <pushed-HEAD>`
+  empty) *before* any `reset --hard`, and never discard uncommitted work you didn't create.
 - **Invoke through a login shell.** Use `make remote-tmux` (its tmux window is a login
   shell) or `ssh <host> 'bash -lc "…"'` — not a bare
   `ssh <host> "source .venv/bin/activate && …"`. A non-login shell skips lmod module
   init, so a venv Python built against a module-provided libpython dies with
-  `libpython3.XX.so.1.0: cannot open shared object file`. In a long ssh command
-  string `cd` is easy to drop — prefer absolute paths (e.g. the full
-  `.venv/bin/activate` path).
+  `libpython3.XX.so.1.0: cannot open shared object file`.
 
 ## Error Handling
 
