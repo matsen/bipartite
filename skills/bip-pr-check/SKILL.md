@@ -81,21 +81,36 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 - Contains multiple "fix typo", "address review", "WIP" entries
 - Is auto-generated from concatenated commit messages (GitHub's default for squash merge)
 - Is empty or just whitespace
+- Accumulates one section per review round — headers like "Reviewer
+  follow-up: ...", "Human-flagged follow-up: ...", "Update:", or a
+  growing "History" section — even when each section is individually
+  well-written. This is the same defect as commit-message noise: the
+  reader has to reconstruct current truth from a chronological trail
+  instead of being told it directly. Long-running PRs that went
+  through several review rounds are the most likely to have this —
+  check specifically for it on any PR with more than one or two
+  rounds of feedback.
 
 **Signs of a good (squashed/summary) body:**
 - Has a `## Summary` or similar section with 1-3 bullet points explaining *what* and *why*
+- Gives enough context that a reader who hasn't seen the linked issue can follow — not just a bare diff description
 - Reads as a coherent description a reviewer can understand
 - Has a test plan or notes section if appropriate
 - Is concise but informative
 
 **Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body. Flag violations and offer to rewrite.
 
-If the body looks like historical commit noise or is empty:
-1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`
+If the body looks like historical commit noise, revision-history
+accumulation, or is empty:
+1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`. For a revision-history body specifically, also read the current body in full — later sections usually contain results/conclusions (recomputed numbers, resolved bugs, reconciled findings) that supersede earlier ones and must carry over into the rewrite; only the per-round framing gets dropped, not the substance.
 2. Draft a clean replacement body in this format:
    ```
    ## Summary
+   [1-2 sentences of context: the problem or question this addresses, for
+   a reader who knows the project but hasn't seen this issue]
    - [1-3 bullet points describing what changed and why]
+   - [Link related issues you already know of — the issue this closes, a
+     prior PR that touched the same area — don't go searching for more]
 
    ## Test plan
    - [How to verify the changes work]

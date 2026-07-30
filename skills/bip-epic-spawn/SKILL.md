@@ -233,6 +233,14 @@ COMPLETION: When done (or when lead says completed):
       fix the ones you'll address, commit and push
    c. If either flagged issues that you fixed, go back to (a)
    Track quality gate iterations in .epic-status.json
+
+   A PR that goes through several review rounds tends to accumulate one
+   body section per round ("Reviewer follow-up: ...", "Human-flagged
+   follow-up: ...", a growing "History" section). /bip-pr-check's body
+   check (step a) flags this and offers a rewrite — take it. The body
+   should always read as the current state (premise, results,
+   interpretation), never as a log of how it got there; don't wait for
+   an explicit ask before rewriting it.
 5. When both pass clean (or remaining findings are all deferred):
    - Invoke the issue-lead one final time (it will set phase to completed)
    - Print a FINAL RECAP (see below)
