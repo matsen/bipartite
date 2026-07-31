@@ -97,5 +97,8 @@ Step 3+. A few things carry over regardless of what they ask for:
   dashboards across many slots) and `/bip-epic-recover` (rebuilds
   processes killed by a host reboot). This skill is for a plain new
   conversation re-orienting inside one slot.
+- Its write-side counterpart is `/bip-spawn-tuckin` — run that before a
+  context reset so this skill has a clean commit/PR state to read on
+  the next cold-start.
 - Works for both EPIC slots (`.epic-status.json` present) and plain
   `/bip-spawn` sessions (no status file — just a branch and maybe a PR).
