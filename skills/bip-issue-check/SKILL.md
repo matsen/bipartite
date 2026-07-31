@@ -198,9 +198,47 @@ decisions. Flag conflicts as **HIGH**. Common things to catch:
    **Recommend:** Name the specific existing files that set the
    pattern and show what the issue should match.
 
+#### Deep reuse audit (code-reuse-reviewer)
+
+8c. **Fan-out reuse audit via `code-reuse-reviewer`**: When the issue
+   proposes extending or modifying existing modules (not pure greenfield
+   work), spawn the `code-reuse-reviewer` agent as a deeper pass beyond
+   8b's lightweight sibling-file check. This agent fans out per-file
+   sub-agents to actively hunt for duplicated helpers/constants and
+   missed reuse opportunities — worth the extra cost when there's a
+   concrete integration point to check the proposal against.
+
+   **Gate — does this apply?** Check whether the issue names specific
+   existing files, functions, or packages it will extend, modify, or
+   call into.
+   - **Opportunity present** (run it): the issue names existing
+     files/functions/packages as integration points, even loosely
+     ("add a method to X", "extend the Y pipeline", "hook into Z's
+     config loading"). In this codebase, this is the common case —
+     very little proposed work is pure greenfield.
+   - **No opportunity** (skip it): the issue describes a genuinely new
+     package/directory with no stated integration point into existing
+     code. Note explicitly in the report "skipped — no integration
+     point found" rather than silently omitting it, so the gate call
+     itself is reviewable.
+
+   **How to run:** Use the Agent tool with
+   `subagent_type: code-reuse-reviewer`. Pass it the issue's proposed
+   interfaces/design and the specific existing files it names as
+   integration points, and ask it to check for: helpers or constants
+   that already exist and would be duplicated, structural patterns it
+   should follow but doesn't, and any existing function it could call
+   instead of reimplementing.
+
+   **Flag as HIGH if** the agent finds an existing helper, constant, or
+   pattern that the issue's proposed design would duplicate or bypass.
+
+   **Recommend:** Name the specific existing symbol or file and show
+   how the issue's design should call it instead.
+
 #### Redundancy with existing issues
 
-8c. **Duplicate or overlapping issues**: Search open GitHub issues to
+8d. **Duplicate or overlapping issues**: Search open GitHub issues to
    check whether the proposed work duplicates or substantially overlaps
    with an existing issue. This prevents wasted effort and conflicting
    implementations.
