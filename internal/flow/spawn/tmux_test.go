@@ -1,6 +1,77 @@
 package spawn
 
-import "testing"
+import (
+	"os/exec"
+	"path/filepath"
+	"testing"
+)
+
+// requireTmux skips the test if tmux isn't available in the test environment.
+func requireTmux(t *testing.T) {
+	t.Helper()
+	if _, err := exec.LookPath("tmux"); err != nil {
+		t.Skip("tmux not available")
+	}
+}
+
+// withTmuxSessionIn starts a detached tmux session with cwd set to dir,
+// runs fn, then tears the session down.
+func withTmuxSessionIn(t *testing.T, dir, sessionName string, fn func()) {
+	t.Helper()
+	if err := exec.Command("tmux", "new-session", "-d", "-s", sessionName, "-c", dir).Run(); err != nil {
+		t.Fatalf("starting tmux session: %v", err)
+	}
+	defer exec.Command("tmux", "kill-session", "-t", sessionName).Run()
+	fn()
+}
+
+func TestOccupyingPane(t *testing.T) {
+	requireTmux(t)
+
+	dir := t.TempDir()
+	sessionName := "bip-test-occupying-pane"
+
+	withTmuxSessionIn(t, dir, sessionName, func() {
+		occupied, err := OccupyingPane(dir)
+		if err != nil {
+			t.Fatalf("OccupyingPane(%q) error: %v", dir, err)
+		}
+		if occupied == "" {
+			t.Errorf("OccupyingPane(%q) = \"\", want a match for the live pane", dir)
+		}
+	})
+
+	// After the session is torn down, no pane should occupy dir anymore.
+	occupied, err := OccupyingPane(dir)
+	if err != nil {
+		t.Fatalf("OccupyingPane(%q) error after teardown: %v", dir, err)
+	}
+	if occupied != "" {
+		t.Errorf("OccupyingPane(%q) = %q after session teardown, want \"\"", dir, occupied)
+	}
+}
+
+func TestOccupyingPane_RelativeAndSymlinkedPathsMatch(t *testing.T) {
+	requireTmux(t)
+
+	realDir := t.TempDir()
+	linkParent := t.TempDir()
+	symlink := filepath.Join(linkParent, "link")
+	if err := exec.Command("ln", "-s", realDir, symlink).Run(); err != nil {
+		t.Fatalf("creating symlink: %v", err)
+	}
+
+	sessionName := "bip-test-occupying-pane-symlink"
+	withTmuxSessionIn(t, realDir, sessionName, func() {
+		occupied, err := OccupyingPane(symlink)
+		if err != nil {
+			t.Fatalf("OccupyingPane(%q) error: %v", symlink, err)
+		}
+		if occupied == "" {
+			t.Errorf("OccupyingPane(%q) = \"\", want a match through the symlink", symlink)
+		}
+	})
+}
 
 func TestBuildWindowName(t *testing.T) {
 	tests := []struct {

@@ -31,6 +31,52 @@ func WindowExists(windowName string) bool {
 	return false
 }
 
+// OccupyingPane returns the canonicalized cwd of a live tmux pane already
+// sitting in repoPath, or "" if none. Both sides are resolved through
+// EvalSymlinks + Abs so ~, relative, and symlinked forms compare equal.
+func OccupyingPane(repoPath string) (string, error) {
+	target, err := canonicalizePath(repoPath)
+	if err != nil {
+		return "", fmt.Errorf("resolving path: %w", err)
+	}
+
+	cmd := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_current_path}")
+	output, err := cmd.Output()
+	if err != nil {
+		// No tmux server or no panes; nothing is occupying anything.
+		return "", nil
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		paneDir, err := canonicalizePath(line)
+		if err != nil {
+			continue
+		}
+		if paneDir == target {
+			return line, nil
+		}
+	}
+	return "", nil
+}
+
+func canonicalizePath(path string) (string, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		// Path may not exist on disk (e.g. a pane cwd that was since
+		// removed); fall back to the absolute form.
+		return abs, nil
+	}
+	return resolved, nil
+}
+
 // CreateWindow creates a tmux window and runs Claude Code with the given prompt.
 // model, if non-empty, is passed through as claude's --model flag.
 func CreateWindow(windowName, repoPath, prompt, url, model string) error {

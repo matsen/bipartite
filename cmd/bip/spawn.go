@@ -43,6 +43,7 @@ var spawnPromptFile string
 var spawnDir string
 var spawnName string
 var spawnModel string
+var spawnForce bool
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
@@ -51,6 +52,7 @@ func init() {
 	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
 	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
 	spawnCmd.Flags().StringVar(&spawnModel, "model", "", "Model to pass to the claude launcher (default: unspecified)")
+	spawnCmd.Flags().BoolVar(&spawnForce, "force", false, "Spawn even if a live tmux pane already occupies the target directory")
 }
 
 func resolvePrompt() string {
@@ -275,6 +277,18 @@ func spawnWindow(windowName, workDir, prompt, url, model string) {
 	if spawn.WindowExists(windowName) {
 		fmt.Printf("Window %s already exists, skipping\n", windowName)
 		return
+	}
+
+	if !spawnForce {
+		occupied, err := spawn.OccupyingPane(workDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: checking for occupied directory: %v\n", err)
+			os.Exit(1)
+		}
+		if occupied != "" {
+			fmt.Fprintf(os.Stderr, "refusing: a tmux pane is already live in %s (use --force to override)\n", workDir)
+			os.Exit(1)
+		}
 	}
 
 	if err := spawn.CreateWindow(windowName, workDir, prompt, url, model); err != nil {
