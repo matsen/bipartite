@@ -44,17 +44,31 @@ Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
 **Clone mode** (`local_worktrees` absent or false):
 
-If clone-name not specified, find an idle clone:
+If clone-name not specified, find an idle clone. A good pick is on `main`,
+clean, and has no live tmux pane in its directory — the pool is shared
+across operators and finishing workers self-claim slots via
+`/bip-epic-handoff`, so filter these out to avoid choosing one that's
+already taken:
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+OCCUPIED=$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
-  branch=$(git -C "$CLONE_ROOT/$name" branch --show-current 2>/dev/null)
-  [ "$branch" = "main" ] && echo "$name"
+  dir="$CLONE_ROOT/$name"
+  [ "$(git -C "$dir" branch --show-current 2>/dev/null)" = "main" ] || continue
+  [ -z "$(git -C "$dir" status --porcelain 2>/dev/null)" ] || continue
+  echo "$OCCUPIED" | grep -qxF "$dir" && continue   # live tmux pane here → owned
+  [ -f "$dir/.epic-status.json" ] && continue         # a worker claimed it, unfinished
+  echo "$name"
 done
 ```
 
-Prefer clones with clean worktrees. If all busy, offer to create a new
-clone using a name from `new_clone_names` in the config.
+This selection is **best-effort** — it avoids clones that are obviously
+taken. The actual guarantee is `bip spawn` itself: it refuses to launch
+into a directory a live tmux pane already occupies (`--force` overrides), so
+even if the pool churns between selection and spawn you can never land a
+second agent in one checkout. Prefer clones with clean worktrees. If all
+busy, offer to create a new clone using a name from `new_clone_names` in
+the config.
 
 **Worktree mode** (`local_worktrees: true`):
 
@@ -394,6 +408,13 @@ Now read the issue and begin work:
 Write the composed prompt to a temp file, then use `bip spawn` with
 `--prompt-file` to pass it. This avoids shell expansion issues with
 quotes, braces, and special characters in the prompt.
+
+`bip spawn` refuses to launch into a directory a live tmux pane already
+occupies (exits non-zero with `refusing: a tmux pane is already live in
+<dir>`), so a clone claimed between Step 1 and here is caught at the spawn
+itself — no second agent can land in one checkout. If you hit that refusal,
+pick another idle clone. Pass `--force` only when you deliberately want a
+second session in the same directory.
 
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
