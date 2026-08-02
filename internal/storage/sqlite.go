@@ -24,6 +24,14 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	authors_json, supplement_paths_json,
 	pmid, pmcid, arxiv_id, s2_id, notes, tags_json`
 
+// bm25Weights assigns per-column relevance weight for ranking FTS matches,
+// in refs_fts column order (id, title, abstract, authors_text, pub_year,
+// notes, tags_text). A title match is the strongest relevance signal, so it
+// is weighted well above an incidental hit in the abstract or notes; id and
+// pub_year are excluded from the FTS query itself but still need a weight
+// entry per bm25()'s column-count requirement.
+const bm25Weights = "0.0, 10.0, 2.0, 4.0, 0.0, 1.0, 2.0"
+
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
 	db, err := sql.Open("sqlite", path)
@@ -222,7 +230,7 @@ func (d *DB) Search(query string, limit int) ([]reference.Reference, int, error)
 	rows, err := d.db.Query(`
 		SELECT `+selectRefFields+`
 		FROM refs
-		JOIN (SELECT id AS mid, bm25(refs_fts) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+		JOIN (SELECT id AS mid, bm25(refs_fts, `+bm25Weights+`) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
 		ORDER BY m.rank`, ftsQuery)
 	if err != nil {
 		return nil, 0, fmt.Errorf("searching: %w", err)
@@ -254,7 +262,7 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	rows, err := d.db.Query(`
 		SELECT `+selectRefFields+`
 		FROM refs
-		JOIN (SELECT id AS mid, bm25(refs_fts) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+		JOIN (SELECT id AS mid, bm25(refs_fts, `+bm25Weights+`) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
 		ORDER BY m.rank
 	`, ftsQuery)
 	if err != nil {
@@ -347,7 +355,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		ftsQuery := strings.Join(ftsTerms, " AND ")
 		query = `SELECT ` + selectRefFields + `
 			FROM refs
-			JOIN (SELECT id AS mid, bm25(refs_fts) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+			JOIN (SELECT id AS mid, bm25(refs_fts, ` + bm25Weights + `) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
 			WHERE 1=1`
 		args = append([]interface{}{ftsQuery}, args...) // FTS arg must be first
 	} else {
