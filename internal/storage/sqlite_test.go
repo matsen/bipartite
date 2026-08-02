@@ -257,7 +257,7 @@ func TestDB_Search_Notes(t *testing.T) {
 	defer cleanup()
 
 	// Search for text that only appears in notes
-	refs, err := db.Search("SONIA", 10)
+	refs, _, err := db.Search("SONIA", 10)
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}
@@ -310,7 +310,7 @@ func TestDB_Search(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.query, func(t *testing.T) {
-			refs, err := db.Search(tt.query, tt.limit)
+			refs, _, err := db.Search(tt.query, tt.limit)
 			if err != nil {
 				t.Fatalf("Search() error = %v", err)
 			}
@@ -342,7 +342,7 @@ func TestDB_SearchField(t *testing.T) {
 	defer cleanup()
 
 	// Author search
-	refs, err := db.SearchField("author", "Smith", 10)
+	refs, _, err := db.SearchField("author", "Smith", 10)
 	if err != nil {
 		t.Fatalf("SearchField(author) error = %v", err)
 	}
@@ -351,7 +351,7 @@ func TestDB_SearchField(t *testing.T) {
 	}
 
 	// Title search
-	refs, err = db.SearchField("title", "Machine", 10)
+	refs, _, err = db.SearchField("title", "Machine", 10)
 	if err != nil {
 		t.Fatalf("SearchField(title) error = %v", err)
 	}
@@ -360,7 +360,7 @@ func TestDB_SearchField(t *testing.T) {
 	}
 
 	// Invalid field
-	_, err = db.SearchField("invalid", "test", 10)
+	_, _, err = db.SearchField("invalid", "test", 10)
 	if err == nil {
 		t.Error("SearchField(invalid) should return error")
 	}
@@ -557,7 +557,7 @@ func TestDB_SearchWithFilters(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			refs, err := db.SearchWithFilters(tt.filters, tt.limit)
+			refs, _, err := db.SearchWithFilters(tt.filters, tt.limit)
 			if err != nil {
 				t.Fatalf("SearchWithFilters() error = %v", err)
 			}
@@ -633,7 +633,7 @@ func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
 	}
 
 	// Search for rare author - should find all 5 papers
-	results, err := db.SearchWithFilters(SearchFilters{Authors: []string{"Rareauthor"}}, 50)
+	results, _, err := db.SearchWithFilters(SearchFilters{Authors: []string{"Rareauthor"}}, 50)
 	if err != nil {
 		t.Fatalf("SearchWithFilters() error = %v", err)
 	}
@@ -647,6 +647,89 @@ func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
 		if len(ref.Authors) == 0 || ref.Authors[0].Last != "Rareauthor" {
 			t.Errorf("Result %s has wrong author: %+v", ref.ID, ref.Authors)
 		}
+	}
+}
+
+// TestDB_Search_TotalAndUnlimited verifies truncation reporting (total vs.
+// len(refs)) and that limit <= 0 means unlimited, per issue #180.
+func TestDB_Search_TotalAndUnlimited(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
+
+	// 60 refs share a common keyword so a default-ish limit truncates them.
+	var refs []reference.Reference
+	for i := 0; i < 60; i++ {
+		refs = append(refs, reference.Reference{
+			ID:        fmt.Sprintf("Common%03d", i),
+			Title:     fmt.Sprintf("Paper %d about widgets", i),
+			Published: reference.PublicationDate{Year: 2020},
+			Source:    reference.ImportSource{Type: "test"},
+		})
+	}
+
+	if err := WriteAll(jsonlPath, refs); err != nil {
+		t.Fatalf("WriteAll() error = %v", err)
+	}
+
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB() error = %v", err)
+	}
+	defer db.Close()
+
+	if _, err := db.RebuildFromJSONL(jsonlPath); err != nil {
+		t.Fatalf("RebuildFromJSONL() error = %v", err)
+	}
+
+	// Truncated: limit smaller than total match count.
+	results, total, err := db.Search("widgets", 10)
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	if len(results) != 10 {
+		t.Errorf("Search(limit=10) returned %d results, want 10", len(results))
+	}
+	if total != 60 {
+		t.Errorf("Search(limit=10) total = %d, want 60", total)
+	}
+
+	// Unlimited via 0.
+	results, total, err = db.Search("widgets", 0)
+	if err != nil {
+		t.Fatalf("Search(limit=0) error = %v", err)
+	}
+	if len(results) != 60 || total != 60 {
+		t.Errorf("Search(limit=0) = %d results, total %d, want 60/60", len(results), total)
+	}
+
+	// Unlimited via -1 (documented alias).
+	results, total, err = db.Search("widgets", -1)
+	if err != nil {
+		t.Fatalf("Search(limit=-1) error = %v", err)
+	}
+	if len(results) != 60 || total != 60 {
+		t.Errorf("Search(limit=-1) = %d results, total %d, want 60/60", len(results), total)
+	}
+}
+
+// TestDB_Search_RelevanceOrder verifies results are ranked by relevance
+// (FTS5 bm25) rather than alphabetically by citation key, per issue #180.
+func TestDB_Search_RelevanceOrder(t *testing.T) {
+	db, _, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	refs, _, err := db.Search("machine learning", 10)
+	if err != nil {
+		t.Fatalf("Search() error = %v", err)
+	}
+	if len(refs) == 0 {
+		t.Fatal("Search(machine learning) returned no results")
+	}
+	// The exact title match should rank first, not wherever it falls
+	// alphabetically among the fixture's other IDs.
+	if refs[0].ID != "Smith2026-ab" {
+		t.Errorf("Search(machine learning)[0] = %s, want Smith2026-ab (best title match first)", refs[0].ID)
 	}
 }
 
