@@ -58,18 +58,27 @@ Keep the fetched text in memory as the "before" copy; the rest of this
 workflow treats it the same as a file's contents, substituting "PR body" for
 "file" throughout. Applying the result means posting it back, per Step 5a.
 
-### Step 2: Commit first if the target is a file, tracked, and dirty
+### Step 2: Get a recovery copy before the pass
+
+This is a large in-place rewrite, so a clean way back matters more than how
+it's taken.
 
 ```bash
 git status --short <file>
 ```
 
-If there are uncommitted changes, say so and offer to commit before the pass.
-This is a large in-place rewrite; an easy diff to review and revert is worth
-one commit. Do not commit without approval.
+- **Tracked and clean:** nothing to do — `git diff`/`git checkout <file>` are
+  the recovery path.
+- **Tracked and dirty:** say so and offer to commit before the pass. Do not
+  commit without approval.
+- **Untracked or gitignored** — this is the common case for `ISSUE-*.md`
+  files, which this repo's CLAUDE.md forbids ever committing — there is no
+  git history to fall back on. Instead copy the file to the scratchpad
+  (`cp <file> <scratchpad>/<name>.before.md`) and use that copy, not git, as
+  both the recovery path and the diff baseline in Step 5.
 
 PR bodies have no working tree to protect — skip this step for a PR target;
-the "before" copy from Step 1 is the recovery path instead.
+the "before" copy from Step 1 already serves the same purpose.
 
 ### Step 3: Spawn a subagent — one per section on anything large
 
@@ -90,9 +99,8 @@ report. Observed: a ~5,500-word EPIC completed cleanly in one pass; an
   parallel. Give each the same rules and keep-list plus its own section
   range. Sections are independent for this purpose — the pass makes local
   edits and never needs cross-section context.
-- **Either way, commit first (Step 2) when the target is a file.** A partial
-  rewrite is recoverable only if there is a clean commit behind it. For a PR
-  body, the "before" copy from Step 1 serves the same purpose.
+- **Either way, get the recovery copy first (Step 2).** A partial rewrite is
+  recoverable only if there is a clean commit or before-copy behind it.
 
 If a run does die partway, do not assume the target is broken. Verify instead
 (Step 5's integrity checks are fast), keep the partial work if it passes,
@@ -170,20 +178,21 @@ they are cheap to review when listed.
 ## Step 5: Review before accepting
 
 **First, integrity-check the target** — always, and especially if a run died
-partway. For a file, these are cheap and catch a bad pass immediately:
+partway. Diff against whatever the recovery copy from Step 2 turned out to
+be: for a tracked file, that's git; for an untracked/gitignored file (e.g.
+`ISSUE-*.md`) or a PR body, it's the scratchpad/in-memory "before" copy.
 
 ```bash
+# tracked file:
 git diff --stat <file>
-# every citation key survives:
 git show HEAD:<file> | grep -oE '`[A-Z][A-Za-z-]+[0-9]{4}-[a-z]{2}`' | sort -u > /tmp/k_old
+# untracked file or PR body — diff against the before-copy instead:
+diff <scratchpad>/<name>.before.md <file>
+grep -oE '`[A-Z][A-Za-z-]+[0-9]{4}-[a-z]{2}`' <scratchpad>/<name>.before.md | sort -u > /tmp/k_old
+# either way, check citation keys and structure survive:
 grep -oE '`[A-Z][A-Za-z-]+[0-9]{4}-[a-z]{2}`' <file> | sort -u | diff /tmp/k_old -
-# structure survives:
 grep -c '^## \|^### ' <file>
 ```
-
-For a PR body, diff the "before" copy from Step 1 against the squashed
-result the same way — citation keys, links, and heading structure should all
-still be present.
 
 Then spot-check a handful of the document's most distinctive numbers. A pass
 that silently dropped a citation or a figure is the failure mode worth
