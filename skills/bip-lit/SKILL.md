@@ -42,7 +42,14 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
    ```
    Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper. For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead. The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
 
-4. **Only if not found locally AND user confirms**, use ASTA:
+4. **Before concluding a paper is absent, try an exact-match check** —
+   `bip search -a "LastName"` or `bip search --doi "..."` — rather than another
+   keyword permutation. `bip search` reports when results are truncated
+   (`Found N references (showing M; ...)`), so a plain "not found" is
+   trustworthy, but a truncated keyword search on its own is not proof of
+   absence.
+
+5. **Only if not found locally AND user confirms**, use ASTA:
    ```
    "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
    ```
@@ -86,6 +93,8 @@ Suggest creating concepts when you notice:
 | Search by venue | `bip search --venue "Nature" --human` |
 | Lookup by DOI | `bip search --doi "10.1234/..." --human` |
 | Combined search | `bip search "topic" -a "Author" --year 2020: --human` |
+| Limit results | `bip search "topic" --limit 100 --human` (default 50, ranked by relevance) |
+| Unlimited results | `bip search "topic" --limit 0 --human` (`-1` also works) |
 | Semantic search | `bip semantic "query"` |
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
@@ -134,7 +143,10 @@ bip search "deep mutational scanning" --author "Bloom" --year 2023:
 
 ### Query Formulation Tips
 
-**Keep queries short and specific** - Long conceptual queries perform poorly:
+**Keep queries short and specific** - long conceptual queries are a correctness
+hazard, not just slow: `bip search` uses exact-token AND matching, so one
+inflected or half-remembered word (e.g. plural vs. singular) can zero out an
+otherwise-matching query:
 - Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
 - Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
 

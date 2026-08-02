@@ -20,6 +20,13 @@ var (
 	searchTag     string
 )
 
+// SearchResult is the --json shape for `bip search`. Total may exceed
+// len(References) when the result was truncated by --limit.
+type SearchResult struct {
+	References []reference.Reference `json:"references"`
+	Total      int                   `json:"total"`
+}
+
 // hasAnyFilterFlags returns true if any field-specific search flags were provided.
 // This determines whether to use the new flag-based search or legacy positional query.
 func hasAnyFilterFlags() bool {
@@ -32,7 +39,7 @@ func hasAnyFilterFlags() bool {
 }
 
 func init() {
-	searchCmd.Flags().IntVar(&searchLimit, "limit", DefaultSearchLimit, "Maximum results to return")
+	searchCmd.Flags().IntVar(&searchLimit, "limit", DefaultSearchLimit, "Maximum results to return (0 or -1 for unlimited)")
 	searchCmd.Flags().StringArrayVarP(&searchAuthors, "author", "a", nil, "Search by author name (can be repeated, uses AND logic)")
 	searchCmd.Flags().StringVar(&searchYear, "year", "", "Filter by year: exact (2024), range (2020:2024), or open (2020: or :2024)")
 	searchCmd.Flags().StringVarP(&searchTitle, "title", "t", "", "Search in title only")
@@ -52,6 +59,13 @@ Query Syntax (positional argument):
   author:name    - Search author names only (legacy syntax)
   title:text     - Search title only
 
+Plain-text matching is exact-token (AND logic) and unstemmed: "germinal
+center" will not match a title containing only "germinal centers". Try
+--author or --doi for a definitive check before concluding a paper is
+absent from the library.
+
+Results are ranked by relevance (best match first), not alphabetically.
+
 Flags:
   --author, -a   - Search by author (repeatable, AND logic, exact last name)
   --title, -t    - Search in title only
@@ -59,6 +73,7 @@ Flags:
   --venue        - Filter by venue/journal (partial match)
   --doi          - Lookup by exact DOI
   --tag          - Filter by tag/label (partial match)
+  --limit        - Maximum results to return (default 50; 0 or -1 for unlimited)
 
 Author matching uses exact last name matching to avoid false positives:
   -a "Yu"           - Matches last name "Yu" exactly (not "Yujia")
@@ -90,6 +105,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	defer db.Close()
 
 	var refs []reference.Reference
+	var total int
 	var err error
 
 	// Check if using flag-based search
@@ -117,7 +133,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			filters.YearTo = to
 		}
 
-		refs, err = db.SearchWithFilters(filters, searchLimit)
+		refs, total, err = db.SearchWithFilters(filters, searchLimit)
 	} else if len(args) > 0 {
 		// Legacy behavior: positional query argument
 		query := args[0]
@@ -125,12 +141,12 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		// Check for field-specific searches (legacy syntax)
 		if strings.HasPrefix(query, "author:") {
 			value := strings.TrimPrefix(query, "author:")
-			refs, err = db.SearchField("author", value, searchLimit)
+			refs, total, err = db.SearchField("author", value, searchLimit)
 		} else if strings.HasPrefix(query, "title:") {
 			value := strings.TrimPrefix(query, "title:")
-			refs, err = db.SearchField("title", value, searchLimit)
+			refs, total, err = db.SearchField("title", value, searchLimit)
 		} else {
-			refs, err = db.Search(query, searchLimit)
+			refs, total, err = db.Search(query, searchLimit)
 		}
 	} else {
 		exitWithError(ExitError, "must specify a query or at least one filter (--author, --year)")
@@ -149,13 +165,17 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		if len(refs) == 0 {
 			fmt.Println("No references found")
 		} else {
-			fmt.Printf("Found %d references:\n\n", len(refs))
+			if len(refs) < total {
+				fmt.Printf("Found %d references (showing %d; use --limit to see more):\n\n", total, len(refs))
+			} else {
+				fmt.Printf("Found %d references:\n\n", len(refs))
+			}
 			for i, ref := range refs {
 				printRefSummary(i+1, ref)
 			}
 		}
 	} else {
-		outputJSON(refs)
+		outputJSON(SearchResult{References: refs, Total: total})
 	}
 
 	return nil
