@@ -90,6 +90,33 @@ func setupTestDB(t *testing.T) (*DB, string, func()) {
 	return db, tmpDir, cleanup
 }
 
+// setupDBWithRefs creates a test database from the given references,
+// bypassing setupTestDB's fixed 3-ref fixture for tests that need a larger
+// or differently-shaped synthetic corpus.
+func setupDBWithRefs(t *testing.T, refs []reference.Reference) (*DB, func()) {
+	t.Helper()
+
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
+
+	if err := WriteAll(jsonlPath, refs); err != nil {
+		t.Fatalf("WriteAll() error = %v", err)
+	}
+
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB() error = %v", err)
+	}
+
+	if _, err := db.RebuildFromJSONL(jsonlPath); err != nil {
+		db.Close()
+		t.Fatalf("RebuildFromJSONL() error = %v", err)
+	}
+
+	return db, func() { db.Close() }
+}
+
 func TestOpenDB_CreatesSchema(t *testing.T) {
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
@@ -592,10 +619,6 @@ func TestDB_SearchWithFilters(t *testing.T) {
 // author-only searches would miss results because the query used an arbitrary
 // LIMIT before filtering by author.
 func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
-
 	// Create 150 refs with common authors, plus a few with a rare author
 	var refs []reference.Reference
 	for i := 0; i < 150; i++ {
@@ -618,19 +641,8 @@ func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
 		})
 	}
 
-	if err := WriteAll(jsonlPath, refs); err != nil {
-		t.Fatalf("WriteAll() error = %v", err)
-	}
-
-	db, err := OpenDB(dbPath)
-	if err != nil {
-		t.Fatalf("OpenDB() error = %v", err)
-	}
-	defer db.Close()
-
-	if _, err := db.RebuildFromJSONL(jsonlPath); err != nil {
-		t.Fatalf("RebuildFromJSONL() error = %v", err)
-	}
+	db, cleanup := setupDBWithRefs(t, refs)
+	defer cleanup()
 
 	// Search for rare author - should find all 5 papers
 	results, _, err := db.SearchWithFilters(SearchFilters{Authors: []string{"Rareauthor"}}, 50)
@@ -653,10 +665,6 @@ func TestDB_SearchWithFilters_LargeDB(t *testing.T) {
 // TestDB_Search_TotalAndUnlimited verifies truncation reporting (total vs.
 // len(refs)) and that limit <= 0 means unlimited, per issue #180.
 func TestDB_Search_TotalAndUnlimited(t *testing.T) {
-	tmpDir := t.TempDir()
-	dbPath := filepath.Join(tmpDir, "test.db")
-	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
-
 	// 60 refs share a common keyword so a default-ish limit truncates them.
 	var refs []reference.Reference
 	for i := 0; i < 60; i++ {
@@ -668,19 +676,8 @@ func TestDB_Search_TotalAndUnlimited(t *testing.T) {
 		})
 	}
 
-	if err := WriteAll(jsonlPath, refs); err != nil {
-		t.Fatalf("WriteAll() error = %v", err)
-	}
-
-	db, err := OpenDB(dbPath)
-	if err != nil {
-		t.Fatalf("OpenDB() error = %v", err)
-	}
-	defer db.Close()
-
-	if _, err := db.RebuildFromJSONL(jsonlPath); err != nil {
-		t.Fatalf("RebuildFromJSONL() error = %v", err)
-	}
+	db, cleanup := setupDBWithRefs(t, refs)
+	defer cleanup()
 
 	// Truncated: limit smaller than total match count.
 	results, total, err := db.Search("widgets", 10)

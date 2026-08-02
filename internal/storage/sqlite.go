@@ -24,13 +24,33 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	authors_json, supplement_paths_json,
 	pmid, pmcid, arxiv_id, s2_id, notes, tags_json`
 
-// bm25Weights assigns per-column relevance weight for ranking FTS matches,
-// in refs_fts column order (id, title, abstract, authors_text, pub_year,
-// notes, tags_text). A title match is the strongest relevance signal, so it
-// is weighted well above an incidental hit in the abstract or notes; id and
-// pub_year are excluded from the FTS query itself but still need a weight
-// entry per bm25()'s column-count requirement.
-const bm25Weights = "0.0, 10.0, 2.0, 4.0, 0.0, 1.0, 2.0"
+// Per-column relevance weights for ranking FTS matches, in refs_fts column
+// order (id, title, abstract, authors_text, pub_year, notes, tags_text). A
+// title match is the strongest relevance signal, so it is weighted well
+// above an incidental hit in the abstract or notes; id and pub_year are
+// excluded from the FTS query itself but still need a weight entry per
+// bm25()'s column-count requirement.
+const (
+	bm25WeightID       = 0.0
+	bm25WeightTitle    = 10.0
+	bm25WeightAbstract = 2.0
+	bm25WeightAuthors  = 4.0
+	bm25WeightPubYear  = 0.0
+	bm25WeightNotes    = 1.0
+	bm25WeightTags     = 2.0
+)
+
+// bm25Weights is the comma-separated weight list bm25() expects, built from
+// the named constants above so the column order stays traceable to the
+// refs_fts schema (createSchema) rather than a bare literal.
+var bm25Weights = fmt.Sprintf("%g, %g, %g, %g, %g, %g, %g",
+	bm25WeightID, bm25WeightTitle, bm25WeightAbstract, bm25WeightAuthors,
+	bm25WeightPubYear, bm25WeightNotes, bm25WeightTags)
+
+// ftsRankJoin joins refs to their bm25 relevance rank for a `refs_fts MATCH
+// ?` query. Shared by Search, SearchField, and SearchWithFilters so the
+// ranking expression only needs to change in one place.
+var ftsRankJoin = "JOIN (SELECT id AS mid, bm25(refs_fts, " + bm25Weights + ") AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id"
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
@@ -230,7 +250,7 @@ func (d *DB) Search(query string, limit int) ([]reference.Reference, int, error)
 	rows, err := d.db.Query(`
 		SELECT `+selectRefFields+`
 		FROM refs
-		JOIN (SELECT id AS mid, bm25(refs_fts, `+bm25Weights+`) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+		`+ftsRankJoin+`
 		ORDER BY m.rank`, ftsQuery)
 	if err != nil {
 		return nil, 0, fmt.Errorf("searching: %w", err)
@@ -241,8 +261,8 @@ func (d *DB) Search(query string, limit int) ([]reference.Reference, int, error)
 	if err != nil {
 		return nil, 0, err
 	}
-	total := len(refs)
-	return limitRefs(refs, limit), total, nil
+	truncated, total := splitByLimit(refs, limit)
+	return truncated, total, nil
 }
 
 // SearchField performs a search on a specific field, ranked by relevance.
@@ -262,7 +282,7 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	rows, err := d.db.Query(`
 		SELECT `+selectRefFields+`
 		FROM refs
-		JOIN (SELECT id AS mid, bm25(refs_fts, `+bm25Weights+`) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+		`+ftsRankJoin+`
 		ORDER BY m.rank
 	`, ftsQuery)
 	if err != nil {
@@ -274,8 +294,8 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	if err != nil {
 		return nil, 0, err
 	}
-	total := len(refs)
-	return limitRefs(refs, limit), total, nil
+	truncated, total := splitByLimit(refs, limit)
+	return truncated, total, nil
 }
 
 // limitRefs returns refs truncated to limit entries. limit <= 0 means unlimited.
@@ -284,6 +304,12 @@ func limitRefs(refs []reference.Reference, limit int) []reference.Reference {
 		return refs
 	}
 	return refs[:limit]
+}
+
+// splitByLimit truncates refs to limit entries and reports the total match
+// count before truncation. limit <= 0 means unlimited.
+func splitByLimit(refs []reference.Reference, limit int) ([]reference.Reference, int) {
+	return limitRefs(refs, limit), len(refs)
 }
 
 // SearchFilters contains optional filters for SearchWithFilters.
@@ -317,10 +343,6 @@ type SearchFilters struct {
 // Author filtering uses exact last name matching to avoid false positives.
 // For example, -a "Yu" matches "Timothy Yu" but not "Yujia Chan".
 func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Reference, int, error) {
-	var ftsTerms []string
-	var sqlConditions []string
-	var args []interface{}
-
 	// Parse author queries upfront for post-filtering
 	var authorQueries []author.Query
 	for _, a := range filters.Authors {
@@ -328,6 +350,36 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 			authorQueries = append(authorQueries, author.ParseQuery(a))
 		}
 	}
+
+	query, args := buildFiltersQuery(filters, authorQueries)
+
+	rows, err := d.db.Query(query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("searching with filters: %w", err)
+	}
+	defer rows.Close()
+
+	refs, err := scanReferences(rows)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Post-filter by authors for case-insensitive matching and first name prefixes
+	if len(authorQueries) > 0 {
+		refs = filterByAuthors(refs, authorQueries)
+	}
+
+	truncated, total := splitByLimit(refs, limit)
+	return truncated, total, nil
+}
+
+// buildFiltersQuery assembles the SQL query and args for SearchWithFilters
+// from filters and its pre-parsed author queries. Ranked by bm25 relevance
+// when a keyword/title FTS term is present, else by id.
+func buildFiltersQuery(filters SearchFilters, authorQueries []author.Query) (string, []interface{}) {
+	var ftsTerms []string
+	var sqlConditions []string
+	var args []interface{}
 
 	// Build FTS query parts (keyword and title searches)
 	if filters.Keyword != "" {
@@ -355,7 +407,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		ftsQuery := strings.Join(ftsTerms, " AND ")
 		query = `SELECT ` + selectRefFields + `
 			FROM refs
-			JOIN (SELECT id AS mid, bm25(refs_fts, ` + bm25Weights + `) AS rank FROM refs_fts WHERE refs_fts MATCH ?) m ON m.mid = refs.id
+			` + ftsRankJoin + `
 			WHERE 1=1`
 		args = append([]interface{}{ftsQuery}, args...) // FTS arg must be first
 	} else {
@@ -395,24 +447,7 @@ func (d *DB) SearchWithFilters(filters SearchFilters, limit int) ([]reference.Re
 		query += " ORDER BY id"
 	}
 
-	rows, err := d.db.Query(query, args...)
-	if err != nil {
-		return nil, 0, fmt.Errorf("searching with filters: %w", err)
-	}
-	defer rows.Close()
-
-	refs, err := scanReferences(rows)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// Post-filter by authors for case-insensitive matching and first name prefixes
-	if len(authorQueries) > 0 {
-		refs = filterByAuthors(refs, authorQueries)
-	}
-
-	total := len(refs)
-	return limitRefs(refs, limit), total, nil
+	return query, args
 }
 
 // filterByAuthors filters references to those matching all author queries.

@@ -20,6 +20,13 @@ var (
 	searchTag     string
 )
 
+// SearchResult is the --json shape for `bip search`. Total may exceed
+// len(References) when the result was truncated by --limit.
+type SearchResult struct {
+	References []reference.Reference `json:"references"`
+	Total      int                   `json:"total"`
+}
+
 // hasAnyFilterFlags returns true if any field-specific search flags were provided.
 // This determines whether to use the new flag-based search or legacy positional query.
 func hasAnyFilterFlags() bool {
@@ -157,19 +164,18 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	if humanOutput {
 		if len(refs) == 0 {
 			fmt.Println("No references found")
-		} else if len(refs) < total {
-			fmt.Printf("Found %d references (showing %d; use --limit to see more):\n\n", total, len(refs))
-			for i, ref := range refs {
-				printRefSummary(i+1, ref)
-			}
 		} else {
-			fmt.Printf("Found %d references:\n\n", len(refs))
+			if len(refs) < total {
+				fmt.Printf("Found %d references (showing %d; use --limit to see more):\n\n", total, len(refs))
+			} else {
+				fmt.Printf("Found %d references:\n\n", len(refs))
+			}
 			for i, ref := range refs {
 				printRefSummary(i+1, ref)
 			}
 		}
 	} else {
-		outputJSON(refs)
+		outputJSON(SearchResult{References: refs, Total: total})
 	}
 
 	return nil
