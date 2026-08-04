@@ -34,7 +34,13 @@ Run from inside the slot's worktree/clone, on its branch.
 test -f .epic-status.json && echo "EPIC slot — use bip-epic-spawn's STOPPING POINTS protocol instead"
 ```
 
-If it exists, stop here and point the user at that protocol instead.
+If it exists, this is an EPIC slot. If a ralph-loop/issue-lead cycle is
+actually running, use bip-epic-spawn's STOPPING POINTS protocol. If
+you're just manually pausing a conversational EPIC slot (no active
+autonomous loop), the lightweight version is enough: update
+.epic-status.json/.epic-worklog.md in place and post the relevant
+PR/issue comments yourself — no need to spawn an issue-lead for a
+simple pause.
 
 ### Step 1: Commit local work
 
