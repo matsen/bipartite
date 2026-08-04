@@ -293,6 +293,29 @@ of an under-finished PR is high (follow-up churn, broken windows, work
 re-loaded into context cold weeks later, user prompts to merge what
 should have been one coherent change).
 
+FOLDING A FILED FOLLOW-UP BACK INTO ITS ORIGINATING PR — the reverse of
+the DEFERRAL RULE above. A follow-up issue may already exist (filed by
+issue-lead, or otherwise) that references an open PR as where it came
+from. If the user asks to work on that follow-up without explicitly
+asking for a new branch/PR/slot, don't assume the issue number implies
+new work-unit machinery — a GitHub issue number in a request is not
+automatically a new spawn target. Check for explicit continuation
+language first ("same clone," "this PR," "in place," "as part of the
+current work"). If present, treat it as scope-folding, not a new unit
+of work:
+  - Stay on the current branch. Don't create a new branch, clone, or
+    worktree for the issue number.
+  - Extend the current PR — a comment describing the plan (and any
+    feasibility findings) is enough to make it resumable; no new PR.
+  - Post a short redirect comment on the follow-up issue noting it will
+    close via the current PR instead of a standalone one.
+  - If this is an EPIC slot, update `.epic-status.json`/`.epic-worklog.md`
+    in place to describe the extended scope — don't replace them with
+    state for the follow-up issue as if it were a separate assignment.
+
+Only spawn a new slot/branch when the user asks for genuinely separate
+or parallel work — a different issue being *mentioned* is not that ask.
+
 REVIEW TRIAGE — For each /bip-pr-review finding, apply the DEFERRAL RULE above:
   • FIX NOW (default) — sensible improvements you can complete
     (naming, docs, small refactors, test gaps, lint, edge cases,
