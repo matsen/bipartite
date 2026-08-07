@@ -166,6 +166,9 @@ Do not auto-fix. Do not auto-file. The skill's job ends at the report.
 - **Make every number reproducible.** The "Methodology" section must show the exact `rg`/`wc` command for every cell. Agents working on a regression then know exactly what metric to move.
 - **First run has no deltas.** Suggest `--baseline` and stop; don't pretend every metric is a regression.
 - **Run on demand, not automatically.** Weekly cadence is a suggestion. Use `/bip.schedule` to wire a cron if you want it recurring.
+- **Read the docstring before calling anything zombie.** Scaffolding can be load-bearing for a tracked future issue. A zero import count is a question, not a verdict.
+- **Apply the deletion test before recommending a split.** Many real importers means deletion would force inlining everywhere and the split earns its keep; zero or one means a shallow module.
+- **Present numbered candidates and let the user grill them before filing** — each with the smell, a proposed fix, and a rough size. Don't pre-design. One well-anchored issue beats several threshold-driven ones; a size threshold surfaces the architecture question, it isn't the question.
 
 ## Why this shape
 

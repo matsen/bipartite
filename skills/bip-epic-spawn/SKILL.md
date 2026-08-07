@@ -107,6 +107,14 @@ git checkout main && git pull --ff-only origin main
 rm -f .epic-status.json .epic-worklog.md
 ```
 
+**Fetch inside each clone, never once in the conductor.** Each clone has its
+own `origin/main`, so a conductor-level fetch followed by
+`git -C <clone> reset --hard origin/main` resets the clone to *its own stale*
+ref and silently bases the worker on an old commit. The `cd` above is what
+makes this correct — don't collapse it in a batch-spawn loop (bitten twice in
+2026-08). `.epic-status.json` and `.epic-worklog.md` are gitignored, so
+`reset --hard` preserves them.
+
 **Worktree mode**: worktree was just created fresh from main — just clear
 any stale status files from a previous run on this same issue:
 ```bash
