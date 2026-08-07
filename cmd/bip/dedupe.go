@@ -8,6 +8,7 @@ import (
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/importer"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -223,11 +224,13 @@ func findSourceIDGroups(refs []reference.Reference) []DuplicateGroup {
 
 // findTitleGroups finds references sharing a normalized title. Refs whose
 // normalized title is empty, or whose raw title is the unknown-title
-// sentinel, are skipped.
+// sentinel, are skipped. A group is suppressed entirely if `supersedes`
+// already connects every member (e.g. after `bip s2 link-published` has run)
+// — the relationship is already known, so re-reporting it is noise.
 func findTitleGroups(refs []reference.Reference) []DuplicateGroup {
-	titleMap := make(map[string][]string) // normalized title -> list of ref IDs
+	titleMap := make(map[string][]int) // normalized title -> ref indices
 
-	for _, ref := range refs {
+	for i, ref := range refs {
 		if ref.Title == importer.UnknownTitle {
 			continue
 		}
@@ -235,13 +238,20 @@ func findTitleGroups(refs []reference.Reference) []DuplicateGroup {
 		if key == "" {
 			continue
 		}
-		titleMap[key] = append(titleMap[key], ref.ID)
+		titleMap[key] = append(titleMap[key], i)
 	}
 
 	var groups []DuplicateGroup
-	for title, ids := range titleMap {
-		if len(ids) < 2 {
+	for title, idxs := range titleMap {
+		if len(idxs) < 2 {
 			continue
+		}
+		if allSupersedesConnected(refs, idxs) {
+			continue
+		}
+		ids := make([]string, len(idxs))
+		for i, idx := range idxs {
+			ids[i] = refs[idx].ID
 		}
 		groups = append(groups, DuplicateGroup{
 			MatchBasis: "title",
@@ -255,6 +265,54 @@ func findTitleGroups(refs []reference.Reference) []DuplicateGroup {
 	})
 
 	return groups
+}
+
+// allSupersedesConnected reports whether every member of idxs (indices into
+// refs) is connected to every other member via a chain of `supersedes` ->
+// DOI links, i.e. the relationship between all of them is already recorded
+// and there is nothing left for a human to resolve.
+func allSupersedesConnected(refs []reference.Reference, idxs []int) bool {
+	n := len(idxs)
+	parent := make([]int, n)
+	for i := range parent {
+		parent[i] = i
+	}
+	var find func(int) int
+	find = func(x int) int {
+		if parent[x] != x {
+			parent[x] = find(parent[x])
+		}
+		return parent[x]
+	}
+	union := func(a, b int) {
+		ra, rb := find(a), find(b)
+		if ra != rb {
+			parent[ra] = rb
+		}
+	}
+
+	doi := func(i int) string { return s2.NormalizeDOI(refs[idxs[i]].DOI) }
+	supersedes := func(i int) string { return s2.NormalizeDOI(refs[idxs[i]].Supersedes) }
+
+	for i := 0; i < n; i++ {
+		sup := supersedes(i)
+		if sup == "" {
+			continue
+		}
+		for j := 0; j < n; j++ {
+			if i != j && doi(j) == sup {
+				union(i, j)
+			}
+		}
+	}
+
+	root := find(0)
+	for i := 1; i < n; i++ {
+		if find(i) != root {
+			return false
+		}
+	}
+	return true
 }
 
 // performMerge removes duplicates and updates edge references.

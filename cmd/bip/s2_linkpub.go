@@ -109,6 +109,11 @@ func runS2LinkPub(cmd *cobra.Command, args []string) error {
 		published, err := findPublishedVersion(ctx, client, ref)
 		if err != nil {
 			if s2.IsRateLimited(err) {
+				// Persist any links already found this run before bailing —
+				// otherwise a mid-run 429 silently discards that progress.
+				if writeErr := writeUpdatedRefs(refsPath, refs, updatedRefs); writeErr != nil {
+					return outputLinkPubError(ExitS2APIError, "saving refs before rate-limit exit", writeErr)
+				}
 				return outputS2RateLimited(err)
 			}
 			// Warn about unexpected errors instead of silently ignoring
@@ -159,16 +164,23 @@ func runS2LinkPub(cmd *cobra.Command, args []string) error {
 	}
 
 	// Write updated refs if any links were made
-	if len(updatedRefs) > 0 {
-		for idx, updated := range updatedRefs {
-			refs[idx] = updated
-		}
-		if err := storage.WriteAll(refsPath, refs); err != nil {
-			return outputLinkPubError(ExitS2APIError, "saving refs", err)
-		}
+	if err := writeUpdatedRefs(refsPath, refs, updatedRefs); err != nil {
+		return outputLinkPubError(ExitS2APIError, "saving refs", err)
 	}
 
 	return outputLinkPubResult(result)
+}
+
+// writeUpdatedRefs applies updatedRefs (index -> updated reference) onto refs
+// and writes the result, if there is anything to write.
+func writeUpdatedRefs(refsPath string, refs []reference.Reference, updatedRefs map[int]reference.Reference) error {
+	if len(updatedRefs) == 0 {
+		return nil
+	}
+	for idx, updated := range updatedRefs {
+		refs[idx] = updated
+	}
+	return storage.WriteAll(refsPath, refs)
 }
 
 func findPreprints(refs []reference.Reference) []reference.Reference {
