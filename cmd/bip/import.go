@@ -7,6 +7,7 @@ import (
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/importer"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -262,6 +263,17 @@ func reportImportResults(stats importStats, warnings []importer.ImportWarning, e
 	}
 }
 
+// findByNormalizedDOI searches for a reference whose DOI normalizes to
+// normDOI. normDOI must already be normalized and non-empty.
+func findByNormalizedDOI(refs []reference.Reference, normDOI string) (int, bool) {
+	for i, ref := range refs {
+		if s2.NormalizeDOI(ref.DOI) == normDOI {
+			return i, true
+		}
+	}
+	return -1, false
+}
+
 type importAction struct {
 	action      string // new, update, skip
 	reason      string
@@ -287,9 +299,11 @@ func classifyImport(existing []reference.Reference, newRef reference.Reference) 
 		}
 	}
 
-	// Check for DOI match (secondary deduplication)
-	if newRef.DOI != "" {
-		if idx, found := storage.FindByDOI(existing, newRef.DOI); found {
+	// Check for DOI match (secondary deduplication). Normalized so a
+	// re-import with different DOI casing/prefix updates the existing
+	// record instead of minting a case-variant sibling.
+	if normDOI := s2.NormalizeDOI(newRef.DOI); normDOI != "" {
+		if idx, found := findByNormalizedDOI(existing, normDOI); found {
 			return importAction{
 				action:      "update",
 				reason:      "doi_match",
