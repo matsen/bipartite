@@ -41,6 +41,32 @@ func TestMatchPapers_ByDOI(t *testing.T) {
 	}
 }
 
+func TestMatchPapers_ByDOI_CaseInsensitive(t *testing.T) {
+	region := ConflictRegion{
+		OursRefs: []reference.Reference{
+			{ID: "paper1", DOI: "10.1093/molbev/msl010", Title: "Paper One"},
+		},
+		TheirsRefs: []reference.Reference{
+			{ID: "paper1-different-id", DOI: "10.1093/MOLBEV/MSL010", Title: "Paper One"},
+		},
+	}
+
+	result := MatchPapers(region)
+
+	if len(result.Matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(result.Matches))
+	}
+	if match := result.Matches[0]; match.MatchedBy != "doi" {
+		t.Errorf("expected match by doi, got %s", match.MatchedBy)
+	}
+	if len(result.OursOnly) != 0 {
+		t.Errorf("expected 0 ours only, got %d", len(result.OursOnly))
+	}
+	if len(result.TheirsOnly) != 0 {
+		t.Errorf("expected 0 theirs only, got %d", len(result.TheirsOnly))
+	}
+}
+
 func TestMatchPapers_ByID(t *testing.T) {
 	region := ConflictRegion{
 		OursRefs: []reference.Reference{

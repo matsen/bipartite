@@ -208,6 +208,58 @@ func TestFindTitleGroups(t *testing.T) {
 	}
 }
 
+func TestFindTitleGroups_SupersedesSuppression(t *testing.T) {
+	tests := []struct {
+		name       string
+		refs       []reference.Reference
+		wantGroups int
+	}{
+		{
+			name: "pair fully linked by supersedes is suppressed",
+			refs: []reference.Reference{
+				{ID: "Preprint", Title: "A Shared Title", DOI: "10.1/preprint"},
+				{ID: "Published", Title: "a shared title", DOI: "10.1/published", Supersedes: "10.1/PREPRINT"},
+			},
+			wantGroups: 0,
+		},
+		{
+			name: "pair with no supersedes link is still reported",
+			refs: []reference.Reference{
+				{ID: "Preprint", Title: "A Shared Title", DOI: "10.1/preprint"},
+				{ID: "Published", Title: "a shared title", DOI: "10.1/published"},
+			},
+			wantGroups: 1,
+		},
+		{
+			name: "three-member group fully chained by supersedes is suppressed",
+			refs: []reference.Reference{
+				{ID: "A", Title: "A Shared Title", DOI: "10.1/a"},
+				{ID: "B", Title: "a shared title", DOI: "10.1/b", Supersedes: "10.1/a"},
+				{ID: "C", Title: "A SHARED TITLE", DOI: "10.1/c", Supersedes: "10.1/b"},
+			},
+			wantGroups: 0,
+		},
+		{
+			name: "three-member group only partially linked is still reported",
+			refs: []reference.Reference{
+				{ID: "A", Title: "A Shared Title", DOI: "10.1/a"},
+				{ID: "B", Title: "a shared title", DOI: "10.1/b", Supersedes: "10.1/a"},
+				{ID: "C", Title: "A SHARED TITLE", DOI: "10.1/c"},
+			},
+			wantGroups: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			groups := findTitleGroups(tt.refs)
+			if len(groups) != tt.wantGroups {
+				t.Fatalf("got %d groups, want %d: %+v", len(groups), tt.wantGroups, groups)
+			}
+		})
+	}
+}
+
 func TestFindTitleGroups_ThreeMemberGroupHasAllMembers(t *testing.T) {
 	refs := []reference.Reference{
 		{ID: "Barbulescu2025-xt", Title: "A Shared Title"},
