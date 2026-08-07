@@ -248,17 +248,22 @@ COMPLETION: When done (or when lead says completed):
    c. If either flagged issues that you fixed, go back to (a)
    Track quality gate iterations in .epic-status.json
 
-   A PR that goes through several review rounds tends to accumulate one
-   body section per round ("Reviewer follow-up: ...", "Human-flagged
-   follow-up: ...", a growing "History" section). /bip-pr-check's body
-   check (step a) flags this and offers a rewrite — take it. The body
-   should always read as the current state (premise, results,
-   interpretation), never as a log of how it got there; don't wait for
-   an explicit ask before rewriting it.
+   A PR that survives several review rounds accumulates one body section
+   per round ("Reviewer follow-up: ...", a growing "History"). /bip-pr-check
+   flags this and offers a rewrite — take it, unprompted. The body should
+   read as the current state (premise, results, interpretation), not as a
+   log of how it got there.
 5. When both pass clean (or remaining findings are all deferred):
-   - Invoke the issue-lead one final time (it will set phase to completed)
-   - Print a FINAL RECAP (see below)
-   - Output the completion promise ISSUE WORK COMPLETE
+   - Land the PR yourself with /bip-pr-land, but only if the work
+     obviously matches the issue and nothing needs the user's judgment
+     (step 6's test). A clean gate alone is not enough: if a result
+     reversed the issue's premise, leave the PR open and say so in the
+     recap. Announce, then land without waiting.
+   - Do NOT spawn the next slot. Handing off needs explicit permission.
+   - Invoke the issue-lead one final time — it sets phase to completed
+     and files any follow-ups from the PR body's DEFERRED section
+   - Print a FINAL RECAP (see below), then the completion promise
+     ISSUE WORK COMPLETE
 6. STOP only if a finding requires genuine user judgment (design
    questions, ambiguous requirements, architectural tradeoffs).
    For everything else — formatting, test gaps, docs, naming,
@@ -278,14 +283,10 @@ defer when ALL of the following hold:
      clearly unrelated module. Size alone is not enough — a 400-line
      addition to files you're already editing should still be folded in.
 
-If all three are not true, do the work in this session. Specifically:
-  - "It would take a few minutes" → do it.
-  - "It would take an hour but it's a clear win" → do it.
-  - "I noticed a related test gap while editing" → do it.
-  - "There's an unhandled edge case" → do it.
-  - "The fix is mechanical but tedious" → do it.
-  - "It touches the same files I'm already modifying" → do it.
-  - "It would grow the PR by 50% but it's coherent with the current work" → do it.
+If all three are not true, do the work now — a few minutes, an hour for a
+clear win, a test gap you noticed, an unhandled edge case, something
+mechanical but tedious, anything in files you're already editing, even a
+50%-larger diff that stays coherent.
 
 When in doubt, DO NOT defer. Bring it to the issue-lead with your reasoning.
 The cost of an over-large PR is small (split it later if needed). The cost
@@ -333,6 +334,7 @@ By the time this runs, the final lead invocation has set phase to
 ```
 ═══ COMPLETED: #N — TITLE ═══
 PR: <full PR URL>
+Landed: <merged by me | left open — REASON>
 
 Summary:
   <2-5 sentence narrative — what changed and key decisions>
