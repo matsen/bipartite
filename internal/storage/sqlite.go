@@ -22,7 +22,8 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	pub_year, pub_month, pub_day,
 	pdf_path, source_type, source_id, supersedes,
 	authors_json, supplement_paths_json,
-	pmid, pmcid, arxiv_id, s2_id, notes, tags_json`
+	pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
+	volume, issue, pages`
 
 // Per-column relevance weights for ranking FTS matches, in refs_fts column
 // order (id, title, abstract, authors_text, pub_year, notes, tags_text). A
@@ -100,7 +101,10 @@ func createSchema(db *sql.DB) error {
 			arxiv_id TEXT,
 			s2_id TEXT,
 			notes TEXT,
-			tags_json TEXT
+			tags_json TEXT,
+			volume TEXT,
+			issue TEXT,
+			pages TEXT
 		);
 
 		-- Index for DOI lookups
@@ -138,12 +142,17 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading JSONL: %w", err)
 	}
 
-	// Clear existing data
-	if _, err := d.db.Exec("DELETE FROM refs"); err != nil {
-		return 0, fmt.Errorf("clearing refs table: %w", err)
+	// Drop and recreate the refs/refs_fts tables rather than DELETE-ing rows,
+	// so a rebuild also picks up schema changes (new columns) rather than
+	// failing against a stale table created by an older binary.
+	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs"); err != nil {
+		return 0, fmt.Errorf("dropping refs table: %w", err)
 	}
-	if _, err := d.db.Exec("DELETE FROM refs_fts"); err != nil {
-		return 0, fmt.Errorf("clearing refs_fts table: %w", err)
+	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
+		return 0, fmt.Errorf("dropping refs_fts table: %w", err)
+	}
+	if err := createSchema(d.db); err != nil {
+		return 0, fmt.Errorf("recreating schema: %w", err)
 	}
 
 	// Prepare statements
@@ -153,8 +162,9 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			pub_year, pub_month, pub_day,
 			pdf_path, source_type, source_id, supersedes,
 			authors_json, supplement_paths_json,
-			pmid, pmcid, arxiv_id, s2_id, notes, tags_json
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
+			volume, issue, pages
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
@@ -199,6 +209,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			nullableStringValue(ref.PMID), nullableStringValue(ref.PMCID),
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
 			nullableStringValue(ref.Note), nullableString(tagsJSON),
+			nullableStringValue(ref.Volume), nullableStringValue(ref.Issue),
+			nullableStringValue(ref.Pages),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -521,6 +533,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	var authorsJSON, supplementJSON, tagsJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
 	var pmid, pmcid, arxivID, s2id, notes sql.NullString
+	var volume, issue, pages sql.NullString
 	var pubMonth, pubDay sql.NullInt64
 
 	err := s.Scan(
@@ -529,6 +542,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
 		&pmid, &pmcid, &arxivID, &s2id, &notes, &tagsJSON,
+		&volume, &issue, &pages,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -549,6 +563,9 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.ArXivID = arxivID.String
 	ref.S2ID = s2id.String
 	ref.Note = notes.String
+	ref.Volume = volume.String
+	ref.Issue = issue.String
+	ref.Pages = pages.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)

@@ -33,6 +33,15 @@ func MergeUpdate(existing, incoming Reference) Reference {
 	if out.Venue == "" {
 		out.Venue = existing.Venue
 	}
+	if out.Volume == "" {
+		out.Volume = existing.Volume
+	}
+	if out.Issue == "" {
+		out.Issue = existing.Issue
+	}
+	if out.Pages == "" {
+		out.Pages = existing.Pages
+	}
 	if out.Note == "" {
 		out.Note = existing.Note
 	}

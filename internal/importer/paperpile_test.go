@@ -856,6 +856,44 @@ func TestParsePaperpile_LenientUserLabelDedupedWithIncompleteTag(t *testing.T) {
 	}
 }
 
+func TestParsePaperpile_VolumeIssuePagesPMID(t *testing.T) {
+	data := []byte(`[{
+		"_id": "abc123",
+		"citekey": "DeWitt2026-cw",
+		"doi": "10.1234/test",
+		"title": "Test Paper",
+		"journal": "Cell",
+		"volume": "189",
+		"issue": "16",
+		"pages": "4980-4996.e8",
+		"pmid": 42248140,
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}]
+	}]`)
+
+	refs, _, errs := ParsePaperpile(data, true)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if len(refs) != 1 {
+		t.Fatalf("ParsePaperpile() returned %d refs, want 1", len(refs))
+	}
+
+	ref := refs[0]
+	if ref.Volume != "189" {
+		t.Errorf("Volume = %v, want 189", ref.Volume)
+	}
+	if ref.Issue != "16" {
+		t.Errorf("Issue = %v, want 16", ref.Issue)
+	}
+	if ref.Pages != "4980-4996.e8" {
+		t.Errorf("Pages = %v, want 4980-4996.e8", ref.Pages)
+	}
+	if ref.PMID != "42248140" {
+		t.Errorf("PMID = %v, want 42248140", ref.PMID)
+	}
+}
+
 // Helper function for comparing references
 func refsEqual(a, b reference.Reference) bool {
 	if a.ID != b.ID || a.DOI != b.DOI || a.Title != b.Title {

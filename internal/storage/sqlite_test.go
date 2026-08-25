@@ -1,12 +1,14 @@
 package storage
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/matsen/bipartite/internal/reference"
+	_ "modernc.org/sqlite"
 )
 
 // setupTestDB creates a test database and JSONL file with test data
@@ -171,6 +173,88 @@ func TestDB_RebuildFromJSONL(t *testing.T) {
 	count, _ = db.Count()
 	if count != 1 {
 		t.Errorf("After rebuild, Count() = %d, want 1", count)
+	}
+}
+
+// TestDB_RebuildFromJSONL_SchemaDrift reproduces the case where a cache file
+// was created by an older binary whose refs table lacks columns the current
+// code expects (e.g. before volume/issue/pages were added). RebuildFromJSONL
+// must pick up the new schema rather than failing against the stale table.
+func TestDB_RebuildFromJSONL_SchemaDrift(t *testing.T) {
+	tmpDir := t.TempDir()
+	dbPath := filepath.Join(tmpDir, "test.db")
+	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
+
+	sqlDB, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("sql.Open() error = %v", err)
+	}
+	if _, err := sqlDB.Exec(`
+		CREATE TABLE refs (
+			id TEXT PRIMARY KEY,
+			doi TEXT,
+			title TEXT NOT NULL,
+			abstract TEXT,
+			venue TEXT,
+			pub_year INTEGER NOT NULL,
+			pub_month INTEGER,
+			pub_day INTEGER,
+			pdf_path TEXT,
+			source_type TEXT NOT NULL,
+			source_id TEXT,
+			supersedes TEXT,
+			authors_json TEXT NOT NULL,
+			supplement_paths_json TEXT,
+			pmid TEXT,
+			pmcid TEXT,
+			arxiv_id TEXT,
+			s2_id TEXT,
+			notes TEXT,
+			tags_json TEXT
+		)
+	`); err != nil {
+		t.Fatalf("creating stale schema: %v", err)
+	}
+	if err := sqlDB.Close(); err != nil {
+		t.Fatalf("closing setup connection: %v", err)
+	}
+
+	refs := []reference.Reference{
+		{
+			ID:        "Smith2026-ab",
+			Title:     "Test Paper",
+			Volume:    "189",
+			Issue:     "16",
+			Pages:     "4980-4996.e8",
+			Authors:   []reference.Author{{Last: "Smith"}},
+			Published: reference.PublicationDate{Year: 2026},
+			Source:    reference.ImportSource{Type: "paperpile"},
+		},
+	}
+	if err := WriteAll(jsonlPath, refs); err != nil {
+		t.Fatalf("WriteAll() error = %v", err)
+	}
+
+	db, err := OpenDB(dbPath)
+	if err != nil {
+		t.Fatalf("OpenDB() error = %v", err)
+	}
+	defer db.Close()
+
+	count, err := db.RebuildFromJSONL(jsonlPath)
+	if err != nil {
+		t.Fatalf("RebuildFromJSONL() error = %v, want nil (rebuild should tolerate a stale pre-existing schema)", err)
+	}
+	if count != 1 {
+		t.Errorf("RebuildFromJSONL() = %d, want 1", count)
+	}
+
+	ref, err := db.GetByID("Smith2026-ab")
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if ref.Volume != "189" || ref.Issue != "16" || ref.Pages != "4980-4996.e8" {
+		t.Errorf("GetByID() = %+v, want Volume=189 Issue=16 Pages=4980-4996.e8", ref)
 	}
 }
 
