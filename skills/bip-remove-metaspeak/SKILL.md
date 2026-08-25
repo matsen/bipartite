@@ -1,6 +1,6 @@
 ---
 name: bip-remove-metaspeak
-description: Squash internal-dialogue and meta-commentary out of a document or PR body while preserving every fact, number, citation, gate, and decision-justifying argument. For issues, EPICs, brainstorms, design docs, and PR descriptions that read like a transcript of someone reasoning out loud.
+description: Cut what does not earn its place out of a document or PR body — internal dialogue, meta-commentary, and whole passages the document itself undercuts — while preserving every fact, number, citation, gate, and argument that justifies a decision the document is actually making. For issues, EPICs, brainstorms, design docs, and PR descriptions that read like a transcript of someone reasoning out loud.
 allowed-tools: Agent, Bash, Read, Edit, Write
 ---
 
@@ -8,8 +8,12 @@ allowed-tools: Agent, Bash, Read, Edit, Write
 
 Documents written incrementally with an agent accumulate a characteristic
 residue: they narrate their own drafting, argue with positions they used to
-hold, and pad every claim with rhetorical scaffolding. The content is fine.
-The register is wrong — it reads like a transcript of someone still making up
+hold, and pad every claim with rhetorical scaffolding. They also keep
+material that stopped being load-bearing — an argument the document raises
+and then demolishes, a proposal it talks itself out of, a retraction of
+something never published. Both have to go: the register is wrong, and some
+of the content has not earned its place. It reads like a transcript of
+someone still making up
 their mind, not a settled technical document.
 
 The fix is a squash, in the git sense: many small revisions, each arguing
@@ -42,34 +46,37 @@ residue, and it's exactly the artifact reviewers read first.
 
 ## Workflow
 
-### Step 0: Check the content is settled
+### Step 0: Decide what earns its place
 
-"Before the content is settled" above is the rule this pass gets wrong most
-often, because "is my thinking done?" is unanswerable from inside the
-document. These four signals are checkable, and any one of them means the
-content is still moving:
+Do this before the register pass, on the whole document, and act on it — this
+is a removal step, not a report. Four signals mark content that has stopped
+being load-bearing:
 
-1. A section introduces an argument and then argues that it fails.
-2. The document proposes an action and then lists reasons not to take it.
-3. Prose adjacent to a table or list restates its contents.
-4. A section's content is entirely conditional on another section's outcome.
+1. **A section raises an argument and then argues it fails.** Keep the
+   conclusion as a plain statement if a reader would otherwise walk into the
+   same argument. Delete the rest. Never keep both the argument and its
+   refutation.
+2. **A proposal arrives with reasons not to take it.** Delete the proposal.
+   If the reasons matter, one sentence: "not X, because Y."
+3. **Prose adjacent to a table or list restates its contents.** Keep the
+   table. Keep only the prose that argues something the cells cannot.
+4. **A section is wholly conditional on another section's outcome.** Collapse
+   it to one conditional sentence where the outcome is decided.
 
-If any fire, say so and stop. Recommend deciding what earns its place first —
-which sections survive, which proposals are actually being made — and run this
-pass afterwards.
+Three more that recur, all deletions with nothing kept: framing the reader
+already agreed to in an earlier exchange or an earlier section; a retraction
+of a claim never published; advice about a method nobody proposed.
 
-The failure mode this prevents is expensive and invisible from the report. A
-register pass over a document that is still deciding polishes prose that is
-about to be deleted, then reports a small cut and "the document was already
-dense," which reads as success. Observed twice in one session: passes cutting
-2.7% and 8% were each followed by an author-driven cut of 60% and 24% of the
-same documents, all of it material this pass had just tidied.
+This step is why the pass exists at all. Observed twice in one session:
+register-only passes cut 2.7% and 8% of two documents and reported them
+"already dense," after which the author cut 60% and 24% of the same
+documents — almost all of it material matching the signals above, which the
+register pass had carefully tidied on its way past.
 
-The keep-list below is what makes this necessary rather than merely tidy. "All
-reasoning that justifies a decision" protects an argument a document raises
-and then demolishes, a proposal it undercuts, and a control it defers — each
-is reasoning, each justifies a decision, and each may be about to go. The pass
-cannot tell. The author can.
+Section-level deletions are recoverable: Step 2 takes a copy, and the
+deliverable requires every cut passage be quoted back. Cut, then let the
+review in Step 5 restore what mattered. Erring toward the cut is correct
+here; erring toward keeping is what produced the two failures above.
 
 ### Step 1: Determine the target
 
@@ -177,10 +184,14 @@ Generic instructions produce generic damage. A named keep-list does not.
 - Every number, and its source.
 - Every reference, link, citation key, path, function name, command.
 - Every gate and criterion, in full substance.
-- **All reasoning that justifies a decision.** This is the load-bearing
-  distinction and the one an agent gets wrong. "We chose A over B because B
-  fails when C" is content, not padding, even when it runs several
-  sentences. Compress the prose; keep the logic.
+- **All reasoning that justifies a decision the document is actually
+  making.** This is the load-bearing distinction and the one an agent gets
+  wrong. "We chose A over B because B fails when C" is content, not padding,
+  even when it runs several sentences. Compress the prose; keep the logic.
+  The qualifier is what stops this rule from protecting Step 0's material:
+  an argument the document raises and refutes, or a proposal it undercuts,
+  is also reasoning and also justifies a decision — the decision not to do
+  it. State that decision once and cut the deliberation behind it.
 - Markdown structure: heading hierarchy, numbering, tables,
   placeholders. Heading *hierarchy* is structure and must survive; heading
   *text* is prose and is in scope — a heading can narrate ("What I do not
@@ -208,7 +219,9 @@ report.
 
 ### Deliverable to request
 
-1. Every passage cut entirely, quoted by its first few words.
+1. Every passage cut entirely, quoted by its first few words, with
+   Step 0 removals listed separately from register cuts — those are the ones
+   most worth a second look.
 2. Anything it was unsure about, for review.
 
 Item 2 is the point. The uncertain calls are where substance gets lost, and
@@ -239,8 +252,12 @@ catching, and it takes thirty seconds to rule out.
 
 Then read the report, not just the diff. Two checks:
 
-- **Scan the "cut entirely" list** for anything that was a policy statement
-  or a decision rather than framing. Restore those.
+- **Scan the Step 0 removals first.** A whole section is the expensive
+  mistake to get wrong in either direction. Restore one only if it states a
+  decision the document is making, rather than deliberation behind a decision
+  already stated elsewhere.
+- **Scan the register "cut entirely" list** for anything that was a policy
+  statement or a decision rather than framing. Restore those.
 - **Check flagged uncertainties.** The agent is right to be unsure about
   short sharp lines that read as illustrative but are actually the crispest
   statement of a rule.
