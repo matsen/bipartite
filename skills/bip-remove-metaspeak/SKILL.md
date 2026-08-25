@@ -42,6 +42,35 @@ residue, and it's exactly the artifact reviewers read first.
 
 ## Workflow
 
+### Step 0: Check the content is settled
+
+"Before the content is settled" above is the rule this pass gets wrong most
+often, because "is my thinking done?" is unanswerable from inside the
+document. These four signals are checkable, and any one of them means the
+content is still moving:
+
+1. A section introduces an argument and then argues that it fails.
+2. The document proposes an action and then lists reasons not to take it.
+3. Prose adjacent to a table or list restates its contents.
+4. A section's content is entirely conditional on another section's outcome.
+
+If any fire, say so and stop. Recommend deciding what earns its place first —
+which sections survive, which proposals are actually being made — and run this
+pass afterwards.
+
+The failure mode this prevents is expensive and invisible from the report. A
+register pass over a document that is still deciding polishes prose that is
+about to be deleted, then reports a small cut and "the document was already
+dense," which reads as success. Observed twice in one session: passes cutting
+2.7% and 8% were each followed by an author-driven cut of 60% and 24% of the
+same documents, all of it material this pass had just tidied.
+
+The keep-list below is what makes this necessary rather than merely tidy. "All
+reasoning that justifies a decision" protects an argument a document raises
+and then demolishes, a proposal it undercuts, and a control it defers — each
+is reasoning, each justifies a decision, and each may be about to go. The pass
+cannot tell. The author can.
+
 ### Step 1: Determine the target
 
 Use `$ARGUMENTS` if given; otherwise the most recently discussed document in
@@ -152,7 +181,11 @@ Generic instructions produce generic damage. A named keep-list does not.
   distinction and the one an agent gets wrong. "We chose A over B because B
   fails when C" is content, not padding, even when it runs several
   sentences. Compress the prose; keep the logic.
-- Markdown structure: headings, numbering, tables, placeholders.
+- Markdown structure: heading hierarchy, numbering, tables,
+  placeholders. Heading *hierarchy* is structure and must survive; heading
+  *text* is prose and is in scope — a heading can narrate ("What I do not
+  know about X, and how to find out") and should be squashed like any other
+  sentence.
 
 ### Style target
 
@@ -166,6 +199,12 @@ the last few points come out of the argument. Ask instead for "as much as
 comes out under these rules" and let the result be whatever size the squashed
 version actually is — sometimes that's a large cut, sometimes barely
 anything, if the document was already tight.
+
+"Already tight" is a real outcome and also the easiest wrong answer, so it has
+to be earned rather than asserted. A report claiming it must name the passages
+it considered and rejected, or it is indistinguishable from a pass that did
+not look. If Step 0's signals were checked and none fired, say so in the
+report.
 
 ### Deliverable to request
 
