@@ -142,12 +142,17 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading JSONL: %w", err)
 	}
 
-	// Clear existing data
-	if _, err := d.db.Exec("DELETE FROM refs"); err != nil {
-		return 0, fmt.Errorf("clearing refs table: %w", err)
+	// Drop and recreate the refs/refs_fts tables rather than DELETE-ing rows,
+	// so a rebuild also picks up schema changes (new columns) rather than
+	// failing against a stale table created by an older binary.
+	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs"); err != nil {
+		return 0, fmt.Errorf("dropping refs table: %w", err)
 	}
-	if _, err := d.db.Exec("DELETE FROM refs_fts"); err != nil {
-		return 0, fmt.Errorf("clearing refs_fts table: %w", err)
+	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
+		return 0, fmt.Errorf("dropping refs_fts table: %w", err)
+	}
+	if err := createSchema(d.db); err != nil {
+		return 0, fmt.Errorf("recreating schema: %w", err)
 	}
 
 	// Prepare statements
