@@ -40,11 +40,21 @@ func init() {
 
 // S2LinkPubResult is the JSON output for the link-published command.
 type S2LinkPubResult struct {
-	Linked           []S2LinkInfo   `json:"linked"`
-	NoPublishedFound []string       `json:"no_published_found"`
-	AlreadyLinked    []string       `json:"already_linked"`
-	TotalPreprints   int            `json:"total_preprints"`
-	Error            *S2ErrorResult `json:"error,omitempty"`
+	Linked           []S2LinkInfo    `json:"linked"`
+	NoPublishedFound []string        `json:"no_published_found"`
+	AlreadyLinked    []string        `json:"already_linked"`
+	Failed           []S2LinkFailure `json:"failed,omitempty"`
+	TotalPreprints   int             `json:"total_preprints"`
+	Error            *S2ErrorResult  `json:"error,omitempty"`
+}
+
+// S2LinkFailure records a preprint whose published-version lookup hit a
+// non-rate-limit error (network blip, decode error, etc). Unlike
+// NoPublishedFound, this ref was never actually checked and should be
+// retried — surfaced here so a JSON-mode run doesn't silently drop it.
+type S2LinkFailure struct {
+	PreprintID string `json:"preprint_id"`
+	Reason     string `json:"reason"`
 }
 
 // S2LinkInfo represents a linked preprint-published pair.
@@ -116,7 +126,9 @@ func runS2LinkPub(cmd *cobra.Command, args []string) error {
 				}
 				return outputS2RateLimited(err)
 			}
-			// Warn about unexpected errors instead of silently ignoring
+			// Record and warn about unexpected errors instead of silently
+			// dropping the ref (JSON mode has no other trace of this).
+			result.Failed = append(result.Failed, S2LinkFailure{PreprintID: ref.ID, Reason: err.Error()})
 			warnAPIError("Failed to find published version", ref.ID, err)
 			continue
 		}
@@ -240,8 +252,8 @@ func findPublishedVersion(ctx context.Context, client *s2.Client, preprint refer
 
 func outputLinkPubResult(result S2LinkPubResult) error {
 	if humanOutput {
-		fmt.Printf("Summary: %d linked, %d no published version, %d already linked\n",
-			len(result.Linked), len(result.NoPublishedFound), len(result.AlreadyLinked))
+		fmt.Printf("Summary: %d linked, %d no published version, %d already linked, %d failed (retry these)\n",
+			len(result.Linked), len(result.NoPublishedFound), len(result.AlreadyLinked), len(result.Failed))
 	} else {
 		outputJSON(result)
 	}
