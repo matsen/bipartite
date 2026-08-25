@@ -43,6 +43,35 @@ func TestMergeUpdate_PreservesExternalIdentifiers(t *testing.T) {
 	}
 }
 
+func TestMergeUpdate_PreservesVolumeIssuePages(t *testing.T) {
+	existing := Reference{
+		ID:     "DeWitt2026-cw",
+		DOI:    "10.1234/foo",
+		Title:  "Foo",
+		Volume: "189",
+		Issue:  "16",
+		Pages:  "4980-4996.e8",
+	}
+	incoming := Reference{
+		ID:     "DeWitt2026-cw",
+		DOI:    "10.1234/foo",
+		Title:  "Foo",
+		Source: ImportSource{Type: "paperpile", ID: "uuid-1"},
+		// No Volume/Issue/Pages — re-import doesn't carry these.
+	}
+
+	got := MergeUpdate(existing, incoming)
+	if got.Volume != "189" {
+		t.Errorf("Volume lost: got %q, want 189", got.Volume)
+	}
+	if got.Issue != "16" {
+		t.Errorf("Issue lost: got %q, want 16", got.Issue)
+	}
+	if got.Pages != "4980-4996.e8" {
+		t.Errorf("Pages lost: got %q, want 4980-4996.e8", got.Pages)
+	}
+}
+
 func TestMergeUpdate_IncomingOverridesWhenNonZero(t *testing.T) {
 	// If both existing and incoming have a value for a field, the incoming
 	// wins. This is the standard "update" behavior — the new import is more

@@ -45,6 +45,26 @@ func ToBibTeX(ref reference.Reference) string {
 		b.WriteString(fmt.Sprintf("  doi = {%s},\n", ref.DOI))
 	}
 
+	// Volume (optional)
+	if ref.Volume != "" {
+		b.WriteString(fmt.Sprintf("  volume = {%s},\n", ref.Volume))
+	}
+
+	// Issue/number (optional)
+	if ref.Issue != "" {
+		b.WriteString(fmt.Sprintf("  number = {%s},\n", ref.Issue))
+	}
+
+	// Pages (optional)
+	if ref.Pages != "" {
+		b.WriteString(fmt.Sprintf("  pages = {%s},\n", ref.Pages))
+	}
+
+	// PMID (optional)
+	if ref.PMID != "" {
+		b.WriteString(fmt.Sprintf("  pmid = {%s},\n", ref.PMID))
+	}
+
 	// Abstract (optional, if present)
 	if ref.Abstract != "" {
 		b.WriteString(fmt.Sprintf("  abstract = {%s},\n", escapeLatex(ref.Abstract)))

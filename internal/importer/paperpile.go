@@ -49,13 +49,17 @@ func (f FlexibleString) String() string {
 
 // PaperpileEntry represents a single entry from a Paperpile JSON export.
 type PaperpileEntry struct {
-	ID        string `json:"_id"`
-	Citekey   string `json:"citekey"`
-	DOI       string `json:"doi"`
-	Title     string `json:"title"`
-	Abstract  string `json:"abstract"`
-	Journal   string `json:"journal"`
-	Booktitle string `json:"booktitle"`
+	ID        string         `json:"_id"`
+	Citekey   string         `json:"citekey"`
+	DOI       string         `json:"doi"`
+	Title     string         `json:"title"`
+	Abstract  string         `json:"abstract"`
+	Journal   string         `json:"journal"`
+	Booktitle string         `json:"booktitle"`
+	Volume    string         `json:"volume"`
+	Issue     string         `json:"issue"`
+	Pages     string         `json:"pages"`
+	PMID      FlexibleString `json:"pmid"`
 	Published struct {
 		Year  FlexibleString `json:"year"`
 		Month FlexibleString `json:"month"`
@@ -274,6 +278,10 @@ func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Ref
 		Authors:         authors,
 		Abstract:        entry.Abstract,
 		Venue:           venue,
+		Volume:          entry.Volume,
+		Issue:           entry.Issue,
+		Pages:           entry.Pages,
+		PMID:            entry.PMID.String(),
 		Note:            entry.Note,
 		Tags:            tags,
 		Published:       pubDate,

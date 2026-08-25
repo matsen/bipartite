@@ -229,6 +229,47 @@ func TestToBibTeX_OptionalFields(t *testing.T) {
 	if strings.Contains(got, "journal = ") && strings.Contains(got, "booktitle = ") {
 		t.Errorf("ToBibTeX() should not include empty venue, got:\n%s", got)
 	}
+	if strings.Contains(got, "volume = ") {
+		t.Errorf("ToBibTeX() should not include empty volume, got:\n%s", got)
+	}
+	if strings.Contains(got, "number = ") {
+		t.Errorf("ToBibTeX() should not include empty number, got:\n%s", got)
+	}
+	if strings.Contains(got, "pages = ") {
+		t.Errorf("ToBibTeX() should not include empty pages, got:\n%s", got)
+	}
+	if strings.Contains(got, "pmid = ") {
+		t.Errorf("ToBibTeX() should not include empty pmid, got:\n%s", got)
+	}
+}
+
+func TestToBibTeX_VolumeIssuePagesPMID(t *testing.T) {
+	ref := reference.Reference{
+		ID:    "DeWitt2026-cw",
+		Title: "Replaying germinal center evolution",
+		Authors: []reference.Author{
+			{First: "A", Last: "B"},
+		},
+		Venue:     "Cell",
+		Published: reference.PublicationDate{Year: 2026},
+		Volume:    "189",
+		Issue:     "16",
+		Pages:     "4980-4996.e8",
+		PMID:      "42248140",
+	}
+
+	got := ToBibTeX(ref)
+
+	for _, want := range []string{
+		"volume = {189},",
+		"number = {16},",
+		"pages = {4980-4996.e8},",
+		"pmid = {42248140},",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("ToBibTeX() missing %q, got:\n%s", want, got)
+		}
+	}
 }
 
 func TestToBibTeX_SpecialCharactersInTitle(t *testing.T) {

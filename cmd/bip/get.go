@@ -65,6 +65,22 @@ func printRefDetail(ref reference.Reference) {
 		fmt.Printf("Venue:    %s\n", ref.Venue)
 	}
 
+	if ref.Volume != "" {
+		fmt.Printf("Volume:   %s\n", ref.Volume)
+	}
+
+	if ref.Issue != "" {
+		fmt.Printf("Issue:    %s\n", ref.Issue)
+	}
+
+	if ref.Pages != "" {
+		fmt.Printf("Pages:    %s\n", ref.Pages)
+	}
+
+	if ref.PMID != "" {
+		fmt.Printf("PMID:     %s\n", ref.PMID)
+	}
+
 	// Date
 	date := fmt.Sprintf("%d", ref.Published.Year)
 	if ref.Published.Month > 0 {
