@@ -144,6 +144,23 @@ criterion. No "fast", "scalable", "robust" without numbers.
 
 **No hard-wrapping.** Write each paragraph as a single long line. Do NOT insert newlines at 70-80 characters within paragraphs or bullet points. Let GitHub's renderer handle line wrapping. Only use newlines for actual structural breaks (between paragraphs, list items, headings).
 
+### Step 4b: Re-check for duplicates immediately before filing
+
+Minutes may have passed since Step 3's search (drafting, gathering
+context). Re-run it now, scoped to what's new:
+
+```
+gh issue list -R <repo> --state open --search "sort:created-desc" \
+  --limit 10 --json number,title,createdAt
+```
+
+If any issue created since the Step 3 check has a title or scope that
+substantially overlaps the draft, stop — do not file. This is the
+common failure mode when another agent (e.g. a concurrent epic worker)
+reached the same "obvious next step" independently while this one was
+drafting. Report the collision and ask the user whether to close/link
+the draft against the existing issue instead of filing a duplicate.
+
 ### Step 5: Run /bip-issue-check
 
 Invoke the `/bip-issue-check` skill on the drafted file:
