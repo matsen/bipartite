@@ -3,10 +3,23 @@ package export
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/reference"
 )
+
+var suspectPagesRe = regexp.MustCompile(`^1-\d+$`)
+
+// SuspectPages reports whether ref.Pages looks like a Paperpile-computed
+// placeholder (a PDF-derived page count starting at 1, e.g. "1-9") rather
+// than real pagination. It matches when Pages fits ^1-\d+$ and Volume is
+// empty, which holds for confirmed advance-access placeholders but not for
+// legitimate "1-N" pagination that has a populated Volume (e.g. JMLR
+// articles, IEEE early-access "PP"-volume articles).
+func SuspectPages(ref reference.Reference) bool {
+	return suspectPagesRe.MatchString(ref.Pages) && ref.Volume == ""
+}
 
 // ToBibTeX converts a reference to BibTeX format.
 func ToBibTeX(ref reference.Reference) string {
