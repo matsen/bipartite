@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/matsen/bipartite/internal/export"
 	"github.com/matsen/bipartite/internal/reference"
 	"github.com/spf13/cobra"
 )
@@ -74,7 +75,11 @@ func printRefDetail(ref reference.Reference) {
 	}
 
 	if ref.Pages != "" {
-		fmt.Printf("Pages:    %s\n", ref.Pages)
+		pagesLine := ref.Pages
+		if export.SuspectPages(ref) {
+			pagesLine += " ⚠ possibly preliminary (no volume/issue)"
+		}
+		fmt.Printf("Pages:    %s\n", pagesLine)
 	}
 
 	if ref.PMID != "" {

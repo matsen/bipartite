@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -88,6 +89,8 @@ func runExport(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	warnSuspectPages(refs)
+
 	// Handle --append mode
 	if exportAppend != "" {
 		return runExportAppend(refs, exportAppend)
@@ -98,6 +101,17 @@ func runExport(cmd *cobra.Command, args []string) error {
 	fmt.Print(bibtex)
 
 	return nil
+}
+
+// warnSuspectPages prints a stderr warning for each reference whose Pages
+// looks like a Paperpile advance-access placeholder rather than real
+// pagination. Stdout (the BibTeX itself) is left untouched.
+func warnSuspectPages(refs []reference.Reference) {
+	for _, ref := range refs {
+		if export.SuspectPages(ref) {
+			fmt.Fprintf(os.Stderr, "warning: %s: pages %q with no volume/issue — likely a Paperpile placeholder from an advance-access import, verify at the publisher before citing\n", ref.ID, ref.Pages)
+		}
+	}
 }
 
 func runExportAppend(refs []reference.Reference, outputPath string) error {

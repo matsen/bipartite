@@ -353,3 +353,28 @@ func TestToBibTeX_NoAuthors(t *testing.T) {
 		t.Errorf("ToBibTeX() should still include year, got:\n%s", got)
 	}
 }
+
+func TestSuspectPages(t *testing.T) {
+	tests := []struct {
+		name  string
+		pages string
+		vol   string
+		want  bool
+	}{
+		{"placeholder 1-9 no volume", "1-9", "", true},
+		{"placeholder 1-16 no volume", "1-16", "", true},
+		{"JMLR shape with volume", "1-56", "25", false},
+		{"IEEE early-access PP volume", "1-14", "PP", false},
+		{"elocation id", "msaf186", "42", false},
+		{"no pages", "", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref := reference.Reference{Pages: tt.pages, Volume: tt.vol}
+			if got := SuspectPages(ref); got != tt.want {
+				t.Errorf("SuspectPages(Pages=%q, Volume=%q) = %v, want %v", tt.pages, tt.vol, got, tt.want)
+			}
+		})
+	}
+}
