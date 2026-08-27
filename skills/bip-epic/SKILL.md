@@ -82,8 +82,10 @@ never replaces — the file-based correction path:
   windows on this machine, or connected cloud/Remote Control sessions)
   — never a plain shell, a remote SSH job, or a non-Claude compute node.
   Run `ListAgents` first to confirm the target session is actually
-  addressable; fall back to editing `.epic-status.json` and waiting for
-  the worker's own loop when it isn't. **The address is the session
+  addressable; fall back to the file-only correction (a
+  `conductor_guidance` field or a `lead_notes` entry tagged `source:
+  conductor` — never `lead_guidance`) and wait for the worker's own
+  loop when it isn't. **The address is the session
   name `ListAgents` reports, not the tmux window name the conductor
   assigned at spawn** — `SendMessage` to a window name can fail with
   `No agent named '<window>' is reachable.`

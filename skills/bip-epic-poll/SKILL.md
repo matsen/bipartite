@@ -124,30 +124,36 @@ the plan.
 **Correcting a live worker mid-flight**: `ListAgents`/`SendMessage`
 reach other local Claude tmux sessions and can push an immediate
 correction without waiting for the worker's next lead evaluation or
-killing its tmux window. Send the correction directly — stating what
-changed in at least one line — rather than a bare pointer, which is a
-no-op for a worker that already reads the status file every step and
-strips the priority signal. The durable/transient test is the
-deliverable: any nudge that changes what the worker will produce
-(scope, target, artifact, gate criterion) MUST also get a durable
-record, written by the **conductor** appending a timestamped,
-attributed entry to `.epic-worklog.md` in the same step — not
-`.epic-status.json`, since that file is the worker's own
+killing its tmux window.
+Send the correction directly — stating what changed in at least one
+line — rather than a bare pointer, which is a no-op for a worker that
+already reads the status file every step and strips the priority
+signal.
+If a correction is long enough that pointing at a file seems
+preferable, its home is the spawn prompt or the issue body, not a
+nudge.
+The durable/transient test is the deliverable: any nudge that changes
+what the worker will produce (scope, target, artifact, gate criterion)
+MUST also get a durable record, written by the **conductor** appending
+a timestamped, attributed entry to `.epic-worklog.md` in the same
+step — not `.epic-status.json`, since that file is the worker's own
 continuously-rewritten object and a second writer there is
-unsynchronized and gives no tiebreak against `lead_guidance`. Facts
-that leave the deliverable unchanged (host load, a peer's timing, a
-dependency that just landed) may be message-only. Delivery lands at
-the worker's next tool call, not instantly, and `SendMessage` only
-reaches addressable Claude sessions — run `ListAgents` first to
-confirm (the address is the session name it reports, not the tmux
-window name assigned at spawn — sending to the window name can fail
-with `No agent named '<window>' is reachable.`), and fall back to the
-file-only correction (a `conductor_guidance` field or a `lead_notes`
-entry tagged `source: conductor` — never `lead_guidance`, wait for the
-worker's own loop) when it isn't addressable. Skip the nudge entirely
-for a worker in `awaiting-results` with a live `check_cmd`; use
-`notify_when_idle: true` instead of "tell me when this worker
-finishes" — main-conversation only, this-machine only, one-shot.
+unsynchronized and gives no tiebreak against `lead_guidance`.
+Facts that leave the deliverable unchanged (host load, a peer's
+timing, a dependency that just landed) may be message-only.
+Delivery lands at the worker's next tool call, not instantly, and
+`SendMessage` only reaches addressable Claude sessions — run
+`ListAgents` first to confirm (the address is the session name it
+reports, not the tmux window name assigned at spawn — sending to the
+window name can fail with `No agent named '<window>' is reachable.`),
+and fall back to the file-only correction (a `conductor_guidance`
+field or a `lead_notes` entry tagged `source: conductor` — never
+`lead_guidance`, wait for the worker's own loop) when it isn't
+addressable.
+Skip the nudge entirely for a worker in `awaiting-results` with a live
+`check_cmd`; use `notify_when_idle: true` instead of "tell me when
+this worker finishes" — main-conversation only, this-machine only,
+one-shot.
 
 ### Output structure
 
