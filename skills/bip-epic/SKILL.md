@@ -202,9 +202,17 @@ collision or dependency-direction conflict per Step 4), draft the
 semantic brief — why it matters, scope, any dependency/collision
 warnings from Step 4 — and write it to:
 
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+mkdir -p "$CLONE_ROOT/.spawn-prompts"
+# Use the Write tool to create "$CLONE_ROOT/.spawn-prompts/<N>.md" with the brief
 ```
-$CLONE_ROOT/.spawn-prompts/<N>.md
-```
+
+`clone_root` in `.epic-config.json` is tilde-form — resolve it the same
+way every `/bip-conductor*` skill does, or the brief silently lands in
+a literal `~` directory in the cwd instead of the shared intent
+directory, and the conductor never sees it. `mkdir -p` because
+`.spawn-prompts/` won't exist yet on a fresh repo.
 
 **Naming note**: an older, already-live convention in this same
 directory names files `spawn-<N>.txt` instead. Both are valid intent —
@@ -220,15 +228,28 @@ user confirmation. **Do not spawn or touch tmux/clones yourself** —
 that's the conductor's job, and mixing the two roles back together is
 exactly the failure mode this split exists to avoid.
 
-Tell the user which issues now have pending intent:
+**Check whether a conductor session exists before announcing a handoff
+into a void** — `ListAgents` for one. Writing intent and telling the
+user "the conductor will pick these up" is only true if a conductor is
+or will be running; on a small job with no separate conductor session,
+that message describes nothing and the intent file just accretes,
+unpicked-up, forever.
 
-> "Spawn intent written for `i302` (retry logic) and `i315` (scoring
-> refactor) — the conductor will pick these up."
-
-If the conductor session is addressable right now and the intent is
-urgent, `ListAgents`/`SendMessage` it directly rather than waiting for
-its next poll cycle — see `/bip-conductor`'s Conventions section for
-the mechanics and addressability caveats.
+- **Conductor addressable**: tell the user which issues now have
+  pending intent —
+  > "Spawn intent written for `i302` (retry logic) and `i315` (scoring
+  > refactor) — the conductor will pick these up."
+  If it's urgent, `ListAgents`/`SendMessage` it directly rather than
+  waiting for its next poll cycle — see `/bip-conductor`'s Conventions
+  section for the mechanics and addressability caveats.
+- **No conductor addressable**: say so, and offer both real options —
+  start one now (`/bip-conductor` in a separate tmux window, the normal
+  setup for a multi-issue fleet), or, for a single small job where
+  standing up a second session is overhead, run `/bip-conductor-spawn`
+  yourself from this session for just this intent file. The second
+  option is a deliberate, user-confirmed exception to "don't spawn
+  yourself" above, not a silent default — say plainly that it mixes
+  the two roles for this one spawn, and let the user pick.
 
 ### Step 7: Correcting a live worker — the judgment half
 
