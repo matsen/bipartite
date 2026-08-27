@@ -148,9 +148,9 @@ bip resolve --interactive # Prompt for true conflicts
 ## Maintenance
 
 ```bash
-bip dedupe --dry-run      # Find duplicates by source ID
-bip dedupe --merge        # Merge duplicates, keeping first and updating edges
-bip check                 # Verify repository integrity
+bip dedupe --dry-run      # Find duplicates by source ID, plus title-match groups for review
+bip dedupe --merge        # Merge source-ID duplicates, keeping first and updating edges
+bip check                 # Verify repository integrity (includes normalized duplicate-DOI detection)
 ```
 
 ## Agent Usage

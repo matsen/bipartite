@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/edge"
+	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +21,7 @@ func init() {
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Verify repository integrity",
-	Long:  `Verify repository integrity, checking for missing PDFs and duplicate DOIs.`,
+	Long:  `Verify repository integrity, checking for missing PDFs and duplicate DOIs (normalized, case-insensitive).`,
 	RunE:  runCheck,
 }
 
@@ -44,6 +47,38 @@ type CheckIssue struct {
 	Reason   string   `json:"reason,omitempty"`
 }
 
+// findDuplicateDOIs groups references by normalized DOI and returns a
+// duplicate_doi issue for every DOI held by 2+ references. Issues are sorted
+// by DOI so output is stable across runs.
+func findDuplicateDOIs(refs []reference.Reference) []CheckIssue {
+	doiMap := make(map[string][]string) // normalized DOI -> list of IDs
+	for _, ref := range refs {
+		key := s2.NormalizeDOI(ref.DOI)
+		if key == "" {
+			continue
+		}
+		doiMap[key] = append(doiMap[key], ref.ID)
+	}
+
+	var dois []string
+	for doi, ids := range doiMap {
+		if len(ids) > 1 {
+			dois = append(dois, doi)
+		}
+	}
+	sort.Strings(dois)
+
+	issues := make([]CheckIssue, 0, len(dois))
+	for _, doi := range dois {
+		issues = append(issues, CheckIssue{
+			Type: "duplicate_doi",
+			IDs:  doiMap[doi],
+			DOI:  doi,
+		})
+	}
+	return issues
+}
+
 func runCheck(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 	cfg := mustLoadConfig(repoRoot)
@@ -64,21 +99,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	var issues []CheckIssue
 
 	// Check for duplicate DOIs
-	doiMap := make(map[string][]string) // DOI -> list of IDs
-	for _, ref := range refs {
-		if ref.DOI != "" {
-			doiMap[ref.DOI] = append(doiMap[ref.DOI], ref.ID)
-		}
-	}
-	for doi, ids := range doiMap {
-		if len(ids) > 1 {
-			issues = append(issues, CheckIssue{
-				Type: "duplicate_doi",
-				IDs:  ids,
-				DOI:  doi,
-			})
-		}
-	}
+	issues = append(issues, findDuplicateDOIs(refs)...)
 
 	// Check for missing PDFs (only if pdf_root is configured)
 	if cfg.PDFRoot != "" {

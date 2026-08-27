@@ -2,9 +2,13 @@ package main
 
 import (
 	"fmt"
+	"sort"
+	"unicode"
 
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/importer"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -23,20 +27,29 @@ func init() {
 var dedupeCmd = &cobra.Command{
 	Use:   "dedupe",
 	Short: "Find and remove duplicate references",
-	Long: `Find and remove duplicate references by their import source ID.
+	Long: `Find duplicate references by import source ID, and report references
+that share a normalized title (a broader signal that includes source-ID
+duplicates plus other likely matches for human review).
+
+Only source-ID groups are actionable by --merge; title groups are reported
+for review and never merged automatically.
 
 Examples:
   bip dedupe --dry-run    # Show duplicates without making changes
-  bip dedupe --merge      # Merge duplicates: keep first, remove others, update edges`,
+  bip dedupe --merge      # Merge source-ID duplicates: keep first, remove others, update edges`,
 	RunE: runDedupe,
 }
 
-// DuplicateGroup represents a set of duplicate references.
+// DuplicateGroup represents a set of duplicate or likely-duplicate references.
+// MatchBasis is "source_id" (actionable by --merge) or "title" (report only).
 type DuplicateGroup struct {
-	SourceType string   `json:"source_type"`
-	SourceID   string   `json:"source_id"`
-	Primary    string   `json:"primary"`    // ID of the entry to keep
-	Duplicates []string `json:"duplicates"` // IDs of entries to remove
+	MatchBasis string   `json:"match_basis"`
+	SourceType string   `json:"source_type,omitempty"`
+	SourceID   string   `json:"source_id,omitempty"`
+	Primary    string   `json:"primary,omitempty"`    // ID of the entry to keep; set for match_basis=="source_id"
+	Duplicates []string `json:"duplicates,omitempty"` // IDs of entries to remove; set for match_basis=="source_id"
+	Members    []string `json:"members,omitempty"`    // all ids; set for match_basis=="title"
+	Title      string   `json:"title,omitempty"`      // normalized title; set for match_basis=="title"
 }
 
 // DedupeResult represents the result of a dedupe operation.
@@ -76,6 +89,8 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// TotalDupes counts only source-id groups; title groups leave
+	// Duplicates empty since --merge never acts on them.
 	totalDupes := 0
 	for _, g := range groups {
 		totalDupes += len(g.Duplicates)
@@ -85,9 +100,15 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 		if humanOutput {
 			fmt.Printf("Found %d duplicate groups (%d total duplicates):\n\n", len(groups), totalDupes)
 			for _, g := range groups {
-				fmt.Printf("Source: %s/%s\n", g.SourceType, g.SourceID)
-				fmt.Printf("  Keep:   %s\n", g.Primary)
-				fmt.Printf("  Remove: %v\n\n", g.Duplicates)
+				switch g.MatchBasis {
+				case "source_id":
+					fmt.Printf("Source: %s/%s\n", g.SourceType, g.SourceID)
+					fmt.Printf("  Keep:   %s\n", g.Primary)
+					fmt.Printf("  Remove: %v\n\n", g.Duplicates)
+				case "title":
+					fmt.Printf("Title match: %q\n", g.Title)
+					fmt.Printf("  Members: %v\n\n", g.Members)
+				}
 			}
 		} else {
 			outputJSON(DedupeResult{
@@ -99,14 +120,21 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Merge mode: actually remove duplicates and update edges
-	edgesModified, err := performMerge(repoRoot, refs, groups)
+	// Merge mode only acts on source-id groups; title groups are report-only.
+	mergeGroups := make([]DuplicateGroup, 0, len(groups))
+	for _, g := range groups {
+		if g.MatchBasis == "source_id" {
+			mergeGroups = append(mergeGroups, g)
+		}
+	}
+
+	edgesModified, err := performMerge(repoRoot, refs, mergeGroups)
 	if err != nil {
 		exitWithError(ExitDataError, "performing merge: %v", err)
 	}
 
 	if humanOutput {
-		fmt.Printf("Merged %d duplicate groups (%d duplicates removed)\n", len(groups), totalDupes)
+		fmt.Printf("Merged %d duplicate groups (%d duplicates removed)\n", len(mergeGroups), totalDupes)
 		if edgesModified > 0 {
 			fmt.Printf("Modified %d edges\n", edgesModified)
 		}
@@ -128,8 +156,35 @@ type sourceKey struct {
 	ID   string
 }
 
-// findDuplicateGroups finds references with the same source ID.
+// normalizeTitleAlnum normalizes a title for duplicate grouping: lowercase,
+// keeping only Unicode letters and digits. This deliberately differs from
+// normalizeTitleStrict, which preserves word boundaries for S2-lookup
+// verification — here punctuation and spacing variants should collide.
+func normalizeTitleAlnum(title string) string {
+	var result []rune
+	for _, r := range title {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			result = append(result, unicode.ToLower(r))
+		}
+	}
+	return string(result)
+}
+
+// findDuplicateGroups finds references with the same source ID, then
+// separately groups references sharing a normalized title. Source-ID groups
+// come first, then title groups; both are sorted for stable output.
 func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
+	sourceGroups := findSourceIDGroups(refs)
+	titleGroups := findTitleGroups(refs)
+
+	groups := make([]DuplicateGroup, 0, len(sourceGroups)+len(titleGroups))
+	groups = append(groups, sourceGroups...)
+	groups = append(groups, titleGroups...)
+	return groups
+}
+
+// findSourceIDGroups finds references with the same import source ID.
+func findSourceIDGroups(refs []reference.Reference) []DuplicateGroup {
 	// Map source key -> list of ref IDs
 	sourceMap := make(map[sourceKey][]string)
 
@@ -149,6 +204,7 @@ func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
 		}
 
 		groups = append(groups, DuplicateGroup{
+			MatchBasis: "source_id",
 			SourceType: key.Type,
 			SourceID:   key.ID,
 			Primary:    ids[0],  // Keep first occurrence
@@ -156,7 +212,107 @@ func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
 		})
 	}
 
+	sort.Slice(groups, func(i, j int) bool {
+		if groups[i].SourceType != groups[j].SourceType {
+			return groups[i].SourceType < groups[j].SourceType
+		}
+		return groups[i].SourceID < groups[j].SourceID
+	})
+
 	return groups
+}
+
+// findTitleGroups finds references sharing a normalized title. Refs whose
+// normalized title is empty, or whose raw title is the unknown-title
+// sentinel, are skipped. A group is suppressed entirely if `supersedes`
+// already connects every member (e.g. after `bip s2 link-published` has run)
+// — the relationship is already known, so re-reporting it is noise.
+func findTitleGroups(refs []reference.Reference) []DuplicateGroup {
+	titleMap := make(map[string][]int) // normalized title -> ref indices
+
+	for i, ref := range refs {
+		if ref.Title == importer.UnknownTitle {
+			continue
+		}
+		key := normalizeTitleAlnum(ref.Title)
+		if key == "" {
+			continue
+		}
+		titleMap[key] = append(titleMap[key], i)
+	}
+
+	var groups []DuplicateGroup
+	for title, idxs := range titleMap {
+		if len(idxs) < 2 {
+			continue
+		}
+		if allSupersedesConnected(refs, idxs) {
+			continue
+		}
+		ids := make([]string, len(idxs))
+		for i, idx := range idxs {
+			ids[i] = refs[idx].ID
+		}
+		groups = append(groups, DuplicateGroup{
+			MatchBasis: "title",
+			Members:    ids,
+			Title:      title,
+		})
+	}
+
+	sort.Slice(groups, func(i, j int) bool {
+		return groups[i].Title < groups[j].Title
+	})
+
+	return groups
+}
+
+// allSupersedesConnected reports whether every member of idxs (indices into
+// refs) is connected to every other member via a chain of `supersedes` ->
+// DOI links, i.e. the relationship between all of them is already recorded
+// and there is nothing left for a human to resolve.
+func allSupersedesConnected(refs []reference.Reference, idxs []int) bool {
+	n := len(idxs)
+	parent := make([]int, n)
+	for i := range parent {
+		parent[i] = i
+	}
+	var find func(int) int
+	find = func(x int) int {
+		if parent[x] != x {
+			parent[x] = find(parent[x])
+		}
+		return parent[x]
+	}
+	union := func(a, b int) {
+		ra, rb := find(a), find(b)
+		if ra != rb {
+			parent[ra] = rb
+		}
+	}
+
+	doi := func(i int) string { return s2.NormalizeDOI(refs[idxs[i]].DOI) }
+	supersedes := func(i int) string { return s2.NormalizeDOI(refs[idxs[i]].Supersedes) }
+
+	for i := 0; i < n; i++ {
+		sup := supersedes(i)
+		if sup == "" {
+			continue
+		}
+		for j := 0; j < n; j++ {
+			if i != j && doi(j) == sup {
+				union(i, j)
+			}
+		}
+	}
+
+	root := find(0)
+	for i := 1; i < n; i++ {
+		if find(i) != root {
+			return false
+		}
+	}
+	return true
 }
 
 // performMerge removes duplicates and updates edge references.

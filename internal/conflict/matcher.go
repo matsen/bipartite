@@ -7,6 +7,7 @@ package conflict
 
 import (
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 )
 
 // MatchPapers matches papers between ours and theirs sides of a conflict region.
@@ -20,8 +21,8 @@ func MatchPapers(region ConflictRegion) MatchResult {
 	oursMatched := make(map[string]bool) // Track which ours papers have been matched
 
 	for _, ref := range region.OursRefs {
-		if ref.DOI != "" {
-			oursByDOI[ref.DOI] = ref
+		if key := s2.NormalizeDOI(ref.DOI); key != "" {
+			oursByDOI[key] = ref
 		}
 		if ref.ID != "" {
 			oursByID[ref.ID] = ref
@@ -31,10 +32,10 @@ func MatchPapers(region ConflictRegion) MatchResult {
 	// Track which theirs papers have been matched
 	theirsMatched := make(map[string]bool)
 
-	// First pass: match by DOI
+	// First pass: match by DOI (normalized, case-insensitive)
 	for _, theirs := range region.TheirsRefs {
-		if theirs.DOI != "" {
-			if ours, ok := oursByDOI[theirs.DOI]; ok {
+		if key := s2.NormalizeDOI(theirs.DOI); key != "" {
+			if ours, ok := oursByDOI[key]; ok {
 				result.Matches = append(result.Matches, PaperMatch{
 					Ours:      ours,
 					Theirs:    theirs,
