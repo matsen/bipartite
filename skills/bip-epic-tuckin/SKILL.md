@@ -1,12 +1,17 @@
 ---
 name: bip-epic-tuckin
-description: Persist orchestrator state before context reset
+description: Persist topic-side EPIC state before context reset
 ---
 
 # /bip-epic-tuckin
 
-Flush orchestrator state to durable storage before a context reset or
-session end. Run this when context is getting long or before stopping.
+Flush topic state — EPIC bodies, findings, decisions — to durable
+storage before a context reset or session end. Run this when context
+is getting long or before stopping.
+
+Fleet-side state (clone/slot status, `.epic-status.json`, pending
+spawn intent) is `/bip-conductor-tuckin`'s job, not this skill's — run
+that separately if the conductor session is also resetting.
 
 ## Usage
 
@@ -21,56 +26,24 @@ session end. Run this when context is getting long or before stopping.
 For each `ISSUE-EPIC-*.md` file in the repo root, follow the **EPIC body
 update pattern** from `/bip-epic` (pull with `updatedAt` tracking → edit →
 conflict-check → push). Extract the issue number from the filename
-(`ISSUE-EPIC-284.md` → 284).
+(`ISSUE-EPIC-284.md` → 284). Prune completed sections while you're in
+there — this is the same discipline as `/bip-epic`'s regular update
+pattern, not a separate cleanup pass.
 
 Report which EPICs were pushed (and which were skipped due to conflicts).
 
-### Step 2: Update slot status files
+### Step 2: Update MEMORY.md (lightweight)
 
-Read `clone_root` and `local_worktrees` from `.epic-config.json`.
-
-Slot paths:
-- *Clone mode*: `$CLONE_ROOT/<clone-name>`
-- *Worktree mode*: `$CLONE_ROOT/issue-<N>`
-
-For each slot the orchestrator interacted with this session:
-
-1. Check if the slot's `.epic-status.json` is stale or missing
-2. If the orchestrator has newer information (e.g., a slot finished,
-   got blocked, or changed phase), update the file:
-   ```bash
-   CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-   cat > "$CLONE_ROOT/<slot>/.epic-status.json" << 'EOF'
-   {
-     "issue": <N>,
-     "title": "<title>",
-     "phase": "<current phase>",
-     "summary": "<what happened>",
-     "updated_at": "<ISO 8601 timestamp>",
-     "blockers": []
-   }
-   EOF
-   ```
-
-Update slots the orchestrator has direct knowledge about. This includes:
-- Slots whose PRs were merged this session (even if the slot's own
-  session already exited)
-- Slots the orchestrator observed finishing via tmux or poll
-
-Do not guess status for slots with active sessions that may have
-progressed beyond what the orchestrator last observed.
-
-### Step 3: Update MEMORY.md (lightweight)
-
-Most state should already be in EPIC bodies (`ISSUE-EPIC-<N>.md`) and
-clone status files (`.epic-status.json`). Only update MEMORY.md for
-orchestrator-level context that doesn't fit in those files:
+Most state should already be in EPIC bodies (`ISSUE-EPIC-<N>.md`).
+Only update MEMORY.md for topic-level context that doesn't fit there:
 
 - Key decisions and their rationale
 - Cross-EPIC patterns or dependencies
+- Dependency-direction or collision findings not yet folded into an
+  EPIC body
 - Things the next session should know that aren't obvious from the files
 
-### Step 4: Report
+### Step 3: Report
 
 Print a summary:
 
@@ -79,8 +52,8 @@ Print a summary:
 
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
-- Slot status updated: cedar, issue-295
 - MEMORY.md updated: yes
 
-Safe to reset context.
+Safe to reset context. Fleet-side state (clones, slots) is unaffected
+by this — run /bip-conductor-tuckin if that session is resetting too.
 ```

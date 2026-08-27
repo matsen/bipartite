@@ -1,9 +1,9 @@
 ---
-name: bip-epic-handoff
+name: bip-conductor-handoff
 description: Worker self-spawns a follow-up issue and hands off to a new slot
 ---
 
-# /bip-epic-handoff
+# /bip-conductor-handoff
 
 Hand off work from a finishing worker session to a new slot. Run this
 from a **worker** (not the conductor) when your current issue is done
@@ -27,7 +27,7 @@ you invoke it.
 ## Usage
 
 ```
-/bip-epic-handoff [issue-number]
+/bip-conductor-handoff [issue-number]
 ```
 
 - With an issue number: spawn work for an existing issue
@@ -135,7 +135,7 @@ rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 
 ### Step 6: Compose prompt and spawn
 
-Follow `/bip-epic-spawn` Steps 3-4 to compose the prompt:
+Follow `/bip-conductor-spawn` Steps 3-4 to compose the prompt:
 1. Read the new issue: `gh issue view <N>`
 2. Compose the full prompt including:
    - A branch guard as the **first line**: `IMPORTANT: Before doing any work, verify you are on branch <N>-<slug> (run "git branch --show-current"). If you are on main, run "git checkout -b <N>-<slug>" first. Never commit directly to main.`

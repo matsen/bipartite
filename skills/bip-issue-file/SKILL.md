@@ -71,9 +71,24 @@ gh issue create --title "<extracted title>" --body-file <file> --assignee <usern
 - Use `--body-file` (or `-F`) flag exclusively for the body
 - Only add `--assignee` if explicitly mentioned in conversation context
 
-### Step 6: Report results
+### Step 6: Move the draft out of the way (CREATE only)
+
+On a successful **create**, the source file has done its job — move it
+so it stops being mistaken for unfiled work by any fleet-side sweep
+(e.g. `/bip-conductor`'s cold-start draft check) or confusing a future
+agent poking around the clone:
+
+```bash
+mkdir -p _ignore && mv <file> _ignore/
+```
+
+Skip this for **update** operations — the file is still the live
+source for future edits to that issue, so it stays in place.
+
+### Step 7: Report results
 
 Report:
 - Success/failure status
 - Issue number and URL
 - Whether it was a create or update operation
+- Where the source file ended up (`_ignore/<name>` for create, unchanged for update)

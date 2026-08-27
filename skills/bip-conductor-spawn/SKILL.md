@@ -1,27 +1,62 @@
 ---
-name: bip-epic-spawn
+name: bip-conductor-spawn
 description: Spawn a Claude session in a clone for an EPIC issue
 ---
 
-# /bip-epic-spawn
+# /bip-conductor-spawn
 
 Spawn a Claude Code session in a tmux window to work on a GitHub issue.
 The worker runs inside a **ralph-loop** with an **issue-lead subagent**
 that evaluates progress at stopping points.
 
+This is fleet-conductor machinery: it executes a spawn, annotating it
+with live fleet facts the topic side (`/bip-epic`) cannot see. See
+"Where the prompt comes from" below for the epic/conductor split.
+
 ## Usage
 
 ```
-/bip-epic-spawn <issue-number> [clone-name]
+/bip-conductor-spawn <issue-number> [clone-name]
 ```
 
 If clone-name is omitted, pick the best idle clone automatically.
 
 ## Configuration
 
-Reads `.epic-config.json` from the repo root (see `/bip-epic` for format).
-**If the file does not exist**, stop and ask the user to configure it
-via `/bip-epic` first.
+Reads `.epic-config.json` from the repo root (see `/bip-conductor` for
+format). **If the file does not exist**, stop and ask the user to
+configure it via `/bip-conductor` first.
+
+## Where the prompt comes from
+
+Most of the time `/bip-epic` has already decided an issue is ready and
+written the semantic brief — why it matters, scope, dependency/collision
+warnings from its issue-body analysis — to
+`$CLONE_ROOT/.spawn-prompts/<N>.md`. Check there first:
+
+```bash
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+INTENT="$CLONE_ROOT/.spawn-prompts/<N>.md"
+[ -f "$INTENT" ] && cat "$INTENT"
+```
+
+- **Intent file present**: it is the base for the `IMPORTANT CONTEXT`
+  section of Step 4's prompt below — don't re-derive what it already
+  says. Your job is to check it against live fleet state (Step 2b) and
+  append fleet facts it structurally couldn't know: which host/clone is
+  actually free, a concurrent worker editing an overlapping file, a
+  build running on a target remote host. Delete the intent file after a
+  successful launch (Step 5) — it has done its job.
+- **No intent file** (conductor-initiated respawn, routine maintenance,
+  quick fix with no upstream epic session): compose the prompt from the
+  issue directly, same as before. This is the escape hatch, not the
+  default path.
+
+If the intent conflicts with current fleet state in a way that isn't a
+mechanical fix (e.g. it asks for a clone/host that's genuinely
+contended, not just occupied by a finished session) — don't resolve it
+yourself. State the conflict to the user and let them decide; this
+mirrors the user-confirmation gate every spawn already goes through.
 
 ## Workflow
 
@@ -47,7 +82,7 @@ Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 If clone-name not specified, find an idle clone. A good pick is on `main`,
 clean, and has no live tmux pane in its directory — the pool is shared
 across operators and finishing workers self-claim slots via
-`/bip-epic-handoff`, so filter these out to avoid choosing one that's
+`/bip-conductor-handoff`, so filter these out to avoid choosing one that's
 already taken:
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
@@ -124,6 +159,23 @@ rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 **State cleanup is mandatory** — stale files from a previous assignment
 will confuse the worker and lead.
 
+### Step 2b: Pre-launch staleness check
+
+Mechanical, topic-agnostic, and easy to skip under pressure — don't.
+For every blocker/dependency the issue body names (an issue number, a
+PR number, "blocked on #N"), verify it's still true right now:
+
+```bash
+gh pr view <N> --json state,mergedAt   # merged already?
+gh issue view <N> --json state          # closed already?
+```
+
+An issue that declares itself blocked on an already-merged PR is the
+single most common staleness bug measured in practice (multiple
+instances in three days). If a named blocker turns out to be resolved,
+correct the composed prompt's `IMPORTANT CONTEXT` — don't pass the
+stale claim through to the worker.
+
 ### Step 3: Read the issue
 
 ```bash
@@ -131,7 +183,10 @@ gh issue view <number> --json title,body
 ```
 
 Extract key context: what the issue asks for, data locations, phasing,
-dependencies.
+dependencies. If a `.spawn-prompts/<N>.md` intent file exists (see
+"Where the prompt comes from" above), this is a cross-check against
+the live issue body, not a replacement for reading it — the intent
+file may itself have gone stale since the epic wrote it.
 
 ### Step 4: Compose the prompt
 
@@ -141,6 +196,14 @@ invocation that the worker runs as its first action. The ralph-loop
 prompt is kept SHORT (no special characters) — just a reminder to
 continue. The detailed instructions are already in the conversation
 from the initial message.
+
+The `IMPORTANT CONTEXT` section at the bottom is where the two sources
+combine: start from the epic's intent file when one exists, correct it
+per Step 2b, then append fleet facts only the conductor can see —
+which host/clone is actually free right now, a concurrent worker
+editing a file this issue also touches, a build in progress on a
+target remote host. Without this annotation step those fleet warnings
+never make it into the prompt at all.
 
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ```
@@ -474,17 +537,22 @@ Always go through `bip spawn` which handles the full lifecycle correctly.
 
 ### Step 6: Confirm
 
+If launch succeeded and a `.spawn-prompts/<N>.md` intent file was
+consumed in Step 3/4, delete it now — its job is done, and leaving it
+behind is exactly the kind of finished-but-undeleted artifact that
+accretes across a fleet.
+
 Report to the user:
 - Which clone was spawned
 - Which issue it's working on
 - Any phasing or gate criteria
 
-If a persistent slot monitor is running (started by `/bip-epic`), the
+If a persistent slot monitor is running (started by `/bip-conductor`), the
 conductor will receive automatic notifications when this worker changes
 phase. No additional monitoring setup is needed.
 
 If no monitor is running, suggest starting one or using
-`/loop 10m /bip-epic-poll` to track progress.
+`/loop 10m /bip-conductor-poll` to track progress.
 
 ## Creating new slots
 

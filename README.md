@@ -18,9 +18,9 @@ Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issu
 
 ### Agent Orchestration (the experiments side, EPIC workflow)
 
-The experiments side is the **EPIC orchestration system** — a conductor/worker pattern for managing multiple Claude Code sessions across clones and worktrees. A conductor session stays on `main`, scans GitHub for open issues, and spawns workers in dedicated `tmux` windows. Workers implement, test, and create PRs autonomously. Two subagents keep the loop honest: an `issue-lead` evaluates progress from file-based state and escalates only when human judgment is needed, and a `surprising-conclusion-skeptic` interrogates strong or negative claims before they propagate. Quality gates and PR landing close the loop, with follow-up issues flowing back to the ideas side.
+The experiments side is the **EPIC orchestration system** — split across two roles. A topic-scoped `/bip-epic` session tracks program strategy, triages issues/PRs, and flags dependency/collision conflicts between them; a topic-agnostic `/bip-conductor` session owns the clone pool, spawns workers in dedicated `tmux` windows, and runs mechanical checks (staleness, occupancy) neither role could catch alone. The two coordinate over `SendMessage` and a shared `.spawn-prompts/` directory. Workers implement, test, and create PRs autonomously. Two subagents keep the loop honest: an `issue-lead` evaluates progress from file-based state and escalates only when human judgment is needed, and a `surprising-conclusion-skeptic` interrogates strong or negative claims before they propagate. Quality gates and PR landing close the loop, with follow-up issues flowing back to the ideas side.
 
-Key skills: `/bip-epic`, `/bip-epic-spawn`, `/bip-epic-poll`, `/bip-epic-handoff`, `/bip-pr-review`, `/bip-pr-land`
+Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conductor-poll`, `/bip-conductor-handoff`, `/bip-pr-review`, `/bip-pr-land`
 
 ### Workflow Coordination
 

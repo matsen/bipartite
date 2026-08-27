@@ -11,9 +11,9 @@ stopping.
 
 This is the write-side counterpart to `/bip-spawn-resume` (which reads
 what this writes) and the single-slot, non-EPIC counterpart to
-`/bip-epic-tuckin` (which persists an orchestrator's view across many
+`/bip-conductor-tuckin` (which persists the fleet's view across many
 slots). EPIC workers already have their own persistence built into
-`/bip-epic-spawn`'s STOPPING POINTS protocol (`.epic-status.json` +
+`/bip-conductor-spawn`'s STOPPING POINTS protocol (`.epic-status.json` +
 `.epic-worklog.md` + issue-lead invocation) — if `.epic-status.json`
 exists in this worktree/clone, this is an EPIC slot: stop and use that
 protocol instead of this skill.
@@ -31,11 +31,11 @@ Run from inside the slot's worktree/clone, on its branch.
 ### Step 0: Confirm this isn't an EPIC slot
 
 ```bash
-test -f .epic-status.json && echo "EPIC slot — use bip-epic-spawn's STOPPING POINTS protocol instead"
+test -f .epic-status.json && echo "EPIC slot — use bip-conductor-spawn's STOPPING POINTS protocol instead"
 ```
 
 If it exists, this is an EPIC slot. If a ralph-loop/issue-lead cycle is
-actually running, use bip-epic-spawn's STOPPING POINTS protocol. If
+actually running, use bip-conductor-spawn's STOPPING POINTS protocol. If
 you're just manually pausing a conversational EPIC slot (no active
 autonomous loop), the lightweight version is enough: update
 .epic-status.json/.epic-worklog.md in place and post the relevant
@@ -83,7 +83,7 @@ Two cases:
 - **Session reached a real stopping point (done, or blocked on the
   user)** — rewrite the body to read as current state (premise,
   results, interpretation), not as a log of how it got there. Same
-  discipline as the quality-gate loop in `/bip-epic-spawn`: no growing
+  discipline as the quality-gate loop in `/bip-conductor-spawn`: no growing
   "History" section.
 - **Session is pausing mid-work, PR body would go stale if rewritten
   as "done"** — leave the body alone and instead add a PR comment
