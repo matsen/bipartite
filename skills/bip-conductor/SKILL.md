@@ -253,9 +253,12 @@ dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 > -maxdepth 1 -name 'issue-*' -type d`; for each, capture last
 > commit, dirty files, and `.epic-status.json`.
 >
-> Also: `tmux list-windows -F "#W"`. And: `find $CLONE_ROOT
-> -maxdepth 2 -name '*.md' -path '*.spawn-prompts*'` for pending
-> spawn intent from the epic.
+> Also: `tmux list-windows -F "#W"`. And, for pending spawn intent from
+> the epic: `find $CLONE_ROOT/.spawn-prompts -maxdepth 1 \( -name
+> '*.md' -o -name 'spawn-*.txt' \)` — **both patterns**, since
+> `<N>.md` and the older `spawn-<N>.txt` are both live conventions in
+> that directory; a `-name '*.md'`-only find silently misses a real,
+> current `spawn-<N>.txt` intent file.
 >
 > Classify each slot:
 > - `occupied`: has tmux window (regardless of agent status — user
@@ -269,7 +272,8 @@ dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 >   lead_guidance (from `.epic-status.json`), classification
 > - `action_candidates`: stale slots ready for cleanup (clean up
 >   ONLY if no tmux window — never kill tmux windows); pending
->   `.spawn-prompts/*.md` files with an idle clone to run them
+>   spawn-intent files (either naming pattern) with an idle clone to
+>   run them
 > - `surprises`: phase migrations (`blocked`/`pr-review`), missing
 >   status files, contradictions
 
@@ -290,8 +294,9 @@ issue-centric; this one is about what's occupying the fleet.
 | fir | stale (4d) | i589 | needs-human | check if experiment finished |
 | hazel | available | — | — | — |
 
-**Pending spawn intent**: list any `.spawn-prompts/*.md` files found
-in Step 3/4, with the available slots that could run them.
+**Pending spawn intent**: list any `.spawn-prompts/` files found in
+Step 3/4 (either naming pattern), with the available slots that could
+run them.
 
 ### Step 6: Propose next action
 

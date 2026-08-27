@@ -31,14 +31,21 @@ configure it via `/bip-conductor` first.
 
 Most of the time `/bip-epic` has already decided an issue is ready and
 written the semantic brief — why it matters, scope, dependency/collision
-warnings from its issue-body analysis — to
-`$CLONE_ROOT/.spawn-prompts/<N>.md`. Check there first:
+warnings from its issue-body analysis — to `$CLONE_ROOT/.spawn-prompts/`.
+Check there first, under **either** naming convention live in that
+directory — `<N>.md` (current) or `spawn-<N>.txt` (older, still
+written by some sessions):
 
 ```bash
 CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
-INTENT="$CLONE_ROOT/.spawn-prompts/<N>.md"
-[ -f "$INTENT" ] && cat "$INTENT"
+INTENT=$(ls "$CLONE_ROOT"/.spawn-prompts/{<N>.md,spawn-<N>.txt} 2>/dev/null | head -1)
+[ -n "$INTENT" ] && cat "$INTENT"
 ```
+
+Checking only `<N>.md` silently misses a real, live `spawn-<N>.txt` and
+falls through to the escape hatch below with no warning — exactly the
+failure this split exists to prevent, reintroduced by a filename. Don't
+narrow this check to one pattern.
 
 - **Intent file present**: it is the base for the `IMPORTANT CONTEXT`
   section of Step 4's prompt below — don't re-derive what it already
@@ -183,10 +190,11 @@ gh issue view <number> --json title,body
 ```
 
 Extract key context: what the issue asks for, data locations, phasing,
-dependencies. If a `.spawn-prompts/<N>.md` intent file exists (see
-"Where the prompt comes from" above), this is a cross-check against
-the live issue body, not a replacement for reading it — the intent
-file may itself have gone stale since the epic wrote it.
+dependencies. If a `.spawn-prompts/` intent file exists (see "Where
+the prompt comes from" above, under either naming convention), this is
+a cross-check against the live issue body, not a replacement for
+reading it — the intent file may itself have gone stale since the
+epic wrote it.
 
 ### Step 4: Compose the prompt
 
@@ -537,8 +545,8 @@ Always go through `bip spawn` which handles the full lifecycle correctly.
 
 ### Step 6: Confirm
 
-If launch succeeded and a `.spawn-prompts/<N>.md` intent file was
-consumed in Step 3/4, delete it now — its job is done, and leaving it
+If launch succeeded and a `.spawn-prompts/` intent file (`$INTENT` from
+Step 3) was consumed, delete it now — its job is done, and leaving it
 behind is exactly the kind of finished-but-undeleted artifact that
 accretes across a fleet.
 

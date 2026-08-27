@@ -84,18 +84,23 @@ gh issue list --search "EPIC in:title" --json number,title
 
 > Read EPIC `i<N>` and report its current state. Tasks:
 > 1. `gh issue view <N> --json title,body,updatedAt`.
-> 2. Parse the Status dashboard, Key findings, and active clone
->    assignments table.
-> 3. For each open item with a clone assignment, run `gh issue view
+> 2. Parse the Status dashboard and Key findings. (Older EPIC bodies
+>    may still carry a legacy clone-assignment table from before the
+>    fleet/topic split — that's fleet state that shouldn't have been
+>    authored here; note it as a `surprise` for cleanup, don't treat
+>    it as current truth.)
+> 3. For each open item the dashboard lists, run `gh issue view
 >    <child-N> --json state,stateReason` to confirm it is still open.
 >
 > Return under 400 words:
 > - `changes_since_baseline`: completed items, new findings, items
 >   newly opened
-> - `active_items`: open work with clone assignments and brief status
+> - `active_items`: open work with brief status (for which clone is
+>   running it, if any, that's `/bip-conductor`'s dashboard, not this
+>   report)
 > - `action_candidates`: items the EPIC marks ready but unassigned
-> - `surprises`: contradictions, stale assignments, `RECOMMEND DEEPER
->   LOOK` flags
+> - `surprises`: contradictions, legacy clone-assignment tables found
+>   in the body, `RECOMMEND DEEPER LOOK` flags
 
 **Group B: one PR/issue triage subagent.** Brief:
 
@@ -177,6 +182,19 @@ you touch a body to add a finding or check a box, also look for
 sections whose work is now fully complete and cut them in the same
 edit, rather than letting them ride to the next dedicated cleanup.
 
+**Fleet state is derived, never authored — don't let it back into the
+body.** Which clone holds which issue, which slots are free, which
+tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's
+`/bip-conductor`'s Step 5 dashboard) whenever you need it. Never write
+it into an EPIC body or a continuation doc — it goes stale within a
+day and there is no mechanism to notice, which is exactly the failure
+a hand-maintained clone table caused when it went stale twice in one
+day. Handoff artifacts (spawn intent, unfiled drafts) are the opposite
+category: authored deliberately, to a durable path outside git,
+precisely so they survive clone churn — pruning them (Step 6, below)
+is about cleaning up finished authored state, not about avoiding
+writing derived state down in the first place.
+
 ### Step 6: Hand spawn intent to the conductor
 
 For each issue judged ready (unblocked per Step 3, no unresolved
@@ -187,6 +205,12 @@ warnings from Step 4 — and write it to:
 ```
 $CLONE_ROOT/.spawn-prompts/<N>.md
 ```
+
+**Naming note**: an older, already-live convention in this same
+directory names files `spawn-<N>.txt` instead. Both are valid intent —
+`/bip-conductor-spawn` checks for either (see that skill's "Where the
+prompt comes from"). Use `<N>.md` for new intent; don't rename existing
+`spawn-<N>.txt` files you find there, since one may be mid-flight.
 
 This directory lives outside every clone's git (deliberately — it
 must survive clone churn) and is the handoff point to
@@ -219,11 +243,21 @@ timing, a dependency that just landed)?
   appends a timestamped, attributed entry to `.epic-worklog.md` in the
   same step (never edits `lead_guidance` — see `/bip-conductor`'s
   Conventions section for why the append-only path matters). The
-  epic's job stops at drafting the line; it doesn't have tmux
-  addressability into worker sessions itself.
+  epic's job stops at drafting the line — route it through the
+  conductor even though `SendMessage` would reach the worker directly
+  from here too. A single delivery path is what keeps the message and
+  the `.epic-worklog.md` append from diverging: two senders means a
+  correction can land in the worker's context with no durable record,
+  or a durable record with no delivery.
 - **Transient**: message-only is fine; still routes through the
-  conductor, since it's the one with `ListAgents`/`SendMessage` reach
-  into worker tmux sessions.
+  conductor, for the same single-delivery-path reason.
+
+A worker correction is often *more* time-sensitive than spawn intent —
+the worker is actively doing the wrong thing while it sits in a queue.
+If the conductor session is addressable right now, `SendMessage` it
+directly to request immediate delivery, rather than leaving the
+correction for its next poll cycle — same mechanics and addressability
+caveats as Step 6's escape hatch.
 
 ## EPIC body update pattern
 
@@ -266,9 +300,13 @@ Key sections to maintain:
   finished ones
 - **Key findings**: Numbered list, append new findings
 - **Related experiments**: Add new experiment rows
-- **Active clone assignments**: Update date and clone table
 
-Always include the date in the clone assignments header.
+**Do not maintain a clone/slot assignment table in the body** — which
+clone is working which issue is fleet state, derived from `git`/`tmux`,
+not authored here (see the "Fleet state is derived" note above). If an
+item's status dashboard entry needs a pointer to who's on it, name the
+issue, not the clone — `/bip-conductor`'s dashboard is the place to
+ask "which clone."
 
 ## Error handling
 

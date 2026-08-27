@@ -58,9 +58,11 @@ progressed beyond what the conductor last observed.
 
 ### Step 2: Note pending spawn intent
 
-List any `$CLONE_ROOT/.spawn-prompts/*.md` files still waiting on
-execution — these are the epic's authored intent, not conductor state,
-so don't touch their contents, just confirm they're still there and
+List any `$CLONE_ROOT/.spawn-prompts/` files still waiting on
+execution (either `<N>.md` or `spawn-<N>.txt` — check both, the
+directory holds both live conventions) — these are the epic's authored
+intent, not conductor state, so don't touch their contents, just
+confirm they're still there and
 report them so the next conductor session (or the user) knows what's
 queued.
 

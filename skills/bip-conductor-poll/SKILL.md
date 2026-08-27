@@ -89,9 +89,9 @@ pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 >   issue-lead comments, slot phase changes
 > - `active_items`: per active slot — clone, issue, phase,
 >   stop_reason, lead assessment (one line each)
-> - `action_candidates`: pending spawn intent in
->   `$CLONE_ROOT/.spawn-prompts/*.md` waiting to be executed; merged
->   PRs that should trigger slot cleanup. (Deciding *which* open
+> - `action_candidates`: pending spawn intent in `$CLONE_ROOT/.spawn-prompts/`
+>   (either `<N>.md` or `spawn-<N>.txt` — check both) waiting to be
+>   executed; merged PRs that should trigger slot cleanup. (Deciding *which* open
 >   issues are ready to spawn is `/bip-epic`'s call, not this poll's —
 >   report raw signal, not a readiness verdict.)
 > - `surprises`: `needs-human`/`completed` slots, stale status
@@ -104,7 +104,7 @@ the poll output is one line: "All quiet."
 
 ### Focus on what matters
 
-**Lead with pending spawn intent** — `.spawn-prompts/*.md` files the
+**Lead with pending spawn intent** — `.spawn-prompts/` files (either naming pattern) the
 epic has already written and is waiting on the conductor to execute.
 This is the most actionable information at this level; deciding which
 *other* open issues should be spawned next is `/bip-epic`'s call.
@@ -168,7 +168,7 @@ one-shot.
 
 ### Output structure
 
-1. **Pending spawn intent**: `.spawn-prompts/*.md` files waiting on
+1. **Pending spawn intent**: `.spawn-prompts/` files (either naming pattern) waiting on
    execution, plus idle clones available to run them.
 
 2. **Active work**: Clones with tmux windows that are mid-task. One line
