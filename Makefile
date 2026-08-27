@@ -20,8 +20,11 @@ symlink-agents:
 symlink-skills:
 	mkdir -p ~/.claude/skills
 	@for d in $(REPO_DIR)/skills/*/; do \
-		[ -d "$$d" ] && rm -rf ~/.claude/skills/$$(basename "$$d") && ln -s "$$d" ~/.claude/skills/$$(basename "$$d"); \
+		if [ -f "$$d/SKILL.md" ]; then \
+			rm -rf ~/.claude/skills/$$(basename "$$d") && ln -s "$$d" ~/.claude/skills/$$(basename "$$d"); \
+		fi; \
 	done
+	@rm -rf ~/.claude/skills/lib && ln -s $(REPO_DIR)/skills/lib ~/.claude/skills/lib
 	@echo "Symlinked skills to ~/.claude/skills/"
 
 symlink-statusline:

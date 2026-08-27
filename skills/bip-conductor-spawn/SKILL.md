@@ -37,10 +37,16 @@ directory — `<N>.md` (current) or `spawn-<N>.txt` (older, still
 written by some sessions):
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
-INTENT=$(ls "$CLONE_ROOT"/.spawn-prompts/{<N>.md,spawn-<N>.txt} 2>/dev/null | head -1)
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+INTENT=$(find_spawn_intent "$CLONE_ROOT" <N>)
 [ -n "$INTENT" ] && cat "$INTENT"
 ```
+
+`<this-skill's-base-directory>` is this skill's base directory as given at
+invocation (e.g. `/home/user/.claude/skills/bip-conductor-spawn`); the
+shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill
+directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
 Checking only `<N>.md` silently misses a real, live `spawn-<N>.txt` and
 falls through to the escape hatch below with no warning — exactly the
