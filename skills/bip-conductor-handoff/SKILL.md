@@ -84,7 +84,7 @@ Then select or create a slot:
 
 **Clone mode** (`local_worktrees` absent or false):
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 # Find an idle clone (on main, clean worktree)
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
   branch=$(git -C "$CLONE_ROOT/$name" branch --show-current 2>/dev/null)
@@ -100,7 +100,7 @@ from `new_clone_names` in the config.
 
 **Worktree mode** (`local_worktrees: true`):
 ```bash
-CLONE_ROOT=$(jq -r .clone_root "$MAIN_CHECKOUT/.epic-config.json")
+CLONE_ROOT=$(jq -r .clone_root "$MAIN_CHECKOUT/.epic-config.json" | sed "s|^~|$HOME|")
 SLOT="$CLONE_ROOT/issue-<N>"
 SLUG=$(gh issue view <N> --json title -q '.title' | tr '[:upper:]' '[:lower:]' | awk '{for(i=1;i<=4&&i<=NF;i++) printf "%s%s",$i,(i<4&&i<NF?"-":"")}')
 
@@ -150,7 +150,7 @@ Follow `/bip-conductor-spawn` Steps 3-4 to compose the prompt:
 Then launch with the correct flags for your mode:
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 
 # Clone mode: --name is NNN-clone (e.g. "281-cedar")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \

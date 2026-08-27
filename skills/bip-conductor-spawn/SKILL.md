@@ -37,7 +37,7 @@ directory — `<N>.md` (current) or `spawn-<N>.txt` (older, still
 written by some sessions):
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 INTENT=$(ls "$CLONE_ROOT"/.spawn-prompts/{<N>.md,spawn-<N>.txt} 2>/dev/null | head -1)
 [ -n "$INTENT" ] && cat "$INTENT"
 ```
@@ -92,7 +92,7 @@ across operators and finishing workers self-claim slots via
 `/bip-conductor-handoff`, so filter these out to avoid choosing one that's
 already taken:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 OCCUPIED=$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
   dir="$CLONE_ROOT/$name"
@@ -119,7 +119,7 @@ is the first 4 words of the issue title, lowercased and hyphenated.
 
 Check if slot already exists:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 SLOT="$CLONE_ROOT/issue-<N>"
 if [ -d "$SLOT" ]; then
   # Worktree exists — check for active tmux window
@@ -143,7 +143,7 @@ fi
 
 **Clone mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
 rm -f .epic-status.json .epic-worklog.md
@@ -521,7 +521,7 @@ pick another idle clone. Pass `--force` only when you deliberately want a
 second session in the same directory.
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 
 # Write prompt to temp file (conductor does this, NOT via shell expansion)
 # Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
@@ -566,7 +566,7 @@ If no monitor is running, suggest starting one or using
 
 **Clone mode** — create a new clone and register it:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 REPO=$(jq -r .github_repo .epic-config.json)
 cd "$CLONE_ROOT"
 git clone "git@github.com:$REPO.git" <new-name>
@@ -585,7 +585,7 @@ in Step 1 and named `issue-<N>`. No config changes required.
 
 **Worktree mode** — when an issue's PR is merged:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 git worktree remove "$CLONE_ROOT/issue-<N>"
 git branch -d <N>-short-desc
 ```

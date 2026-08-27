@@ -227,7 +227,7 @@ reuses the file in place, so a draft that's mid-revision on an existing
 issue is expected here too — don't treat those as orphans).
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 ```
 

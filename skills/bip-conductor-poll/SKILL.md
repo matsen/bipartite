@@ -198,7 +198,7 @@ check 1 with slot branches):
 
 **Worktree mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 # Confirm PR is merged before removing
 gh pr list --head <branch> --state merged --json number | jq length
 # If merged:
@@ -208,7 +208,7 @@ git branch -d <branch>
 
 **Clone mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"

@@ -35,7 +35,7 @@ For each slot the conductor interacted with this session:
 2. If the conductor has newer information (e.g., a slot finished,
    got blocked, or changed phase), update the file:
    ```bash
-   CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+   CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
    cat > "$CLONE_ROOT/<slot>/.epic-status.json" << 'EOF'
    {
      "issue": <N>,
