@@ -203,10 +203,16 @@ semantic brief — why it matters, scope, any dependency/collision
 warnings from Step 4 — and write it to:
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 mkdir -p "$CLONE_ROOT/.spawn-prompts"
 # Use the Write tool to create "$CLONE_ROOT/.spawn-prompts/<N>.md" with the brief
 ```
+
+`<this-skill's-base-directory>` is this skill's base directory as given
+at invocation (e.g. `/home/user/.claude/skills/bip-epic`); the shared
+helper lives at `lib/spawn-intent.sh`, a sibling of every skill
+directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
 `clone_root` in `.epic-config.json` is tilde-form — resolve it the same
 way every `/bip-conductor*` skill does, or the brief silently lands in
