@@ -18,17 +18,22 @@ var (
 	bpBinaryErr  error
 )
 
+// moduleRoot returns the absolute path to the repository root, derived from
+// this file's own location (tests/integration/edge_test.go).
+func moduleRoot(t *testing.T) string {
+	t.Helper()
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("could not determine test file path")
+	}
+	return filepath.Dir(filepath.Dir(filepath.Dir(filename)))
+}
+
 // getBPBinary builds the bp binary once and returns its path.
 func getBPBinary(t *testing.T) string {
 	t.Helper()
 	bpBinaryOnce.Do(func() {
-		// Get module root directory
-		_, filename, _, ok := runtime.Caller(0)
-		if !ok {
-			bpBinaryErr = os.ErrInvalid
-			return
-		}
-		moduleRoot := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
+		moduleRoot := moduleRoot(t)
 
 		// Build bp to a temp location
 		tmpDir, err := os.MkdirTemp("", "bp-test-*")

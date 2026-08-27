@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -13,12 +12,7 @@ import (
 // spawnIntentScriptPath returns the absolute path to skills/lib/spawn-intent.sh.
 func spawnIntentScriptPath(t *testing.T) string {
 	t.Helper()
-	_, filename, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("could not determine test file path")
-	}
-	moduleRoot := filepath.Dir(filepath.Dir(filepath.Dir(filename)))
-	return filepath.Join(moduleRoot, "skills", "lib", "spawn-intent.sh")
+	return filepath.Join(moduleRoot(t), "skills", "lib", "spawn-intent.sh")
 }
 
 // runSpawnIntentShell sources spawn-intent.sh and runs the given shell
