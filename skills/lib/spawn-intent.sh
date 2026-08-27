@@ -14,18 +14,27 @@
 
 # resolve_clone_root <config-file>
 # Reads .clone_root from the given JSON config and tilde-expands it.
-# Defaults to .epic-config.json in the current directory.
+# Defaults to .epic-config.json in the current directory. Fails with a
+# message on stderr if the file is unreadable or .clone_root is
+# missing/null, rather than silently resolving to an empty string.
 resolve_clone_root() {
     local config_file="${1:-.epic-config.json}"
-    jq -r '.clone_root' "$config_file" | sed "s|^~|$HOME|"
+    local root
+    root=$(jq -r '.clone_root' "$config_file") || return 1
+    if [ -z "$root" ] || [ "$root" = "null" ]; then
+        echo "resolve_clone_root: no .clone_root in $config_file" >&2
+        return 1
+    fi
+    echo "$root" | sed "s|^~|$HOME|"
 }
 
 # find_spawn_intent <clone_root> <issue-number>
 # Locates a spawn-intent file for the given issue number under either
 # naming convention live in .spawn-prompts/: "<N>.md" (current) or
 # "spawn-<N>.txt" (older, still written by some sessions). Prefers
-# "<N>.md" when both exist. Prints the path, or nothing if neither
-# exists.
+# "<N>.md" when both exist — relying on `ls`'s alphabetical ordering of
+# its (unglobbed) arguments, where a leading digit sorts before "s", not
+# on argument order. Prints the path, or nothing if neither exists.
 find_spawn_intent() {
     local clone_root="$1"
     local issue_number="$2"

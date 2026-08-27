@@ -15,12 +15,23 @@ func spawnIntentScriptPath(t *testing.T) string {
 	return filepath.Join(moduleRoot(t), "skills", "lib", "spawn-intent.sh")
 }
 
-// runSpawnIntentShell sources spawn-intent.sh and runs the given shell
-// snippet, returning trimmed stdout.
-func runSpawnIntentShell(t *testing.T, script string) string {
+// shellQuote wraps s in single quotes for safe interpolation into a shell
+// command string, escaping any single quotes it contains.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// callSpawnIntentFunc sources spawn-intent.sh and calls fn with the given
+// arguments, returning trimmed stdout.
+func callSpawnIntentFunc(t *testing.T, fn string, args ...string) string {
 	t.Helper()
-	full := "source " + spawnIntentScriptPath(t) + "\n" + script
-	cmd := exec.Command("bash", "-c", full)
+	quoted := make([]string, len(args))
+	for i, a := range args {
+		quoted[i] = shellQuote(a)
+	}
+	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+		fn + " " + strings.Join(quoted, " ")
+	cmd := exec.Command("bash", "-c", script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("shell snippet failed: %v\nOutput: %s", err, out)
@@ -41,7 +52,7 @@ func TestResolveCloneRootTildeForm(t *testing.T) {
 	}
 	want := filepath.Join(home, "re", "pz")
 
-	got := runSpawnIntentShell(t, "resolve_clone_root "+configPath)
+	got := callSpawnIntentFunc(t, "resolve_clone_root", configPath)
 	if got != want {
 		t.Fatalf("resolve_clone_root(~/re/pz) = %q, want %q", got, want)
 	}
@@ -55,75 +66,52 @@ func TestResolveCloneRootAbsoluteForm(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := runSpawnIntentShell(t, "resolve_clone_root "+configPath)
+	got := callSpawnIntentFunc(t, "resolve_clone_root", configPath)
 	if got != absPath {
 		t.Fatalf("resolve_clone_root(%s) = %q, want unchanged %q", absPath, got, absPath)
 	}
 }
 
-func TestFindSpawnIntentMdOnly(t *testing.T) {
-	cloneRoot := t.TempDir()
-	promptsDir := filepath.Join(cloneRoot, ".spawn-prompts")
-	if err := os.MkdirAll(promptsDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	mdPath := filepath.Join(promptsDir, "302.md")
-	if err := os.WriteFile(mdPath, []byte("intent"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	got := runSpawnIntentShell(t, "find_spawn_intent "+cloneRoot+" 302")
-	if got != mdPath {
-		t.Fatalf("find_spawn_intent = %q, want %q", got, mdPath)
-	}
-}
-
-func TestFindSpawnIntentTxtOnly(t *testing.T) {
-	cloneRoot := t.TempDir()
-	promptsDir := filepath.Join(cloneRoot, ".spawn-prompts")
-	if err := os.MkdirAll(promptsDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	txtPath := filepath.Join(promptsDir, "spawn-302.txt")
-	if err := os.WriteFile(txtPath, []byte("intent"), 0644); err != nil {
-		t.Fatal(err)
+func TestFindSpawnIntent(t *testing.T) {
+	tests := []struct {
+		name       string
+		createMd   bool
+		createTxt  bool
+		wantSuffix string // relative to .spawn-prompts/, or "" for none found
+	}{
+		{name: "md only", createMd: true, wantSuffix: "302.md"},
+		{name: "txt only", createTxt: true, wantSuffix: "spawn-302.txt"},
+		{name: "both present prefers md", createMd: true, createTxt: true, wantSuffix: "302.md"},
+		{name: "none found", wantSuffix: ""},
 	}
 
-	got := runSpawnIntentShell(t, "find_spawn_intent "+cloneRoot+" 302")
-	if got != txtPath {
-		t.Fatalf("find_spawn_intent = %q, want %q", got, txtPath)
-	}
-}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cloneRoot := t.TempDir()
+			promptsDir := filepath.Join(cloneRoot, ".spawn-prompts")
+			if err := os.MkdirAll(promptsDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if tc.createMd {
+				if err := os.WriteFile(filepath.Join(promptsDir, "302.md"), []byte("intent"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.createTxt {
+				if err := os.WriteFile(filepath.Join(promptsDir, "spawn-302.txt"), []byte("intent"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
 
-func TestFindSpawnIntentPrefersMdWhenBothPresent(t *testing.T) {
-	cloneRoot := t.TempDir()
-	promptsDir := filepath.Join(cloneRoot, ".spawn-prompts")
-	if err := os.MkdirAll(promptsDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	mdPath := filepath.Join(promptsDir, "302.md")
-	txtPath := filepath.Join(promptsDir, "spawn-302.txt")
-	if err := os.WriteFile(mdPath, []byte("intent"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(txtPath, []byte("intent"), 0644); err != nil {
-		t.Fatal(err)
-	}
+			want := ""
+			if tc.wantSuffix != "" {
+				want = filepath.Join(promptsDir, tc.wantSuffix)
+			}
 
-	got := runSpawnIntentShell(t, "find_spawn_intent "+cloneRoot+" 302")
-	if got != mdPath {
-		t.Fatalf("find_spawn_intent with both present = %q, want %q (should prefer <N>.md)", got, mdPath)
-	}
-}
-
-func TestFindSpawnIntentNoneFound(t *testing.T) {
-	cloneRoot := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(cloneRoot, ".spawn-prompts"), 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	got := runSpawnIntentShell(t, "find_spawn_intent "+cloneRoot+" 302")
-	if got != "" {
-		t.Fatalf("find_spawn_intent with no intent files = %q, want empty", got)
+			got := callSpawnIntentFunc(t, "find_spawn_intent", cloneRoot, "302")
+			if got != want {
+				t.Fatalf("find_spawn_intent = %q, want %q", got, want)
+			}
+		})
 	}
 }
