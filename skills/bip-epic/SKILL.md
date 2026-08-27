@@ -50,11 +50,31 @@ let the conductor push an immediate correction to a live worker
 without killing and respawning its tmux window. This supplements —
 never replaces — the file-based correction path:
 
-- **`.epic-status.json`'s `lead_guidance` remains the durable, canonical
-  instruction.** Any correction sent via `SendMessage` MUST also be
-  written to `lead_guidance` in the same step, so a compacted or
-  restarted worker (or a fresh conductor cold-starting via `/bip-epic`)
-  can reconstruct the correction from files alone.
+- **Send the correction directly — that is the channel's purpose.**
+  No status-file write is a precondition for messaging. State the
+  change in at least one line; a bare pointer ("re-read
+  `lead_guidance`") is a no-op for a worker that already reads the
+  status file every step, and it strips the priority signal (drop
+  what you're doing vs. finish the current step). If a correction is
+  long enough that pointing at a file seems preferable, its home is
+  the spawn prompt or the issue body, not a nudge.
+- **The durable/transient test is the deliverable.** Any nudge that
+  changes what the worker will produce — scope, target, artifact, gate
+  criterion — is state that matters and MUST be recorded durably in
+  the same step as the message. Facts that leave the deliverable
+  unchanged (which host to use, a peer's timing, a dependency that
+  just landed) may be message-only.
+  - Record deliverable-changing corrections by having the **conductor**
+    append a timestamped, attributed entry to `.epic-worklog.md` in
+    the same step — not by writing `.epic-status.json`. Workers treat
+    that file as append-only and never edit previous entries, so a
+    conductor append cannot clobber worker history the way editing
+    `lead_guidance` can: it is a field every spawn prompt attributes to
+    the lead, so a second writer makes a conductor nudge
+    indistinguishable from a lead verdict, with no tiebreak when they
+    disagree. If the status file is written at all, use a field the
+    lead does not own (`conductor_guidance`, or a `lead_notes` entry
+    tagged `source: conductor`) — never merge into `lead_guidance`.
 - Delivery is not instant: the message drains at the worker's *next
   tool call*, not mid-tool-call. It is not a substitute for `tmux
   capture-pane` when the conductor needs to see current state right now.
@@ -62,12 +82,23 @@ never replaces — the file-based correction path:
   windows on this machine, or connected cloud/Remote Control sessions)
   — never a plain shell, a remote SSH job, or a non-Claude compute node.
   Run `ListAgents` first to confirm the target session is actually
-  addressable; fall back to editing `.epic-status.json` and waiting for
-  the worker's own loop when it isn't.
+  addressable; fall back to the file-only correction (a
+  `conductor_guidance` field or a `lead_notes` entry tagged `source:
+  conductor` — never `lead_guidance`) and wait for the worker's own
+  loop when it isn't. **The address is the session
+  name `ListAgents` reports, not the tmux window name the conductor
+  assigned at spawn** — `SendMessage` to a window name can fail with
+  `No agent named '<window>' is reachable.`
 - Do not use `SendMessage` to route around the conductor's own
   restrictions (cross-session permission laundering) — the "should not
   write code or create branches for numbered issues" rule above applies
   equally to instructions phrased as a message to a worker.
+- **When not to nudge**: a worker in `awaiting-results` with a live
+  `check_cmd` needs no ping. Use `notify_when_idle: true` instead of
+  "tell me when this worker finishes" — it works only from the main
+  conversation, only for sessions on this machine, and it is one-shot
+  (omit `message` for a pure subscription that costs the target
+  nothing; a subscription that never fires reports as expired).
 
 ## Configuration
 
@@ -299,12 +330,10 @@ Wait for user confirmation, then run `/bip-epic-spawn` (do NOT improvise tmux/cl
 
 If a live worker's scope needs correcting *before* its next natural
 stopping point (rather than waiting for the next `needs-human`/
-`completed` transition): update `.epic-status.json`'s `lead_guidance`
-(and append to `lead_notes`) as usual, then optionally `ListAgents` to
-confirm the worker's session is addressable and `SendMessage` a short
-pointer — "updated .epic-status.json lead_guidance for iN — re-read it
-before continuing" — rather than the instruction itself. See
-"Correcting a live worker" above.
+`completed` transition): `ListAgents` to confirm the worker's session
+is addressable, then `SendMessage` the correction directly. See
+"Correcting a live worker" above for when the correction also needs a
+durable record and where it goes.
 
 ### Step 7: Start slot monitor
 
