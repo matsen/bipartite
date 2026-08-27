@@ -43,6 +43,32 @@ seems trivial. The conductor can do light triage (reading files, checking
 CI output, running `gh` commands) but should not write code or create
 branches for numbered issues.
 
+### Correcting a live worker: SendMessage as a nudge channel
+
+`ListAgents`/`SendMessage` reach other local Claude tmux sessions and
+let the conductor push an immediate correction to a live worker
+without killing and respawning its tmux window. This supplements —
+never replaces — the file-based correction path:
+
+- **`.epic-status.json`'s `lead_guidance` remains the durable, canonical
+  instruction.** Any correction sent via `SendMessage` MUST also be
+  written to `lead_guidance` in the same step, so a compacted or
+  restarted worker (or a fresh conductor cold-starting via `/bip-epic`)
+  can reconstruct the correction from files alone.
+- Delivery is not instant: the message drains at the worker's *next
+  tool call*, not mid-tool-call. It is not a substitute for `tmux
+  capture-pane` when the conductor needs to see current state right now.
+- `SendMessage` only reaches addressable Claude sessions (tmux Claude
+  windows on this machine, or connected cloud/Remote Control sessions)
+  — never a plain shell, a remote SSH job, or a non-Claude compute node.
+  Run `ListAgents` first to confirm the target session is actually
+  addressable; fall back to editing `.epic-status.json` and waiting for
+  the worker's own loop when it isn't.
+- Do not use `SendMessage` to route around the conductor's own
+  restrictions (cross-session permission laundering) — the "should not
+  write code or create branches for numbered issues" rule above applies
+  equally to instructions phrased as a message to a worker.
+
 ## Configuration
 
 The epic skill reads `.epic-config.json` from the repo root. This file
@@ -270,6 +296,15 @@ Then propose spawning work for ready issues:
 > "Ready to spawn: `i302` (retry logic) and `i315` (scoring refactor). 2 clones available. Shall I spawn them?"
 
 Wait for user confirmation, then run `/bip-epic-spawn` (do NOT improvise tmux/claude commands).
+
+If a live worker's scope needs correcting *before* its next natural
+stopping point (rather than waiting for the next `needs-human`/
+`completed` transition): update `.epic-status.json`'s `lead_guidance`
+(and append to `lead_notes`) as usual, then optionally `ListAgents` to
+confirm the worker's session is addressable and `SendMessage` a short
+pointer — "updated .epic-status.json lead_guidance for iN — re-read it
+before continuing" — rather than the instruction itself. See
+"Correcting a live worker" above.
 
 ### Step 7: Start slot monitor
 
