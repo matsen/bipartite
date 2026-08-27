@@ -1,6 +1,6 @@
 # Subagent scan pattern for bip skills
 
-Many cold-start and poll skills (`/bip-ms`, `/bip-ms-poll`, `/bip-epic`, `/bip-epic-poll`, `/bip-ms-audit`) scan many independent sources — every tracked EPIC, every active clone, every recently merged PR. Reading those bodies directly into the primary agent burns context: a single `/bip-ms` invocation can spend 85K tokens loading EPIC bodies and PR descriptions that the primary doesn't need verbatim.
+Many cold-start and poll skills (`/bip-ms`, `/bip-ms-poll`, `/bip-epic`, `/bip-conductor`, `/bip-conductor-poll`, `/bip-ms-audit`) scan many independent sources — every tracked EPIC, every active clone, every recently merged PR. Reading those bodies directly into the primary agent burns context: a single `/bip-ms` invocation can spend 85K tokens loading EPIC bodies and PR descriptions that the primary doesn't need verbatim.
 
 This file is the shared pattern for offloading that scan work to subagents. Reference it from a skill; do not restate its rules inline.
 

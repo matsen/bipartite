@@ -1,24 +1,31 @@
 ---
-name: bip-epic-poll
+name: bip-conductor-poll
 description: Quick poll of GitHub activity and clone status since last check
 ---
 
-# /bip-epic-poll
+# /bip-conductor-poll
 
-Lightweight mid-session update. Checks what changed on GitHub and in
-active clones since last check. Use this instead of `/bip-epic` when
-you already have context established.
+Lightweight mid-session update for the fleet conductor. Checks what
+changed on GitHub (as it bears on slots/clones) and in active clones
+since last check. Use this instead of `/bip-conductor` when you already
+have context established.
+
+Fleet-scoped, not topic-scoped: this skill reconciles slots against
+GitHub state and does housekeeping. It does not update EPIC bodies —
+that's `/bip-epic`'s job, on its own cadence, driven by findings and
+completions rather than a poll timer.
 
 For continuous monitoring, prefer `bip epic watch` (started by
-`/bip-epic` Step 7). It writes phase transitions to
+`/bip-conductor` Step 7). It writes phase transitions to
 `.epic-notifications.log` in the conductor cwd; this poll skill reads
 new entries from that log to catch transitions the conductor may have
-missed. Use `/bip-epic-poll` for:
-- Full GitHub reconciliation (merged PRs, new issues, comments)
-- Slot cleanup and EPIC body updates
+missed. Use `/bip-conductor-poll` for:
+- Full GitHub reconciliation (merged PRs, new issues, comments) as it
+  bears on slot/clone state
+- Slot cleanup
 - Catching up on log entries written while the conductor was idle
 
-For periodic auto-polling: `/loop 10m /bip-epic-poll`
+For periodic auto-polling: `/loop 10m /bip-conductor-poll`
 
 ## What to check
 
@@ -82,9 +89,11 @@ pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 >   issue-lead comments, slot phase changes
 > - `active_items`: per active slot — clone, issue, phase,
 >   stop_reason, lead assessment (one line each)
-> - `action_candidates`: open issues ready for unassigned slots;
->   merged PRs that should trigger slot cleanup; EPIC body updates
->   needed
+> - `action_candidates`: pending spawn intent in `$CLONE_ROOT/.spawn-prompts/`
+>   (either `<N>.md` or `spawn-<N>.txt` — check both) waiting to be
+>   executed; merged PRs that should trigger slot cleanup. (Deciding *which* open
+>   issues are ready to spawn is `/bip-epic`'s call, not this poll's —
+>   report raw signal, not a readiness verdict.)
 > - `surprises`: `needs-human`/`completed` slots, stale status
 >   files, contradictions, `RECOMMEND DEEPER LOOK` flags
 
@@ -95,8 +104,10 @@ the poll output is one line: "All quiet."
 
 ### Focus on what matters
 
-**Lead with unblocked issues** — issues that are ready to work on but
-not assigned to any clone. This is the most actionable information.
+**Lead with pending spawn intent** — `.spawn-prompts/` files (either naming pattern) the
+epic has already written and is waiting on the conductor to execute.
+This is the most actionable information at this level; deciding which
+*other* open issues should be spawned next is `/bip-epic`'s call.
 
 **Surface lead evaluations** — if a clone's status shows a recent lead
 evaluation (stop_reason set, lead_guidance present), mention the lead's
@@ -157,8 +168,8 @@ one-shot.
 
 ### Output structure
 
-1. **Unblocked issues**: Issues ready for work, not assigned to a clone.
-   Cross-reference with EPIC dashboards to find next items.
+1. **Pending spawn intent**: `.spawn-prompts/` files (either naming pattern) waiting on
+   execution, plus idle clones available to run them.
 
 2. **Active work**: Clones with tmux windows that are mid-task. One line
    each: clone, issue, phase, stop_reason (if set), lead assessment.
@@ -169,13 +180,16 @@ one-shot.
 4. **Recently landed** (brief): PRs merged since last poll, only if
    noteworthy.
 
-5. **Propose spawns**: If unblocked issues and idle clones exist, propose
-   which to spawn. Wait for confirmation.
+5. **Execute pending spawns**: If spawn intent files and idle clones
+   both exist, propose running `/bip-conductor-spawn` for them. Wait
+   for confirmation.
 
 ### Housekeeping (do silently, don't report unless problems)
 
-This is the ongoing cleanup that keeps slots and EPICs current between
-cold starts. Do it every poll cycle — don't wait for `/bip-epic`.
+This is the ongoing cleanup that keeps slots current between cold
+starts. Do it every poll cycle — don't wait for `/bip-conductor`. EPIC
+body content is not this skill's concern; `/bip-epic` keeps bodies
+current on its own cadence.
 
 #### Slot cleanup for merged PRs
 
@@ -184,7 +198,7 @@ check 1 with slot branches):
 
 **Worktree mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 # Confirm PR is merged before removing
 gh pr list --head <branch> --state merged --json number | jq length
 # If merged:
@@ -194,7 +208,7 @@ git branch -d <branch>
 
 **Clone mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json)
+CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"
@@ -203,16 +217,15 @@ rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog
 Also clean up stale slots: no tmux window AND `.epic-status.json`
 older than 30 minutes. Same cleanup as above.
 
-#### EPIC body updates
-
-If merges closed issues tracked in an EPIC, update the EPIC body:
-follow the **EPIC body update pattern** from `/bip-epic` (pull →
-edit → conflict-check → push). Check the box for completed items,
-update the clone assignments table.
+If a merge closes an issue tracked in an EPIC, that's signal `/bip-epic`
+needs, not something to act on here — surface it under
+`changes_since_baseline` and move on.
 
 #### Memory
 
-- Update MEMORY.md only for orchestrator-level decisions/patterns
+- Update MEMORY.md only for fleet-level decisions/patterns (clone
+  layout, host quirks). Topic-level decisions belong to `/bip-epic`'s
+  own memory, not here.
 
 ## Conventions
 

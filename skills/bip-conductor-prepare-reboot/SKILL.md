@@ -1,21 +1,21 @@
 ---
-name: bip-epic-prepare-reboot
-description: Quiesce the whole tmux host before a PLANNED reboot — walk every session, resolve each Claude window's exact session id, optionally checkpoint workers, and write a manifest so bip-epic-recover can rebuild the workspace deterministically. Use when you know a reboot is coming and want a clean, lossless restart.
+name: bip-conductor-prepare-reboot
+description: Quiesce the whole tmux host before a PLANNED reboot — walk every session, resolve each Claude window's exact session id, optionally checkpoint workers, and write a manifest so bip-conductor-recover can rebuild the workspace deterministically. Use when you know a reboot is coming and want a clean, lossless restart.
 allowed-tools: Bash, Read
 ---
 
-# /bip-epic-prepare-reboot
+# /bip-conductor-prepare-reboot
 
-`/bip-epic-recover` reconstructs a *killed* fleet after an unplanned reboot by scanning `~/.claude/projects/*/<id>.jsonl` and inferring which sessions were live from file mtimes. That inference is lossy: mtime is last *activity*, not "window was open", and it cannot tell which of several concurrent sessions in one cwd were on screen.
+`/bip-conductor-recover` reconstructs a *killed* fleet after an unplanned reboot by scanning `~/.claude/projects/*/<id>.jsonl` and inferring which sessions were live from file mtimes. That inference is lossy: mtime is last *activity*, not "window was open", and it cannot tell which of several concurrent sessions in one cwd were on screen.
 
-When the reboot is **planned**, we can do better: capture ground truth *while tmux is still alive*. This skill walks every pane on the host in one run, resolves each Claude window's exact `session_id` from the live process (its `--resume` cmdline, or start-time correlation for fresh sessions), optionally checkpoints epic workers, and writes a host-wide manifest. `bip-epic-recover` then replays that manifest after the reboot — rebuilding every session by its real name, windows in order, each Claude window resumed to the right id — instead of guessing.
+When the reboot is **planned**, we can do better: capture ground truth *while tmux is still alive*. This skill walks every pane on the host in one run, resolves each Claude window's exact `session_id` from the live process (its `--resume` cmdline, or start-time correlation for fresh sessions), optionally checkpoints epic workers, and writes a host-wide manifest. `bip-conductor-recover` then replays that manifest after the reboot — rebuilding every session by its real name, windows in order, each Claude window resumed to the right id — instead of guessing.
 
 The deterministic engine is the bundled `epic-prepare-reboot` shell helper; this skill is the brain that runs it, sanity-checks the resolved table with the user, and triggers the manifest write / shutdown. Run it **on the box about to reboot** — that is where tmux, the jsonl files, and the clones live.
 
 ## Usage
 
 ```
-/bip-epic-prepare-reboot [--no-checkpoint] [--shutdown]
+/bip-conductor-prepare-reboot [--no-checkpoint] [--shutdown]
 ```
 
 Run it once, host-wide, *before* the reboot. There is no project argument — the manifest spans the entire tmux host, not one epic project.
@@ -83,7 +83,7 @@ When you are ready to reboot, either reboot the box yourself, or let the helper 
 
 ### Step 5: After the reboot
 
-On the rebooted box, run `/bip-epic-recover`. It detects the manifest (parked before the current boot, not yet consumed), rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their exact ids, plain windows as bare shells — reports "(from manifest)", and asks about any `ambiguous` windows. After a successful replay it stamps the manifest consumed so a later *unplanned* reboot falls back to the jsonl scan instead of replaying a stale park.
+On the rebooted box, run `/bip-conductor-recover`. It detects the manifest (parked before the current boot, not yet consumed), rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their exact ids, plain windows as bare shells — reports "(from manifest)", and asks about any `ambiguous` windows. After a successful replay it stamps the manifest consumed so a later *unplanned* reboot falls back to the jsonl scan instead of replaying a stale park.
 
 ## The manifest (what recover consumes)
 
@@ -108,12 +108,12 @@ These helpers introspect live tmux and the process tree, so they are verified by
 
 1. **Fidelity** — `"$HELPER" --dry-run`; confirm the table's sessions/windows match `tmux list-panes -a` exactly (names, order, cwds), with a resolved `session_id` per Claude window.
 2. **Resolution** — a resumed window (started with `--resume`) shows `method=cmdline`; a fresh window shows `starttime`; two fresh windows in one cwd with near-identical start times show `ambiguous` (with two candidates in the manifest).
-3. **Roundtrip** — run for real, then on the same host `epic-recover --manifest-status` reports VALID and `--manifest-resume` rebuilds the sessions by real name with windows in order. (See `bip-epic-recover`'s own verification notes for staleness/consumed/fallback.)
+3. **Roundtrip** — run for real, then on the same host `epic-recover --manifest-status` reports VALID and `--manifest-resume` rebuilds the sessions by real name with windows in order. (See `bip-conductor-recover`'s own verification notes for staleness/consumed/fallback.)
 4. **Guards** — `--no-checkpoint` skips the worker nudges; `--shutdown` kills tmux only after the manifest exists.
 
 ## Notes
 
 - `--dry-run` mutates nothing. Only a real run writes the manifest, sends checkpoints, or (with `--shutdown`) kills tmux.
 - The skill is **host-wide and project-agnostic** — it does *not* require `.epic-config.json` and records every session on the host, not just epic clones.
-- Naming pairs it with `bip-epic-recover`, though it operates beyond epic clones. Related: `bip-epic-tuckin` persists *orchestrator* state for a context reset — distinct from parking the *whole host* for a reboot.
+- Naming pairs it with `bip-conductor-recover`, though it operates beyond epic clones. Related: `bip-conductor-tuckin` persists *fleet* state for a context reset — distinct from parking the *whole host* for a reboot.
 - Driving a remote box from elsewhere: prefix with `ssh <host> 'bash <skill-dir>/epic-prepare-reboot …'`, but it is cleanest run from a shell on the box itself.

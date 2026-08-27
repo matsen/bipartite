@@ -132,7 +132,7 @@ clobbering a neighbor:
   `REMOTE_DIR` explicitly on every `make remote-sync`/`remote-run`/`remote-tmux` call
   (or ssh to an explicit path). The config-derived default (`~/.config/dasm2/config.yaml`)
   is the *same directory for every clone/worktree on the box*, so concurrent runs
-  overwrite each other's checkout — the rule `bip-epic-spawn` states for EPIC slots
+  overwrite each other's checkout — the rule `bip-conductor-spawn` states for EPIC slots
   applies to any remote run. Don't trust that default to be non-empty either: the
   Makefile resolves it with a bare `python3` that may lack the project's deps and
   silently return `""` (`cd ` → "not a git repository"). **Before syncing, check the

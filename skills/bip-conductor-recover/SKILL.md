@@ -1,22 +1,22 @@
 ---
-name: bip-epic-recover
-description: Recover bip-epic Claude sessions after a host reboot — replay a planned-reboot manifest if one exists, else find the killed sessions by scanning jsonl, label them, and resume each into a tmux window. Use when a box running a bip-epic fleet rebooted and the tmux sessions are gone.
+name: bip-conductor-recover
+description: Recover bip-conductor fleet Claude sessions after a host reboot — replay a planned-reboot manifest if one exists, else find the killed sessions by scanning jsonl, label them, and resume each into a tmux window. Use when a box running a bip-conductor fleet rebooted and the tmux sessions are gone.
 allowed-tools: Bash, Read
 ---
 
-# /bip-epic-recover
+# /bip-conductor-recover
 
-A reboot of a host running a bip-epic fleet kills the tmux server and every `claude` process at once. The clones, their `.epic-status.json`/`.epic-worklog.md`, and the full per-session `~/.claude/projects/*/<id>.jsonl` conversations all survive on disk, so the sessions are resumable via `claude --dangerously-skip-permissions --resume <id>`. This skill finds those sessions, labels them in human terms, and resumes the ones you pick into tmux windows.
+A reboot of a host running a bip-conductor fleet kills the tmux server and every `claude` process at once. The clones, their `.epic-status.json`/`.epic-worklog.md`, and the full per-session `~/.claude/projects/*/<id>.jsonl` conversations all survive on disk, so the sessions are resumable via `claude --dangerously-skip-permissions --resume <id>`. This skill finds those sessions, labels them in human terms, and resumes the ones you pick into tmux windows.
 
 The deterministic engine is the bundled `epic-recover` shell helper; this skill is the brain that turns its raw output into labeled choices. Run it **on the box that rebooted** — that is where the tmux, jsonl, and clones live.
 
 ## Usage
 
 ```
-/bip-epic-recover [project]
+/bip-conductor-recover [project]
 ```
 
-`project` is a path to a bip-epic project's **main clone** (the dir holding `.epic-config.json`), or its basename. Defaults to the current directory.
+`project` is a path to a bip-conductor project's **main clone** (the dir holding `.epic-config.json`), or its basename. Defaults to the current directory.
 
 ## The bundled helper
 
@@ -32,7 +32,7 @@ Start tmux the usual way first (e.g. `eval $(keychain --eval id_rsa) && tmux`) s
 
 ## Two recovery paths
 
-If the reboot was **planned** and `/bip-epic-prepare-reboot` parked the host first, a host-wide manifest at `~/.epic-recover/manifest.json` records every session/window with its exact `session_id`. Replaying it is deterministic and lossless — prefer it. Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot set from file mtimes.
+If the reboot was **planned** and `/bip-conductor-prepare-reboot` parked the host first, a host-wide manifest at `~/.epic-recover/manifest.json` records every session/window with its exact `session_id`. Replaying it is deterministic and lossless — prefer it. Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot set from file mtimes.
 
 ### Step 0: Check for a planned-reboot manifest
 
@@ -112,13 +112,13 @@ Auto-`send-keys` timing against claude's resume-load is unreliable, so prompt th
 
 - `--list`, `--manifest-status`, and `--manifest-list` mutate nothing; only `--resume`, `--manifest-resume`, and the bare interactive mode create tmux windows. Re-running the read-only modes is safe.
 - The manifest modes are **host-wide and project-agnostic** — they do not need `.epic-config.json` and rebuild every session in the manifest, not just one project's clones. The scan modes (`--list`, `--resume`, interactive) still require `.epic-config.json` in the cwd.
-- For a planned reboot, write that manifest first with `/bip-epic-prepare-reboot` — it captures exact session ids from live processes, which is lossless where the mtime scan only infers.
+- For a planned reboot, write that manifest first with `/bip-conductor-prepare-reboot` — it captures exact session ids from live processes, which is lossless where the mtime scan only infers.
 - Driving a remote rebooted box from elsewhere: prefix the helper calls with `ssh <host> 'cd <main-clone> && bash <skill-dir>/epic-recover …'`, but resuming into tmux is cleanest run from a shell already inside that host's tmux.
 - For a no-Claude recovery, run the helper directly with no args (`bash <skill-dir>/epic-recover`) for an interactive numbered picker over the same data — less smart labeling, same engine. Symlink it onto your `PATH` if you want it as a bare command.
 
 ## Manual verification
 
-The manifest data paths are pure JSON logic and worth exercising after a change; the live-tmux/process parts of the partner skill are verified the same way (see `bip-epic-prepare-reboot`). Both helpers ship without a unit-test suite, matching this repo's shell-helper convention.
+The manifest data paths are pure JSON logic and worth exercising after a change; the live-tmux/process parts of the partner skill are verified the same way (see `bip-conductor-prepare-reboot`). Both helpers ship without a unit-test suite, matching this repo's shell-helper convention.
 
 1. **Staleness** — a manifest whose `parked_at` is *after* the current boot → `--manifest-status` reports `stale` and exits 1 (recover falls back to the scan).
 2. **Consumed** — after `--manifest-resume`, the manifest is renamed `manifest.<boot>.done`; a fresh `--manifest-status` reports `none`.

@@ -1,12 +1,12 @@
 ---
 name: bip-spawn-resume
-description: Cold-start into a worktree/clone from a fresh conversation — read the PR, issue, and any status files, figure out where things stand, then STOP and ask the user what to do next. Use for a fresh conversation dropped into a bip-spawn or bip-epic-spawn worktree/clone that already has history (a PR, an in-progress phase, or a stalled worker).
+description: Cold-start into a worktree/clone from a fresh conversation — read the PR, issue, and any status files, figure out where things stand, then STOP and ask the user what to do next. Use for a fresh conversation dropped into a bip-spawn or bip-conductor-spawn worktree/clone that already has history (a PR, an in-progress phase, or a stalled worker).
 ---
 
 # /bip-spawn-resume
 
 For a fresh conversation dropped into a worktree/clone that was spawned
-(via `/bip-spawn` or `/bip-epic-spawn`) and already has history — a PR
+(via `/bip-spawn` or `/bip-conductor-spawn`) and already has history — a PR
 out, review feedback waiting, an EPIC worker mid-phase, or something
 stalled. This skill's job is entirely **orientation**: gather context,
 report it, and stop. It does not decide what happens next — the most
@@ -14,7 +14,7 @@ common case is a vetted PR the user wants to modify (directly, or via
 PR review comments), but treat that as a prior, not a restriction. Let
 the actual state (and the user) drive what happens after Step 2.
 
-This is **not** a crash-recovery tool — see `/bip-epic-recover` for
+This is **not** a crash-recovery tool — see `/bip-conductor-recover` for
 processes killed by a host reboot (`claude --resume`-based). This skill
 is for the ordinary case of a new conversation that needs to re-orient
 inside a slot that already has state.
@@ -78,25 +78,26 @@ Step 3+. A few things carry over regardless of what they ask for:
 
 - Same branch, same PR — don't open a new branch or a second PR unless
   told to.
-- Apply the DEFERRAL RULE from `/bip-epic-spawn` if scope creep comes up
+- Apply the DEFERRAL RULE from `/bip-conductor-spawn` if scope creep comes up
   (fold small related fixes in; only defer clearly out-of-scope work).
 - Before pushing changes back out, re-run `/bip-pr-check` and
-  `/bip-pr-review`, same REVIEW TRIAGE as `/bip-epic-spawn`.
+  `/bip-pr-review`, same REVIEW TRIAGE as `/bip-conductor-spawn`.
 - Replying to or resolving someone else's review thread is a visible
   GitHub action — draft it and confirm before posting/resolving, per the
   standing GitHub Action Sequencing rule.
 - If this is an EPIC slot and the change is small and bounded, update
   `.epic-status.json`/`.epic-worklog.md` directly rather than restarting
-  the ralph-loop. Only fall back to `/bip-epic-spawn`'s RECOVERING
+  the ralph-loop. Only fall back to `/bip-conductor-spawn`'s RECOVERING
   CONTEXT + ralph-loop protocol if the user actually wants ongoing
   autonomous iteration, not just this one fix.
 
 ## Notes
 
-- Distinct from `/bip-epic-tuckin` (orchestrator-side, persists EPIC
-  dashboards across many slots) and `/bip-epic-recover` (rebuilds
-  processes killed by a host reboot). This skill is for a plain new
-  conversation re-orienting inside one slot.
+- Distinct from `/bip-conductor-tuckin` (fleet-side, persists slot
+  status across many clones), `/bip-epic-tuckin` (topic-side, persists
+  EPIC dashboards), and `/bip-conductor-recover` (rebuilds processes
+  killed by a host reboot). This skill is for a plain new conversation
+  re-orienting inside one slot.
 - Its write-side counterpart is `/bip-spawn-tuckin` — run that before a
   context reset so this skill has a clean commit/PR state to read on
   the next cold-start.
