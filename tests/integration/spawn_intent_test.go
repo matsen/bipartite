@@ -72,6 +72,25 @@ func TestResolveCloneRootAbsoluteForm(t *testing.T) {
 	}
 }
 
+func TestResolveCloneRootMissingFailsFast(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, ".epic-config.json")
+	if err := os.WriteFile(configPath, []byte(`{}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+		"resolve_clone_root " + shellQuote(configPath)
+	cmd := exec.Command("bash", "-c", script)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("resolve_clone_root with no .clone_root succeeded, want non-zero exit; output: %s", out)
+	}
+	if !strings.Contains(string(out), "no .clone_root in") {
+		t.Fatalf("resolve_clone_root error output = %q, want mention of missing .clone_root", out)
+	}
+}
+
 func TestFindSpawnIntent(t *testing.T) {
 	tests := []struct {
 		name       string
