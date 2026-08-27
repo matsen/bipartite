@@ -121,6 +121,21 @@ but don't need a table row.
 **Mention recent merges** only if they unblock something or change
 the plan.
 
+**Correcting a live worker mid-flight**: `ListAgents`/`SendMessage`
+reach other local Claude tmux sessions and can push an immediate
+correction without waiting for the worker's next lead evaluation or
+killing its tmux window. `.epic-status.json`'s `lead_guidance` remains
+the durable, canonical instruction — any `SendMessage` correction MUST
+also be written to `lead_guidance` in the same step, so a compacted or
+restarted worker can reconstruct it from files alone. Delivery lands
+at the worker's next tool call, not instantly, and `SendMessage` only
+reaches addressable Claude sessions — run `ListAgents` first to
+confirm, and fall back to the file-only correction (edit
+`lead_guidance`, wait for the worker's own loop) when it isn't
+addressable. Send a pointer ("updated .epic-status.json lead_guidance
+for iN — re-read it"), not the instruction payload, so nothing
+important lives only in the ephemeral channel.
+
 ### Output structure
 
 1. **Unblocked issues**: Issues ready for work, not assigned to a clone.
