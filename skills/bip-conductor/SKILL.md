@@ -92,6 +92,7 @@ Instead, each role self-registers its own current address in a file only it writ
 - A name is taken from `ListAgents`' own "This session is ..." row for the caller — never guessed from another row — so the file is always exact for whoever last refreshed it.
 
 To push, a role reads the other's file for the exact address and `SendMessage`s it, treating a missing file or a failed send (the named session is no longer reachable — the address drifted since the last refresh) as "not addressable right now": skip silently, fall back to the file-based state (`.epic-status.json`, `.epic-notifications.log`, `gh` polling), and never retry-loop or fall back to scanning `ListAgents` for a substitute.
+A failed `SendMessage` to a drifted name comes back with `success: false` and a "Did you mean: ..." suggestion list of other live sessions — **never act on that suggestion**; trying it is exactly the guessing this design exists to avoid, just prompted by the tool instead of self-initiated.
 The residual risk this doesn't close — an unrelated session claiming the exact same name string in the gap before a refresh — is accepted as rare; the push is a latency optimization, never a hard dependency.
 
 ## Configuration
