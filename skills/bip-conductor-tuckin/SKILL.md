@@ -62,9 +62,12 @@ List `$CLONE_ROOT/.spawn-prompts/` and report two groups separately —
 these are the epic's authored intent, not conductor state, so don't
 touch their contents either way:
 
-- **Queued** — files directly in `.spawn-prompts/` (either `<N>.md` or
-  `spawn-<N>.txt` — check both, the directory holds both live
-  conventions). Still waiting on execution.
+- **Queued** — regular files directly in `.spawn-prompts/`:
+  `find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 -type f \( -name
+  '*.md' -o -name 'spawn-*.txt' \)` (both naming conventions live
+  there). `-type f` matters: a plain `ls` also lists the `consumed/`
+  directory itself as an entry, which is not a queued intent file.
+  Still waiting on execution.
 - **Consumed** — files under `.spawn-prompts/consumed/`. Already
   launched by `/bip-conductor-spawn` Step 6.
 
