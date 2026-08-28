@@ -134,3 +134,49 @@ func TestFindSpawnIntent(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkSpawnIntentConsumed(t *testing.T) {
+	cloneRoot := t.TempDir()
+	promptsDir := filepath.Join(cloneRoot, ".spawn-prompts")
+	if err := os.MkdirAll(promptsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	intentPath := filepath.Join(promptsDir, "302.md")
+	if err := os.WriteFile(intentPath, []byte("intent"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	callSpawnIntentFunc(t, "mark_spawn_intent_consumed", intentPath)
+
+	if _, err := os.Stat(intentPath); !os.IsNotExist(err) {
+		t.Fatalf("intent file still present at original path after consuming: err=%v", err)
+	}
+
+	consumedPath := filepath.Join(promptsDir, "consumed", "302.md")
+	data, err := os.ReadFile(consumedPath)
+	if err != nil {
+		t.Fatalf("expected consumed file at %s: %v", consumedPath, err)
+	}
+	if string(data) != "intent" {
+		t.Fatalf("consumed file contents = %q, want %q", data, "intent")
+	}
+
+	// A file distinguishable as consumed must not still resolve as queued.
+	got := callSpawnIntentFunc(t, "find_spawn_intent", cloneRoot, "302")
+	if got != "" {
+		t.Fatalf("find_spawn_intent after consuming = %q, want empty (not still queued)", got)
+	}
+}
+
+func TestMarkSpawnIntentConsumedMissingSourceFailsFast(t *testing.T) {
+	cloneRoot := t.TempDir()
+	missingPath := filepath.Join(cloneRoot, ".spawn-prompts", "302.md")
+
+	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+		"mark_spawn_intent_consumed " + shellQuote(missingPath)
+	cmd := exec.Command("bash", "-c", script)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("mark_spawn_intent_consumed on missing source succeeded, want non-zero exit; output: %s", out)
+	}
+}

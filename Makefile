@@ -15,6 +15,12 @@ symlink-agents:
 	@for f in $(REPO_DIR)/agents/*.md; do \
 		ln -sf "$$f" ~/.claude/agents/$$(basename "$$f"); \
 	done
+	@for l in ~/.claude/agents/*; do \
+		if [ -L "$$l" ] && [ ! -e "$$l" ]; then \
+			echo "Pruning stale symlink: $$l"; \
+			rm -f "$$l"; \
+		fi; \
+	done
 	@echo "Symlinked agents to ~/.claude/agents/"
 
 symlink-skills:
@@ -25,6 +31,12 @@ symlink-skills:
 		fi; \
 	done
 	@rm -rf ~/.claude/skills/lib && ln -s $(REPO_DIR)/skills/lib ~/.claude/skills/lib
+	@for l in ~/.claude/skills/*; do \
+		if [ -L "$$l" ] && [ ! -e "$$l" ]; then \
+			echo "Pruning stale symlink: $$l"; \
+			rm -f "$$l"; \
+		fi; \
+	done
 	@echo "Symlinked skills to ~/.claude/skills/"
 
 symlink-statusline:

@@ -258,7 +258,11 @@ dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root). Brief:
 > '*.md' -o -name 'spawn-*.txt' \)` — **both patterns**, since
 > `<N>.md` and the older `spawn-<N>.txt` are both live conventions in
 > that directory; a `-name '*.md'`-only find silently misses a real,
-> current `spawn-<N>.txt` intent file.
+> current `spawn-<N>.txt` intent file. `-maxdepth 1` also matters here:
+> `/bip-conductor-spawn` moves a launched intent file into a
+> `.spawn-prompts/consumed/` subdirectory instead of deleting it, and
+> this find must not descend into `consumed/` and report an
+> already-launched file as still pending.
 >
 > Classify each slot:
 > - `occupied`: has tmux window (regardless of agent status — user
