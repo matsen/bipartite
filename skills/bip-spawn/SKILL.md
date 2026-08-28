@@ -9,7 +9,8 @@ Open a tmux window for GitHub issue or PR review.
 
 ## Instructions
 
-**Just run `bip spawn` directly.** Do not attempt to construct `claude` or `tmux` commands yourself — `bip spawn` handles all of that.
+**Just run `bip spawn` directly.**
+Do not attempt to construct `claude` or `tmux` commands yourself — `bip spawn` handles all of that.
 
 ```bash
 bip spawn org/repo#123
@@ -26,22 +27,19 @@ bip spawn org/repo#123 --prompt "Rebase and fix conflicts"
 
 ## Common modes
 
-There are two distinct ways to use `bip spawn`. **Pick deliberately**:
+There are two distinct ways to use `bip spawn`.
+**Pick deliberately**:
 
-- **Review** (default, no `--prompt`): opens a Claude session with the
-  issue or PR context loaded and waits at an empty prompt. Use this
-  when *you* will drive the next steps in the spawned window.
-- **Handoff-to-work**: pass `--prompt "/bip-issue-work <N>"` (for
-  issues) or `--prompt "/bip-pr-review"` (for PRs). The spawned Claude
-  starts the workflow autonomously — the right choice when the parent
-  session is delegating implementation and won't be steering.
+- **Review** (default, no `--prompt`): opens a Claude session with the issue or PR context loaded and waits at an empty prompt.
+  Use this when *you* will drive the next steps in the spawned window.
+- **Handoff-to-work**: pass `--prompt "/bip-issue-work <N>"` (for issues) or `--prompt "/bip-pr-review"` (for PRs).
+  The spawned Claude starts the workflow autonomously — the right choice when the parent session is delegating implementation and won't be steering.
 
 Example handoff:
 
-    bip spawn matsengrp/phyz#1453 --prompt "/bip-issue-work 1453"
+bip spawn matsengrp/phyz#1453 --prompt "/bip-issue-work 1453"
 
-If you're spawning from inside a `/bip-pr-land` or similar handoff
-context, the handoff form is almost always what you want.
+If you're spawning from inside a `/bip-pr-land` or similar handoff context, the handoff form is almost always what you want.
 
 ## Requirements
 
@@ -54,10 +52,8 @@ context, the handoff form is almost always what you want.
 
 ## Worktree mode (opt-in)
 
-By default, `bip spawn` opens its tmux window in the canonical clone of
-the repo — every spawn shares one working tree. To get one linked git
-worktree per issue instead (so concurrent spawns don't share a branch
-checkout), add a `layout:` block to `~/.config/bip/config.yml`:
+By default, `bip spawn` opens its tmux window in the canonical clone of the repo — every spawn shares one working tree.
+To get one linked git worktree per issue instead (so concurrent spawns don't share a branch checkout), add a `layout:` block to `~/.config/bip/config.yml`:
 
 ```yaml
 layout:
@@ -70,7 +66,5 @@ layout:
 Per-repo overrides live in `sources.yml` (see `docs/guides/layout.md`).
 With no `layout:` block, behavior is identical to before issue #149.
 
-When worktree mode fires, `bip spawn` runs `git worktree add` from the
-canonical clone on a fresh branch named `<N>-<slug>`, and the spawned
-tmux window opens in the new worktree. `bip pr-land` later detects the
-worktree, lands the PR from the primary clone, and removes the worktree.
+When worktree mode fires, `bip spawn` runs `git worktree add` from the canonical clone on a fresh branch named `<N>-<slug>`, and the spawned tmux window opens in the new worktree.
+`bip pr-land` later detects the worktree, lands the PR from the primary clone, and removes the worktree.

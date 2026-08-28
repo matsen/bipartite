@@ -5,7 +5,8 @@ description: Quick PR readiness check — clean worktree, good description, squa
 
 # /bip-pr-check
 
-Quick sanity check before running the heavier `/bip-pr-review`. Catches common issues that waste review cycles.
+Quick sanity check before running the heavier `/bip-pr-review`.
+Catches common issues that waste review cycles.
 
 ## Usage
 
@@ -33,7 +34,8 @@ git status --short
 
 If there are uncommitted changes:
 - List them clearly
-- Ask the user: "There are uncommitted changes. Commit these before proceeding?"
+- Ask the user: "There are uncommitted changes.
+  Commit these before proceeding?"
 - **Do not proceed** until the worktree is clean or the user explicitly says to continue
 
 ### Step 3: Fetch and rebase on base branch
@@ -81,15 +83,9 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 - Contains multiple "fix typo", "address review", "WIP" entries
 - Is auto-generated from concatenated commit messages (GitHub's default for squash merge)
 - Is empty or just whitespace
-- Accumulates one section per review round — headers like "Reviewer
-  follow-up: ...", "Human-flagged follow-up: ...", "Update:", or a
-  growing "History" section — even when each section is individually
-  well-written. This is the same defect as commit-message noise: the
-  reader has to reconstruct current truth from a chronological trail
-  instead of being told it directly. Long-running PRs that went
-  through several review rounds are the most likely to have this —
-  check specifically for it on any PR with more than one or two
-  rounds of feedback.
+- Accumulates one section per review round — headers like "Reviewer follow-up: ...", "Human-flagged follow-up: ...", "Update:", or a growing "History" section — even when each section is individually well-written.
+  This is the same defect as commit-message noise: the reader has to reconstruct current truth from a chronological trail instead of being told it directly.
+  Long-running PRs that went through several review rounds are the most likely to have this — check specifically for it on any PR with more than one or two rounds of feedback.
 
 **Signs of a good (squashed/summary) body:**
 - Has a `## Summary` or similar section with 1-3 bullet points explaining *what* and *why*
@@ -98,11 +94,12 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 - Has a test plan or notes section if appropriate
 - Is concise but informative
 
-**Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body. Flag violations and offer to rewrite.
+**Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body.
+Flag violations and offer to rewrite.
 
-If the body looks like historical commit noise, revision-history
-accumulation, or is empty:
-1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`. For a revision-history body specifically, also read the current body in full — later sections usually contain results/conclusions (recomputed numbers, resolved bugs, reconciled findings) that supersede earlier ones and must carry over into the rewrite; only the per-round framing gets dropped, not the substance.
+If the body looks like historical commit noise, revision-history accumulation, or is empty:
+1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`.
+   For a revision-history body specifically, also read the current body in full — later sections usually contain results/conclusions (recomputed numbers, resolved bugs, reconciled findings) that supersede earlier ones and must carry over into the rewrite; only the per-round framing gets dropped, not the substance.
 2. Draft a clean replacement body in this format:
    ```
    ## Summary
@@ -128,7 +125,8 @@ EOF
 ### Step 7: Check draft status
 
 If the PR is marked as draft:
-- Ask: "PR is currently a draft. Ready to mark as ready for review?"
+- Ask: "PR is currently a draft.
+  Ready to mark as ready for review?"
 - If yes: `gh pr ready`
 
 ### Step 8: Summary

@@ -6,7 +6,8 @@ allowed-tools: Bash
 
 # /bip-tmux
 
-Open a file in an 80%×80% tmux popup using `less` for scrolling. Press `q` to close.
+Open a file in an 80%×80% tmux popup using `less` for scrolling.
+Press `q` to close.
 
 ## Usage
 
@@ -22,4 +23,7 @@ Run:
 tmux display-popup -w 80% -h 80% -E -- less <file>
 ```
 
-That's it. No confirmation needed — just run it. After the command completes, stop and wait for the user to respond. Do not summarize the file contents, ask follow-up questions, or take any further action.
+That's it.
+No confirmation needed — just run it.
+After the command completes, stop and wait for the user to respond.
+Do not summarize the file contents, ask follow-up questions, or take any further action.

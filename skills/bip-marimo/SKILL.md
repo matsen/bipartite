@@ -7,8 +7,7 @@ description: Generate and edit marimo reactive notebooks correctly. Auto-trigger
 
 Reactive Python notebooks stored as plain `.py` files.
 
-**Docs**: https://docs.marimo.io/
-**API Reference**: https://docs.marimo.io/api/
+**Docs**: https://docs.marimo.io/ **API Reference**: https://docs.marimo.io/api/
 
 ## Environment
 

@@ -5,7 +5,8 @@ description: "Check in on recent GitHub activity across tracked repos. Filters t
 
 # /bip-checkin
 
-Check in on recent activity across tracked repos. Shows issues, PRs, and comments that need your attention.
+Check in on recent activity across tracked repos.
+Shows issues, PRs, and comments that need your attention.
 
 ## Instructions
 
@@ -36,12 +37,10 @@ By default, checkin only shows items where you need to act:
 | Your issue/PR, they commented last | Yes | They replied |
 | Your issue/PR, you commented last | No | Waiting for their reply |
 
-*"You're involved" means at least one of: you're an assignee, requested
-reviewer, @mentioned in the body, or have previously commented on the item.
+*"You're involved" means at least one of: you're an assignee, requested reviewer, @mentioned in the body, or have previously commented on the item.
 
-Use `--broad` to restore the older behavior (every teammate item with no
-window activity counts as needing review). Use `--all` to disable filtering
-entirely.
+Use `--broad` to restore the older behavior (every teammate item with no window activity counts as needing review).
+Use `--all` to disable filtering entirely.
 
 ## Options
 
@@ -68,13 +67,15 @@ Each window:
 - Launches Claude Code with context about the issue/PR
 - Named by repo and number (e.g., `repo#123`)
 
-Tmux window existence = item under review. Close the window when done.
+Tmux window existence = item under review.
+Close the window when done.
 
 ## Board triage (optional)
 
 After presenting checkin results, ask the user:
 
-> "Would you like to review board triage? I can check if any issues from this checkin should be added to project boards."
+> "Would you like to review board triage?
+> I can check if any issues from this checkin should be added to project boards."
 
 If they agree, then:
 

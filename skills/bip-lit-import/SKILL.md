@@ -34,7 +34,10 @@ Always dry-run first to show what will change:
 bip import --format paperpile "<file>" --dry-run --human
 ```
 
-Report the counts (new, updated, skipped, warnings) to the user. By default, entries missing required fields (title, author, published.year) are imported with sentinel placeholders (`[no title]`, `Unknown`, year `0`) and listed under `warnings` so they're not silently dropped — review the warning list and fix the affected Paperpile records when convenient. Entries with no useful metadata at all (no title, author, year, or DOI — typically Paperpile auto-stubs for unparsed web pages) are still skipped and counted under `skipped`. Pass `--strict` to revert to the old behavior of dropping any entry with a missing required field.
+Report the counts (new, updated, skipped, warnings) to the user.
+By default, entries missing required fields (title, author, published.year) are imported with sentinel placeholders (`[no title]`, `Unknown`, year `0`) and listed under `warnings` so they're not silently dropped — review the warning list and fix the affected Paperpile records when convenient.
+Entries with no useful metadata at all (no title, author, year, or DOI — typically Paperpile auto-stubs for unparsed web pages) are still skipped and counted under `skipped`.
+Pass `--strict` to revert to the old behavior of dropping any entry with a missing required field.
 
 ### 3. Import
 
@@ -56,7 +59,8 @@ rm "<file>"
 
 ### 6. Report
 
-Summarize: new refs added, total count, file deleted. Notes from Paperpile are preserved and searchable via `bip search`.
+Summarize: new refs added, total count, file deleted.
+Notes from Paperpile are preserved and searchable via `bip search`.
 
 ### 7. Recommend cleanup if warnings fired
 
@@ -66,4 +70,5 @@ If the import reported a non-zero `warnings` count, recommend the cleanup query 
 bip search --tag paperpile:incomplete
 ```
 
-Every reference imported with a sentinel field (`[no title]`, `Unknown`, year `0`) is auto-tagged `paperpile:incomplete`. Once the user fixes the entry in Paperpile and re-imports, the next import replaces the stored reference and the tag disappears automatically, so the list shrinks until empty without any manual untagging step.
+Every reference imported with a sentinel field (`[no title]`, `Unknown`, year `0`) is auto-tagged `paperpile:incomplete`.
+Once the user fixes the entry in Paperpile and re-imports, the next import replaces the stored reference and the tag disappears automatically, so the list shrinks until empty without any manual untagging step.

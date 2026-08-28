@@ -5,7 +5,8 @@ description: Run comprehensive pre-merge quality checklist for current branch's 
 
 # /bip-pr-review
 
-Run a comprehensive quality checklist before merging a PR. Automatically detects project type and runs appropriate checks.
+Run a comprehensive quality checklist before merging a PR.
+Automatically detects project type and runs appropriate checks.
 
 ## Usage
 
@@ -38,7 +39,8 @@ Examine the repository to determine what checks apply:
 The two reviewers operate in **different modes** and complement each other — run them in parallel:
 
 - `clean-code-reviewer` reads the diff and evaluates each hunk against clean-code principles (naming, function size, single responsibility, DRY-within-hunk).
-- `code-reuse-reviewer` surveys the surrounding codebase *first*, then audits the diff for missed reuse of existing constants, helpers, conventions, and patterns. Its mandatory output tables (inline-import audit vs `pyproject.toml`; function-pair overlap audit) catch things a diff-only reviewer cannot see.
+- `code-reuse-reviewer` surveys the surrounding codebase *first*, then audits the diff for missed reuse of existing constants, helpers, conventions, and patterns.
+  Its mandatory output tables (inline-import audit vs `pyproject.toml`; function-pair overlap audit) catch things a diff-only reviewer cannot see.
 
 Multiple types can apply (e.g., Snakemake + Python).
 
@@ -56,7 +58,8 @@ Determine the base branch from the PR (if one exists), otherwise default to `mai
 gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "main"
 ```
 
-Use `origin/<base>` (not local `<base>`) for all diffs below. This avoids false positives from a stale local main.
+Use `origin/<base>` (not local `<base>`) for all diffs below.
+This avoids false positives from a stale local main.
 
 ### Step 2: Identify Changed Files
 
@@ -96,11 +99,13 @@ Flag anything suspicious for user confirmation before proceeding.
 
 **For all projects with code changes:**
 - Launch `clean-code-reviewer` agent on modified source files (not tests)
-- **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions. The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
+- **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions.
+  The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 
-**Always run this detection step.** Examine the PR title, body, and diff for signals that the PR reports a scientific conclusion or experimental result:
+**Always run this detection step.**
+Examine the PR title, body, and diff for signals that the PR reports a scientific conclusion or experimental result:
 
 - Benchmark results or comparison tables
 - Win/loss rates, accuracy numbers, or performance metrics
@@ -125,7 +130,8 @@ not just the description.
 Report your findings with Claim / Confidence / Concerns / Recommended Checks / Verdict.
 ```
 
-This step runs **in parallel** with the agent reviews in Step 4. Do not wait for it to complete before proceeding.
+This step runs **in parallel** with the agent reviews in Step 4.
+Do not wait for it to complete before proceeding.
 
 **If no scientific conclusion is detected**, skip this step and note "No scientific claims detected — skeptic review skipped" in the final report.
 
@@ -145,7 +151,8 @@ Detect and run available quality tools:
 
 ### Step 6: Test Audit
 
-Run a thorough test quality review using an agent. Grepping alone is insufficient—tests need semantic analysis to detect:
+Run a thorough test quality review using an agent.
+Grepping alone is insufficient—tests need semantic analysis to detect:
 
 - Placeholder tests (empty bodies, just `pass`, meaningless assertions)
 - Inappropriate use of mocks (if project forbids mocking)

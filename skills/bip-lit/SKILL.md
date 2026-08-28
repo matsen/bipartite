@@ -13,14 +13,22 @@ A CLI tool for managing academic references with local storage and external pape
 
 ## ⚠️ CRITICAL: Local-First, Paper-First Policy
 
-**ALWAYS search locally before using external APIs. NEVER call ASTA without explicit user permission.**
+**ALWAYS search locally before using external APIs.
+NEVER call ASTA without explicit user permission.**
 
-**When answering questions about papers, READ THE ACTUAL PAPER PDF.** Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library. Reach for the right reader for the job:
+**When answering questions about papers, READ THE ACTUAL PAPER PDF.**
+Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library.
+Reach for the right reader for the job:
 
-- **Text and search → pdf-navigator MCP (MuPDF).** Use `search_pdf_text` to jump to the relevant pages, then `read_pdf_text` / `read_pdf_page`. MuPDF keeps reading order across columns and inline math intact, and the text is searchable. This is the default.
-- **Figures, panels, rendered equations, tables → built-in `Read` with a narrow `pages` range.** The built-in reader renders pages as *images* (token-heavy, not searchable), so use it only for the 1–3 pages that hold the visual you need — never the whole paper.
+- **Text and search → pdf-navigator MCP (MuPDF).**
+  Use `search_pdf_text` to jump to the relevant pages, then `read_pdf_text` / `read_pdf_page`.
+  MuPDF keeps reading order across columns and inline math intact, and the text is searchable.
+  This is the default.
+- **Figures, panels, rendered equations, tables → built-in `Read` with a narrow `pages` range.**
+  The built-in reader renders pages as *images* (token-heavy, not searchable), so use it only for the 1–3 pages that hold the visual you need — never the whole paper.
 
-The nexus library has ~6000 papers. Most relevant papers are already there.
+The nexus library has ~6000 papers.
+Most relevant papers are already there.
 
 ### Required Search Order
 
@@ -28,26 +36,24 @@ The nexus library has ~6000 papers. Most relevant papers are already there.
    ```bash
    bip search -a "LastName" "keyword" --human
    ```
-   **Always use `--human`** — the default JSON output is verbose and easy to mis-scan.
+**Always use `--human`** — the default JSON output is verbose and easy to mis-scan.
 
 2. **If `bip search` fails** (e.g., schema error), rebuild the database:
    ```bash
    bip rebuild
    ```
-   Then retry the search.
+Then retry the search.
 
 3. **If found locally, READ THE PAPER** to answer the question:
    ```bash
    bip get <id> --human   # Get PDF path
    ```
-   Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper. For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead. The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
+Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper.
+For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead.
+The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
 
-4. **Before concluding a paper is absent, try an exact-match check** —
-   `bip search -a "LastName"` or `bip search --doi "..."` — rather than another
-   keyword permutation. `bip search` reports when results are truncated
-   (`Found N references (showing M; ...)`), so a plain "not found" is
-   trustworthy, but a truncated keyword search on its own is not proof of
-   absence.
+4. **Before concluding a paper is absent, try an exact-match check** — `bip search -a "LastName"` or `bip search --doi "..."` — rather than another keyword permutation.
+   `bip search` reports when results are truncated (`Found N references (showing M; ...)`), so a plain "not found" is trustworthy, but a truncated keyword search on its own is not proof of absence.
 
 5. **Only if not found locally AND user confirms**, use ASTA:
    ```
@@ -143,10 +149,7 @@ bip search "deep mutational scanning" --author "Bloom" --year 2023:
 
 ### Query Formulation Tips
 
-**Keep queries short and specific** - long conceptual queries are a correctness
-hazard, not just slow: `bip search` uses exact-token AND matching, so one
-inflected or half-remembered word (e.g. plural vs. singular) can zero out an
-otherwise-matching query:
+**Keep queries short and specific** - long conceptual queries are a correctness hazard, not just slow: `bip search` uses exact-token AND matching, so one inflected or half-remembered word (e.g. plural vs. singular) can zero out an otherwise-matching query:
 - Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
 - Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
 
@@ -203,7 +206,8 @@ For finding a specific paper or result:
 
 ### Snippet Search Caveats
 
-The `bip asta snippet` command can be **slow and unreliable** (timeouts are common). Alternatives:
+The `bip asta snippet` command can be **slow and unreliable** (timeouts are common).
+Alternatives:
 - Use keyword search first to find candidate papers
 - Use MCP `mcp__asta__snippet_search` directly with smaller limits
 - If snippet times out, fall back to `bip asta search`
@@ -222,7 +226,8 @@ S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution servi
 | Get citations/references | Either S2 or ASTA | ASTA is faster |
 | Backfill PMCIDs (e.g., for NIH RPPR) | `bip ncbi backfill` | NCBI is the canonical source; S2/ASTA do not return PMCIDs reliably |
 
-**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library, `bip ncbi` for authoritative PMCID resolution. NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
+**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library, `bip ncbi` for authoritative PMCID resolution.
+NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
 
 See [api-guide.md](api-guide.md) for detailed comparison.
 
@@ -249,13 +254,11 @@ See [api-guide.md](api-guide.md) for detailed comparison.
    mcp__pdf-navigator__search_pdf_text(file_path, "phage display")
    mcp__pdf-navigator__read_pdf_text(file_path, 2, 3)
    ```
-   For a **figure, panel, or rendered equation** you need to *see*, use the
-   built-in `Read` tool on a narrow page range instead (it renders pages as
-   images — token-heavy, so read only the page(s) with the visual):
+For a **figure, panel, or rendered equation** you need to *see*, use the built-in `Read` tool on a narrow page range instead (it renders pages as images — token-heavy, so read only the page(s) with the visual):
    ```
    Read(file_path, pages="4")
    ```
-   **Always prefer reading the paper over relying on abstracts or external metadata.**
+**Always prefer reading the paper over relying on abstracts or external metadata.**
 
 4. **Only if not in library**, search externally (with user permission):
    ```bash
@@ -306,7 +309,8 @@ See [workflows.md](workflows.md) for detailed workflow instructions.
 
 ## Output Format
 
-All commands output JSON by default. Add `--human` for readable format:
+All commands output JSON by default.
+Add `--human` for readable format:
 
 ```bash
 bip asta search "phylogenetics" --human
@@ -324,10 +328,8 @@ Both S2 and ASTA accept these identifier formats:
 
 ### Opening a paper page in the browser
 
-The reliable way to open an S2 paper page in Chrome is to resolve the
-identifier to the 40-char paper ID, then open the **website** URL. The
-`https://api.semanticscholar.org/...` redirect form is NOT reliable — Chrome
-often gets a JSON/non-navigable response instead of the rendered page.
+The reliable way to open an S2 paper page in Chrome is to resolve the identifier to the 40-char paper ID, then open the **website** URL.
+The `https://api.semanticscholar.org/...` redirect form is NOT reliable — Chrome often gets a JSON/non-navigable response instead of the rendered page.
 
 ```bash
 # From a DOI: resolve to paperId, then open the website page
@@ -340,9 +342,8 @@ open -a "Google Chrome" "https://www.semanticscholar.org/paper/$pid"
 open -a "Google Chrome" "https://www.semanticscholar.org/paper/<sha>"
 ```
 
-Note: the bare `https://www.semanticscholar.org/paper/CorpusID:...` form does
-NOT resolve (404s) — you must use the SHA paper ID. To resolve a CorpusId
-instead of a DOI, swap `DOI:$doi` above for `CorpusId:236964352`.
+Note: the bare `https://www.semanticscholar.org/paper/CorpusID:...` form does NOT resolve (404s) — you must use the SHA paper ID.
+To resolve a CorpusId instead of a DOI, swap `DOI:$doi` above for `CorpusId:236964352`.
 
 ## Concept Nodes (Knowledge Graph)
 
@@ -421,7 +422,8 @@ bip concept merge shm somatic-hypermutation --human
 
 ### Snippet Search Timeouts
 
-`bip asta snippet` frequently times out with "context deadline exceeded". Workarounds:
+`bip asta snippet` frequently times out with "context deadline exceeded".
+Workarounds:
 
 1. **Reduce limit**: `--limit 5` instead of default
 2. **Use MCP directly**: `mcp__asta__snippet_search` with small limit
@@ -458,7 +460,8 @@ If you see errors like `no such column: pmid` or similar schema mismatches:
 bip rebuild
 ```
 
-The SQLite database is ephemeral and rebuilt from the JSONL source of truth. Schema changes require deleting and rebuilding.
+The SQLite database is ephemeral and rebuilt from the JSONL source of truth.
+Schema changes require deleting and rebuilding.
 
 ### Slow Performance
 

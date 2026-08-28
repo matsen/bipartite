@@ -15,12 +15,14 @@ Generate a themed narrative digest for a Slack channel.
 
 **Arguments:**
 - `<channel>` — Channel name (required, e.g., `dasm2`)
-- `--since <period>` — Time period to cover (default: `1w`). Examples: `1w`, `2d`, `3d`
+- `--since <period>` — Time period to cover (default: `1w`).
+  Examples: `1w`, `2d`, `3d`
 - `--verbose` — Include PR/issue body summaries in the raw activity
 
 ## Setup
 
-The nexus path is configured in `~/.config/bip/config.yml`. For the commands below, use the configured path (e.g., if `nexus_path` is `~/re/nexus`, substitute that).
+The nexus path is configured in `~/.config/bip/config.yml`.
+For the commands below, use the configured path (e.g., if `nexus_path` is `~/re/nexus`, substitute that).
 
 ## Workflow
 
@@ -49,8 +51,7 @@ Read the shared preferences file:
 cat <nexus>/narrative/preferences.md
 ```
 
-**If the file doesn't exist**, stop and report:
-"Missing shared preferences file: <nexus>/narrative/preferences.md"
+**If the file doesn't exist**, stop and report: "Missing shared preferences file: <nexus>/narrative/preferences.md"
 
 ### Step 3: Read Channel Configuration
 
@@ -60,9 +61,7 @@ Read the channel-specific config:
 cat <nexus>/narrative/{{channel}}.md
 ```
 
-**If the file doesn't exist**, stop and report:
-"Missing channel config: <nexus>/narrative/{{channel}}.md
-Create this file with Themes and Repo Context sections."
+**If the file doesn't exist**, stop and report: "Missing channel config: <nexus>/narrative/{{channel}}.md Create this file with Themes and Repo Context sections."
 
 ### Step 4: Generate Narrative
 
@@ -108,10 +107,13 @@ Using the raw activity from Step 1, the preferences from Step 2, and the channel
 - Stick to available information—do not invent context
 
 **CRITICAL — Include ALL Activity:**
-- You MUST include EVERY item from the raw activity output. Do NOT skip or omit ANY PR or issue.
+- You MUST include EVERY item from the raw activity output.
+  Do NOT skip or omit ANY PR or issue.
 - EVERY repository that appears in the raw output MUST be represented in the narrative.
-- If a repo has activity, it MUST appear somewhere in the digest. Missing repos is a failure.
-- When in doubt, include the item. Completeness is more important than brevity.
+- If a repo has activity, it MUST appear somewhere in the digest.
+  Missing repos is a failure.
+- When in doubt, include the item.
+  Completeness is more important than brevity.
 
 ### Step 5: Write Output
 
@@ -146,7 +148,8 @@ After the user has reviewed the narrative, ask if they want to post it to Slack.
    bip digest --channel {{channel}} --post
    ```
 
-3. Post the narrative link to Slack. Look up the webhook URL for the channel from `slack_webhooks` in `~/.config/bip/config.yml`, then:
+3. Post the narrative link to Slack.
+   Look up the webhook URL for the channel from `slack_webhooks` in `~/.config/bip/config.yml`, then:
    ```bash
    curl -s -X POST '{{webhook_url}}' -H 'Content-type: application/json' \
      -d '{"text":"https://github.com/matsengrp/nexus/blob/main/narrative/{{channel}}/{{YYYY-MM-DD}}.md"}'

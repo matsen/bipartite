@@ -5,24 +5,21 @@ description: Worker self-spawns a follow-up issue and hands off to a new slot
 
 # /bip-conductor-handoff
 
-Hand off work from a finishing worker session to a new slot. Run this
-from a **worker** (not the conductor) when your current issue is done
-and you know what should happen next.
+Hand off work from a finishing worker session to a new slot.
+Run this from a **worker** (not the conductor) when your current issue is done and you know what should happen next.
 
 ## Prerequisites — direction must be decided FIRST
 
 **Do not run this skill until you have a clear next direction.**
 
 If you have just finished an issue and are unsure what comes next:
-1. Think through what you learned, what's unresolved, and what the
-   logical next step is
-2. Write a **prose proposal** (2-4 sentences) describing the direction
-   and why it's the right next move
+1. Think through what you learned, what's unresolved, and what the logical next step is
+2. Write a **prose proposal** (2-4 sentences) describing the direction and why it's the right next move
 3. Present it to the user and **wait for confirmation**
 4. Only after the user agrees, proceed with the handoff
 
-This skill is for execution, not ideation. The thinking happens before
-you invoke it.
+This skill is for execution, not ideation.
+The thinking happens before you invoke it.
 
 ## Usage
 
@@ -51,8 +48,8 @@ If no issue number was provided:
 /bip-issue-next
 ```
 
-This drafts and creates the follow-up issue. Record the new issue
-number as `<N>`.
+This drafts and creates the follow-up issue.
+Record the new issue number as `<N>`.
 
 ### Step 3: Update the EPIC body
 
@@ -64,16 +61,15 @@ Follow the **EPIC body update pattern** from `/bip-epic`:
 3. If the current issue's PR is ready, check its box
 4. Conflict-check and push
 
-If the conflict check fails, report it and continue — the conductor
-will reconcile on next poll.
+If the conflict check fails, report it and continue — the conductor will reconcile on next poll.
 
 ### Step 4: Select or create a slot
 
 Read `.epic-config.json` from the repo root.
 
-**Finding the config**: In clone mode, `.epic-config.json` is in each
-clone's repo root. In worktree mode, it's in the **main checkout**
-(the conductor's working directory, not the worktree). To find it:
+**Finding the config**: In clone mode, `.epic-config.json` is in each clone's repo root.
+In worktree mode, it's in the **main checkout** (the conductor's working directory, not the worktree).
+To find it:
 ```bash
 # Worktree mode: find the main checkout
 MAIN_CHECKOUT=$(git worktree list | head -1 | awk '{print $1}')
@@ -93,18 +89,12 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
 done
 ```
 
-`<this-skill's-base-directory>` is this skill's base directory as given
-at invocation (e.g. `/home/user/.claude/skills/bip-conductor-handoff`);
-the shared helper lives at `lib/spawn-intent.sh`, a sibling of every
-skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite`
-repo).
+`<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-conductor-handoff`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
-Pick the first idle clone **that is not the current clone**. The
-handoff should move work to a different slot so the current session
-can wind down cleanly. If all other clones are busy, use the current
-clone as a last resort (after confirming with the user). If all clones
-including current are busy, offer to create a new clone using a name
-from `new_clone_names` in the config.
+Pick the first idle clone **that is not the current clone**.
+The handoff should move work to a different slot so the current session can wind down cleanly.
+If all other clones are busy, use the current clone as a last resort (after confirming with the user).
+If all clones including current are busy, offer to create a new clone using a name from `new_clone_names` in the config.
 
 **Worktree mode** (`local_worktrees: true`):
 ```bash
@@ -134,8 +124,8 @@ git checkout -b "<N>-$SLUG"
 rm -f .epic-status.json .epic-worklog.md
 ```
 
-The branch **must** be created before spawning. If the spawn starts
-on `main`, any uncommitted work lands on `main` and is hard to rescue.
+The branch **must** be created before spawning.
+If the spawn starts on `main`, any uncommitted work lands on `main` and is hard to rescue.
 
 **Worktree mode** — just clear stale status files:
 ```bash
@@ -152,9 +142,7 @@ Follow `/bip-conductor-spawn` Steps 3-4 to compose the prompt:
    - Ralph-loop invocation block
    - EPIC status protocol (`.epic-status.json` fields, worklog format)
    - Any phasing or gate criteria from the issue
-3. Use the **Write tool** to create `/tmp/spawn-<N>.txt` with the
-   full prompt (do NOT use shell redirection — complex prompts break
-   zsh expansion)
+3. Use the **Write tool** to create `/tmp/spawn-<N>.txt` with the full prompt (do NOT use shell redirection — complex prompts break zsh expansion)
 
 Then launch with the correct flags for your mode:
 
@@ -174,8 +162,7 @@ bip spawn --prompt-file /tmp/spawn-<N>.txt \
 ```
 
 **IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat ...)"`.
-Always use `--dir` and `--name` — without them the tmux window gets
-a wrong name and the session runs in the wrong directory.
+Always use `--dir` and `--name` — without them the tmux window gets a wrong name and the session runs in the wrong directory.
 
 **Do NOT** use raw `tmux new-window` / `tmux send-keys` / `claude`.
 Always go through `bip spawn`.
@@ -186,8 +173,7 @@ If the current issue's PR is merged:
 - **Worktree mode**: the conductor will clean up on next poll
 - **Clone mode**: `git checkout main && git pull --ff-only`
 
-Don't force-remove your own worktree while you're in it — just let
-the conductor handle cleanup.
+Don't force-remove your own worktree while you're in it — just let the conductor handle cleanup.
 
 ### Step 8: Report
 
@@ -202,11 +188,9 @@ the conductor handle cleanup.
 ## Conventions
 
 Same as `/bip-epic`: `iN`/`pN` prefixes, full URLs on first mention.
-Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the
-clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
+Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
 
 ## Layout config (issue #149)
 
-`.epic-config.json` keeps working. The newer global `layout:` block in
-`~/.config/bip/config.yml` configures worktree mode for non-EPIC `bip
-spawn`; see `docs/guides/layout.md`.
+`.epic-config.json` keeps working.
+The newer global `layout:` block in `~/.config/bip/config.yml` configures worktree mode for non-EPIC `bip spawn`; see `docs/guides/layout.md`.
