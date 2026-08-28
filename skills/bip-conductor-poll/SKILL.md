@@ -223,11 +223,22 @@ If a merge closes an issue tracked in an EPIC, that's signal `/bip-epic`
 needs, not something to act on here — surface it under
 `changes_since_baseline` and move on.
 
-#### Memory
+#### Filter and route fleet-level findings
 
-- Update MEMORY.md only for fleet-level decisions/patterns (clone
-  layout, host quirks). Topic-level decisions belong to `/bip-epic`'s
-  own memory, not here.
+Before recording anything anywhere, run each candidate fleet-level
+finding through this filter (same as `/bip-conductor-tuckin` Step 3):
+
+1. **Is it derived?** Recomputable from `git`, `tmux`, `gh`, or the
+   filesystem — record nothing. Host quirks (which host had a warm
+   cache, which was mid-build) are derived and go stale within hours;
+   don't write them down anywhere, including MEMORY.md.
+2. **Is it already recorded?** A finding that produced an issue, PR,
+   test, or doc needs no second copy.
+
+Only what survives both gates gets a destination: a durable clone-pool
+layout decision → a `CLAUDE.md`; a workflow rule → a skill; a
+topic-level decision → `/bip-epic`'s own memory, not here. Nothing
+else fits → the poll report itself.
 
 ## Conventions
 
