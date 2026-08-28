@@ -225,7 +225,7 @@ target remote host. Without this annotation step those fleet warnings
 never make it into the prompt at all.
 
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
-```
+````
 You are working on GitHub issue #N TITLE.
 
 First, run this command to start the iteration loop:
@@ -459,7 +459,7 @@ instructions, remote execution notes, dependencies, key files)
 
 Now read the issue and begin work:
 /bip-issue-work N
-```
+````
 
 ### Common context additions
 
