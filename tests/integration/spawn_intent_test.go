@@ -167,3 +167,16 @@ func TestMarkSpawnIntentConsumed(t *testing.T) {
 		t.Fatalf("find_spawn_intent after consuming = %q, want empty (not still queued)", got)
 	}
 }
+
+func TestMarkSpawnIntentConsumedMissingSourceFailsFast(t *testing.T) {
+	cloneRoot := t.TempDir()
+	missingPath := filepath.Join(cloneRoot, ".spawn-prompts", "302.md")
+
+	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+		"mark_spawn_intent_consumed " + shellQuote(missingPath)
+	cmd := exec.Command("bash", "-c", script)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("mark_spawn_intent_consumed on missing source succeeded, want non-zero exit; output: %s", out)
+	}
+}

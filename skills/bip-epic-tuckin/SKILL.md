@@ -39,11 +39,11 @@ Before recording anything anywhere, run each candidate topic-level
 finding through this filter:
 
 1. **Is it derived?** Recomputable from `git`, `gh`, or the EPIC bodies
-   themselves — record nothing. Dependency-direction or collision
+   themselves — record nothing.
+2. **Does it already have a home?** Dependency-direction or collision
    findings belong in the EPIC body they concern (Step 1), not as a
-   separate copy.
-2. **Is it already recorded?** A finding that produced an issue, PR,
-   or EPIC body update needs no second copy.
+   separate copy. A finding that already produced an issue, PR, or
+   EPIC body update needs no second copy either.
 
 Only what survives both gates gets a destination:
 - A durable repo-level fact → a `CLAUDE.md`.
