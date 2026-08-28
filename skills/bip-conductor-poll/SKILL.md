@@ -200,7 +200,8 @@ check 1 with slot branches):
 
 **Worktree mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 # Confirm PR is merged before removing
 gh pr list --head <branch> --state merged --json number | jq length
 # If merged:
@@ -208,9 +209,15 @@ git worktree remove "$CLONE_ROOT/issue-<N>"
 git branch -d <branch>
 ```
 
+`<this-skill's-base-directory>` is this skill's base directory as given
+at invocation (e.g. `/home/user/.claude/skills/bip-conductor-poll`); the
+shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill
+directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
+
 **Clone mode**:
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"

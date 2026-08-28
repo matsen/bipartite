@@ -84,13 +84,21 @@ Then select or create a slot:
 
 **Clone mode** (`local_worktrees` absent or false):
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 # Find an idle clone (on main, clean worktree)
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
   branch=$(git -C "$CLONE_ROOT/$name" branch --show-current 2>/dev/null)
   [ "$branch" = "main" ] && echo "$name"
 done
 ```
+
+`<this-skill's-base-directory>` is this skill's base directory as given
+at invocation (e.g. `/home/user/.claude/skills/bip-conductor-handoff`);
+the shared helper lives at `lib/spawn-intent.sh`, a sibling of every
+skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite`
+repo).
+
 Pick the first idle clone **that is not the current clone**. The
 handoff should move work to a different slot so the current session
 can wind down cleanly. If all other clones are busy, use the current
@@ -100,7 +108,8 @@ from `new_clone_names` in the config.
 
 **Worktree mode** (`local_worktrees: true`):
 ```bash
-CLONE_ROOT=$(jq -r .clone_root "$MAIN_CHECKOUT/.epic-config.json" | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root "$MAIN_CHECKOUT/.epic-config.json")
 SLOT="$CLONE_ROOT/issue-<N>"
 SLUG=$(gh issue view <N> --json title -q '.title' | tr '[:upper:]' '[:lower:]' | awk '{for(i=1;i<=4&&i<=NF;i++) printf "%s%s",$i,(i<4&&i<NF?"-":"")}')
 
@@ -150,7 +159,8 @@ Follow `/bip-conductor-spawn` Steps 3-4 to compose the prompt:
 Then launch with the correct flags for your mode:
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 
 # Clone mode: --name is NNN-clone (e.g. "281-cedar")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
