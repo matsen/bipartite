@@ -130,13 +130,6 @@ If during polling you notice gaps — an experiment that should be run, a compar
 
 4. **Proposed actions**: Concrete list — import figure X, open notebook Y, draft text for finding Z, raise issue for gap W.
 
-Ring the terminal bell and send a phone notification if a major new result arrives (new figure or quantitative finding):
-```bash
-printf '\a'
-NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
-[ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip ms" -d "New result: <description>" "ntfy.sh/$NTFY_TOPIC" > /dev/null
-```
-
 ### Verify state before reporting
 
 When mentioning any PR or issue in the poll output, always verify its current state programmatically (`gh pr view --json state`, `gh issue view --json state`) rather than relying on earlier poll results or conversation memory.

@@ -62,6 +62,9 @@ Issueless spawns break EPIC tracking, PR linking, and conductor polling.
 `ListAgents`/`SendMessage` reach other local Claude tmux sessions and let the conductor push an immediate correction to a live worker without killing and respawning its tmux window.
 Whether a correction needs this channel at all, and whether it's durable or transient, is `/bip-epic`'s call (see that skill's "Correcting a live worker" section) — this section covers the mechanics once the epic has decided and drafted the line, plus the case where the conductor itself spots something worth flagging (a fleet fact, not a scope change — always message-only, since fleet facts never redefine the deliverable).
 
+The same channel also carries completion signals the other direction: a worker pushes the conductor on reaching `needs-human`/`completed` (skills/bip-conductor-spawn/SKILL.md, PUSH NOTIFICATION step), and the conductor pushes the epic on observing the same transition (Step 7 below, and skills/bip-conductor-poll/SKILL.md's "Flag needs-human and completed" section).
+Those pushes share every addressability caveat below — run `ListAgents` first, fall back to the file-based state (`.epic-status.json`, `.epic-notifications.log`, `gh` polling) when no target is addressable, and never treat the push as a hard dependency.
+
 - **Send the correction directly — that is the channel's purpose.**
   No status-file write is a precondition for messaging.
   State the change in at least one line; a bare pointer ("re-read `lead_guidance`") is a no-op for a worker that already reads the status file every step, and it strips the priority signal (drop what you're doing vs. finish the current step).
@@ -251,7 +254,7 @@ The watcher runs forever, exits cleanly on SIGTERM, and emits one event per real
 To also receive events as Claude Code notifications when that pipeline is reliable, additionally start a Monitor with `command: tail -F .epic-notifications.log` and `persistent: true`.
 The notifications log is the contract; Monitor is a latency optimization, not a correctness requirement.
 
-When a transition arrives showing `needs-human` or `completed`, the conductor should react immediately — read the slot's status, check the lead guidance, and either propose the next action or flag it for the user.
+When a transition arrives showing `needs-human` or `completed`, the conductor should react immediately — read the slot's status, check the lead guidance, run `ListAgents` for an addressable epic session and `SendMessage` it the issue number and phase if one exists (same addressability mechanics as "Correcting a live worker" above, just in the other direction), and either propose the next action or flag it for the user.
 
 > "Slot monitor started — phase transitions are streaming to `.epic-notifications.log`.
 > Use `/bip-conductor-poll` for a full reconciliation sweep when needed."

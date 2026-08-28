@@ -85,12 +85,8 @@ This tells the conductor what the workers are doing without having to read full 
 
 **Flag needs-human and completed** — if any clone has `phase: "needs-human"` (or legacy `blocked`) or `phase: "completed"`, highlight it prominently.
 These require conductor attention.
-**Ring the terminal bell and send a phone notification** so the user notices even if away:
-```bash
-printf '\a'
-NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
-[ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip epic" -d "<clone> <phase> (<issue>)" "ntfy.sh/$NTFY_TOPIC" > /dev/null
-```
+Run `ListAgents` for an addressable epic session and, if one exists, `SendMessage` it the issue number and phase so `/bip-epic` can re-poll and update the EPIC body without waiting for its own cadence.
+If no epic session is addressable, this is a no-op — `/bip-epic`'s independent `gh` polling remains the fallback path.
 
 **Only report active clones** — clones with a tmux window that are actually doing something.
 Don't list completed or idle clones; that's noise.
