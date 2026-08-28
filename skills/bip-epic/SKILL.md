@@ -50,6 +50,10 @@ cat .epic-config.json
 
 If this project uses the auto-memory directory, also read its MEMORY.md for topic-level context from previous sessions (decisions, findings, what's next) — some setups deliberately don't use it (e.g. because the directory is keyed by working directory and invisible to other clones), in which case skip this and rely on EPIC bodies and issue history instead.
 
+**Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.epic-session` — this is how the conductor finds the epic to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows.
+See `/bip-conductor`'s Conventions section ("Completion pushes") for the full mechanics and why guessing isn't safe here.
+Re-run this write every time `/bip-epic` starts a fresh poll cycle, since the address can drift mid-session.
+
 ### Step 2: Fan out scanners
 
 Dispatch two groups of `general-purpose` subagents in parallel — single message, multiple `Agent` tool calls.

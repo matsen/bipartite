@@ -250,14 +250,20 @@ If you launch a long-running experiment:
 4. After 3 consecutive check failures, set stop_reason to
    mechanical-blocker and invoke the lead
 
-PHONE NOTIFICATION — When you set phase to needs-human or completed,
-ring the terminal bell and send a push notification so the user notices:
-```bash
-printf '\a'
-NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
-[ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip epic" -d "#N <phase>: <one-line summary>" "ntfy.sh/$NTFY_TOPIC" > /dev/null
-```
-Do this EVERY time you write needs-human or completed to .epic-status.json.
+PUSH NOTIFICATION — When you set phase to needs-human or completed, read
+`$CLONE_ROOT/.conductor-session` (resolve `CLONE_ROOT` from
+`.epic-config.json` the usual way). If it exists, `SendMessage` that exact
+address a one-line notification (issue number, phase, one-line summary)
+so the conductor doesn't have to wait for its next poll cycle. Do NOT
+`ListAgents` and pick a plausible-looking row yourself — session names
+derive from working directory, so every other worker sharing your clone
+root shares your name prefix, and guessing risks messaging the wrong
+live session (see `/bip-conductor`'s Conventions section, "Completion
+pushes"). If the file is missing or the send fails (address went stale
+since the conductor's last refresh), skip silently — `.epic-status.json`
+is written regardless, so `/bip-conductor-poll` and `bip epic watch`
+remain the fallback. Do this EVERY time you write needs-human or
+completed to .epic-status.json.
 
 STOPPING POINTS — When you reach a natural stopping point:
 1. Append a worklog entry describing what you did and why you stopped

@@ -23,7 +23,11 @@ For periodic auto-polling: `/loop 10m /bip-conductor-poll`
 
 ## What to check
 
-Two things stay in the primary because they're cheap and structured:
+Three things stay in the primary because they're cheap and structured:
+
+**Refresh the completion-push address** — resolve `CLONE_ROOT` and rewrite `$CLONE_ROOT/.conductor-session` with this session's current `ListAgents` name.
+This is the file workers read to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows — see `/bip-conductor`'s Conventions section ("Completion pushes") for why.
+Cheap (one `ListAgents` self-lookup, one file write) and bounds how stale the address can get between conductor cold starts.
 
 **Notifications log tail** — if `bip epic watch` is running, it appends one JSONL line per phase transition to `.epic-notifications.log` in the conductor cwd.
 The state file `/tmp/.epic-poll-last-read` records the previous poll time as Unix seconds; pass the elapsed window to `--since`:
@@ -85,12 +89,8 @@ This tells the conductor what the workers are doing without having to read full 
 
 **Flag needs-human and completed** — if any clone has `phase: "needs-human"` (or legacy `blocked`) or `phase: "completed"`, highlight it prominently.
 These require conductor attention.
-**Ring the terminal bell and send a phone notification** so the user notices even if away:
-```bash
-printf '\a'
-NTFY_TOPIC=$(grep ntfy_topic ~/.config/bip/config.yml | awk '{print $2}')
-[ -n "$NTFY_TOPIC" ] && curl -s -H "Title: bip epic" -d "<clone> <phase> (<issue>)" "ntfy.sh/$NTFY_TOPIC" > /dev/null
-```
+Read `$CLONE_ROOT/.epic-session` and, if present, `SendMessage` that address the issue number and phase so `/bip-epic` can re-poll and update the EPIC body without waiting for its own cadence.
+If the file is absent or the send fails, this is a no-op — `/bip-epic`'s independent `gh` polling remains the fallback path.
 
 **Only report active clones** — clones with a tmux window that are actually doing something.
 Don't list completed or idle clones; that's noise.
