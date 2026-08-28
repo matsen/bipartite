@@ -122,15 +122,15 @@ Every `FINAL` relay (above), every forwarded worker finding (above), and every n
 Format is timestamped markdown, append-only, never edit a previous entry — the same convention as `.epic-worklog.md`, because this is attributed narrative for a human (or a fresh epic session) to read, not a machine-parsed event stream like the JSONL `.epic-notifications.log`.
 
 ```
+## 2026-08-28T09:00:00Z — NEGATIVE (conductor)
+<action not taken, and why — e.g. "i2080 not proposed: clone stood down 08-27 for <reason>, prerequisites merging today doesn't reopen it">
+
 ## 2026-08-28T14:30:00Z — RELAY:FINAL (conductor→epic)
 <the decision, restated in full, not a paraphrase of sentiment>
 
 ## 2026-08-28T14:32:00Z — FINDING (worker i2098, forwarded by conductor)
 <the worker's finding, verbatim>
 Conductor's own reading, if any, marked separately: <...>
-
-## 2026-08-28T09:00:00Z — NEGATIVE (conductor)
-<action not taken, and why — e.g. "i2080 not proposed: clone stood down 08-27 for <reason>, prerequisites merging today doesn't reopen it">
 ```
 
 **Not `.epic-worklog.md`.** That file is per-slot and gets `rm -f`'d on slot cleanup, so a fleet-level entry written there is destroyed by unrelated housekeeping the moment that slot is cleaned up.

@@ -62,8 +62,10 @@ Group A's step 3 re-verifies every open child item's state one `gh issue view` a
 In the run that motivated this rule, Group A spent ~58k tokens re-verifying 10 issues this way, 9 of which the conductor's own report covered a minute and a half later.
 
 - Resolve `CLONE_ROOT`, read `$CLONE_ROOT/.conductor-session` for the conductor's self-registered address (see `/bip-conductor`'s Conventions section, "Completion pushes"), and `SendMessage` it a request for its current slot→issue occupancy table (Step 5's dashboard) and its negative list (decisions already taken against an action — see `/bip-conductor`'s Step 5).
-- **Payload**: the slot→issue occupancy table (which issue, if any, each slot holds) plus the negative list.
-- **Scope**: "what the conductor does not already own" means issues with no live slot in that table. Pass this table down to each Group A subagent and have it skip step 3's `gh issue view` confirmation for any child item the table already shows occupied — the conductor's own dashboard just reconfirmed that item is open and active. Everything else about the subagent's job (reading the EPIC body, parsing findings, flagging surprises) is unaffected; only the redundant per-item open/closed check is skipped.
+- **Payload**: the slot→issue occupancy table (which issue, and which **phase**, each slot holds) plus the negative list.
+- **Scope**: "what the conductor does not already own" means issues with no live slot in that table, **and only for slots in an in-progress phase** (`coding`, `exploring`, `testing`, `awaiting-results`, `quality-gate`) — occupancy is evidence about the fleet, not about GitHub, and a slot's issue can close while the slot itself still shows occupied.
+  Never skip the confirmation for `completed` or `needs-human` phases: a slot that just finished is *more* likely to have a closed issue than one still mid-flight, since finishing is exactly what triggers the issue closing, and slot cleanup (which would otherwise clear the slot) is a separate housekeeping step that can lag behind.
+  Pass the table (with phase) down to each Group A subagent and have it skip step 3's `gh issue view` confirmation only for child items on an in-progress-phase slot. Everything else about the subagent's job (reading the EPIC body, parsing findings, flagging surprises) is unaffected; only the redundant per-item open/closed check is narrowed.
 - **Fallback**: if `$CLONE_ROOT/.conductor-session` is absent, or the send fails (no conductor addressable), proceed with the full Group A dispatch below, unscoped — run step 3's confirmation for every item, and do not block waiting for a conductor that may never exist.
   A solo `/bip-epic` run with no separate conductor session must not deadlock here (see Step 6's conductor-absent handling for the same fallback shape).
 
@@ -86,7 +88,7 @@ Brief:
 > 1. `gh issue view <N> --json title,body,updatedAt`.
 > 2. Parse the Status dashboard and Key findings.
 >    (Older EPIC bodies may still carry a legacy clone-assignment table from before the fleet/topic split — that's fleet state that shouldn't have been authored here; note it as a `surprise` for cleanup, don't treat it as current truth.)
-> 3. For each open item the dashboard lists, run `gh issue view <child-N> --json state,stateReason` to confirm it is still open — **except** items the conductor's occupancy table (handshake above) already shows holding a live slot; take "open" as given for those and skip the query.
+> 3. For each open item the dashboard lists, run `gh issue view <child-N> --json state,stateReason` to confirm it is still open — **except** items the conductor's occupancy table (handshake above) shows holding a slot in an **in-progress** phase (`coding`, `exploring`, `testing`, `awaiting-results`, `quality-gate`); take "open" as given only for those and skip the query. Still confirm for `completed`/`needs-human` slots, and for anything the table doesn't cover — a slot can finish and its issue close before the slot itself is cleaned up, so occupancy alone never implies "still open."
 >
 > Return under 400 words:
 > - `changes_since_baseline`: completed items, new findings, items newly opened
