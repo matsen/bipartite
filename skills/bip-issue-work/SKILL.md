@@ -29,7 +29,8 @@ Read both the issue body and any comments for full context.
 
 ### Step 2: Brainstorm clarifying questions
 
-Think hard about the issue requirements. If you have any clarifying questions, **STOP and ask them before writing any code**.
+Think hard about the issue requirements.
+If you have any clarifying questions, **STOP and ask them before writing any code**.
 
 Once everything is clear, proceed.
 
@@ -55,7 +56,10 @@ Use the issue number as a branch prefix for traceability.
 ls PRE-MERGE-CHECKLIST.md 2>/dev/null
 ```
 
-- **If `PRE-MERGE-CHECKLIST.md` exists**: read it **line by line** and verify every numbered item. For each item, either confirm it passes or explicitly state why it is not applicable (e.g. "item 4: parity — skipped, no alignment code changed"). Do not rely on memory — re-read the file fresh each time. Issue-lead approval does **not** substitute for this: the lead evaluates issue scope; the checklist catches cross-cutting concerns (citations, formatting, README sync) that the issue body won't mention.
+- **If `PRE-MERGE-CHECKLIST.md` exists**: read it **line by line** and verify every numbered item.
+  For each item, either confirm it passes or explicitly state why it is not applicable (e.g. "item 4: parity — skipped, no alignment code changed").
+  Do not rely on memory — re-read the file fresh each time.
+  Issue-lead approval does **not** substitute for this: the lead evaluates issue scope; the checklist catches cross-cutting concerns (citations, formatting, README sync) that the issue body won't mention.
 - **Otherwise**: run `/bip-pr-check` as the baseline quality gate.
 
 ### Step 6: Fix review findings
@@ -74,21 +78,18 @@ gh pr create --title "<concise title>" --body "<body>"
 - Include `Closes #$ARGUMENTS` in the body to auto-close the issue on merge
 - Do NOT manually close the issue — GitHub handles it when the PR merges
 
-**Report findings in the PR body.** If the work involved experiments or benchmarks, include key results (tables, numbers, conclusions) directly in the PR body. Don't just point at branch files — the PR body is the permanent record.
+**Report findings in the PR body.**
+If the work involved experiments or benchmarks, include key results (tables, numbers, conclusions) directly in the PR body.
+Don't just point at branch files — the PR body is the permanent record.
 
 ### Step 8: Summary for the user
 
-After creating the PR, provide a concise summary that highlights
-things the user needs to **judge**:
+After creating the PR, provide a concise summary that highlights things the user needs to **judge**:
 
 - **Underlying bugs or tech debt** discovered during the work (even if worked around)
 - **Structural concerns** — places where the fix is a workaround rather than a root-cause fix
 - **Performance implications** of the approach taken
 
-Record any deferred work in the PR body `DEFERRED` section (one line
-per item, with rationale per the DEFERRAL RULE). In EPIC mode the
-issue-lead will scan these at terminal `completed` and file the
-legitimate ones as follow-up issues; standalone users can review the
-list and run `/bip-issue-next` for the ones worth filing. Either way,
-do not list follow-ups in this summary — the PR body is the source of
-truth.
+Record any deferred work in the PR body `DEFERRED` section (one line per item, with rationale per the DEFERRAL RULE).
+In EPIC mode the issue-lead will scan these at terminal `completed` and file the legitimate ones as follow-up issues; standalone users can review the list and run `/bip-issue-next` for the ones worth filing.
+Either way, do not list follow-ups in this summary — the PR body is the source of truth.

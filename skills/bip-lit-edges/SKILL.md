@@ -42,19 +42,23 @@ for key in Key1 Key2 Key3; do
 done
 ```
 
-**When a key is NOT FOUND**, the paper may still be in the library under a different key suffix (e.g., `Sethna2019-lv` in bib vs `Sethna2019-at` in library). Search by title or keyword:
+**When a key is NOT FOUND**, the paper may still be in the library under a different key suffix (e.g., `Sethna2019-lv` in bib vs `Sethna2019-at` in library).
+Search by title or keyword:
 
 ```bash
 bip search "OLGA"  # search by tool/method name or keyword
 ```
 
-If found under a different key, **ask the user** if they want to fix the bib and tex files to use the library's key. If yes, update both `main.bib` (the `@ARTICLE{...}` key) and all `\cite{...}` references in `.tex` files.
+If found under a different key, **ask the user** if they want to fix the bib and tex files to use the library's key.
+If yes, update both `main.bib` (the `@ARTICLE{...}` key) and all `\cite{...}` references in `.tex` files.
 
-For papers truly not in library, add via `bip s2 add "DOI:..."`. If rate-limited, note for later.
+For papers truly not in library, add via `bip s2 add "DOI:..."`.
+If rate-limited, note for later.
 
 ### 4. Identify concepts
 
-Look at the highly-cited papers and the subagent analysis. Create concept nodes for:
+Look at the highly-cited papers and the subagent analysis.
+Create concept nodes for:
 - Named algorithms or methods (e.g., "beta-splitting", "F-matrices")
 - Biological processes (e.g., "affinity-maturation")
 - Modeling frameworks (e.g., "mutation-selection-model")
@@ -127,7 +131,8 @@ make viz && open -a "Google Chrome" viz/knowledge-graph.html
 ## Tips
 
 - **Citation keys ≈ paper IDs** — check directly first, but key suffixes can differ
-- **Key mismatch?** Search by keyword (`bip search "OLGA"`), then fix bib+tex to match the library key
+- **Key mismatch?**
+  Search by keyword (`bip search "OLGA"`), then fix bib+tex to match the library key
 - **Citation frequency** from grep helps prioritize which papers matter most
 - **Use subagents** for exploring TeX repos — keeps main context clean
 - **Create concepts conservatively** — only for named methods that bridge papers

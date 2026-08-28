@@ -9,7 +9,9 @@ Enter plan mode with a rich context brief so the planning agent has everything i
 
 ## Why this skill exists
 
-Plan mode clears conversation history. If you've spent time discussing a bug, constraints, or pitfalls, that context is lost the moment the planning agent starts. This skill captures everything *before* entering plan mode and hands it off in a structured brief.
+Plan mode clears conversation history.
+If you've spent time discussing a bug, constraints, or pitfalls, that context is lost the moment the planning agent starts.
+This skill captures everything *before* entering plan mode and hands it off in a structured brief.
 
 ## Usage
 
@@ -24,7 +26,8 @@ Plan mode clears conversation history. If you've spent time discussing a bug, co
 
 ## Step 1: Gather context
 
-Before entering plan mode, collect the following. Run commands in parallel where possible.
+Before entering plan mode, collect the following.
+Run commands in parallel where possible.
 
 ### Git state
 ```bash
@@ -56,7 +59,9 @@ Read the most relevant changed files to understand the current state of implemen
 
 ## Step 2: Compose the brief
 
-Synthesize everything gathered into a structured **Context Brief**. This is what you'll hand to the planning agent. Include:
+Synthesize everything gathered into a structured **Context Brief**.
+This is what you'll hand to the planning agent.
+Include:
 
 ```markdown
 ## Context Brief for Planning Agent

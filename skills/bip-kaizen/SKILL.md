@@ -9,7 +9,8 @@ Reflect on friction or confusion from the current session and propose a concrete
 
 ## Context
 
-"Kaizen" means continuous improvement. After any interaction where something didn't go smoothly—agent couldn't find files, a skill was confusing, documentation was missing, a workflow was clunky—the user can invoke `/bip-kaizen` and the agent will:
+"Kaizen" means continuous improvement.
+After any interaction where something didn't go smoothly—agent couldn't find files, a skill was confusing, documentation was missing, a workflow was clunky—the user can invoke `/bip-kaizen` and the agent will:
 
 1. Diagnose what went wrong (or what could be better)
 2. Propose a specific, actionable fix
@@ -22,13 +23,15 @@ Reflect on friction or confusion from the current session and propose a concrete
 /bip-kaizen "the bip search kept failing because the schema was stale"
 ```
 
-`$ARGUMENTS` is an optional hint about what to improve. If empty, infer from conversation context.
+`$ARGUMENTS` is an optional hint about what to improve.
+If empty, infer from conversation context.
 
 ## Workflow
 
 ### Step 1: Diagnose
 
-Review the conversation history for friction points. Look for:
+Review the conversation history for friction points.
+Look for:
 
 - **Confusion**: Agent searched for files in the wrong place, couldn't find source code, misunderstood project structure
 - **Failed commands**: CLI errors, missing flags, wrong syntax, stale schemas
@@ -37,9 +40,11 @@ Review the conversation history for friction points. Look for:
 - **Repetitive work**: Something the agent had to figure out repeatedly that should be documented
 - **Workflow friction**: Too many manual steps, missing automation, unclear handoffs
 
-If `$ARGUMENTS` is provided, focus the diagnosis there. Otherwise, scan the full conversation.
+If `$ARGUMENTS` is provided, focus the diagnosis there.
+Otherwise, scan the full conversation.
 
-Identify the **root cause**, not just the symptom. For example:
+Identify the **root cause**, not just the symptom.
+For example:
 - Symptom: "Agent couldn't find the database" → Root cause: Database path not documented in CLAUDE.md
 - Symptom: "bip search returned errors" → Root cause: Skill doc doesn't mention `bip rebuild` as a first step
 
@@ -78,7 +83,8 @@ Then show the specific change—either as a diff, a new section to add, or a des
 
 ### Step 4: Ask before acting
 
-**STOP and ask the user** before making any changes. Present options:
+**STOP and ask the user** before making any changes.
+Present options:
 
 1. **Apply now** — Make the edit directly (for small CLAUDE.md or skill changes)
 2. **Create a PR** — For changes to the bipartite repo (skills, code)
@@ -123,8 +129,11 @@ gh pr create --title "kaizen: <description>" --body "..."
 ## Guidelines
 
 - **Be specific**: "Add database path to CLAUDE.md" not "improve documentation"
-- **Be minimal**: Propose the smallest change that fixes the problem. Don't refactor adjacent code
+- **Be minimal**: Propose the smallest change that fixes the problem.
+  Don't refactor adjacent code
 - **One improvement per invocation**: If you see multiple issues, pick the highest-impact one and mention the others briefly
 - **Respect existing structure**: Follow the conventions already in CLAUDE.md and skill files
-- **Bipartite repo awareness**: Skills live in `/Users/matsen/re/bipartite/skills/`. The repo is `matsen/bipartite` on GitHub
-- **Don't over-document**: If something is obvious from the code, it doesn't need a CLAUDE.md entry. Only document things the agent genuinely couldn't figure out on its own
+- **Bipartite repo awareness**: Skills live in `/Users/matsen/re/bipartite/skills/`.
+  The repo is `matsen/bipartite` on GitHub
+- **Don't over-document**: If something is obvious from the code, it doesn't need a CLAUDE.md entry.
+  Only document things the agent genuinely couldn't figure out on its own

@@ -6,7 +6,9 @@ allowed-tools: Agent, Bash, Read, Glob, Grep, Edit
 
 # /bip-comment-check
 
-Fact-check a PR review, comment, or pasted review text against the actual code. Reviews often contain false claims about missing code, broken imports, or incorrect logic. This skill verifies each claim by reading the relevant files.
+Fact-check a PR review, comment, or pasted review text against the actual code.
+Reviews often contain false claims about missing code, broken imports, or incorrect logic.
+This skill verifies each claim by reading the relevant files.
 
 ## Usage
 
@@ -19,7 +21,9 @@ Also works when the user pastes review text directly into the conversation.
 
 ## Core Principle
 
-**Read the code before evaluating any claim.** Never accept a reviewer's assertion at face value. Every factual claim must be verified against the actual source on the PR branch.
+**Read the code before evaluating any claim.**
+Never accept a reviewer's assertion at face value.
+Every factual claim must be verified against the actual source on the PR branch.
 
 ## Workflow
 
@@ -33,7 +37,8 @@ Determine the source of claims to check:
    gh pr view <N> --json reviews,comments
    gh api repos/{owner}/{repo}/pulls/<N>/comments
    ```
-   Note: `reviews` contains top-level review bodies; inline code comments (attached to specific lines) come from the `/pulls/<N>/comments` endpoint. Fetch both to get the full picture.
+Note: `reviews` contains top-level review bodies; inline code comments (attached to specific lines) come from the `/pulls/<N>/comments` endpoint.
+Fetch both to get the full picture.
 3. **If no argument**, detect the current branch's PR:
    ```bash
    gh pr view --json number,reviews,comments
@@ -56,7 +61,8 @@ git show origin/<pr-branch>:path/to/file.py
 
 ### Step 3: Identify checkable claims
 
-Parse the review into discrete, falsifiable claims. Focus on:
+Parse the review into discrete, falsifiable claims.
+Focus on:
 
 - **"File X is missing / not updated"** — verify the file exists and contains what's expected
 - **"Line N does Y"** — read the actual line
@@ -64,14 +70,16 @@ Parse the review into discrete, falsifiable claims. Focus on:
 - **"Code at line N has bug Z"** — read surrounding context and evaluate
 - **"Test doesn't cover X"** — read the test
 - **"Pattern A should be pattern B"** — check if the code already uses pattern B
-- **"This is fragile / breaks when..."** — evaluate whether the failure scenario is actually possible given the math or data invariants
+- **"This is fragile / breaks when..."**
+  — evaluate whether the failure scenario is actually possible given the math or data invariants
 - **"Variable/dict is indexed by position N"** — check actual data structure (list vs dict, positional vs keyed)
 
 Skip subjective style preferences that have no factual component.
 
 ### Step 4: Verify each claim against the code
 
-For each claim, **read the relevant source files**. Use dedicated tools:
+For each claim, **read the relevant source files**.
+Use dedicated tools:
 
 - `Read` to examine specific files and line numbers
 - `Grep` to find patterns across the codebase
@@ -110,7 +118,8 @@ For each claim, assign a verdict:
 
 Apply `PROSE-DISCIPLINE.md` (bipartite repo root) when writing the verdict.
 
-Present findings as a numbered list matching the original review's numbering. For each claim:
+Present findings as a numbered list matching the original review's numbering.
+For each claim:
 
 1. **State the verdict** (bold)
 2. **Quote the key assertion** from the review
@@ -136,13 +145,20 @@ this is intentional. A comment explaining the mathematical reason would help.
 
 ## Guidelines
 
-- **Err on the side of reading more code**, not less. A 30-second file read prevents a false verdict.
-- **Check the actual branch**, not main. Reviews are about PR code.
-- **Don't assume the reviewer is right** just because they sound confident. Detailed, specific-sounding claims are often the most wrong.
-- **Don't assume the reviewer is wrong** either. Verify, don't assume.
-- **When claims involve data structures**, check the actual type (dict vs list, keyed vs positional). Reviewers frequently misremember these.
-- **When claims involve math**, read the documentation. Mathematical code often looks wrong to someone unfamiliar with the domain.
-- **Run the tests.** A claim that "all tests fail" is trivially verifiable.
+- **Err on the side of reading more code**, not less.
+  A 30-second file read prevents a false verdict.
+- **Check the actual branch**, not main.
+  Reviews are about PR code.
+- **Don't assume the reviewer is right** just because they sound confident.
+  Detailed, specific-sounding claims are often the most wrong.
+- **Don't assume the reviewer is wrong** either.
+  Verify, don't assume.
+- **When claims involve data structures**, check the actual type (dict vs list, keyed vs positional).
+  Reviewers frequently misremember these.
+- **When claims involve math**, read the documentation.
+  Mathematical code often looks wrong to someone unfamiliar with the domain.
+- **Run the tests.**
+  A claim that "all tests fail" is trivially verifiable.
 - **Restore the original branch** when done:
   ```bash
   git checkout <original-branch>

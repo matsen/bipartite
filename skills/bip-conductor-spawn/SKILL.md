@@ -6,12 +6,10 @@ description: Spawn a Claude session in a clone for an EPIC issue
 # /bip-conductor-spawn
 
 Spawn a Claude Code session in a tmux window to work on a GitHub issue.
-The worker runs inside a **ralph-loop** with an **issue-lead subagent**
-that evaluates progress at stopping points.
+The worker runs inside a **ralph-loop** with an **issue-lead subagent** that evaluates progress at stopping points.
 
-This is fleet-conductor machinery: it executes a spawn, annotating it
-with live fleet facts the topic side (`/bip-epic`) cannot see. See
-"Where the prompt comes from" below for the epic/conductor split.
+This is fleet-conductor machinery: it executes a spawn, annotating it with live fleet facts the topic side (`/bip-epic`) cannot see.
+See "Where the prompt comes from" below for the epic/conductor split.
 
 ## Usage
 
@@ -23,18 +21,13 @@ If clone-name is omitted, pick the best idle clone automatically.
 
 ## Configuration
 
-Reads `.epic-config.json` from the repo root (see `/bip-conductor` for
-format). **If the file does not exist**, stop and ask the user to
-configure it via `/bip-conductor` first.
+Reads `.epic-config.json` from the repo root (see `/bip-conductor` for format).
+**If the file does not exist**, stop and ask the user to configure it via `/bip-conductor` first.
 
 ## Where the prompt comes from
 
-Most of the time `/bip-epic` has already decided an issue is ready and
-written the semantic brief — why it matters, scope, dependency/collision
-warnings from its issue-body analysis — to `$CLONE_ROOT/.spawn-prompts/`.
-Check there first, under **either** naming convention live in that
-directory — `<N>.md` (current) or `spawn-<N>.txt` (older, still
-written by some sessions):
+Most of the time `/bip-epic` has already decided an issue is ready and written the semantic brief — why it matters, scope, dependency/collision warnings from its issue-body analysis — to `$CLONE_ROOT/.spawn-prompts/`.
+Check there first, under **either** naming convention live in that directory — `<N>.md` (current) or `spawn-<N>.txt` (older, still written by some sessions):
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
@@ -43,43 +36,26 @@ INTENT=$(find_spawn_intent "$CLONE_ROOT" <N>)
 [ -n "$INTENT" ] && cat "$INTENT"
 ```
 
-`<this-skill's-base-directory>` is this skill's base directory as given at
-invocation (e.g. `/home/user/.claude/skills/bip-conductor-spawn`); the
-shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill
-directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
+`<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-conductor-spawn`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
-Checking only `<N>.md` silently misses a real, live `spawn-<N>.txt` and
-falls through to the escape hatch below with no warning — exactly the
-failure this split exists to prevent, reintroduced by a filename. Don't
-narrow this check to one pattern.
+Checking only `<N>.md` silently misses a real, live `spawn-<N>.txt` and falls through to the escape hatch below with no warning — exactly the failure this split exists to prevent, reintroduced by a filename.
+Don't narrow this check to one pattern.
 
-- **Intent file present**: it is the base for the `IMPORTANT CONTEXT`
-  section of Step 4's prompt below — don't re-derive what it already
-  says. Your job is to check it against live fleet state (Step 2b) and
-  append fleet facts it structurally couldn't know: which host/clone is
-  actually free, a concurrent worker editing an overlapping file, a
-  build running on a target remote host. Mark the intent file consumed
-  after a successful launch (Step 6) — it has done its job, but the
-  directory lives outside git, so this is a move to `consumed/`, not a
-  delete (see Step 6).
-- **No intent file** (conductor-initiated respawn, routine maintenance,
-  quick fix with no upstream epic session): compose the prompt from the
-  issue directly, same as before. This is the escape hatch, not the
-  default path.
+- **Intent file present**: it is the base for the `IMPORTANT CONTEXT` section of Step 4's prompt below — don't re-derive what it already says.
+  Your job is to check it against live fleet state (Step 2b) and append fleet facts it structurally couldn't know: which host/clone is actually free, a concurrent worker editing an overlapping file, a build running on a target remote host.
+  Mark the intent file consumed after a successful launch (Step 6) — it has done its job, but the directory lives outside git, so this is a move to `consumed/`, not a delete (see Step 6).
+- **No intent file** (conductor-initiated respawn, routine maintenance, quick fix with no upstream epic session): compose the prompt from the issue directly, same as before.
+  This is the escape hatch, not the default path.
 
-If the intent conflicts with current fleet state in a way that isn't a
-mechanical fix (e.g. it asks for a clone/host that's genuinely
-contended, not just occupied by a finished session) — don't resolve it
-yourself. State the conflict to the user and let them decide; this
-mirrors the user-confirmation gate every spawn already goes through.
+If the intent conflicts with current fleet state in a way that isn't a mechanical fix (e.g. it asks for a clone/host that's genuinely contended, not just occupied by a finished session) — don't resolve it yourself.
+State the conflict to the user and let them decide; this mirrors the user-confirmation gate every spawn already goes through.
 
 ## Workflow
 
 ### Prerequisite: Issue number required
 
-Every spawn MUST target an existing GitHub issue. If the conductor wants
-to spawn work that doesn't have an issue yet (reruns, follow-ups, quick
-experiments), file the issue first:
+Every spawn MUST target an existing GitHub issue.
+If the conductor wants to spawn work that doesn't have an issue yet (reruns, follow-ups, quick experiments), file the issue first:
 
 1. Write a minimal issue body (title + 3-sentence motivation + success criteria)
 2. `gh issue create --title "..." --body-file ISSUE-*.md`
@@ -94,11 +70,8 @@ Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
 **Clone mode** (`local_worktrees` absent or false):
 
-If clone-name not specified, find an idle clone. A good pick is on `main`,
-clean, and has no live tmux pane in its directory — the pool is shared
-across operators and finishing workers self-claim slots via
-`/bip-conductor-handoff`, so filter these out to avoid choosing one that's
-already taken:
+If clone-name not specified, find an idle clone.
+A good pick is on `main`, clean, and has no live tmux pane in its directory — the pool is shared across operators and finishing workers self-claim slots via `/bip-conductor-handoff`, so filter these out to avoid choosing one that's already taken:
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
@@ -113,18 +86,15 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
 done
 ```
 
-This selection is **best-effort** — it avoids clones that are obviously
-taken. The actual guarantee is `bip spawn` itself: it refuses to launch
-into a directory a live tmux pane already occupies (`--force` overrides), so
-even if the pool churns between selection and spawn you can never land a
-second agent in one checkout. Prefer clones with clean worktrees. If all
-busy, offer to create a new clone using a name from `new_clone_names` in
-the config.
+This selection is **best-effort** — it avoids clones that are obviously taken.
+The actual guarantee is `bip spawn` itself: it refuses to launch into a directory a live tmux pane already occupies (`--force` overrides), so even if the pool churns between selection and spawn you can never land a second agent in one checkout.
+Prefer clones with clean worktrees.
+If all busy, offer to create a new clone using a name from `new_clone_names` in the config.
 
 **Worktree mode** (`local_worktrees: true`):
 
-Slot name is always `issue-<N>`. Branch name is `<N>-<slug>` where `<slug>`
-is the first 4 words of the issue title, lowercased and hyphenated.
+Slot name is always `issue-<N>`.
+Branch name is `<N>-<slug>` where `<slug>` is the first 4 words of the issue title, lowercased and hyphenated.
 
 Check if slot already exists:
 ```bash
@@ -160,39 +130,30 @@ git checkout main && git pull --ff-only origin main
 rm -f .epic-status.json .epic-worklog.md
 ```
 
-**Fetch inside each clone, never once in the conductor.** Each clone has its
-own `origin/main`, so a conductor-level fetch followed by
-`git -C <clone> reset --hard origin/main` resets the clone to *its own stale*
-ref and silently bases the worker on an old commit. The `cd` above is what
-makes this correct — don't collapse it in a batch-spawn loop (bitten twice in
-2026-08). `.epic-status.json` and `.epic-worklog.md` are gitignored, so
-`reset --hard` preserves them.
+**Fetch inside each clone, never once in the conductor.**
+Each clone has its own `origin/main`, so a conductor-level fetch followed by `git -C <clone> reset --hard origin/main` resets the clone to *its own stale* ref and silently bases the worker on an old commit.
+The `cd` above is what makes this correct — don't collapse it in a batch-spawn loop (bitten twice in 2026-08).
+`.epic-status.json` and `.epic-worklog.md` are gitignored, so `reset --hard` preserves them.
 
-**Worktree mode**: worktree was just created fresh from main — just clear
-any stale status files from a previous run on this same issue:
+**Worktree mode**: worktree was just created fresh from main — just clear any stale status files from a previous run on this same issue:
 ```bash
 rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 ```
 
-**State cleanup is mandatory** — stale files from a previous assignment
-will confuse the worker and lead.
+**State cleanup is mandatory** — stale files from a previous assignment will confuse the worker and lead.
 
 ### Step 2b: Pre-launch staleness check
 
 Mechanical, topic-agnostic, and easy to skip under pressure — don't.
-For every blocker/dependency the issue body names (an issue number, a
-PR number, "blocked on #N"), verify it's still true right now:
+For every blocker/dependency the issue body names (an issue number, a PR number, "blocked on #N"), verify it's still true right now:
 
 ```bash
 gh pr view <N> --json state,mergedAt   # merged already?
 gh issue view <N> --json state          # closed already?
 ```
 
-An issue that declares itself blocked on an already-merged PR is the
-single most common staleness bug measured in practice (multiple
-instances in three days). If a named blocker turns out to be resolved,
-correct the composed prompt's `IMPORTANT CONTEXT` — don't pass the
-stale claim through to the worker.
+An issue that declares itself blocked on an already-merged PR is the single most common staleness bug measured in practice (multiple instances in three days).
+If a named blocker turns out to be resolved, correct the composed prompt's `IMPORTANT CONTEXT` — don't pass the stale claim through to the worker.
 
 ### Step 3: Read the issue
 
@@ -200,29 +161,17 @@ stale claim through to the worker.
 gh issue view <number> --json title,body
 ```
 
-Extract key context: what the issue asks for, data locations, phasing,
-dependencies. If a `.spawn-prompts/` intent file exists (see "Where
-the prompt comes from" above, under either naming convention), this is
-a cross-check against the live issue body, not a replacement for
-reading it — the intent file may itself have gone stale since the
-epic wrote it.
+Extract key context: what the issue asks for, data locations, phasing, dependencies.
+If a `.spawn-prompts/` intent file exists (see "Where the prompt comes from" above, under either naming convention), this is a cross-check against the live issue body, not a replacement for reading it — the intent file may itself have gone stale since the epic wrote it.
 
 ### Step 4: Compose the prompt
 
-The prompt has two parts: (1) the work instructions passed as the
-initial message to `claude` via `--prompt-file`, and (2) a ralph-loop
-invocation that the worker runs as its first action. The ralph-loop
-prompt is kept SHORT (no special characters) — just a reminder to
-continue. The detailed instructions are already in the conversation
-from the initial message.
+The prompt has two parts: (1) the work instructions passed as the initial message to `claude` via `--prompt-file`, and (2) a ralph-loop invocation that the worker runs as its first action.
+The ralph-loop prompt is kept SHORT (no special characters) — just a reminder to continue.
+The detailed instructions are already in the conversation from the initial message.
 
-The `IMPORTANT CONTEXT` section at the bottom is where the two sources
-combine: start from the epic's intent file when one exists, correct it
-per Step 2b, then append fleet facts only the conductor can see —
-which host/clone is actually free right now, a concurrent worker
-editing a file this issue also touches, a build in progress on a
-target remote host. Without this annotation step those fleet warnings
-never make it into the prompt at all.
+The `IMPORTANT CONTEXT` section at the bottom is where the two sources combine: start from the epic's intent file when one exists, correct it per Step 2b, then append fleet facts only the conductor can see — which host/clone is actually free right now, a concurrent worker editing a file this issue also touches, a build in progress on a target remote host.
+Without this annotation step those fleet warnings never make it into the prompt at all.
 
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ````
@@ -557,13 +506,9 @@ Always go through `bip spawn` which handles the full lifecycle correctly.
 
 ### Step 6: Confirm
 
-If launch succeeded and a `.spawn-prompts/` intent file (`$INTENT` from
-Step 3) was used, mark it consumed now — don't delete it. The
-directory lives outside every clone's git, so deletion there is
-unrecoverable, and a still-open issue may have another live session
-referencing the same brief. Moving it aside is reversible and lets
-`/bip-conductor-tuckin` Step 2 report it as consumed rather than
-queued:
+If launch succeeded and a `.spawn-prompts/` intent file (`$INTENT` from Step 3) was used, mark it consumed now — don't delete it.
+The directory lives outside every clone's git, so deletion there is unrecoverable, and a still-open issue may have another live session referencing the same brief.
+Moving it aside is reversible and lets `/bip-conductor-tuckin` Step 2 report it as consumed rather than queued:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
@@ -575,12 +520,10 @@ Report to the user:
 - Which issue it's working on
 - Any phasing or gate criteria
 
-If a persistent slot monitor is running (started by `/bip-conductor`), the
-conductor will receive automatic notifications when this worker changes
-phase. No additional monitoring setup is needed.
+If a persistent slot monitor is running (started by `/bip-conductor`), the conductor will receive automatic notifications when this worker changes phase.
+No additional monitoring setup is needed.
 
-If no monitor is running, suggest starting one or using
-`/loop 10m /bip-conductor-poll` to track progress.
+If no monitor is running, suggest starting one or using `/loop 10m /bip-conductor-poll` to track progress.
 
 ## Creating new slots
 
@@ -594,8 +537,8 @@ git clone "git@github.com:$REPO.git" <new-name>
 ```
 After creating, add the new name to `clone_names` in `.epic-config.json`.
 
-**Worktree mode** — no registration needed; worktrees are created on demand
-in Step 1 and named `issue-<N>`. No config changes required.
+**Worktree mode** — no registration needed; worktrees are created on demand in Step 1 and named `issue-<N>`.
+No config changes required.
 
 ## Cleaning up slots after work
 
@@ -611,8 +554,8 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 git worktree remove "$CLONE_ROOT/issue-<N>"
 git branch -d <N>-short-desc
 ```
-If the worktree has uncommitted changes, use `--force`. Check for an open
-PR first — don't remove a worktree with unmerged work.
+If the worktree has uncommitted changes, use `--force`.
+Check for an open PR first — don't remove a worktree with unmerged work.
 
 ## Gitignore reminder
 
@@ -624,17 +567,15 @@ Target project repos should gitignore these files (add to `.gitignore`):
 ```
 
 `.epic-status.json` and `.epic-worklog.md` live in each clone/worktree.
-`.epic-notifications.log` lives in the conductor cwd and is written by
-`bip epic watch`. None should be checked in.
+`.epic-notifications.log` lives in the conductor cwd and is written by `bip epic watch`.
+None should be checked in.
 
 ## Conventions
 
-Same as `/bip-epic`: `iN`/`pN` prefixes. Tmux windows named `NNN-YYY`
-where NNN is the issue number and YYY is the clone/slot name
-(e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
+Same as `/bip-epic`: `iN`/`pN` prefixes.
+Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
 
 ## Layout config (issue #149)
 
-`.epic-config.json` keeps working. The newer global `layout:` block in
-`~/.config/bip/config.yml` configures worktree mode for non-EPIC `bip
-spawn`; see `docs/guides/layout.md`.
+`.epic-config.json` keeps working.
+The newer global `layout:` block in `~/.config/bip/config.yml` configures worktree mode for non-EPIC `bip spawn`; see `docs/guides/layout.md`.

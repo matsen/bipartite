@@ -31,7 +31,8 @@ Search the recent conversation history for:
 - Issue numbers referenced in discussion (e.g., "#123", "issue 123")
 - Any clear indication we're discussing a specific issue
 
-If found, this is an UPDATE operation. Otherwise, CREATE.
+If found, this is an UPDATE operation.
+Otherwise, CREATE.
 
 ### Step 3: Check for assignee context
 
@@ -73,17 +74,13 @@ gh issue create --title "<extracted title>" --body-file <file> --assignee <usern
 
 ### Step 6: Move the draft out of the way (CREATE only)
 
-On a successful **create**, the source file has done its job — move it
-so it stops being mistaken for unfiled work by any fleet-side sweep
-(e.g. `/bip-conductor`'s cold-start draft check) or confusing a future
-agent poking around the clone:
+On a successful **create**, the source file has done its job — move it so it stops being mistaken for unfiled work by any fleet-side sweep (e.g. `/bip-conductor`'s cold-start draft check) or confusing a future agent poking around the clone:
 
 ```bash
 mkdir -p _ignore && mv <file> _ignore/
 ```
 
-Skip this for **update** operations — the file is still the live
-source for future edits to that issue, so it stays in place.
+Skip this for **update** operations — the file is still the live source for future edits to that issue, so it stays in place.
 
 ### Step 7: Report results
 

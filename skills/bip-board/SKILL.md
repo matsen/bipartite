@@ -5,7 +5,8 @@ description: "Manage GitHub project boards. Add, move, and remove issues; boards
 
 # /bip-board
 
-Manage GitHub project boards. Boards are resolved automatically from repo → channel → board mappings in sources.yml.
+Manage GitHub project boards.
+Boards are resolved automatically from repo → channel → board mappings in sources.yml.
 
 ## Quick Reference
 
@@ -41,7 +42,8 @@ Example sources.yml:
 ## Subcommands
 
 ### list
-Show board items grouped by status. Shows ALL boards by default.
+Show board items grouped by status.
+Shows ALL boards by default.
 
 ```bash
 bip board list                  # All boards
