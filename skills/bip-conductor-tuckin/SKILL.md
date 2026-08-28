@@ -35,7 +35,8 @@ For each slot the conductor interacted with this session:
 2. If the conductor has newer information (e.g., a slot finished,
    got blocked, or changed phase), update the file:
    ```bash
-   CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+   source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+   CLONE_ROOT=$(resolve_clone_root .epic-config.json)
    cat > "$CLONE_ROOT/<slot>/.epic-status.json" << 'EOF'
    {
      "issue": <N>,
@@ -47,6 +48,12 @@ For each slot the conductor interacted with this session:
    }
    EOF
    ```
+
+   `<this-skill's-base-directory>` is this skill's base directory as
+   given at invocation (e.g. `/home/user/.claude/skills/bip-conductor-tuckin`);
+   the shared helper lives at `lib/spawn-intent.sh`, a sibling of every
+   skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite`
+   repo).
 
 Update slots the conductor has direct knowledge about. This includes:
 - Slots whose PRs were merged this session (even if the slot's own

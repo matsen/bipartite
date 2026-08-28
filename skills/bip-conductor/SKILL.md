@@ -227,9 +227,15 @@ reuses the file in place, so a draft that's mid-revision on an existing
 issue is expected here too — don't treat those as orphans).
 
 ```bash
-CLONE_ROOT=$(jq -r .clone_root .epic-config.json | sed "s|^~|$HOME|")
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 ```
+
+`<this-skill's-base-directory>` is this skill's base directory as given
+at invocation (e.g. `/home/user/.claude/skills/bip-conductor`); the
+shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill
+directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
 **Never auto-delete or auto-file these.** An unfiled draft is authored
 state — the only copy of someone's unfinished thinking — and at least
