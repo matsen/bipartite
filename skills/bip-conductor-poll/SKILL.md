@@ -115,9 +115,11 @@ Skip the nudge entirely for a worker in `awaiting-results` with a live `check_cm
 
 3. **Needs human**: Clones in `needs-human` phase — show the lead's assessment and what decision is needed.
 
-4. **Recently landed** (brief): PRs merged since last poll, only if noteworthy.
+4. **Decisions and negative list**: read new entries from `.epic-decisions.md` in the conductor cwd since the last poll (`FINAL` relays, forwarded worker findings, negative-list entries — see `/bip-conductor`'s Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") and report them here; this is the file's canonical output surface for a poll cycle, not a fresh derivation.
 
-5. **Execute pending spawns**: If spawn intent files and idle clones both exist, propose running `/bip-conductor-spawn` for them.
+5. **Recently landed** (brief): PRs merged since last poll, only if noteworthy.
+
+6. **Execute pending spawns**: If spawn intent files and idle clones both exist, propose running `/bip-conductor-spawn` for them.
    Wait for confirmation.
 
 ### Housekeeping (do silently, don't report unless problems)
@@ -167,13 +169,16 @@ Before recording anything anywhere, run each candidate fleet-level finding throu
 2. **Is it already recorded?**
    A finding that produced an issue, PR, test, or doc needs no second copy.
 
-Only what survives both gates gets a destination: a durable clone-pool layout decision → a `CLAUDE.md`; a workflow rule → a skill; a topic-level decision → `/bip-epic`'s own memory, not here.
+Only what survives both gates gets a destination: a durable clone-pool layout decision → a `CLAUDE.md`; a workflow rule → a skill; a **fleet-level decision** (a `FINAL` relay, a forwarded worker finding, a negative-list entry) → `.epic-decisions.md` in the conductor cwd, not `/bip-epic`'s own memory — that memory is unavailable wherever the auto-memory directory is deliberately skipped (`bip-epic/SKILL.md`'s Step 1 explicitly allows this, and some setups do it), and `.epic-decisions.md` has no such gap since it's a plain file, not a memory-directory feature.
 Nothing else fits → the poll report itself.
 
 ## Conventions
 
 Same as `/bip-epic`: `iN`/`pN` prefixes, full URLs on first mention.
 Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the clone/slot name (e.g. `281-cedar` in clone mode, `281-issue-281` in worktree mode).
+
+**Decision relays are marked `PROVISIONAL` or `FINAL`, nothing unmarked.**
+When this conductor session is the one talking to the user mid-poll and a decision results, push it to `/bip-epic` via `$CLONE_ROOT/.epic-session` prefixed `PROVISIONAL` or `FINAL` and append it to `.epic-decisions.md` — see `/bip-conductor`'s Conventions, "Decision relays: PROVISIONAL and FINAL", for the full mechanics; this is the same rule, restated here because a conductor mid-cycle is reading this skill, not the cold-start one (the durable/transient nudge test above duplicates the same way).
 
 ## Layout config (issue #149)
 
