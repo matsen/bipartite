@@ -80,10 +80,11 @@ Brief:
 > - `action_candidates`: items the EPIC marks ready but unassigned
 > - `surprises`: contradictions, legacy clone-assignment tables found in the body, `RECOMMEND DEEPER LOOK` flags
 
-**Group B: one PR/issue triage subagent.**
+**Group B: one recent-activity subagent.**
 Brief:
 
-> Triage the backlog for the epic.
+> Report recent issue/PR activity for the epic.
+> This is a recency feed, not backlog coverage — see the note below.
 > Tasks:
 > 1. `gh issue list --search "sort:updated-desc" --limit 20 --json number,title,state,labels,body`.
 > 2. `gh pr list --json number,title,headRefName,state`.
@@ -97,6 +98,11 @@ Brief:
 > - `active_items`: open PRs with state/CI status
 > - `action_candidates`: open issues ready to spawn (unblocked, unassigned, dependencies satisfied), ordered by priority
 > - `surprises`: closed/merged items the EPICs don't reflect yet, issues with unclear blocker state, `RECOMMEND DEEPER LOOK` flags
+
+**Group B does not cover the backlog, and must not be relied on as if it did.**
+`sort:updated-desc --limit 20` reaches back only as far as the last 20 touched issues, which on an active repo is a couple of days: measured on `matsengrp/phyz` 2026-08-28, that window spanned 08-26 to 08-28 and saw 20 of 65 open issues.
+The window compresses further as activity rises, so an issue that is neither on an EPIC dashboard nor recently touched is reachable by neither group.
+Coverage is Group A's job plus a periodic audit for issues no EPIC references (see `matsengrp/phyz`#2093 for the audit script and the shape of that gap); Group B only answers "what moved lately".
 
 **Never ask the user a question about an issue/PR status that you could answer with a `gh` query** — verify first, then present facts.
 
