@@ -346,7 +346,11 @@ nohup bip epic watch --poll >/dev/null 2>&1 &
 }
 ```
 
-- Must be `.gitignored` (along with `.epic-worklog.md` and `.epic-decisions.md` — see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log")
+- Must be `.gitignored` (along with `.epic-worklog.md`, `.epic-decisions.md`, and `.epic-notifications.log` — see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log")
+- **The general rule, not just this list**: any file this skill writes to the **conductor cwd** needs a `.gitignore` entry in the consuming repo, because that cwd is inside a clone's git tree.
+  This has bitten a real fleet twice — `.epic-decisions.md` (new here) and, independently, `.epic-notifications.log` (written by `bip epic watch` since the Step 7 slot monitor landed, but never added to gitignore until the same pass caught it) both sat unignored, dirtying a worktree, until someone noticed.
+  Files at `$CLONE_ROOT` instead — `.epic-session`, `.conductor-session`, `.spawn-prompts/` — do **not** need this, since that path is deliberately outside every clone's git tree (see Step 6 in `/bip-epic` on why `.spawn-prompts/` lives there).
+  When adding a new fleet-state file, ask which of the two paths it's written to before deciding whether it needs a gitignore line.
 - Stale after 30 minutes with no tmux window
 - `remote_run` optional — set when work dispatched to remote server
 - `quality` optional — set during `quality-gate` phase:
