@@ -58,8 +58,10 @@ narrow this check to one pattern.
   says. Your job is to check it against live fleet state (Step 2b) and
   append fleet facts it structurally couldn't know: which host/clone is
   actually free, a concurrent worker editing an overlapping file, a
-  build running on a target remote host. Delete the intent file after a
-  successful launch (Step 5) — it has done its job.
+  build running on a target remote host. Mark the intent file consumed
+  after a successful launch (Step 6) — it has done its job, but the
+  directory lives outside git, so this is a move to `consumed/`, not a
+  delete (see Step 6).
 - **No intent file** (conductor-initiated respawn, routine maintenance,
   quick fix with no upstream epic session): compose the prompt from the
   issue directly, same as before. This is the escape hatch, not the
@@ -552,9 +554,17 @@ Always go through `bip spawn` which handles the full lifecycle correctly.
 ### Step 6: Confirm
 
 If launch succeeded and a `.spawn-prompts/` intent file (`$INTENT` from
-Step 3) was consumed, delete it now — its job is done, and leaving it
-behind is exactly the kind of finished-but-undeleted artifact that
-accretes across a fleet.
+Step 3) was used, mark it consumed now — don't delete it. The
+directory lives outside every clone's git, so deletion there is
+unrecoverable, and a still-open issue may have another live session
+referencing the same brief. Moving it aside is reversible and lets
+`/bip-conductor-tuckin` Step 2 report it as consumed rather than
+queued:
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+mark_spawn_intent_consumed "$INTENT"
+```
 
 Report to the user:
 - Which clone was spawned

@@ -41,3 +41,18 @@ find_spawn_intent() {
     ls "$clone_root/.spawn-prompts/$issue_number.md" \
        "$clone_root/.spawn-prompts/spawn-$issue_number.txt" 2>/dev/null | head -1
 }
+
+# mark_spawn_intent_consumed <intent-file-path>
+# Moves a spawn-intent file into a "consumed/" subdirectory sibling to
+# it, so a launched intent is distinguishable on disk from one still
+# queued, without reading file contents. A plain `mv`, not a delete —
+# `.spawn-prompts/` lives outside every clone's git, so deletion there
+# is unrecoverable, and `/bip-conductor-tuckin` needs to report queued
+# vs consumed separately (issue #198).
+mark_spawn_intent_consumed() {
+    local intent_path="$1"
+    local consumed_dir
+    consumed_dir="$(dirname "$intent_path")/consumed"
+    mkdir -p "$consumed_dir"
+    mv "$intent_path" "$consumed_dir/"
+}

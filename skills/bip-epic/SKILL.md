@@ -66,8 +66,12 @@ the rest of the file's fields are about.
 cat .epic-config.json
 ```
 
-Also read MEMORY.md from the auto-memory directory for topic-level
-context from previous sessions (decisions, findings, what's next).
+If this project uses the auto-memory directory, also read its
+MEMORY.md for topic-level context from previous sessions (decisions,
+findings, what's next) — some setups deliberately don't use it (e.g.
+because the directory is keyed by working directory and invisible to
+other clones), in which case skip this and rely on EPIC bodies and
+issue history instead.
 
 ### Step 2: Fan out scanners
 
