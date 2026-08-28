@@ -62,9 +62,6 @@ Issueless spawns break EPIC tracking, PR linking, and conductor polling.
 `ListAgents`/`SendMessage` reach other local Claude tmux sessions and let the conductor push an immediate correction to a live worker without killing and respawning its tmux window.
 Whether a correction needs this channel at all, and whether it's durable or transient, is `/bip-epic`'s call (see that skill's "Correcting a live worker" section) — this section covers the mechanics once the epic has decided and drafted the line, plus the case where the conductor itself spots something worth flagging (a fleet fact, not a scope change — always message-only, since fleet facts never redefine the deliverable).
 
-The same channel also carries completion signals the other direction: a worker pushes the conductor on reaching `needs-human`/`completed` (skills/bip-conductor-spawn/SKILL.md, PUSH NOTIFICATION step), and the conductor pushes the epic on observing the same transition (Step 7 below, and skills/bip-conductor-poll/SKILL.md's "Flag needs-human and completed" section).
-Those pushes share every addressability caveat below — run `ListAgents` first, fall back to the file-based state (`.epic-status.json`, `.epic-notifications.log`, `gh` polling) when no target is addressable, and never treat the push as a hard dependency.
-
 - **Send the correction directly — that is the channel's purpose.**
   No status-file write is a precondition for messaging.
   State the change in at least one line; a bare pointer ("re-read `lead_guidance`") is a no-op for a worker that already reads the status file every step, and it strips the priority signal (drop what you're doing vs. finish the current step).
@@ -81,6 +78,21 @@ Those pushes share every addressability caveat below — run `ListAgents` first,
 - Do not use `SendMessage` to route around the conductor's own restrictions (cross-session permission laundering) — the "should not write code or create branches for numbered issues" rule above applies equally to instructions phrased as a message to a worker.
 - **When not to nudge**: a worker in `awaiting-results` with a live `check_cmd` needs no ping.
   Use `notify_when_idle: true` instead of "tell me when this worker finishes" — it works only from the main conversation, only for sessions on this machine, and it is one-shot (omit `message` for a pure subscription that costs the target nothing; a subscription that never fires reports as expired).
+
+### Completion pushes: self-registered addresses, not ListAgents guessing
+
+The corrections channel above works because a human — the epic operator, or the conductor itself — is watching `ListAgents`' output and picking the right row before sending; a wrong or ambiguous name gets caught before it does damage.
+Completion pushes fire the other direction (worker → conductor, conductor → epic) with no human watching at send time, so they cannot reuse "run `ListAgents`, pick a plausible row": session names derive from working directory, so every session sharing a clone directory shares a name prefix, and a display name can itself drift mid-session (it can become a fragment of the session's own first message).
+Guessing among rows under those conditions doesn't just risk finding nothing — it risks silently messaging the *wrong* live session, a correctness failure the old dead bell/`ntfy` code could never produce.
+
+Instead, each role self-registers its own current address in a file only it writes, so the reader never has to disambiguate:
+
+- The conductor writes its own name to `$CLONE_ROOT/.conductor-session` (Step 1 at cold start, refreshed at the top of every `/bip-conductor-poll` run and immediately before reacting to a transition in Step 7 below).
+- `/bip-epic` writes its own name to `$CLONE_ROOT/.epic-session` the same way (see that skill's Step 1).
+- A name is taken from `ListAgents`' own "This session is ..." row for the caller — never guessed from another row — so the file is always exact for whoever last refreshed it.
+
+To push, a role reads the other's file for the exact address and `SendMessage`s it, treating a missing file or a failed send (the named session is no longer reachable — the address drifted since the last refresh) as "not addressable right now": skip silently, fall back to the file-based state (`.epic-status.json`, `.epic-notifications.log`, `gh` polling), and never retry-loop or fall back to scanning `ListAgents` for a substitute.
+The residual risk this doesn't close — an unrelated session claiming the exact same name string in the gap before a refresh — is accepted as rare; the push is a latency optimization, never a hard dependency.
 
 ## Configuration
 
@@ -148,6 +160,8 @@ There is no separate conductor clone — `clone_root` is just where worktrees ar
 Then create `.epic-config.json` with their answers and proceed.
 
 All subsequent steps use values from this config — never hardcode paths or clone names.
+
+**Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.conductor-session` — see the Conventions section's "Completion pushes" for why this file exists and how it's kept fresh.
 
 ### Step 2: Pull main
 
@@ -254,7 +268,7 @@ The watcher runs forever, exits cleanly on SIGTERM, and emits one event per real
 To also receive events as Claude Code notifications when that pipeline is reliable, additionally start a Monitor with `command: tail -F .epic-notifications.log` and `persistent: true`.
 The notifications log is the contract; Monitor is a latency optimization, not a correctness requirement.
 
-When a transition arrives showing `needs-human` or `completed`, the conductor should react immediately — read the slot's status, check the lead guidance, run `ListAgents` for an addressable epic session and `SendMessage` it the issue number and phase if one exists (same addressability mechanics as "Correcting a live worker" above, just in the other direction), and either propose the next action or flag it for the user.
+When a transition arrives showing `needs-human` or `completed`, the conductor should react immediately: read the slot's status, check the lead guidance, refresh `$CLONE_ROOT/.conductor-session` (see "Completion pushes" in Conventions — this is one of the moments that keeps it fresh), then read `$CLONE_ROOT/.epic-session` and `SendMessage` that address the issue number and phase if the file is present — skip silently if it's absent or the send fails — and either propose the next action or flag it for the user.
 
 > "Slot monitor started — phase transitions are streaming to `.epic-notifications.log`.
 > Use `/bip-conductor-poll` for a full reconciliation sweep when needed."
