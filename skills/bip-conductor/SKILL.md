@@ -95,6 +95,46 @@ To push, a role reads the other's file for the exact address and `SendMessage`s 
 A failed `SendMessage` to a drifted name comes back with `success: false` and a "Did you mean: ..." suggestion list of other live sessions — **never act on that suggestion**; trying it is exactly the guessing this design exists to avoid, just prompted by the tool instead of self-initiated.
 The residual risk this doesn't close — an unrelated session claiming the exact same name string in the gap before a refresh — is accepted as rare; the push is a latency optimization, never a hard dependency.
 
+### Decision relays: PROVISIONAL and FINAL
+
+No skill documents a conductor→epic path for user decisions before this — the only documented pushes in that direction are the `needs-human`/`completed` completion pushes above; everything else in these Conventions runs epic→conductor→worker.
+This section creates that convention rather than annotating an existing one.
+
+When the conductor is the session talking to the user and a decision results, push it to `/bip-epic` rather than letting it sit only in this session's own conversation: read `$CLONE_ROOT/.epic-session` for the epic's self-registered address (same mechanics as "Completion pushes" above) and `SendMessage` it the decision, **prefixed `PROVISIONAL` or `FINAL`. Nothing goes unmarked.**
+
+- **`PROVISIONAL`**: the decision is still being discussed, or the conductor is relaying a first read before the user has confirmed it. `/bip-epic` may note that a decision is pending but must not write it into an EPIC body — see that skill's "Fleet state is derived" section for the FINAL-only body rule this feeds.
+- **`FINAL`**: the user has confirmed the decision's shape. This, and only this, authorizes `/bip-epic` to write the decision into an EPIC body.
+- Append every `FINAL` relay (and, once it firms up, the `PROVISIONAL` relay it followed from) to `.epic-decisions.md` in the conductor cwd, timestamped and attributed — see ".epic-decisions.md: the durable fleet-decision log" below. A relay that lives only in the message is gone the moment either session compacts; the body-write authorization in `/bip-epic` depends on being able to re-derive that a `FINAL` marker was actually sent.
+
+This is one-directional: epic→conductor relays (spawn intent, worker corrections) are unaffected by this rule, since the conductor writes no citable artifact from them.
+
+### Forwarding worker findings
+
+A worker's semantic finding — "this assumption doesn't hold," "this arm was already moved" — reaches the epic through the conductor, and passing it through invites the conductor to interpret it along the way.
+Don't. Forward the finding **verbatim and attributed** to the worker (issue/slot) that produced it.
+If the conductor has its own reading of the finding worth adding, add it as a separate, clearly marked line — never blended into the forwarded text so that the epic (or the user) cannot tell which parts are the worker's observation and which are the conductor's interpretation.
+The failure this prevents: a worker's matrix-provenance finding, forwarded as if it undercut a sibling issue's premise, when the EPIC had already moved that arm for the same reason — the conductor's reading reached the user mid-decision as though it were the worker's own conclusion.
+Append forwarded findings to `.epic-decisions.md` alongside decision relays (see ".epic-decisions.md: the durable fleet-decision log" above), same reasoning: message-only state does not survive compaction.
+
+### `.epic-decisions.md`: the durable fleet-decision log
+
+Every `FINAL` relay (above), every forwarded worker finding (above), and every negative-list entry (Step 5's dashboard) appends here — in the conductor cwd, gitignored the same way as `.epic-status.json` (see the gitignore note near that spec below).
+Format is timestamped markdown, append-only, never edit a previous entry — the same convention as `.epic-worklog.md`, because this is attributed narrative for a human (or a fresh epic session) to read, not a machine-parsed event stream like the JSONL `.epic-notifications.log`.
+
+```
+## 2026-08-28T09:00:00Z — NEGATIVE (conductor)
+<action not taken, and why — e.g. "i2080 not proposed: clone stood down 08-27 for <reason>, prerequisites merging today doesn't reopen it">
+
+## 2026-08-28T14:30:00Z — RELAY:FINAL (conductor→epic)
+<the decision, restated in full, not a paraphrase of sentiment>
+
+## 2026-08-28T14:32:00Z — FINDING (worker i2098, forwarded by conductor)
+<the worker's finding, verbatim>
+Conductor's own reading, if any, marked separately: <...>
+```
+
+**Not `.epic-worklog.md`.** That file is per-slot and gets `rm -f`'d on slot cleanup, so a fleet-level entry written there is destroyed by unrelated housekeeping the moment that slot is cleaned up.
+
 ## Configuration
 
 The conductor skill reads `.epic-config.json` from the repo root — the same file `/bip-epic` reads.
@@ -231,6 +271,11 @@ The dashboard is **slot-centric** — the epic's dashboard is issue-centric; thi
 
 **Pending spawn intent**: list any `.spawn-prompts/` files found in Step 3/4 (either naming pattern), with the available slots that could run them.
 
+**Negative list**: also surface decisions already taken *against* an action, with reasons — sequencing already applied, an issue already stood down for a reason that would otherwise look resolved, and similar.
+This is the one category of fleet fact the epic (or a fresh conductor) cannot re-derive from `git`/`tmux`/`gh`: it's the absence of work, which leaves no trace in any of those.
+Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
+Concrete shape from the run that motivated this: an issue whose stated prerequisites both merged the same day reads as unblocked, but the conductor had already stood a clone down for it for an unrelated reason — without the negative list, that reads as ready to the epic and gets proposed again.
+
 ### Step 6: Propose next action
 
 First, do housekeeping automatically (no need to ask):
@@ -301,7 +346,7 @@ nohup bip epic watch --poll >/dev/null 2>&1 &
 }
 ```
 
-- Must be `.gitignored` (along with `.epic-worklog.md`)
+- Must be `.gitignored` (along with `.epic-worklog.md` and `.epic-decisions.md` — see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log")
 - Stale after 30 minutes with no tmux window
 - `remote_run` optional — set when work dispatched to remote server
 - `quality` optional — set during `quality-gate` phase:

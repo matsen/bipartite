@@ -10,7 +10,8 @@ Fleet mechanics — clone/tmux inventory, staleness checks, spawning, pruning of
 The two roles coordinate over `SendMessage` and a shared `.spawn-prompts/` directory (see "Handing spawn intent to the conductor" below); they do not need to be the same session, though they may run side-by-side in one tmux host.
 
 Use this at **session start** to establish topic context.
-For fleet state (which clones are free, what's running where, tmux/host occupancy), ask `/bip-conductor` instead — this skill does not scan clones or tmux, and has no visibility into them.
+For fleet state (which clones are free, what's running where, tmux/host occupancy), ask `/bip-conductor` instead — this skill does not scan clones or tmux itself.
+It does *consume* a conductor-supplied occupancy table when a conductor handshake succeeds (Step 2 below), but that table is read-only input to scoping, not something this skill goes and gets on its own.
 
 ## Role
 
@@ -56,6 +57,21 @@ Re-run this write every time `/bip-epic` starts a fresh poll cycle, since the ad
 
 ### Step 2: Fan out scanners
 
+**Handshake with the conductor before dispatching Group A.**
+Group A's step 3 re-verifies every open child item's state one `gh issue view` at a time; most of that is exactly what `/bip-conductor`'s own Step 5 dashboard already computed 90 seconds earlier from `git`/`tmux`.
+In the run that motivated this rule, Group A spent ~58k tokens re-verifying 10 issues this way, 9 of which the conductor's own report covered a minute and a half later.
+
+- Resolve `CLONE_ROOT`, read `$CLONE_ROOT/.conductor-session` for the conductor's self-registered address (see `/bip-conductor`'s Conventions section, "Completion pushes"), and `SendMessage` it a request for its current slot→issue occupancy table (Step 5's dashboard) and its negative list (decisions already taken against an action — see `/bip-conductor`'s Step 5).
+- **Payload**: the slot→issue occupancy table (which issue, and which **phase**, each slot holds) plus the negative list.
+- **Scope**: "what the conductor does not already own" means issues with no live slot in that table, **and only for slots in an in-progress phase** (`coding`, `exploring`, `testing`, `awaiting-results`, `quality-gate`) — occupancy is evidence about the fleet, not about GitHub, and a slot's issue can close while the slot itself still shows occupied.
+  Never skip the confirmation for `completed` or `needs-human` phases: a slot that just finished is *more* likely to have a closed issue than one still mid-flight, since finishing is exactly what triggers the issue closing, and slot cleanup (which would otherwise clear the slot) is a separate housekeeping step that can lag behind.
+  Pass the table (with phase) down to each Group A subagent and have it skip step 3's `gh issue view` confirmation only for child items on an in-progress-phase slot. Everything else about the subagent's job (reading the EPIC body, parsing findings, flagging surprises) is unaffected; only the redundant per-item open/closed check is narrowed.
+- **Fallback**: if `$CLONE_ROOT/.conductor-session` is absent, or the send fails (no conductor addressable), proceed with the full Group A dispatch below, unscoped — run step 3's confirmation for every item, and do not block waiting for a conductor that may never exist.
+  A solo `/bip-epic` run with no separate conductor session must not deadlock here (see Step 6's conductor-absent handling for the same fallback shape).
+
+This narrows Group A's redundant re-verification; it does not narrow Group A's judgment.
+In the run that motivated this rule, Group A independently found an open PR and three dependency corrections the conductor's dashboard had no way to see — occupancy and dependency reasoning are different questions, and the conductor's table answers only the first.
+
 Dispatch two groups of `general-purpose` subagents in parallel — single message, multiple `Agent` tool calls.
 Follow the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
 Start with the cheap structured listing the primary can do directly:
@@ -72,7 +88,7 @@ Brief:
 > 1. `gh issue view <N> --json title,body,updatedAt`.
 > 2. Parse the Status dashboard and Key findings.
 >    (Older EPIC bodies may still carry a legacy clone-assignment table from before the fleet/topic split — that's fleet state that shouldn't have been authored here; note it as a `surprise` for cleanup, don't treat it as current truth.)
-> 3. For each open item the dashboard lists, run `gh issue view <child-N> --json state,stateReason` to confirm it is still open.
+> 3. For each open item the dashboard lists, run `gh issue view <child-N> --json state,stateReason` to confirm it is still open — **except** items the conductor's occupancy table (handshake above) shows holding a slot in an **in-progress** phase (`coding`, `exploring`, `testing`, `awaiting-results`, `quality-gate`); take "open" as given only for those and skip the query. Still confirm for `completed`/`needs-human` slots, and for anything the table doesn't cover — a slot can finish and its issue close before the slot itself is cleaned up, so occupancy alone never implies "still open."
 >
 > Return under 400 words:
 > - `changes_since_baseline`: completed items, new findings, items newly opened
@@ -114,19 +130,31 @@ Compose the reconciliation from the two reports — do not paste subagent prose 
 - Flag anything merged/closed that an EPIC body doesn't reflect yet
 - If either group's report has zero `surprises` and zero `changes_since_baseline`, send a follow-up to that subagent with a narrower question before concluding "nothing changed there."
 
-Clone/tmux occupancy is not part of this reconciliation — it's `/bip-conductor`'s dashboard, not this one.
+This reconciliation itself does not scan clone/tmux occupancy — that's `/bip-conductor`'s dashboard, not this one — though Step 2's handshake may already have pulled the conductor's occupancy table in for scoping purposes by the time you reach this step.
 
-### Step 4: Dependency-direction and collision detection
+### Step 4a: Dependency-direction detection
 
 Run this before proposing any issue as ready to spawn, not after — once a branch exists the cost of a collision is sunk.
-This automates what has so far been a manual capability: extracting file paths from issue bodies and building an overlap matrix.
+
+1. For every currently open, unassigned (or about-to-be-spawned) issue, read its body against every other such issue's body and ask: can both land as currently written, in either order?
+   Or does one delete, rename, or restructure something the other's patch depends on — a dependency-direction conflict that no ordering fixes, because one issue has to change shape?
+   (Concrete shape: one issue deletes a function a sibling issue is patching; one issue's test assertion contradicts a value a sibling issue is about to change.)
+2. Record findings where a future spawn will see them: a note in the EPIC body's dashboard, and — if either issue is about to be handed off as spawn intent (Step 6) — the warning goes directly into that issue's brief.
+
+**Completion criterion**: every pair of currently-open, about-to-be-spawned issues has been read against each other for dependency direction, not just for whether one references the other's issue number.
+
+### Step 4b: File-overlap collision detection
+
+This is a distinct analysis from 4a, not a second pass over the same reading — it automates what has so far been a manual capability: extracting file paths from issue bodies and building an overlap matrix.
 
 1. From every currently open, unassigned (or about-to-be-spawned) issue body, extract mentioned file/module paths — code blocks, a "Files:" section, or explicit paths in prose.
 2. Build an overlap matrix: any two open issues naming the same file or module are a candidate collision.
-3. For each overlap, read both issue bodies against each other and ask the harder question, not just "who goes first": can both land as currently written, in either order?
-   Or does one delete, rename, or restructure something the other's patch depends on — a dependency-direction conflict that no ordering fixes, because one issue has to change shape?
-   (Concrete shape: one issue deletes a function a sibling issue is patching; one issue's test assertion contradicts a value a sibling issue is about to change.)
-4. Record findings where a future spawn will see them: a note in the EPIC body's dashboard, and — if either issue is about to be handed off as spawn intent (Step 6) — the warning goes directly into that issue's brief.
+3. For each overlap, this is not the same question as 4a's — file overlap alone (two issues touching the same file, in disjoint regions or compatible ways) is not itself a dependency-direction conflict, and clearing a pair on dependency grounds in 4a does not clear it here.
+   Confirm whether the overlapping regions can coexist or whether one issue's edit invalidates the other's, even absent any direction conflict.
+4. Record findings the same way as 4a: a dashboard note, and a brief warning for any issue about to be handed off (Step 6).
+
+**Completion criterion**: every pair of currently-open, about-to-be-spawned issues naming an overlapping file/module has an explicit overlap verdict — "compatible" or "conflicts, because ___" — not merely "no dependency conflict found in 4a."
+**A pair cleared in 4a is not thereby cleared here** — this is the check that "No collisions" wrongly skipped when two issues sharing a dependency-independent EPIC both edited `experiments/2026-08-27-2051-heavy-v2-stated-estimator/scripts/rescore_cell.py`.
 
 ### Step 5: Prune and update the EPIC body
 
@@ -142,9 +170,15 @@ Which clone holds which issue, which slots are free, which tmux windows are live
 Never write it into an EPIC body or a continuation doc — it goes stale within a day and there is no mechanism to notice, which is exactly the failure a hand-maintained clone table caused when it went stale twice in one day.
 Handoff artifacts (spawn intent, unfiled drafts) are the opposite category: authored deliberately, to a durable path outside git, precisely so they survive clone churn — pruning them (Step 6, below) is about cleaning up finished authored state, not about avoiding writing derived state down in the first place.
 
+**A user decision may be written into the EPIC body only against a `FINAL` shape.**
+When the session talking to the user is the conductor, not this one, the decision arrives here as a relay — see `/bip-conductor`'s "Decision relays: PROVISIONAL and FINAL" — and every relay is marked one or the other.
+A `PROVISIONAL` relay is discussion in progress, not yet a settled decision; write nothing into the body from it beyond noting that a decision is pending, and check `.epic-decisions.md` in the conductor cwd (see `/bip-conductor`'s ".epic-decisions.md: the durable fleet-decision log") for the eventual `FINAL` entry before composing the body edit.
+Only a `FINAL` relay — or a decision reached directly in this session — authorizes the write, and the body text should restate the decision's substance, not a paraphrase of the sentiment that led to it: "burn everything down and make it right" said in conversation is not "make parity diverges permanently" written into an EPIC body: the paraphrase is a second-hand summary as if it were the specification itself.
+If the deciding session's shape is unclear, treat it as `PROVISIONAL` and ask before writing.
+
 ### Step 6: Hand spawn intent to the conductor
 
-For each issue judged ready (unblocked per Step 3, no unresolved collision or dependency-direction conflict per Step 4), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4 — and write it to:
+For each issue judged ready (unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
