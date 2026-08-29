@@ -153,6 +153,11 @@ This is a distinct analysis from 4a, not a second pass over the same reading —
    Confirm whether the overlapping regions can coexist or whether one issue's edit invalidates the other's, even absent any direction conflict.
 4. Record findings the same way as 4a: a dashboard note, and a brief warning for any issue about to be handed off (Step 6).
 
+**A path extracted from prose is a candidate, not a location.**
+Resolve it with `find`/`grep -r` against the actual repo before recording an overlap or its absence — a filename with no directory component is unresolved, and two issues naming `common.py` are not evidence of overlap by themselves.
+This matters most in a repo with per-experiment `scripts/` copies, where the same filename can resolve to unrelated files, and the same symbol name can appear in several of them meaning different things.
+Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call persisting into this one.
+
 **Completion criterion**: every pair of currently-open, about-to-be-spawned issues naming an overlapping file/module has an explicit overlap verdict — "compatible" or "conflicts, because ___" — not merely "no dependency conflict found in 4a."
 **A pair cleared in 4a is not thereby cleared here** — this is the check that "No collisions" wrongly skipped when two issues sharing a dependency-independent EPIC both edited `experiments/2026-08-27-2051-heavy-v2-stated-estimator/scripts/rescore_cell.py`.
 
@@ -164,6 +169,10 @@ Do this whenever findings come in, items complete, or new work starts — not on
 **Prune on every write, not on a separate sweep.**
 The observed failure mode is accretion, not staleness: a body cut from 524 to 146 lines had almost nothing stale in what was removed — it was cut because the work had *finished* (checked-off phases, a fully-ticked table) and kept getting appended around instead of trimmed.
 Whenever you touch a body to add a finding or check a box, also look for sections whose work is now fully complete and cut them in the same edit, rather than letting them ride to the next dedicated cleanup.
+
+**A correction that reduces a previously-reported quantity to *no* information deserves a second look before it's written.**
+Debunking has its own momentum: before recording the stronger retraction, check whether a weaker, still-true claim survives.
+A count found to be guaranteed in direction by construction is not thereby guaranteed in magnitude — "carries no information" is a more quotable sentence than "carries less than it appears to, in this specific way," and only one of them is usually true.
 
 **Fleet state is derived, never authored — don't let it back into the body.**
 Which clone holds which issue, which slots are free, which tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's `/bip-conductor`'s Step 5 dashboard) whenever you need it.
