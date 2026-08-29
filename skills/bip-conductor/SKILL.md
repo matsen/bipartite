@@ -122,6 +122,7 @@ A finding often carries a citation — a file, a line range, a symbol — and fo
 **A `find` run against a reconstructed path returns a real result for an invented question.** The result looking concrete does not make the resolution correct, and a "missing file" found this way is not evidence of an error in the citation — it is evidence of an error in the reconstruction.
 The same caution applies to a bare symbol name in a repo with duplicated modules: two files can define the same name for different things, and matching on the name alone is not resolution.
 Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call in the same session persisting into this one.
+This cuts both ways: when relaying a finding or citing a file in a message to another session — a worker report, a push to the epic — include the directory. A bare filename plus line number is not an address, and a sender who includes the directory removes the ambiguity at its cheapest point, before it costs the receiver a resolution or a round-trip question.
 
 ### `.epic-decisions.md`: the durable fleet-decision log
 

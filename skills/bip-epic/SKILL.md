@@ -147,16 +147,16 @@ Run this before proposing any issue as ready to spawn, not after — once a bran
 
 This is a distinct analysis from 4a, not a second pass over the same reading — it automates what has so far been a manual capability: extracting file paths from issue bodies and building an overlap matrix.
 
-1. From every currently open, unassigned (or about-to-be-spawned) issue body, extract mentioned file/module paths — code blocks, a "Files:" section, or explicit paths in prose.
+1. From every currently open, unassigned (or about-to-be-spawned) issue body, extract mentioned file/module paths — code blocks, a "Files:" section, or explicit paths in prose. **A path extracted this way is a candidate, not a location** — resolve it before recording it as anything else.
 2. Build an overlap matrix: any two open issues naming the same file or module are a candidate collision.
 3. For each overlap, this is not the same question as 4a's — file overlap alone (two issues touching the same file, in disjoint regions or compatible ways) is not itself a dependency-direction conflict, and clearing a pair on dependency grounds in 4a does not clear it here.
    Confirm whether the overlapping regions can coexist or whether one issue's edit invalidates the other's, even absent any direction conflict.
 4. Record findings the same way as 4a: a dashboard note, and a brief warning for any issue about to be handed off (Step 6).
 
-**A path extracted from prose is a candidate, not a location.**
-Resolve it with `find`/`grep -r` against the actual repo before recording an overlap or its absence — a filename with no directory component is unresolved, and two issues naming `common.py` are not evidence of overlap by themselves.
+Resolve with `find`/`grep -r` against the actual repo before recording an overlap or its absence — a filename with no directory component is unresolved, and two issues naming `common.py` are not evidence of overlap by themselves.
 This matters most in a repo with per-experiment `scripts/` copies, where the same filename can resolve to unrelated files, and the same symbol name can appear in several of them meaning different things.
 Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call persisting into this one.
+When *naming* a file in a brief or message to another session (Step 6, or any epic→conductor relay), include the directory — a bare filename plus line number is not an address, and pushing resolution onto the receiver costs a round trip that including the directory up front would have avoided.
 
 **Completion criterion**: every pair of currently-open, about-to-be-spawned issues naming an overlapping file/module has an explicit overlap verdict — "compatible" or "conflicts, because ___" — not merely "no dependency conflict found in 4a."
 **A pair cleared in 4a is not thereby cleared here** — this is the check that "No collisions" wrongly skipped when two issues sharing a dependency-independent EPIC both edited `experiments/2026-08-27-2051-heavy-v2-stated-estimator/scripts/rescore_cell.py`.
