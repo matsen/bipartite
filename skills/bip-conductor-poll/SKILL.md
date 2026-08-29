@@ -180,6 +180,9 @@ Tmux windows named `NNN-YYY` where NNN is the issue number and YYY is the clone/
 **Decision relays are marked `PROVISIONAL` or `FINAL`, nothing unmarked.**
 When this conductor session is the one talking to the user mid-poll and a decision results, push it to `/bip-epic` via `$CLONE_ROOT/.epic-session` prefixed `PROVISIONAL` or `FINAL` and append it to `.epic-decisions.md` — see `/bip-conductor`'s Conventions, "Decision relays: PROVISIONAL and FINAL", for the full mechanics; this is the same rule, restated here because a conductor mid-cycle is reading this skill, not the cold-start one (the durable/transient nudge test above duplicates the same way).
 
+**Resolve a citation before acting on it, here too.**
+A worker's finding forwarded mid-poll carries the same citation risk as at cold start — a bare filename with no directory is unresolved, and reconstructing one from context produces a real `find` result for an invented question. See `/bip-conductor`'s Conventions, "Resolving a citation before acting on it", for the full mechanics; restated here for the same reason as the decision-relay rule above.
+
 ## Layout config (issue #149)
 
 `.epic-config.json` keeps working.

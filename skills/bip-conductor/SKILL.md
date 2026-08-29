@@ -116,6 +116,14 @@ If the conductor has its own reading of the finding worth adding, add it as a se
 The failure this prevents: a worker's matrix-provenance finding, forwarded as if it undercut a sibling issue's premise, when the EPIC had already moved that arm for the same reason — the conductor's reading reached the user mid-decision as though it were the worker's own conclusion.
 Append forwarded findings to `.epic-decisions.md` alongside decision relays (see ".epic-decisions.md: the durable fleet-decision log" above), same reasoning: message-only state does not survive compaction.
 
+### Resolving a citation before acting on it
+
+A finding often carries a citation — a file, a line range, a symbol — and forwarding it verbatim (above) does not excuse skipping resolution before acting on it locally. Never reconstruct a missing path component from surrounding context: a citation like `run_heavy_baselines.py:30-43` with no directory is unresolved, not incomplete-but-inferable. Resolve it against the repo (`find`/`grep -r`) or ask the sender which copy they meant.
+**A `find` run against a reconstructed path returns a real result for an invented question.** The result looking concrete does not make the resolution correct, and a "missing file" found this way is not evidence of an error in the citation — it is evidence of an error in the reconstruction.
+The same caution applies to a bare symbol name in a repo with duplicated modules: two files can define the same name for different things, and matching on the name alone is not resolution.
+Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call in the same session persisting into this one.
+This cuts both ways: when relaying a finding or citing a file in a message to another session — a worker report, a push to the epic — include the directory. A bare filename plus line number is not an address, and a sender who includes the directory removes the ambiguity at its cheapest point, before it costs the receiver a resolution or a round-trip question.
+
 ### `.epic-decisions.md`: the durable fleet-decision log
 
 Every `FINAL` relay (above), every forwarded worker finding (above), and every negative-list entry (Step 5's dashboard) appends here — in the conductor cwd, gitignored the same way as `.epic-status.json` (see the gitignore note near that spec below).
