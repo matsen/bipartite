@@ -174,6 +174,12 @@ Whenever you touch a body to add a finding or check a box, also look for section
 Debunking has its own momentum: before recording the stronger retraction, check whether a weaker, still-true claim survives.
 A count found to be guaranteed in direction by construction is not thereby guaranteed in magnitude — "carries no information" is a more quotable sentence than "carries less than it appears to, in this specific way," and only one of them is usually true.
 
+**Identified work needs an issue number, or it is not tracked.**
+Every mechanism downstream of this skill keys on issue numbers: Group A's scanner resolves each dashboard item with `gh issue view <N>`, spawn intent files are named `<N>.md`, the conductor's dashboard maps slots to issues, and blocker sets are lists of numbers.
+Work described only in body prose — "root-causing this is not yet filed", "a follow-up should re-examine X" — reads as durable to whoever writes it and resolves to nothing for whoever reads it next.
+File it, and if that has to wait, put it in the Open work checklist as an explicit `**UNFILED**` bullet so the dashboard shows a gap rather than hiding one.
+This is the same shape as an under-specified citation (Step 4b): it looks like an address and isn't.
+
 **Fleet state is derived, never authored — don't let it back into the body.**
 Which clone holds which issue, which slots are free, which tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's `/bip-conductor`'s Step 5 dashboard) whenever you need it.
 Never write it into an EPIC body or a continuation doc — it goes stale within a day and there is no mechanism to notice, which is exactly the failure a hand-maintained clone table caused when it went stale twice in one day.
