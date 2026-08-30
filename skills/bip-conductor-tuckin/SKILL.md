@@ -18,7 +18,31 @@ Topic-side state (EPIC bodies, findings, decisions) is `/bip-epic-tuckin`'s job,
 
 ## Workflow
 
-### Step 1: Update slot status files
+### Step 1: Verify role registration
+
+`$CLONE_ROOT/.conductor-session` and `$CLONE_ROOT/.epic-session` name the sessions currently holding those roles.
+They are written at cold start and at handover, and nothing else re-checks them — a tuckin is the moment they are most likely to be wrong, since a role often changes hands shortly before a context reset.
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+for f in .conductor-session .epic-session; do echo "$f: $(cat "$CLONE_ROOT/$f" 2>/dev/null)"; done
+```
+
+Cross-check each name against `ListAgents`:
+
+- **Names a live session** — correct, leave it alone.
+- **Names this session under an old name** — rewrite it with the current name.
+- **Names a session that no longer appears** — that role is vacant. Report it in Step 5 rather than nominating a successor; who takes a role is the user's call.
+
+**Address slots by clone directory, not by session name.**
+`ListAgents` renames a session when it is resumed — `birch` becomes `birch-61`, and a send to the bare name fails with a disambiguation error.
+So any durable note that addresses a session by name rots at the next resume; look the name up at send time instead.
+
+Do not write a roster of worker sessions.
+Which session occupies which clone is derivable (`ListAgents` for names and panes, `readlink /proc/<pid>/cwd` for the directory) and fails Step 4's "is it derived?" gate.
+
+### Step 2: Update slot status files
 
 Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
@@ -54,7 +78,7 @@ This includes:
 
 Do not guess status for slots with active sessions that may have progressed beyond what the conductor last observed.
 
-### Step 2: Note queued and consumed spawn intent
+### Step 3: Note queued and consumed spawn intent
 
 List `$CLONE_ROOT/.spawn-prompts/` and report two groups separately — these are the epic's authored intent, not conductor state, so don't touch their contents either way:
 
@@ -67,7 +91,7 @@ List `$CLONE_ROOT/.spawn-prompts/` and report two groups separately — these ar
 Reporting these separately matters: a consumed file left in the top level (or a queued one reported as consumed) invites either a re-spawn of work that's already running or merged, or a queued brief getting ignored as if it were stale.
 Report both groups so the next conductor session (or the user) knows what's actually queued vs already launched.
 
-### Step 3: Filter and route fleet-level findings
+### Step 4: Filter and route fleet-level findings
 
 Most state should already be in `.epic-status.json` per slot.
 Before recording anything anywhere, run each candidate fleet-level finding through this filter:
@@ -82,16 +106,17 @@ Only what survives both gates gets a destination:
 - A durable repo-level fact → a `CLAUDE.md`.
 - A workflow rule → a skill.
 - A finding → the test, doc, or issue it came from.
-- Nothing else fits → the Step 4 report below.
+- Nothing else fits → the Step 5 report below.
   This is where a user who has opted out of auto-memory files will actually see it — don't treat a MEMORY.md write as the only or required destination.
 
-### Step 4: Report
+### Step 5: Report
 
 Print a summary:
 
 ```
 ## Tuckin Complete
 
+- Roles: conductor = <name> (verified live) | epic = <name> (verified live | VACANT — last named <name>, no longer in ListAgents)
 - Slot status updated: cedar, issue-295
 - Queued spawn intent: i302 (retry logic)
 - Consumed spawn intent: i298 (already launched, moved to consumed/)
