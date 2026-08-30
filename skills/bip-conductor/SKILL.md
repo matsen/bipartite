@@ -114,7 +114,7 @@ A worker's semantic finding — "this assumption doesn't hold," "this arm was al
 Don't. Forward the finding **verbatim and attributed** to the worker (issue/slot) that produced it.
 If the conductor has its own reading of the finding worth adding, add it as a separate, clearly marked line — never blended into the forwarded text so that the epic (or the user) cannot tell which parts are the worker's observation and which are the conductor's interpretation.
 The failure this prevents: a worker's matrix-provenance finding, forwarded as if it undercut a sibling issue's premise, when the EPIC had already moved that arm for the same reason — the conductor's reading reached the user mid-decision as though it were the worker's own conclusion.
-Append forwarded findings to `.epic-decisions.md` alongside decision relays (see ".epic-decisions.md: the durable fleet-decision log" above), same reasoning: message-only state does not survive compaction.
+Append forwarded findings to `.epic-decisions.md` alongside decision relays (see ".epic-decisions.md: the durable fleet-decision log" below), same reasoning: message-only state does not survive compaction.
 
 ### Resolving a citation before acting on it
 
@@ -123,6 +123,19 @@ A finding often carries a citation — a file, a line range, a symbol — and fo
 The same caution applies to a bare symbol name in a repo with duplicated modules: two files can define the same name for different things, and matching on the name alone is not resolution.
 Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call in the same session persisting into this one.
 This cuts both ways: when relaying a finding or citing a file in a message to another session — a worker report, a push to the epic — include the directory. A bare filename plus line number is not an address, and a sender who includes the directory removes the ambiguity at its cheapest point, before it costs the receiver a resolution or a round-trip question.
+
+### Message economy: the log is the artifact, the message is the nudge
+
+Cross-session messages and the durable log do different jobs, and the fastest way to burn a fleet's context is to make every message a self-contained restatement of the log.
+Be succinct and clear — not terse.
+Lead with the decision, the ask, or the correction; give the reasoning the receiver cannot reconstruct; cite `.epic-decisions.md`, the issue, the PR, or the worklog entry for the rest instead of reproducing it.
+There is no word limit, and a genuinely complex correction earns its length — a message that omits the one fact making it actionable has saved nothing.
+Cut: context the receiver already has, restatement of what you wrote to the log in the same step, and courtesy recaps of the thread so far.
+Keep: the specific claim, the command or citation backing it, and what you want the receiver to do differently.
+This applies to user-facing reports too — a dashboard that has to be scrolled is a dashboard that gets skimmed.
+Two cases this never licenses, because this same file mandates reproduction in them: a forwarded worker finding still goes **verbatim and attributed** (see "Forwarding worker findings"), never swapped for a pointer to the log entry you wrote in the same step; and a live-worker correction still states the change in at least one line (see "Correcting a live worker"), never a bare "re-read the log."
+The economy is in what you leave out of a message that already carries its point — never in dropping the point itself.
+The failure this prevents: conductor-to-epic traffic costing more context than the work it coordinates, so both sessions compact early and lose exactly the state the messages existed to preserve.
 
 ### `.epic-decisions.md`: the durable fleet-decision log
 

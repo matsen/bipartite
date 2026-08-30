@@ -31,6 +31,14 @@ The epic session does strategy, not fleet ops:
 
 Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns — see that skill's Conventions section.
 
+### Message economy
+
+Cross-session messages are nudges, not transcripts.
+Be succinct and clear: lead with the decision or the ask, give the reasoning the receiver cannot reconstruct, and cite the EPIC body, the issue, or `.epic-decisions.md` for the rest instead of restating it.
+There is no word limit — a complex correction earns its length — but a message that recaps the thread, or reproduces what you just wrote to a durable artifact, spends context the fleet needs elsewhere.
+This never licenses a bare pointer where Step 7 requires substance: a drafted worker correction states the change itself, not "re-read the EPIC body."
+See `/bip-conductor`'s "Message economy" section for the full convention; it applies symmetrically here.
+
 ## Configuration
 
 Reads `.epic-config.json` from the repo root — the same file `/bip-conductor` uses, so the two roles never disagree about where things live.
