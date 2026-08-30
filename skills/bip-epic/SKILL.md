@@ -209,6 +209,14 @@ A `PROVISIONAL` relay is discussion in progress, not yet a settled decision; wri
 Only a `FINAL` relay — or a decision reached directly in this session — authorizes the write, and the body text should restate the decision's substance, not a paraphrase of the sentiment that led to it: "burn everything down and make it right" said in conversation is not "make parity diverges permanently" written into an EPIC body: the paraphrase is a second-hand summary as if it were the specification itself.
 If the deciding session's shape is unclear, treat it as `PROVISIONAL` and ask before writing.
 
+**An unmarked relay is not a decision, and not a cue to go ask the user yourself — reply asking the relaying session for the marked form.**
+Sender-side discipline says nothing goes unmarked, but senders forget, and the thing they forget to mark is rarely a formal decision: it is an informal mention of what the user is *ready for* ("they're done thinking, they want to spawn the batch"), which reads enough like a decision to be tempting and enough unlike one to distrust.
+The right response is neither of the two obvious ones.
+Acting on it treats a peer's summary as the user's approval, which is exactly the substitution the FINAL rule exists to prevent.
+Putting the question to the user yourself costs them a duplicate — on 2026-08-30 both sessions asked the same spawn-hold question within the same minute, because the epic could not distinguish "the user is ready for the batch" from "the user lifted these three specific holds," and reached for the user instead of for the sender.
+Asking the sender costs one message, resolves the ambiguity at its source, and keeps the anti-substitution rule intact instead of trading it against the user's attention.
+This is the rule regardless of whose column the decision sits in: role boundaries determine who *puts* a question to the user, and this determines what to do with an unmarked answer, which is a separate question that survives any reassignment of the first.
+
 ### Step 6: Hand spawn intent to the conductor
 
 For each issue judged ready (unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:

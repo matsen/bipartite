@@ -125,6 +125,17 @@ The relay machinery below still applies to any decision the user *does* make in 
 
 When the conductor is the session talking to the user and a decision results, push it to `/bip-epic` rather than letting it sit only in this session's own conversation: read `$CLONE_ROOT/.epic-session` for the epic's self-registered address (same mechanics as "Completion pushes" above) and `SendMessage` it the decision, **prefixed `PROVISIONAL` or `FINAL`. Nothing goes unmarked.**
 
+**A status mention is not a relay, and this is how the rule actually gets skipped.**
+Nobody forgets to mark a message they sat down to write as a decision relay.
+What goes unmarked is a passing line inside a message about something else — "the user says they're ready for the new batch, send me the list" — because relaying a decision was not the point of sending it.
+The epic cannot tell that from a relay, cannot act on it, and if the skill does not tell it what to do instead it will reach for the user.
+That is the 2026-08-30 double-question: two sessions put the same spawn-hold question to the user inside a minute.
+So: if a decision has been made, mark it. If the user said something bearing on the epic's work that is not yet a decision, say that explicitly and mark it `PROVISIONAL`. Expect a reply asking for the marked form rather than action — that reply is the convention working, not friction.
+
+**A `FINAL` relay must carry the decision at the granularity the receiver has to act on.**
+"The user is ready to spawn the batch" is not actionable against three issues, two of which carry separately-recorded holds; "spawn them all", asked itemized, is.
+If the user's answer was broader than the decisions it has to settle, itemize before relaying, not after — the receiver cannot itemize on your behalf and its only recourse is to ask the user again.
+
 - **`PROVISIONAL`**: the decision is still being discussed, or the conductor is relaying a first read before the user has confirmed it. `/bip-epic` may note that a decision is pending but must not write it into an EPIC body — see that skill's "Fleet state is derived" section for the FINAL-only body rule this feeds.
 - **`FINAL`**: the user has confirmed the decision's shape. This, and only this, authorizes `/bip-epic` to write the decision into an EPIC body.
 - Append every `FINAL` relay (and, once it firms up, the `PROVISIONAL` relay it followed from) to `.epic-decisions.md` in the conductor cwd, timestamped and attributed — see ".epic-decisions.md: the durable fleet-decision log" below. A relay that lives only in the message is gone the moment either session compacts; the body-write authorization in `/bip-epic` depends on being able to re-derive that a `FINAL` marker was actually sent.
