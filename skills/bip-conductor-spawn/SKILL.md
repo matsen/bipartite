@@ -142,6 +142,20 @@ rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
 
 **State cleanup is mandatory** — stale files from a previous assignment will confuse the worker and lead.
 
+**Respawning into a *preserved* clone is the case this cleanup misses, and it silently defeats the spawn.**
+Both blocks above assume a clean slate: a fresh assignment, where `git checkout main` discards the old work and removing both files is obviously right.
+The dangerous case is the opposite one — a clone parked mid-issue whose branch and worklog you are deliberately keeping, because the whole point of the respawn is to resume that work.
+There the instinct is to preserve everything, and the worklog *should* be preserved. **`.epic-status.json` must not be**, even then.
+The reason is that the two files are different kinds of thing: the worklog is context, and the status file is **instructions**. Per the worker's own recovery protocol below ("Read `.epic-status.json` — current phase and lead guidance … If `lead_guidance` is set → follow it"), `lead_guidance` is consulted *before* anything in the launch prompt and outranks it.
+So a clone parked at `needs-human` with `lead_guidance` reading "stand down, wait for #X to land" will stand the worker down on arrival, in the same breath as a fresh prompt telling it to start — and the more obsolete that guidance is, the more confidently it fires. Observed 2026-08-30: a clone carrying a stand-down that named two issues *which had both since landed* was one `rm` away from silently no-op'ing its own spawn.
+
+```bash
+rm -f "$SLOT/.epic-status.json"      # ALWAYS -- it is stale instructions, not context
+# keep .epic-worklog.md when resuming: it is the history the worker needs
+```
+
+The symptom is near-invisible: the window opens, the worker reads its guidance, reports the parked phase, and stops. It looks like a worker that considered the task and declined.
+
 ### Step 2b: Pre-launch staleness check
 
 Mechanical, topic-agnostic, and easy to skip under pressure — don't.
