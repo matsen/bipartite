@@ -26,6 +26,23 @@ The conductor session owns the clone pool, tmux, and host state:
 - Never adjudicates a genuine resource conflict itself — states it and asks the user (see "Arbitration" below)
 - Never does topic reasoning, and does not write code or create branches for numbered issues (light triage — reading files, checking CI output, running `gh` commands — is fine)
 
+### The fleet/topic line
+
+The conductor's user-facing report contains nothing it did not derive from fleet state — `git`, `tmux`, `gh`, `ps`, `/bip-scout`, and the status/intent files.
+Slots, windows, hosts, branches, PR *state* (open, draft, mergeable), what is running, what is dead, what is free, and who is blocked on whom **by name**.
+Not why an issue matters, not whether a finding is right, not the substance of a blocker.
+The user hears that once, from `/bip-epic`, in its window.
+
+**This is a rule about narration, not about intake.**
+Topic findings legitimately reach the conductor and some are load-bearing here — but only ever as *scheduling constraints*.
+"#2080 and #2088 share three files" is topic-derived and is the conductor's to act on, because its entire consequence is an ordering decision between two slots.
+The test is whether the finding changes what the conductor **schedules** — not whether it is interesting, and not whether it is correct.
+Consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it.
+
+**Why this is a rule and not a preference:** with both sessions addressing the same user, a conductor that relays the epic's reasoning makes the user read every analysis twice, and the second copy is the weaker one — a paraphrase by the session that did not do the work.
+The failure that produced this rule: across one session the conductor independently re-verified three of the epic's citations and reported each to the user alongside the epic's own report, turning up a single discrepancy that changed nothing — while the epic's own verify tier, the mechanism that is actually for this, found six real errors in the same window.
+The user's summary was "I feel like I am having the same convo with two agents."
+
 ## Arbitration
 
 When two things want the same clone, cache, or host, or when the epic's spawn intent conflicts with what the conductor observes live, this skill does not run a heuristic to pick a winner.
@@ -100,6 +117,12 @@ The residual risk this doesn't close — an unrelated session claiming the exact
 No skill documents a conductor→epic path for user decisions before this — the only documented pushes in that direction are the `needs-human`/`completed` completion pushes above; everything else in these Conventions runs epic→conductor→worker.
 This section creates that convention rather than annotating an existing one.
 
+**Which decisions belong in which window.**
+Fleet decisions — spawn approvals, resume and cleanup calls, host and slot arbitration — are the conductor's to put to the user and to carry.
+Scientific decisions — whether an issue is worth doing, which arm to pursue, whether a result holds — belong in the epic's window, get made there, and reach the conductor as consequences ("#2088 is KEEP; cedar's route is now #2088 -> #2119 -> #2080").
+When a scientific question surfaces here, name the fleet consequence and point at the epic instead of working the question: "cedar is blocked until you rule on #2088 — the epic has the trade-off."
+The relay machinery below still applies to any decision the user *does* make in this session, scientific or not; the point is not to solicit the scientific ones here.
+
 When the conductor is the session talking to the user and a decision results, push it to `/bip-epic` rather than letting it sit only in this session's own conversation: read `$CLONE_ROOT/.epic-session` for the epic's self-registered address (same mechanics as "Completion pushes" above) and `SendMessage` it the decision, **prefixed `PROVISIONAL` or `FINAL`. Nothing goes unmarked.**
 
 - **`PROVISIONAL`**: the decision is still being discussed, or the conductor is relaying a first read before the user has confirmed it. `/bip-epic` may note that a decision is pending but must not write it into an EPIC body — see that skill's "Fleet state is derived" section for the FINAL-only body rule this feeds.
@@ -116,6 +139,11 @@ If the conductor has its own reading of the finding worth adding, add it as a se
 The failure this prevents: a worker's matrix-provenance finding, forwarded as if it undercut a sibling issue's premise, when the EPIC had already moved that arm for the same reason — the conductor's reading reached the user mid-decision as though it were the worker's own conclusion.
 Append forwarded findings to `.epic-decisions.md` alongside decision relays (see ".epic-decisions.md: the durable fleet-decision log" below), same reasoning: message-only state does not survive compaction.
 
+**Scope: this is about *worker* findings, and only those.**
+The verbatim requirement exists because the conductor is the sole path from a worker to the epic and to the user — nobody else can produce that text, so fidelity is the whole job.
+It does not extend to findings arriving *from the epic*, which has its own voice, its own durable record, and its own channel to the user.
+Reproducing those is duplication, not fidelity: log an epic finding as a one-line pointer plus its fleet consequence, forward nothing onward, and let the epic present its own reasoning in its own window.
+
 ### Resolving a citation before acting on it
 
 A finding often carries a citation — a file, a line range, a symbol — and forwarding it verbatim (above) does not excuse skipping resolution before acting on it locally. Never reconstruct a missing path component from surrounding context: a citation like `run_heavy_baselines.py:30-43` with no directory is unresolved, not incomplete-but-inferable. Resolve it against the repo (`find`/`grep -r`) or ask the sender which copy they meant.
@@ -123,6 +151,11 @@ A finding often carries a citation — a file, a line range, a symbol — and fo
 The same caution applies to a bare symbol name in a repo with duplicated modules: two files can define the same name for different things, and matching on the name alone is not resolution.
 Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call in the same session persisting into this one.
 This cuts both ways: when relaying a finding or citing a file in a message to another session — a worker report, a push to the epic — include the directory. A bare filename plus line number is not an address, and a sender who includes the directory removes the ambiguity at its cheapest point, before it costs the receiver a resolution or a round-trip question.
+
+**"Before acting on it" is the operative phrase, and logging is not acting.**
+Resolve a citation when the conductor is about to *do* something with it: schedule around it, clean up a path, spawn against it, or send a worker to look at it.
+Recording a forwarded finding in `.epic-decisions.md`, or relaying it onward, is neither — forward it attributed and unresolved, and let the tier that owns verification do the verifying.
+A conductor that resolves every citation crossing its desk has become a second reviewer of the epic's work, which is exactly the duplication "The fleet/topic line" exists to prevent.
 
 ### Message economy: the log is the artifact, the message is the nudge
 
@@ -313,6 +346,9 @@ Then propose executing pending spawn intent:
 
 > "Pending intent: `i302` (retry logic) and `i315` (scoring refactor), 2 clones available.
 > Shall I run `/bip-conductor-spawn`?"
+
+Keep the proposal at that altitude: which intent is pending, which slots are free, and any ordering constraint from the epic's Step 4b.
+If the user asks "why this one?", point at the brief rather than summarizing it — the brief is the artifact, and a conductor paraphrase of it is strictly worse than the thing itself.
 
 Wait for user confirmation, then run `/bip-conductor-spawn` (do NOT improvise tmux/claude commands).
 Deciding *which other* open issues should be spawned next isn't this skill's call — that's `/bip-epic`.

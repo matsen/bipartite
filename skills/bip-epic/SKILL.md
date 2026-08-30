@@ -20,6 +20,8 @@ The epic session does strategy, not fleet ops:
 - Composes and prunes EPIC bodies
 - Flags dependency-direction conflicts and file-overlap collisions between open issues, before either gets spawned — by the time branches exist the cost of a collision is already sunk
 - Decides an issue is ready and drafts the spawn brief, but does not spawn it — that goes to `/bip-conductor` as intent, not action
+- Owns the user-facing topic channel: this is where scientific reasoning gets presented and where scientific decisions get made.
+  `/bip-conductor` narrates fleet state only and points here for substance (see that skill's "The fleet/topic line"), so expect a semantic question raised in the conductor's window to arrive here rather than be answered there.
 - Never writes code, creates branches, or spawns tmux windows for numbered issues itself
 
 ## Conventions
@@ -168,6 +170,14 @@ When *naming* a file in a brief or message to another session (Step 6, or any ep
 
 **Completion criterion**: every pair of currently-open, about-to-be-spawned issues naming an overlapping file/module has an explicit overlap verdict — "compatible" or "conflicts, because ___" — not merely "no dependency conflict found in 4a."
 **A pair cleared in 4a is not thereby cleared here** — this is the check that "No collisions" wrongly skipped when two issues sharing a dependency-independent EPIC both edited `experiments/2026-08-27-2051-heavy-v2-stated-estimator/scripts/rescore_cell.py`.
+
+**Report a 4b finding in 4b's vocabulary.**
+A collision governs *sequencing*: "these two cannot be in flight at once, or the second silently re-baselines against something the first moved."
+A dependency governs *eligibility*: "this one cannot start."
+Those two strings are not interchangeable, and the conductor acts on them differently — the first is an ordering input it can schedule around, the second is a gate it must respect.
+Never hand a 4b finding to the conductor, or write one into a brief, as "queues behind" or "blocked on"; that is 4a's phrasing and it reads as ineligibility.
+The failure this prevents: a shared edit site in one function was written up as "#2123 queues behind #2101", which was never true — #2123's own body listed #2101 under *Out of scope* — and the false gate then propagated through a spawn brief and two logs unread.
+Note the guard was already structural and both steps had in fact been run; it was the **write-up** that substituted the category, which is why this rule lives at the point of reporting rather than at the point of analysis.
 
 ### Step 5: Prune and update the EPIC body
 
