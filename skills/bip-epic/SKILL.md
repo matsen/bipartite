@@ -238,6 +238,13 @@ Both are valid intent — `/bip-conductor-spawn` checks for either (see that ski
 Use `<N>.md` for new intent; don't rename existing `spawn-<N>.txt` files you find there, since one may be mid-flight.
 
 This directory lives outside every clone's git (deliberately — it must survive clone churn) and is the handoff point to `/bip-conductor-spawn`, which reads it, checks it against live fleet state, appends the fleet facts only it can see, and executes after user confirmation.
+
+**A brief states what is durable about *its own* issue. It must not restate another issue's gate, hold, or queue status.**
+That is the fastest-rotting content a brief can carry, and the conductor supplies it at spawn anyway — the sentence above already assigns it live fleet facts, so a brief that duplicates them is both redundant and the only copy that can go stale.
+Three instances in one day on `matsengrp/phyz`: a brief asserted its issue "queues behind" another that turned out never to have been a gate at all; a second opened by calling its issue "the most spawnable item on the board"; and a refresh of that same brief asserted a sibling issue was user-held, which the conductor caught as false **at launch, under two hours after it was written.**
+The failure is quiet — a brief is read once, by a worker with no way to know which of its claims were true only at authoring time.
+Write instead the collision constraint in 4b's vocabulary ("cannot run concurrently with `iN`, because both edit X"), which is a property of the two issues and stays true, and leave "is `iN` running right now, and is it approved" to the session that can see the answer.
+The same goes for superlatives about queue position: "no 4a gate, no unresolved 4b collision" is durable; "the most spawnable item on the board" is a snapshot wearing a recommendation's clothes.
 **Do not spawn or touch tmux/clones yourself** — that's the conductor's job, and mixing the two roles back together is exactly the failure mode this split exists to avoid.
 
 **Check whether a conductor session exists before announcing a handoff into a void** — `ListAgents` for one.
