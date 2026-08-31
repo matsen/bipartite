@@ -293,9 +293,12 @@ rm -f /tmp/epic-pull.json
 # Edit the file (add findings, check boxes, cut finished sections)
 # ...
 
-# Before pushing: check if someone else edited since our pull
+# Before pushing: check if someone else edited since our pull.
+# Both values MUST be non-empty -- see "a check that cannot read fails open" below.
 CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
-if [ "$PULLED_AT" != "$CURRENT_AT" ]; then
+if [ -z "$PULLED_AT" ] || [ -z "$CURRENT_AT" ]; then
+  echo "ABORT: could not read updatedAt (network? auth?) — cannot establish safety, not pushing"
+elif [ "$PULLED_AT" != "$CURRENT_AT" ]; then
   echo "CONFLICT: Issue was updated since pull ($PULLED_AT → $CURRENT_AT)"
   echo "Re-pull, merge changes, then try again."
   # Stop here — do NOT push
@@ -303,6 +306,18 @@ else
   gh issue edit <number> --body-file ISSUE-EPIC-<N>.md
 fi
 ```
+
+**A check that succeeds when it could not read the value it was checking is worse than no check, because it reports a safety it did not establish.**
+The emptiness guard above is not defensive padding; without it this snippet **fails open on exactly the failures it exists to survive.**
+When `gh` cannot reach the API it prints to stderr, exits non-zero, and leaves the variable empty — so `[ "$PULLED_AT" != "$CURRENT_AT" ]` compares `""` against `""`, concludes nobody else edited, and pushes whatever is in the local file. Observed live on 2026-08-31: an unreachable `api.github.com` produced two empty timestamps, the guard passed, and the push was attempted against a stale body; only the network failing a *second* time prevented it.
+
+The class is worth recognising beyond this snippet, because four instances turned up in one day on `matsengrp/phyz` and each looked like a working check:
+- a harness's "the two arms differ" assertion that included a wall-time field, so it passed unconditionally;
+- a sweep's `check_cmd`, which exited 0 whether or not the sweep had finished;
+- this conflict guard;
+- a fleet cleanup audit whose `dirty=$(git -C "$d" status --porcelain | wc -l)` returns **0** for an unreadable clone — indistinguishable from clean, and gating whether a window gets killed.
+
+The shape is always the same: a *failure to read* is silently rendered as a *reassuring value* — empty string, zero count, exit 0. Ask of any guard you write or inherit: **what does this do when the thing it queries is unavailable?** If the answer is "the same as when everything is fine", it is not a guard. Capture into a variable, check the command actually succeeded, and only then compare — and prefer a shape where the failure mode is a loud abort rather than a quiet pass, especially when what follows is destructive or outward-facing.
 
 **Conflict check**: Record `updatedAt` when pulling.
 Before pushing, re-fetch `updatedAt` — if it changed, someone else edited.
