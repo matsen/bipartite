@@ -201,6 +201,13 @@ This is the same shape as an under-specified citation (Step 4b): it looks like a
 **Fleet state is derived, never authored — don't let it back into the body.**
 Which clone holds which issue, which slots are free, which tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's `/bip-conductor`'s Step 5 dashboard) whenever you need it.
 Never write it into an EPIC body or a continuation doc — it goes stale within a day and there is no mechanism to notice, which is exactly the failure a hand-maintained clone table caused when it went stale twice in one day.
+
+**The rule is about the claim, not the artifact, and reading it as artifact-only is the way it gets obeyed and defeated at once.**
+Keeping a clone table out of the EPIC body while telling the user "cedar is working on it" repeats the same stale fact in the place they will actually act on, and skips the recompute that would have caught it — the body is protected and the user is not.
+Three instances in one session on `matsengrp/phyz`, all inherited from an earlier message rather than a command: a PR reported `DIRTY` after it had been rebased clean, a build target reported red after a merge turned it green, and a slot reported working after its issue had closed and merged.
+The tell they share is grammatical: **a claim in the present continuous about what a slot, host, PR, or target is doing *right now* is fleet state**, whoever it is addressed to and whether or not it is being written down.
+Ask the conductor or run the command; do not carry it forward from a message, including your own earlier one.
+The asymmetry is the point — the conductor can re-derive all of this in a single command and this session structurally cannot see any of it, so the cost of asking is one message and the cost of guessing is a confident wrong statement to the person deciding what to do next.
 Handoff artifacts (spawn intent, unfiled drafts) are the opposite category: authored deliberately, to a durable path outside git, precisely so they survive clone churn — pruning them (Step 6, below) is about cleaning up finished authored state, not about avoiding writing derived state down in the first place.
 
 **A user decision may be written into the EPIC body only against a `FINAL` shape.**
