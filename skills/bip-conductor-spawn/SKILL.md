@@ -75,16 +75,36 @@ A good pick is on `main`, clean, and has no live tmux pane in its directory — 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-OCCUPIED=$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
+OCCUPIED=$(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null) || OCCUPIED=""
 for name in $(jq -r '.clone_names[]' .epic-config.json); do
   dir="$CLONE_ROOT/$name"
   [ "$(git -C "$dir" branch --show-current 2>/dev/null)" = "main" ] || continue
-  [ -z "$(git -C "$dir" status --porcelain 2>/dev/null)" ] || continue
+  # Capture, then test readability separately: `git status | wc -l` or a bare
+  # `-z` on failed output reports "clean" and "could not read" identically.
+  status=$(git -C "$dir" status --porcelain 2>/dev/null) || continue
+  [ -z "$status" ] || continue
   echo "$OCCUPIED" | grep -qxF "$dir" && continue   # live tmux pane here → owned
   [ -f "$dir/.epic-status.json" ] && continue         # a worker claimed it, unfinished
   echo "$name"
 done
 ```
+
+**Two fail-open hazards in that snippet, both deliberate to know about** (the
+class is recorded in `/bip-epic`; see `18cc049`):
+
+- **The `git status` test** is why the capture-then-test form above replaces a
+  bare `-z`. An unreadable clone yields empty output, and empty is exactly what
+  a clean clone yields — so the bare form selects a broken checkout as idle. In
+  the original ordering the preceding `branch --show-current` test happened to
+  fail closed and covered it, which made the status test *safe by accident of
+  its neighbour rather than by construction*: reordering the tests, or
+  simplifying to the status check alone, would have reintroduced it silently.
+- **`OCCUPIED` is empty if `tmux` fails**, and an empty `OCCUPIED` makes every
+  clone look unoccupied — including ones with a live worker. This one has a real
+  backstop rather than an accidental one: `bip spawn` refuses to launch into a
+  directory a live pane already occupies (see Step 5), which is the actual
+  guarantee. Selection is best-effort; the refusal is the invariant. Do not
+  invert that reliance by "improving" selection into a gate.
 
 This selection is **best-effort** — it avoids clones that are obviously taken.
 The actual guarantee is `bip spawn` itself: it refuses to launch into a directory a live tmux pane already occupies (`--force` overrides), so even if the pool churns between selection and spawn you can never land a second agent in one checkout.
