@@ -103,7 +103,10 @@ Send the correction directly — stating what changed in at least one line — r
 If a correction is long enough that pointing at a file seems preferable, its home is the spawn prompt or the issue body, not a nudge.
 The durable/transient test is the deliverable: any nudge that changes what the worker will produce (scope, target, artifact, gate criterion) MUST also get a durable record, written by the **conductor** appending a timestamped, attributed entry to `.epic-worklog.md` in the same step — not `.epic-status.json`, since that file is the worker's own continuously-rewritten object and a second writer there is unsynchronized and gives no tiebreak against `lead_guidance`.
 Facts that leave the deliverable unchanged (host load, a peer's timing, a dependency that just landed) may be message-only.
-Delivery lands at the worker's next tool call, not instantly, and `SendMessage` only reaches addressable Claude sessions — run `ListAgents` first to confirm (the address is the session name it reports, not the tmux window name assigned at spawn — sending to the window name can fail with `No agent named '<window>' is reachable.`), and fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`, wait for the worker's own loop) when it isn't addressable.
+Delivery lands at the worker's next tool call, not instantly. Fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`; wait for the worker's own loop) only once you have established the target is genuinely unaddressable, per the rule immediately below.
+
+**Addressing — read this before any `SendMessage`; a mid-cycle conductor got it wrong with the weaker version of this note in front of it.**
+Read the address off `ListAgents`' own row, or off the message you are replying to. **Never compose it.** Worker names are `<clone>-<suffix>` (`fir-b3`, `teak-37`, `spruce-66`); the bare clone name and the tmux window name are both *not* addresses. **A failed send to a name you typed yourself is a typo, not a channel limit** — re-run `ListAgents` and use the exact string. Never conclude from one failed send that workers are unreachable. (An address that came from a self-registration file and stops working is the different case: it drifted, so skip silently and don't hunt a substitute.)
 Skip the nudge entirely for a worker in `awaiting-results` with a live `check_cmd`; use `notify_when_idle: true` instead of "tell me when this worker finishes" — main-conversation only, this-machine only, one-shot.
 
 ### Output structure
@@ -159,21 +162,32 @@ Same cleanup as above.
 
 #### The liveness sweep — run this every poll, it is the only stall detector
 
-`bip epic watch` reports transitions, so a slot that stops transitioning is invisible to it. This sweep is what catches that, and it costs two `find` calls:
+`bip epic watch` reports transitions, so a slot that stops transitioning is invisible to it. Nothing else detects that, and a stale status file means two opposite things depending on whether a tmux window is open — so the window check belongs *inside* the sweep, not in prose beside it. This is the same 30-minute rule as above, extended to the window-open case rather than a second competing rule:
 
 ```bash
-find "$CLONE_ROOT"/*/.epic-status.json -mmin +45   # status not refreshed
-find "$CLONE_ROOT"/*/.epic-worklog.md  -mmin +45   # no narrative progress either
+for f in "$CLONE_ROOT"/*/.epic-status.json; do
+  [ -n "$(find "$f" -mmin +45 2>/dev/null)" ] || continue
+  d=$(dirname "$f")
+  if tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null | grep -qxF "$d"; then
+    echo "STALLED?  $d — window OPEN, never clean up; check the worklog next"
+  else
+    echo "ABANDONED $d — no window, cleanup candidate per the rule above"
+  fi
+done
 ```
 
-Use mtimes, not the `updated_at` field — a worker that writes a placeholder timestamp defeats the field but not the mtime. Read the pair:
+For anything the sweep marks `STALLED?`, check its worklog mtime to tell a stall from a quiet worker:
 
-- **status stale + worklog stale** → genuinely stalled. Escalate to the user; do not clean up (its window is open and it may hold typed human input).
-- **status stale + worklog fresh** → alive and working, status file simply lying. Not a stall: nudge it to resume writing status, and don't report it as dead.
+```bash
+find "$CLONE_ROOT/<clone>/.epic-worklog.md" -mmin +45   # empty output = worklog is fresh
+```
 
-Measured 2026-09-01: a slot showed a 6-hour-old status file frozen on `phase: exploring` while its worklog had been written 4 minutes earlier — mid-experiment the whole time. The inverse reading would have been an escalation about a healthy worker; the naive reading (trusting the phase field) reported a live slot as `exploring` for six hours.
+- **status stale + worklog stale** → genuinely stalled. Escalate to the user. Still never clean up: the window is open and may hold typed human input.
+- **status stale + worklog fresh** → alive and working; the status file is simply lying. Not a stall — nudge it to resume writing status, and don't report it as dead.
 
-See `/bip-conductor`'s `.epic-status.json` spec for the full two-check rule and the `phase`-is-not-evidence corollary.
+Use mtimes, not the `updated_at` field: a worker that writes a placeholder timestamp defeats the field but not the mtime. Measured 2026-09-01 — a slot's status file was 6h old and frozen on `phase: exploring` while its worklog had been written 4 minutes earlier.
+
+See `/bip-conductor`'s `.epic-status.json` spec for the `phase`-is-not-evidence corollary.
 
 If a merge closes an issue tracked in an EPIC, that's signal `/bip-epic` needs, not something to act on here — surface it under `changes_since_baseline` and move on.
 

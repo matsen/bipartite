@@ -97,7 +97,7 @@ Based on user choice:
 
 **Apply now** (CLAUDE.md, skill, or memory edits):
 - Edit the target file directly
-- For bipartite skill changes, the working tree is at `/Users/matsen/re/bipartite`
+- For bipartite skill changes, the working tree is at `~/re/bipartite`
 
 **Create a PR** (bipartite repo changes):
 
@@ -113,7 +113,7 @@ agents/          # Agent definitions
 Skills are symlinked from `skills/<name>/` to `~/.claude/skills/<name>` for global availability.
 
 ```bash
-cd /Users/matsen/re/bipartite
+cd ~/re/bipartite
 git pull origin main
 git checkout -b kaizen/<short-description>
 # Make the changes
@@ -133,7 +133,7 @@ gh pr create --title "kaizen: <description>" --body "..."
   Don't refactor adjacent code
 - **One improvement per invocation**: If you see multiple issues, pick the highest-impact one and mention the others briefly
 - **Respect existing structure**: Follow the conventions already in CLAUDE.md and skill files
-- **Bipartite repo awareness**: Skills live in `/Users/matsen/re/bipartite/skills/`.
+- **Bipartite repo awareness**: Skills live in `~/re/bipartite/skills/`.
   The repo is `matsen/bipartite` on GitHub
 - **Don't over-document**: If something is obvious from the code, it doesn't need a CLAUDE.md entry.
   Only document things the agent genuinely couldn't figure out on its own

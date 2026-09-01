@@ -614,10 +614,11 @@ Target project repos should gitignore these files (add to `.gitignore`):
 .epic-status.json
 .epic-worklog.md
 .epic-notifications.log
+.epic-decisions.md
 ```
 
 `.epic-status.json` and `.epic-worklog.md` live in each clone/worktree.
-`.epic-notifications.log` lives in the conductor cwd and is written by `bip epic watch`.
+`.epic-notifications.log` and `.epic-decisions.md` live in the conductor cwd (written by `bip epic watch` and by the conductor itself).
 None should be checked in.
 
 ## Conventions
