@@ -106,6 +106,16 @@ class is recorded in `/bip-epic`; see `18cc049`):
   guarantee. Selection is best-effort; the refusal is the invariant. Do not
   invert that reliance by "improving" selection into a gate.
 
+**Do not rank idle clones by build-cache size.** It is an appealing tiebreak — bigger cache looks like a warmer clone and a faster first build — and it measures the wrong thing. Cache size records *what has historically been built in that clone*, not whether the next build's hashes hit. A worker's first act is usually to edit source, which invalidates everything downstream regardless.
+
+Measured on `matsengrp/phyz`, 2026-09-01, after a day in which six clones landed merged PRs: their caches were **14G, 12G, 7.2G, 6.2G, 5.1G and 2.1G** — the 2.1G clone shipped a merged PR the same day. Meanwhile the five largest caches stood at **114G, 81G, 66G, 49G and 33G**, totalling **585G across 13 clones** on a disk at 50% with no pruning step anywhere. `remote-gc` exists but its scope is shared-NFS compute hosts; a local workstation clone root is covered by nothing.
+
+Two reasons this is worth a rule rather than a preference:
+- **It is a feedback loop.** Rank by size, the biggest gets picked, it grows biggest, it gets picked again. The five clones holding the largest caches were the five selected in the wave immediately before this was measured.
+- **It trades a real, accumulating cost for an unmeasured benefit.** The cold-vs-warm gap on this repo is genuinely minutes against seconds, so it is not nothing — but no clone in a working pool is ever cold, so the choice is among degrees of warm that do not predict the next build, while the disk cost compounds indefinitely.
+
+If clones are otherwise equivalent, pick arbitrarily; the tiebreak that *does* pay is avoiding a clone whose cache is pathologically large, since that is unpruned history rather than readiness. **Watch for cache-directory proliferation too** — subagent, lead and review runs create their own dirs (`.zig-cache-<clone>-bench`, `-lead`, `-lead5`, `-review` all observed), and nothing removes them when the run ends.
+
 This selection is **best-effort** — it avoids clones that are obviously taken.
 The actual guarantee is `bip spawn` itself: it refuses to launch into a directory a live tmux pane already occupies (`--force` overrides), so even if the pool churns between selection and spawn you can never land a second agent in one checkout.
 Prefer clones with clean worktrees.
