@@ -89,35 +89,18 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
 done
 ```
 
-**Two fail-open hazards in that snippet, both deliberate to know about** (the
-class is recorded in `/bip-epic`; see `18cc049`):
+**Two fail-open hazards in that snippet** (the class is recorded in `/bip-epic`; see `18cc049`):
 
-- **The `git status` test** is why the capture-then-test form above replaces a
-  bare `-z`. An unreadable clone yields empty output, and empty is exactly what
-  a clean clone yields — so the bare form selects a broken checkout as idle. In
-  the original ordering the preceding `branch --show-current` test happened to
-  fail closed and covered it, which made the status test *safe by accident of
-  its neighbour rather than by construction*: reordering the tests, or
-  simplifying to the status check alone, would have reintroduced it silently.
-- **`OCCUPIED` is empty if `tmux` fails**, and an empty `OCCUPIED` makes every
-  clone look unoccupied — including ones with a live worker. This one has a real
-  backstop rather than an accidental one: `bip spawn` refuses to launch into a
-  directory a live pane already occupies (see Step 5), which is the actual
-  guarantee. Selection is best-effort; the refusal is the invariant. Do not
-  invert that reliance by "improving" selection into a gate.
+- **The `git status` test**: an unreadable clone yields empty output, exactly what a clean clone yields, so a bare `-z` selects a broken checkout as idle — hence the capture-then-test form above.
+- **`OCCUPIED` is empty if `tmux` fails**, and an empty `OCCUPIED` makes every clone look unoccupied, including ones with a live worker. Selection is best-effort; `bip spawn`'s refusal to launch into a directory a live pane already occupies (Step 5; `--force` overrides) is the invariant. Do not invert that reliance by "improving" selection into a gate.
 
-**Do not rank idle clones by build-cache size.** It is an appealing tiebreak — bigger cache looks like a warmer clone and a faster first build — and it measures the wrong thing. Cache size records *what has historically been built in that clone*, not whether the next build's hashes hit. A worker's first act is usually to edit source, which invalidates everything downstream regardless.
+**Do not rank idle clones by build-cache size.** Cache size records *what has historically been built in that clone*, not whether the next build's hashes hit — and a worker's first act is usually to edit source, which invalidates everything downstream. Ranking by size is also a feedback loop: the biggest gets picked, grows biggest, gets picked again. Measured on `matsengrp/phyz`, 2026-09-01: clone caches ran 2.1G to 114G, **585G across 13 clones** on a disk at 50% with no pruning step anywhere (`remote-gc`'s scope is shared-NFS compute hosts, not a local workstation clone root), and the smallest cache (2.1G) shipped a merged PR that same day.
 
-Measured on `matsengrp/phyz`, 2026-09-01, after a day in which six clones landed merged PRs: their caches were **14G, 12G, 7.2G, 6.2G, 5.1G and 2.1G** — the 2.1G clone shipped a merged PR the same day. Meanwhile the five largest caches stood at **114G, 81G, 66G, 49G and 33G**, totalling **585G across 13 clones** on a disk at 50% with no pruning step anywhere. `remote-gc` exists but its scope is shared-NFS compute hosts; a local workstation clone root is covered by nothing.
+If clones are otherwise equivalent, pick arbitrarily; the tiebreak that *does* pay is avoiding a clone whose cache is pathologically large, since that is unpruned history rather than readiness. **Watch for cache-directory proliferation too** — subagent, lead and review runs create their own dirs (`.zig-cache-<clone>-bench`, `-lead`, `-lead5`, `-review`, `-safe2` all observed), and nothing removes them when the run ends.
 
-Two reasons this is worth a rule rather than a preference:
-- **It is a feedback loop.** Rank by size, the biggest gets picked, it grows biggest, it gets picked again. The five clones holding the largest caches were the five selected in the wave immediately before this was measured.
-- **It trades a real, accumulating cost for an unmeasured benefit.** The cold-vs-warm gap on this repo is genuinely minutes against seconds, so it is not nothing — but no clone in a working pool is ever cold, so the choice is among degrees of warm that do not predict the next build, while the disk cost compounds indefinitely.
+**Workers do not reliably honour the `--cache-dir .zig-cache-<clone>` convention** — measured 2026-09-01, a live worker was building into its clone's *bare* `.zig-cache`.
+So "a bare `.zig-cache` is a leftover" is false in general: a cache-pruning sweep must check liveness per directory rather than reasoning from the name.
 
-If clones are otherwise equivalent, pick arbitrarily; the tiebreak that *does* pay is avoiding a clone whose cache is pathologically large, since that is unpruned history rather than readiness. **Watch for cache-directory proliferation too** — subagent, lead and review runs create their own dirs (`.zig-cache-<clone>-bench`, `-lead`, `-lead5`, `-review` all observed), and nothing removes them when the run ends.
-
-This selection is **best-effort** — it avoids clones that are obviously taken.
-The actual guarantee is `bip spawn` itself: it refuses to launch into a directory a live tmux pane already occupies (`--force` overrides), so even if the pool churns between selection and spawn you can never land a second agent in one checkout.
 Prefer clones with clean worktrees.
 If all busy, offer to create a new clone using a name from `new_clone_names` in the config.
 
