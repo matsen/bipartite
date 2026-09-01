@@ -52,8 +52,14 @@ It owns the clone/worktree layout questions (clone mode vs. worktree mode, clone
 ### Step 1: Load config and memory
 
 ```bash
+git pull --ff-only origin main
 cat .epic-config.json
 ```
+
+**Re-run that pull at the top of every fresh scan cycle, not just at cold start.**
+An epic session only ever *reads* remote state — every `gh issue view` and `gh pr view` is correct regardless of how old the working tree is — so nothing in the normal loop ever forces a pull, and the tree rots silently while every answer stays right.
+Measured 2026-09-01: both the epic and the conductor sat four merges behind on `main` for hours, each with a clean tree on the correct branch, and neither noticed until the other described it. `git fetch` does not help: it updates remote-tracking refs, not the working tree.
+This matters here specifically because reading a stale file and writing it back is how an EPIC body or a skill acquires a reverted diff — see `/bip-kaizen` Step 5 on the shared working tree.
 
 If this project uses the auto-memory directory, also read its MEMORY.md for topic-level context from previous sessions (decisions, findings, what's next) — some setups deliberately don't use it (e.g. because the directory is keyed by working directory and invisible to other clones), in which case skip this and rely on EPIC bodies and issue history instead.
 

@@ -23,7 +23,13 @@ For periodic auto-polling: `/loop 10m /bip-conductor-poll`
 
 ## What to check
 
-Three things stay in the primary because they're cheap and structured:
+Four things stay in the primary because they're cheap and structured:
+
+**Pull the conductor's own clone** — `git pull --ff-only origin main` in the conductor cwd.
+`/bip-conductor` Step 2 pulls once at cold start and nothing pulls it again, so across a long session this tree silently rots while every GitHub answer stays correct.
+**A role that only ever *reads* remote state has no natural moment that forces a pull**, and `git fetch` — which a conductor runs constantly to check merge state — updates remote-tracking refs and not the working tree.
+Measured 2026-09-01: a conductor sat nine hours and four merges behind on `main`, clean tree and correct branch, and nothing surfaced it, because `git merge-base --is-ancestor <sha> origin/main` reads the fetched ref rather than the tree. Every merge verification it performed was right. The staleness produced no wrong answer, which is exactly why it survived.
+(Two sessions hit this the same day; `/bip-epic` Step 1 carries the same instruction for the same reason.)
 
 **Refresh the completion-push address** — resolve `CLONE_ROOT` and rewrite `$CLONE_ROOT/.conductor-session` with this session's current `ListAgents` name.
 This is the file workers read to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows — see `/bip-conductor`'s Conventions section ("Completion pushes") for why.
