@@ -63,6 +63,29 @@ Determine where the fix belongs:
 | **New skill** | Repeated workflow that should be a `/command` | Multi-step process done manually every time |
 | **GitHub issue** | Improvement too large for a quick fix | Needs design discussion, multi-file refactor |
 
+### Step 2b: Find the rule you are about to collide with
+
+**Mandatory, and skipping it is the single most common way kaizen makes things worse.** This table tells you where a fix *could* go; it does not tell you whether guidance on this already exists somewhere, possibly saying something different. Before writing anything, `grep` for the rule's existing home:
+
+```bash
+cd ~/re/bipartite
+grep -rn '<the key term>' skills/ *.md          # every restatement, not just the obvious one
+```
+
+Then state one of these explicitly in your proposal:
+
+- **"Supersedes: `<file>` `<section>`"** — an existing rule is wrong or narrower than reality. **Edit it in place.** Do not add a second rule beside it; two rules on one topic have no tiebreak, and a later reader gets whichever they hit first.
+- **"Amends: `<file>` `<section>`"** — the rule is right but incomplete. Extend that passage; don't start a new one elsewhere.
+- **"No existing rule"** — you grepped and found nothing. Say so, so a reviewer can check the claim.
+
+Then list **every other file that restates the rule**, and update all of them or say why not. A fix that lands in one of two copies is worse than no fix: the un-updated copy is now authoritative-looking and stale.
+
+Two failures this exists to prevent, both measured 2026-09-01 in one session:
+- An addressing rule was strengthened in `bip-conductor` but not in `bip-conductor-poll` — which is *deliberately* the copy a mid-cycle conductor reads. The conductor that made the original error was mid-cycle.
+- A generalized gitignore rule in `bip-conductor` never reached the concrete checklist in `bip-conductor-spawn`, so the checklist kept omitting a file that "has bitten a real fleet twice".
+
+**Budget discipline:** ten consecutive kaizen commits to this repo added 166 lines and deleted 7, retiring zero rules. Prefer a change that is roughly line-neutral — a new rule can usually pay for itself out of the previous rule's justification prose. If you are adding a rule and deleting nothing, check whether you have actually found a *new* fact or are re-litigating one already written down.
+
 ### Step 3: Propose the fix
 
 Present the diagnosis and proposed fix clearly:
@@ -77,6 +100,12 @@ Present the diagnosis and proposed fix clearly:
 **Proposed fix**: [What to change and where]
 
 **Target**: [CLAUDE.md / skill / code / issue / etc.]
+
+**Supersedes / Amends**: [`file` `section`, or "no existing rule — grepped `<term>`"]
+
+**Other restatements**: [every other file stating this rule, and whether you updated it — or "none found"]
+
+**Net lines**: [+N / -M. If you are adding and deleting nothing, justify it.]
 ```
 
 Then show the specific change—either as a diff, a new section to add, or a description of the code change.
