@@ -35,11 +35,7 @@ Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics
 
 ### Message economy
 
-Cross-session messages are nudges, not transcripts.
-Be succinct and clear: lead with the decision or the ask, give the reasoning the receiver cannot reconstruct, and cite the EPIC body, the issue, or `.epic-decisions.md` for the rest instead of restating it.
-There is no word limit — a complex correction earns its length — but a message that recaps the thread, or reproduces what you just wrote to a durable artifact, spends context the fleet needs elsewhere.
-This never licenses a bare pointer where Step 7 requires substance: a drafted worker correction states the change itself, not "re-read the EPIC body."
-See `/bip-conductor`'s "Message economy" section for the full convention; it applies symmetrically here.
+Cross-session messages are nudges, not transcripts: lead with the decision or the ask, give the reasoning the receiver cannot reconstruct, and cite the EPIC body, the issue, or `.epic-decisions.md` for the rest instead of restating it. There is no word limit, but a message that recaps the thread, or reproduces what you just wrote to a durable artifact, spends context the fleet needs elsewhere. This never licenses a bare pointer where Step 7 requires substance: a drafted worker correction states the change itself, not "re-read the EPIC body." See `/bip-conductor`'s "Message economy" section for the full convention; it applies symmetrically here.
 
 ## Configuration
 
@@ -188,9 +184,7 @@ Do this whenever findings come in, items complete, or new work starts — not on
 The observed failure mode is accretion, not staleness: a body cut from 524 to 146 lines had almost nothing stale in what was removed — it was cut because the work had *finished* (checked-off phases, a fully-ticked table) and kept getting appended around instead of trimmed.
 Whenever you touch a body to add a finding or check a box, also look for sections whose work is now fully complete and cut them in the same edit, rather than letting them ride to the next dedicated cleanup.
 
-**A correction that reduces a previously-reported quantity to *no* information deserves a second look before it's written.**
-Debunking has its own momentum: before recording the stronger retraction, check whether a weaker, still-true claim survives.
-A count found to be guaranteed in direction by construction is not thereby guaranteed in magnitude — "carries no information" is a more quotable sentence than "carries less than it appears to, in this specific way," and only one of them is usually true.
+**Before writing a correction, a retraction, or a unification of two findings**, apply the three checks in `PROSE-DISCIPLINE.md` ("Before writing a correction or a unification").
 
 **Identified work needs an issue number, or it is not tracked.**
 Every mechanism downstream of this skill keys on issue numbers: Group A's scanner resolves each dashboard item with `gh issue view <N>`, spawn intent files are named `<N>.md`, the conductor's dashboard maps slots to issues, and blocker sets are lists of numbers.
@@ -224,22 +218,6 @@ Putting the question to the user yourself costs them a duplicate — on 2026-08-
 Asking the sender costs one message, resolves the ambiguity at its source, and keeps the anti-substitution rule intact instead of trading it against the user's attention.
 This is the rule regardless of whose column the decision sits in: role boundaries determine who *puts* a question to the user, and this determines what to do with an unmarked answer, which is a separate question that survives any reassignment of the first.
 
-### Two cheap tests for corrections and for unifications
-
-Both of these are answerable **in about a minute by someone who does not yet understand the finding**, which is what makes them usable — over-unification and motivated correction both happen under time pressure, and a rule that requires understanding the result first is useless exactly when it is needed.
-
-**Before accepting a critique of a result: would this objection have been raised if the result had come out the other way?**
-This separates a validity critique from moving the goalposts, and pre-registration does not.
-Pre-registration protects against choosing a lens after seeing the numbers; it does not protect a measurement from having been confounded, and those are different failures.
-"The median is -5.4, so let me find a weighting that shrinks it" fails the test. "The two engines did 13x different amounts of work, so the quantity the rule was applied to may not be the quantity it was designed to judge" passes it — that would be worth stating at +5.4 exactly as much as at -5.4.
-A critique that only occurs to you when the sign is inconvenient is the thing pre-registration forbids; one that survives the counterfactual is reporting.
-
-**Before merging two findings into one story: do their remedies land in the same subsystem?**
-A shared *symptom* is not a shared *mechanism*, and the remedy test is the cheap tell.
-Worked case, 2026-08-31: two failures both presented as "phyz performs far less topology search than its configuration implies" and were written up as one pattern. They were not — one was a search that ran and was cut short by an adaptive stopping rule, the other a search that never started because the tree handed to it had immovable branches. **Fixes in different subsystems, so not one pattern**, and presenting them as one invites a single fix that addresses neither. The honest form was "two independent defects with a common symptom", which is still a strong claim and a more useful one.
-
-Three appealing unifications needed narrowing in a single day on `matsengrp/phyz`, and in each case they were proposed by one session and enthusiastically endorsed by the other within minutes. **That is the argument for these being written down rather than held as either session's habit:** the session best placed to apply the check was, each time, the one that had just proposed the unification.
-
 ### Step 6: Hand spawn intent to the conductor
 
 For each issue judged ready (unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:
@@ -264,12 +242,11 @@ This directory lives outside every clone's git (deliberately — it must survive
 
 **A brief states what is durable about *its own* issue. It must not restate another issue's gate, hold, or queue status.**
 That is the fastest-rotting content a brief can carry, and the conductor supplies it at spawn anyway — the sentence above already assigns it live fleet facts, so a brief that duplicates them is both redundant and the only copy that can go stale.
-Three instances in one day on `matsengrp/phyz`: a brief asserted its issue "queues behind" another that turned out never to have been a gate at all; a second opened by calling its issue "the most spawnable item on the board"; and a refresh of that same brief asserted a sibling issue was user-held, which the conductor caught as false **at launch, under two hours after it was written.**
 The failure is quiet — a brief is read once, by a worker with no way to know which of its claims were true only at authoring time.
 Write instead the collision constraint in 4b's vocabulary ("cannot run concurrently with `iN`, because both edit X"), which is a property of the two issues and stays true, and leave "is `iN` running right now, and is it approved" to the session that can see the answer.
 The same goes for superlatives about queue position: "no 4a gate, no unresolved 4b collision" is durable; "the most spawnable item on the board" is a snapshot wearing a recommendation's clothes.
 
-**The general form is: a brief may only assert what has stopped moving.** Another issue's gate status is the common case; **an unlanded result is the same failure with a longer fuse.** A brief whose motivation cites numbers still in review will not fail at launch — it fails hours in, when a worker discovers the finding it was built on was restructured during review, and the cost lands far from its cause. Observed 2026-08-31: an issue was flagged as the highest-value item on the board and briefing was deliberately held until the PR it depended on merged; that PR's skeptic round then withdrew the exact result the brief's redesign was anchored to. **The hold cost hours. Briefing would have cost a worker's day and produced an experiment answering a question that no longer existed.** Wait for the merge.
+**The general form is: a brief may only assert what has stopped moving.** Another issue's gate status is the common case; **an unlanded result is the same failure with a longer fuse.** A brief whose motivation cites numbers still in review will not fail at launch — it fails hours in, when a worker discovers the finding it was built on was restructured during review, and the cost lands far from its cause (observed: a PR's skeptic round withdrew the exact result a held brief's redesign was anchored to). **Wait for the merge** — the hold costs hours, briefing costs a worker's day on a question that no longer exists.
 
 **Name the host class for anything with real compute.** A worker reads its issue body and its brief; neither tells it whether the machine it landed on is a shared interactive workstation or a dedicated compute host, and there is no way for it to infer this. Say "run the sweep on an orca, not on `pax`" in as many words. Observed 2026-08-31: a brief omitted it and its worker launched a 391-job sweep locally, taking the shared workstation to load ~11 before killing it — behaving reasonably on the information it had.
 **Do not spawn or touch tmux/clones yourself** — that's the conductor's job, and mixing the two roles back together is exactly the failure mode this split exists to avoid.
@@ -329,7 +306,7 @@ fi
 
 **A check that succeeds when it could not read the value it was checking is worse than no check, because it reports a safety it did not establish.**
 The emptiness guard above is not defensive padding; without it this snippet **fails open on exactly the failures it exists to survive.**
-When `gh` cannot reach the API it prints to stderr, exits non-zero, and leaves the variable empty — so `[ "$PULLED_AT" != "$CURRENT_AT" ]` compares `""` against `""`, concludes nobody else edited, and pushes whatever is in the local file. Observed live on 2026-08-31: an unreachable `api.github.com` produced two empty timestamps, the guard passed, and the push was attempted against a stale body; only the network failing a *second* time prevented it.
+When `gh` cannot reach the API it prints to stderr, exits non-zero, and leaves the variable empty — so `[ "$PULLED_AT" != "$CURRENT_AT" ]` compares `""` against `""`, concludes nobody else edited, and pushes whatever is in the local file. Observed live: an unreachable `api.github.com` produced two empty timestamps, the guard passed, and the push went ahead against a stale body.
 
 The class is worth recognising beyond this snippet, because four instances turned up in one day on `matsengrp/phyz` and each looked like a working check:
 - a harness's "the two arms differ" assertion that included a wall-time field, so it passed unconditionally;
@@ -337,7 +314,16 @@ The class is worth recognising beyond this snippet, because four instances turne
 - this conflict guard;
 - a fleet cleanup audit whose `dirty=$(git -C "$d" status --porcelain | wc -l)` returns **0** for an unreadable clone — indistinguishable from clean, and gating whether a window gets killed.
 
-The shape is always the same: a *failure to read* is silently rendered as a *reassuring value* — empty string, zero count, exit 0. Ask of any guard you write or inherit: **what does this do when the thing it queries is unavailable?** If the answer is "the same as when everything is fine", it is not a guard. Capture into a variable, check the command actually succeeded, and only then compare — and prefer a shape where the failure mode is a loud abort rather than a quiet pass, especially when what follows is destructive or outward-facing.
+The shape is always the same: a *failure to read* is silently rendered as a *reassuring value* — empty string, zero count, exit 0.
+
+**The sibling failure, and it is the more general one: the check works, reports the failure correctly, and the report is discarded by the control flow around it.** Here the guard is not fail-open — it is fail-reported-and-ignored, which looks even safer because you can see the warning in the transcript.
+
+Measured 2026-09-01: a `python3` heredoc doing a string replacement in a shared skill file printed **`MISS`** when its anchor was not found — exactly right — and then exited **0**, because `print()` sets no exit status. The enclosing `... && git add && git commit && git push && echo PUSHED` therefore ran to completion and reported **PUSHED**. The commit contained only a reversion of 29 lines a peer had added, because the working tree had been read after `git fetch` without a pull. Two guards were present and both were defeated by plumbing: the staleness one was never written, and the anchor one wrote to stdout instead of `exit 1`.
+
+So, whenever a check gates something destructive or outward-facing:
+- **A diagnostic that does not set exit status is not a guard in a pipeline.** `print("MISS")` must be `sys.exit(1)`, or the `&&` chain is decorative.
+- **Verify the mutation happened, not that the command ran.** After a scripted edit, `grep` for the new text before committing; after a commit, `git diff <base> HEAD -- <file>` should be exactly what you intended and nothing else.
+- **`git fetch` updates remote-tracking refs and not your working tree.** Editing a shared file after `fetch` alone edits a stale copy, and the resulting commit silently reverts whatever landed upstream in between. Pull. Ask of any guard you write or inherit: **what does this do when the thing it queries is unavailable?** If the answer is "the same as when everything is fine", it is not a guard. Capture into a variable, check the command actually succeeded, and only then compare — and prefer a shape where the failure mode is a loud abort rather than a quiet pass, especially when what follows is destructive or outward-facing.
 
 **Conflict check**: Record `updatedAt` when pulling.
 Before pushing, re-fetch `updatedAt` — if it changed, someone else edited.
