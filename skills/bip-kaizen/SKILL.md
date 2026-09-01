@@ -128,6 +128,14 @@ Based on user choice:
 - Edit the target file directly
 - For bipartite skill changes, the working tree is at `~/re/bipartite`
 
+> **That working tree is shared, and it is the one at `~/re/bipartite` for every session on the machine.** There is no per-session checkout and no locking: two Claude sessions running kaizen are editing the same bytes on disk. `git` never reports a conflict, because there is only one tree — so the failure is silent.
+>
+> **Before you edit**, run `git status`. Modified files you did not touch mean another session is live in here; coordinate or wait rather than writing.
+> **Before you commit**, run `git diff --cached` and confirm every hunk is yours. Per-file `git add` limits the blast radius but does not close it — if the other session edited *the same file*, staging that one path still ships its work. Never `git add -A` or `git add .` here.
+> **Commit a cross-file dependency in one commit.** A pointer and its target must land together.
+>
+> Measured 2026-09-01: two sessions each committed the other's in-flight uncommitted work under their own commit message, in opposite directions, within one hour. Both then misdiagnosed it as their own stale read — `git fetch` updates remote-tracking refs and not the working tree, which is true and was not the cause. The worst outcome was structural rather than a lost edit: one commit shipped a `bip-epic` pointer to a `PROSE-DISCIPLINE.md` section that existed only in the *other* session's uncommitted tree, so for ~20 minutes `origin/main` carried a reference to nothing and the two discriminators it replaced were unreachable. A separate `git worktree` per session would prevent the class outright.
+
 **Create a PR** (bipartite repo changes):
 
 The bipartite repo (`matsen/bipartite`) structure:
