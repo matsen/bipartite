@@ -93,8 +93,7 @@ Whether a correction needs this channel at all, and whether it's durable or tran
   Run `ListAgents` first to confirm the target session is actually addressable; fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`) and wait for the worker's own loop when it isn't.
   **The address is the session name `ListAgents` reports, not the tmux window name the conductor assigned at spawn** — `SendMessage` to a window name can fail with `No agent named '<window>' is reachable.`
   **Worker names look like `<clone>-<suffix>`** — `fir-b3`, `teak-37`, `spruce-66`. The bare clone name is never an address. Workers sign their own completion pushes with this name, so that signature is the address to reply to; read it off the message you already received rather than reconstructing it.
-  **A send you addressed by hand and got wrong is an address error, not a capability limit — and these two failures have opposite remedies.** An address taken from a self-registration file that stops working has *drifted*: skip silently, don't hunt for a substitute (see "Completion pushes" below). An address you *composed yourself* was never valid: re-run `ListAgents` and use the exact name it prints. Conflating them turns a typo into a false conclusion about what the fleet can do.
-  Measured 2026-09-01: a conductor sent to `teak`, got `No agent named 'teak' is reachable`, and wrote into its durable fleet log that `bip spawn` workers are structurally unaddressable and the channel is one-way worker→conductor only. Every worker had a live socket in `/run/user/$UID/cc-socks/` the entire time, and `ListAgents` listed them as `fir-b3`/`teak-37`/`spruce-66`. Two weak signals had agreed — the failed send, plus an `ListAgents` call made minutes after spawn, before name resolution settled — and agreement was mistaken for verification. The cost was a stalled slot reported to the user as unreachable-by-design instead of simply nudged. **Never generalise a single failed send into a claim about the channel; the channel is the last thing to suspect and the cheapest to re-test.**
+  **A send you addressed by hand and got wrong is an address error, not a capability limit — and these two failures have opposite remedies.** An address taken from a self-registration file that stops working has *drifted*: skip silently, don't hunt for a substitute (see "Completion pushes" below). An address you *composed yourself* was never valid — a failed send to a hand-composed name is a typo, not a channel limit: re-run `ListAgents` and use the exact name it prints. **Never generalise a single failed send into a claim about the channel**; the channel is the last thing to suspect and the cheapest to re-test.
 - Do not use `SendMessage` to route around the conductor's own restrictions (cross-session permission laundering) — the "should not write code or create branches for numbered issues" rule above applies equally to instructions phrased as a message to a worker.
 - **When not to nudge**: a worker in `awaiting-results` with a live `check_cmd` needs no ping.
   Use `notify_when_idle: true` instead of "tell me when this worker finishes" — it works only from the main conversation, only for sessions on this machine, and it is one-shot (omit `message` for a pure subscription that costs the target nothing; a subscription that never fires reports as expired).
@@ -173,16 +172,7 @@ A conductor that resolves every citation crossing its desk has become a second r
 
 ### Message economy: the log is the artifact, the message is the nudge
 
-Cross-session messages and the durable log do different jobs, and the fastest way to burn a fleet's context is to make every message a self-contained restatement of the log.
-Be succinct and clear — not terse.
-Lead with the decision, the ask, or the correction; give the reasoning the receiver cannot reconstruct; cite `.epic-decisions.md`, the issue, the PR, or the worklog entry for the rest instead of reproducing it.
-There is no word limit, and a genuinely complex correction earns its length — a message that omits the one fact making it actionable has saved nothing.
-Cut: context the receiver already has, restatement of what you wrote to the log in the same step, and courtesy recaps of the thread so far.
-Keep: the specific claim, the command or citation backing it, and what you want the receiver to do differently.
-This applies to user-facing reports too — a dashboard that has to be scrolled is a dashboard that gets skimmed.
-Two cases this never licenses, because this same file mandates reproduction in them: a forwarded worker finding still goes **verbatim and attributed** (see "Forwarding worker findings"), never swapped for a pointer to the log entry you wrote in the same step; and a live-worker correction still states the change in at least one line (see "Correcting a live worker"), never a bare "re-read the log."
-The economy is in what you leave out of a message that already carries its point — never in dropping the point itself.
-The failure this prevents: conductor-to-epic traffic costing more context than the work it coordinates, so both sessions compact early and lose exactly the state the messages existed to preserve.
+Lead with the decision, the ask, or the correction; give the reasoning the receiver cannot reconstruct; cite `.epic-decisions.md`, the issue, the PR, or the worklog entry for the rest instead of reproducing it. Succinct, not terse — there is no word limit, and a message that omits the one fact making it actionable has saved nothing. This applies to user-facing reports too. Two cases this never licenses, because this same file mandates reproduction in them: a forwarded worker finding still goes **verbatim and attributed** (see "Forwarding worker findings"), never swapped for a pointer to the log entry you wrote in the same step; and a live-worker correction still states the change in at least one line (see "Correcting a live worker"), never a bare "re-read the log."
 
 ### `.epic-decisions.md`: the durable fleet-decision log
 
@@ -383,11 +373,9 @@ nohup bip epic watch >/dev/null 2>&1 &
 
 The watcher runs forever, exits cleanly on SIGTERM, and emits one event per real phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`).
 
-**Two ways this watcher goes silent without failing, both observed 2026-09-01. Neither is a bug in the watcher; both are reasons it is not liveness detection:**
-- **An off-spec `phase` value falls outside `--phases` and emits nothing.** An issue-lead wrote `phase: "premature-deferral"` (a `stop_reason`-shaped string in the phase field); the `completed -> premature-deferral` transition appears nowhere in the log. Broadening the filter helps against *known* strings only — `--phases exploring,coding,testing,awaiting-results,quality-gate,needs-human,completed` plus any off-spec value you have actually seen — and a newly invented one still slips, since the flag takes an explicit list with no "all".
-- **A slot that never transitions produces no events at all**, however wide the filter. See the two-check staleness rule in the `.epic-status.json` spec below: the only thing that catches this is status-file mtime against the clock.
-
-Treat the notification log as a low-latency feed for transitions that *do* happen, and the mtime sweep in `/bip-conductor-poll` as the actual liveness check. Don't let a quiet log read as a healthy fleet.
+**Two ways this watcher goes silent without failing. Neither is a bug in the watcher; both are reasons it is not liveness detection:**
+- **An off-spec `phase` value falls outside `--phases` and emits nothing** — observed: an issue-lead wrote `phase: "premature-deferral"`, a `stop_reason`-shaped string in the phase field, and the `completed -> premature-deferral` transition appears nowhere in the log. Broadening the filter helps against *known* strings only — `--phases exploring,coding,testing,awaiting-results,quality-gate,needs-human,completed` plus any off-spec value you have actually seen — and a newly invented one still slips, since the flag takes an explicit list with no "all".
+- **A slot that never transitions produces no events at all**, however wide the filter. Only status-file mtime against the clock catches this: see the two-check staleness rule in the `.epic-status.json` spec below, and the sweep in `/bip-conductor-poll` that is the actual liveness check. Don't let a quiet log read as a healthy fleet.
 
 **Checking whether the watcher is running:** use `ps -eo pid,args | grep -E '^\s*[0-9]+ bip epic watch'`, **not** `pgrep -af 'bip epic watch'` — the spawn prompt in `/bip-conductor-spawn` contains the literal string `bip epic watch` (in its PUSH NOTIFICATION block), so `pgrep -af` matches every live worker and returns tens of KB of prompt text.
 To also receive events as Claude Code notifications when that pipeline is reliable, additionally start a Monitor with `command: tail -F .epic-notifications.log` and `persistent: true`.
@@ -432,19 +420,9 @@ nohup bip epic watch --poll >/dev/null 2>&1 &
   When adding a new fleet-state file, ask which of the two paths it's written to before deciding whether it needs a gitignore line.
 - **Staleness is two checks, and the second one is what catches a slot that stops reporting.**
   - *No tmux window, status file older than 30 minutes* → abandoned slot, a cleanup candidate (Step 6).
-  - ***Window still open***, *status file older than ~45 minutes* → possibly **stalled**. That needs a human, not cleanup: surface it in Step 5's dashboard and never clean it up.
-
-  Why the second check has to exist: measured on a live fleet 2026-09-01, a slot ran **six hours** on `phase: exploring` with `updated_at` frozen at a placeholder `2026-09-01T00:00:00Z` and its tmux window open throughout. Every staleness rule documented here required *no tmux window*, so none could fire — and **`bip epic watch` could not fire either, because it is transition-based and the phase never changed.** A slot that stalls, or merely stops reporting, without ever transitioning is invisible to the whole monitoring design.
-
-  **Check file mtimes, not the `updated_at` field** — a worker that writes a placeholder timestamp defeats the field but not the mtime. Check *both* files, because the pair identifies which failure you have:
-  ```bash
-  find "$CLONE_ROOT"/*/.epic-status.json -mmin +45   # status not refreshed
-  find "$CLONE_ROOT"/*/.epic-worklog.md  -mmin +45   # no narrative progress either
-  ```
-  - status stale **and** worklog stale → genuinely stalled; escalate to the user.
-  - status stale, worklog **fresh** → the worker is alive and working and its status file is simply lying. Don't escalate this as a stall; nudge it to resume writing status. In the measured case the status file was 6h old while the worklog had been written 4 minutes earlier — the worker was mid-experiment the whole time.
-
-  Corollary, same root cause: **the `phase` field is not evidence that work is done.** A worker wrote `completed` while its issue-lead was still running the terminal ceremony and its PR was still open. Check the PR state (`gh pr view`), not the phase.
+  - ***Window still open***, *status file older than ~45 minutes* → possibly **stalled**. That needs a human, not cleanup: surface it in Step 5's dashboard and never clean it up. Every other staleness rule here requires *no tmux window*, and `bip epic watch` is transition-based, so without this check a slot that stalls (or merely stops reporting) with its window open and its phase unchanged is invisible to the whole monitoring design — measured 2026-09-01, six hours on `phase: exploring`.
+  - **Check file mtimes, not the `updated_at` field** — a worker that writes a placeholder timestamp defeats the field but not the mtime. Check both `.epic-status.json` and `.epic-worklog.md`: the pair separates a genuine stall from a worker that is alive but not reporting. `/bip-conductor-poll`'s liveness sweep is the executable version — run it there, not here.
+  - Corollary, same root cause: **the `phase` field is not evidence that work is done.** A worker wrote `completed` while its issue-lead was still running the terminal ceremony and its PR was still open. Check the PR state (`gh pr view`), not the phase.
 - `remote_run` optional — set when work dispatched to remote server
 - `quality` optional — set during `quality-gate` phase:
   ```json

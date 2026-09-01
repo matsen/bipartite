@@ -105,7 +105,7 @@ The durable/transient test is the deliverable: any nudge that changes what the w
 Facts that leave the deliverable unchanged (host load, a peer's timing, a dependency that just landed) may be message-only.
 Delivery lands at the worker's next tool call, not instantly. Fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`; wait for the worker's own loop) only once you have established the target is genuinely unaddressable, per the rule immediately below.
 
-**Addressing — read this before any `SendMessage`; a mid-cycle conductor got it wrong with the weaker version of this note in front of it.**
+**Addressing — read this before any `SendMessage`.**
 Read the address off `ListAgents`' own row, or off the message you are replying to. **Never compose it.** Worker names are `<clone>-<suffix>` (`fir-b3`, `teak-37`, `spruce-66`); the bare clone name and the tmux window name are both *not* addresses. **A failed send to a name you typed yourself is a typo, not a channel limit** — re-run `ListAgents` and use the exact string. Never conclude from one failed send that workers are unreachable. (An address that came from a self-registration file and stops working is the different case: it drifted, so skip silently and don't hunt a substitute.)
 Skip the nudge entirely for a worker in `awaiting-results` with a live `check_cmd`; use `notify_when_idle: true` instead of "tell me when this worker finishes" — main-conversation only, this-machine only, one-shot.
 
@@ -162,7 +162,7 @@ Same cleanup as above.
 
 #### The liveness sweep — run this every poll, it is the only stall detector
 
-`bip epic watch` reports transitions, so a slot that stops transitioning is invisible to it. Nothing else detects that, and a stale status file means two opposite things depending on whether a tmux window is open — so the window check belongs *inside* the sweep, not in prose beside it. This is the same 30-minute rule as above, extended to the window-open case rather than a second competing rule:
+`bip epic watch` reports transitions, so a slot that stops transitioning is invisible to it and nothing else detects that. A stale status file means two opposite things depending on whether a tmux window is open, so the window check belongs *inside* the sweep. Same 30-minute rule as above, extended to the window-open case rather than a second competing rule:
 
 ```bash
 for f in "$CLONE_ROOT"/*/.epic-status.json; do
@@ -185,7 +185,7 @@ find "$CLONE_ROOT/<clone>/.epic-worklog.md" -mmin +45   # empty output = worklog
 - **status stale + worklog stale** → genuinely stalled. Escalate to the user. Still never clean up: the window is open and may hold typed human input.
 - **status stale + worklog fresh** → alive and working; the status file is simply lying. Not a stall — nudge it to resume writing status, and don't report it as dead.
 
-Use mtimes, not the `updated_at` field: a worker that writes a placeholder timestamp defeats the field but not the mtime. Measured 2026-09-01 — a slot's status file was 6h old and frozen on `phase: exploring` while its worklog had been written 4 minutes earlier.
+Use mtimes, not the `updated_at` field: a worker that writes a placeholder timestamp defeats the field but not the mtime (measured: a status file 6h old and frozen on `phase: exploring` while its worklog had been written 4 minutes earlier).
 
 See `/bip-conductor`'s `.epic-status.json` spec for the `phase`-is-not-evidence corollary.
 
