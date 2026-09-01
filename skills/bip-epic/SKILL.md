@@ -224,6 +224,22 @@ Putting the question to the user yourself costs them a duplicate — on 2026-08-
 Asking the sender costs one message, resolves the ambiguity at its source, and keeps the anti-substitution rule intact instead of trading it against the user's attention.
 This is the rule regardless of whose column the decision sits in: role boundaries determine who *puts* a question to the user, and this determines what to do with an unmarked answer, which is a separate question that survives any reassignment of the first.
 
+### Two cheap tests for corrections and for unifications
+
+Both of these are answerable **in about a minute by someone who does not yet understand the finding**, which is what makes them usable — over-unification and motivated correction both happen under time pressure, and a rule that requires understanding the result first is useless exactly when it is needed.
+
+**Before accepting a critique of a result: would this objection have been raised if the result had come out the other way?**
+This separates a validity critique from moving the goalposts, and pre-registration does not.
+Pre-registration protects against choosing a lens after seeing the numbers; it does not protect a measurement from having been confounded, and those are different failures.
+"The median is -5.4, so let me find a weighting that shrinks it" fails the test. "The two engines did 13x different amounts of work, so the quantity the rule was applied to may not be the quantity it was designed to judge" passes it — that would be worth stating at +5.4 exactly as much as at -5.4.
+A critique that only occurs to you when the sign is inconvenient is the thing pre-registration forbids; one that survives the counterfactual is reporting.
+
+**Before merging two findings into one story: do their remedies land in the same subsystem?**
+A shared *symptom* is not a shared *mechanism*, and the remedy test is the cheap tell.
+Worked case, 2026-08-31: two failures both presented as "phyz performs far less topology search than its configuration implies" and were written up as one pattern. They were not — one was a search that ran and was cut short by an adaptive stopping rule, the other a search that never started because the tree handed to it had immovable branches. **Fixes in different subsystems, so not one pattern**, and presenting them as one invites a single fix that addresses neither. The honest form was "two independent defects with a common symptom", which is still a strong claim and a more useful one.
+
+Three appealing unifications needed narrowing in a single day on `matsengrp/phyz`, and in each case they were proposed by one session and enthusiastically endorsed by the other within minutes. **That is the argument for these being written down rather than held as either session's habit:** the session best placed to apply the check was, each time, the one that had just proposed the unification.
+
 ### Step 6: Hand spawn intent to the conductor
 
 For each issue judged ready (unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:
@@ -252,6 +268,10 @@ Three instances in one day on `matsengrp/phyz`: a brief asserted its issue "queu
 The failure is quiet — a brief is read once, by a worker with no way to know which of its claims were true only at authoring time.
 Write instead the collision constraint in 4b's vocabulary ("cannot run concurrently with `iN`, because both edit X"), which is a property of the two issues and stays true, and leave "is `iN` running right now, and is it approved" to the session that can see the answer.
 The same goes for superlatives about queue position: "no 4a gate, no unresolved 4b collision" is durable; "the most spawnable item on the board" is a snapshot wearing a recommendation's clothes.
+
+**The general form is: a brief may only assert what has stopped moving.** Another issue's gate status is the common case; **an unlanded result is the same failure with a longer fuse.** A brief whose motivation cites numbers still in review will not fail at launch — it fails hours in, when a worker discovers the finding it was built on was restructured during review, and the cost lands far from its cause. Observed 2026-08-31: an issue was flagged as the highest-value item on the board and briefing was deliberately held until the PR it depended on merged; that PR's skeptic round then withdrew the exact result the brief's redesign was anchored to. **The hold cost hours. Briefing would have cost a worker's day and produced an experiment answering a question that no longer existed.** Wait for the merge.
+
+**Name the host class for anything with real compute.** A worker reads its issue body and its brief; neither tells it whether the machine it landed on is a shared interactive workstation or a dedicated compute host, and there is no way for it to infer this. Say "run the sweep on an orca, not on `pax`" in as many words. Observed 2026-08-31: a brief omitted it and its worker launched a 391-job sweep locally, taking the shared workstation to load ~11 before killing it — behaving reasonably on the information it had.
 **Do not spawn or touch tmux/clones yourself** — that's the conductor's job, and mixing the two roles back together is exactly the failure mode this split exists to avoid.
 
 **Check whether a conductor session exists before announcing a handoff into a void** — `ListAgents` for one.
