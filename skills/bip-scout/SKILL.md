@@ -32,7 +32,11 @@ bip scout
 **If the command fails**, check for common issues:
 - Missing `servers.yml`: "No servers.yml found — see `bip scout --help` for config location."
 - SSH authentication failure: Report the error and suggest checking SSH agent and `~/.ssh/config`.
-- All servers offline: Report that all servers are unreachable and suggest checking network/VPN.
+- All servers offline, or several at once: **do NOT report an outage — verify one host by direct `ssh <host> uptime` first.**
+  `bip scout` reports a pre-auth SSH throttle as `OFFLINE` rather than as an error, so a burst of scouts produces a false fleet-wide outage.
+  Observed 2026-08-31: five hosts (orca01, orca03, orca04, orca05, conatus) all reported `OFFLINE`; every one answered a direct `ssh` seconds later.
+  Cause inferred rather than proven — the user's `CLAUDE.md` records that Fred Hutch hosts throttle pre-auth when connections are too frequent, and that scout run followed several others in quick succession.
+  Only report an outage once a direct `ssh` also fails; a genuine one will fail that too, so the check costs a second and the alternative is standing down a fleet that is up.
 
 ### Step 2: Parse JSON Output
 
