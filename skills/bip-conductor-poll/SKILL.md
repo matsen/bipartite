@@ -73,7 +73,7 @@ Brief:
 > - `active_items`: per active slot — clone, issue, phase, stop_reason, lead assessment (one line each)
 > - `action_candidates`: pending spawn intent directly in `$CLONE_ROOT/.spawn-prompts/` (either `<N>.md` or `spawn-<N>.txt` — check both) waiting to be executed — ignore anything under `.spawn-prompts/consumed/`, that's already-launched intent, not pending; merged PRs that should trigger slot cleanup.
 >   (Deciding *which* open issues are ready to spawn is `/bip-epic`'s call, not this poll's — report raw signal, not a readiness verdict.)
-> - `surprises`: `needs-human`/`completed` slots, stale status files, contradictions, `RECOMMEND DEEPER LOOK` flags
+> - `surprises`: `needs-human`/`completed` slots, stale status files, contradictions, `RECOMMEND DEEPER LOOK` flags. Include the liveness sweep's result: any slot whose `.epic-status.json` mtime is >45 min old, and whether its `.epic-worklog.md` is also stale (stalled) or fresh (alive but not reporting). Also flag any `phase` value outside the seven spec-valid ones — an off-spec string silently escapes `bip epic watch`'s `--phases` filter.
 
 If the report has zero `changes_since_baseline` and zero `surprises`, the poll output is one line: "All quiet."
 
@@ -156,6 +156,24 @@ rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog
 
 Also clean up stale slots: no tmux window AND `.epic-status.json` older than 30 minutes.
 Same cleanup as above.
+
+#### The liveness sweep — run this every poll, it is the only stall detector
+
+`bip epic watch` reports transitions, so a slot that stops transitioning is invisible to it. This sweep is what catches that, and it costs two `find` calls:
+
+```bash
+find "$CLONE_ROOT"/*/.epic-status.json -mmin +45   # status not refreshed
+find "$CLONE_ROOT"/*/.epic-worklog.md  -mmin +45   # no narrative progress either
+```
+
+Use mtimes, not the `updated_at` field — a worker that writes a placeholder timestamp defeats the field but not the mtime. Read the pair:
+
+- **status stale + worklog stale** → genuinely stalled. Escalate to the user; do not clean up (its window is open and it may hold typed human input).
+- **status stale + worklog fresh** → alive and working, status file simply lying. Not a stall: nudge it to resume writing status, and don't report it as dead.
+
+Measured 2026-09-01: a slot showed a 6-hour-old status file frozen on `phase: exploring` while its worklog had been written 4 minutes earlier — mid-experiment the whole time. The inverse reading would have been an escalation about a healthy worker; the naive reading (trusting the phase field) reported a live slot as `exploring` for six hours.
+
+See `/bip-conductor`'s `.epic-status.json` spec for the full two-check rule and the `phase`-is-not-evidence corollary.
 
 If a merge closes an issue tracked in an EPIC, that's signal `/bip-epic` needs, not something to act on here — surface it under `changes_since_baseline` and move on.
 
