@@ -185,6 +185,14 @@ find "$CLONE_ROOT/<clone>/.epic-worklog.md" -mmin +45   # empty output = worklog
 - **status stale + worklog stale** → genuinely stalled. Escalate to the user. Still never clean up: the window is open and may hold typed human input.
 - **status stale + worklog fresh** → alive and working; the status file is simply lying. Not a stall — nudge it to resume writing status, and don't report it as dead.
 
+**A fresh worklog is necessary and not sufficient, so add a third leg: check that the work still exists.** "Worklog fresh" bounds how long ago the worker last *thought*, not whether its background job is still alive — a worker can write a perfectly accurate "waiting on the sweep to finish" entry and then wait forever on a job that already died. Measured 2026-09-01: a slot passed the worklog check, and its pane said "3 shells still running", while `ps` showed no process at all under its clone and machine load was 0.31.
+
+```bash
+ps -eo pid,args | grep -F "$CLONE_ROOT/<clone>" | grep -v grep   # any compute still alive?
+```
+
+If the worklog says it is waiting on something and no process matches, it is stalled regardless of the mtimes: tell it the job is gone, and where its output actually did or did not land. Do not trust a pane's "N shells still running" indicator — it goes stale when the session idles.
+
 Use mtimes, not the `updated_at` field: a worker that writes a placeholder timestamp defeats the field but not the mtime (measured: a status file 6h old and frozen on `phase: exploring` while its worklog had been written 4 minutes earlier).
 
 See `/bip-conductor`'s `.epic-status.json` spec for the `phase`-is-not-evidence corollary.
