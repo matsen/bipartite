@@ -60,6 +60,17 @@ When reviewing a draft, flag these specific patterns:
 - Test-plan items that are mathematical identities rather than bug-catching tests.
 - Revision-history framing — "Reviewer follow-up:", "Human-flagged follow-up:", "Update:", a growing "History" section, or "originally X, now Y" phrasing — instead of one narrative describing the current state. Offer to rewrite from scratch rather than patch in place.
 
+## Before citing a measurement
+
+A number in an issue body licenses work. Before one goes in, establish two things about it that its presence in a file does not establish on its own.
+
+- **Is it derived from the data, or from the configuration?** A field can vary across runs, carry a plausible name, and still be a restatement of the flags. Measured on `matsengrp/phyz` 2026-09-02: `--summary-tsv`'s `search_rounds` read exactly 42 in all 43 cells of a sweep spanning 51-351 leaves, 9 parameter values and 3 seeds, because it resolved to `max_failures + free_pool_slots` — inputs the operator had chosen. It looked like search depth and was an echo of the command line. The cheap tell is to predict the value from the flags alone before opening the file; if you can, it is not evidence. A field that varies with `num_leaves` is the harder case, because tracking one input looks more like measurement than tracking none.
+- **Does it reach disk, where a reader can open it?** Four separate times in one day the answer was no, in four different ways: a cited `results/raw/` path was gitignored and absent from a fresh clone; the stderr files holding an experiment's primary evidence matched no `*.tsv` negation at any depth; a harness discarded the subprocess stdout carrying the column it was there to collect; and a rescued copy lived at a path nothing committed referenced. Each was invisible in the same way — the run produced the quantity, and nothing that survived the run recorded it.
+
+The two failures compose, and the composition is the one to watch for: a number that is a configuration artifact **and** unreadable by the next person reads exactly like a hard-won result, because nobody can check it. Verify the capture path end to end on one case before running anything at scale, and quote the command that produced the number rather than the file it landed in.
+
+This is the evidence-side twin of the guard rule above: there, a check that cannot read its input reports a safety it never established; here, a citation that cannot be opened reports an observation nobody made.
+
 ## Before writing a correction or a unification
 
 Three checks, each answerable in about a minute by someone who does not yet understand the finding — which is what makes them usable, since motivated correction and over-unification both happen under time pressure.
