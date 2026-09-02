@@ -163,6 +163,17 @@ git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"
 ```
 
+**Before returning a clone to the pool, check what untracked output it is carrying.**
+Reclaiming is safe for tracked files and **silently destructive for untracked ones** — and untracked is where experiment output lives *by policy*. Nothing in the reclaim removes it, so it survives until the next spawn into that clone quietly destroys it. **A free clone is not an empty clone.**
+
+```bash
+du -sh "$CLONE_ROOT/<clone>"/experiments/*/results 2>/dev/null   # anything sizeable here?
+```
+
+If a directory turns up, the question is not whether it looks disposable — it always does — but **whether anything cited points into it**. Check the open issues and PRs for the experiment's name before reusing the clone. If something cites it, copy it to `$CLONE_ROOT/.preserved/<name>/` with a README saying what cites it and why it is not committed; that path is outside every clone's git tree, so no `git clean` can reach it.
+
+Measured 2026-09-02: a clone was returned to the pool still holding the **only** copy of a 391-job sweep's output — including the exact file a live issue cited twice in its load-bearing argument, on a gitignored path absent from the repo. The next spawn into that clone would have destroyed it, and nothing in the reclaim would have warned anyone. The tell was never the clone's identity; it was that an open issue's citation resolved to a path only that clone had.
+
 Also clean up stale slots: no tmux window AND `.epic-status.json` older than 30 minutes.
 Same cleanup as above.
 
