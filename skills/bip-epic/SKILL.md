@@ -198,6 +198,27 @@ Work described only in body prose — "root-causing this is not yet filed", "a f
 File it, and if that has to wait, put it in the Open work checklist as an explicit `**UNFILED**` bullet so the dashboard shows a gap rather than hiding one.
 This is the same shape as an under-specified citation (Step 4b): it looks like an address and isn't.
 
+**Fleet *policy* is not fleet state, and this rule does not cover it — ask for it and write it down.**
+The prohibition above is about facts that *rot*: which clone holds which issue, what is running where.
+It says nothing about how the fleet *works* — who lands PRs, whether CI exists, what a spawn prompt standardly instructs, what the reclaim rules are.
+That second category is stable, and an epic session that conflates the two ends up refusing to learn it.
+Measured 2026-09-02: the epic told its user "the bottleneck is the merge queue" and recommended they merge three PRs by hand, because it did not know workers land their own PRs via `/bip-pr-land` — a standing instruction in every spawn prompt, unchanged for the whole session.
+The tell is the tense: *"cedar is running #2143"* rots by morning; *"workers land their own PRs"* does not.
+Ask the conductor for policy once, keep it, and re-ask only when a spawn prompt's shape visibly changes.
+
+**Type every collision claim as VERIFIED or FORECAST when you send it.**
+A claim resolved against a landed diff and a claim about where a not-yet-written edit will land are different objects, and sending them in the same voice makes the receiver treat both as constraints.
+Measured across one session: six collision claims, five of which dissolved on inspection — p2159/#2162 hunks were disjoint, #2157 never made the `src/` edit its Phase 2 predicted, #2160-R4 and #2162 turned out to exercise different code paths, and two `.gitignore` races were in different files.
+The one that survived had a diff to check against.
+Same-file and same-struct reasoning is a weak signal that reads as a strong one, and the conductor can resolve it in a single command at spawn time — so the useful division is that you raise the semantic question and mark your confidence, rather than spending a round-trip pre-verifying each one.
+Note the inverse trap too: two modules can export the same type name (`SearchResult` in both `tree_search` and `search_dispatch`), so a name match is not a collision either.
+
+**A number that crosses a session boundary loses its provenance unless you attach it.**
+Re-derive anything load-bearing that arrived from a conductor, a worker, or your own earlier round, and quote the command.
+Measured the same day: an inherited `12M` for a preserved artifact set was actually `6.0M` (a `find` list that pulled in a sibling directory), a subagent's per-topology timing was ~20% high, and an "it costs nothing to capture" assertion turned out to describe a column the harness was discarding before it reached disk.
+None changed a conclusion; all three would have shipped into an issue body unchallenged.
+See `PROSE-DISCIPLINE.md`'s "Before citing a measurement" for the issue-body form of this — the cross-session form is the same failure with a different surface.
+
 **Fleet state is derived, never authored — don't let it back into the body.**
 Which clone holds which issue, which slots are free, which tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's `/bip-conductor`'s Step 5 dashboard) whenever you need it.
 Never write it into an EPIC body or a continuation doc — it goes stale within a day and there is no mechanism to notice, which is exactly the failure a hand-maintained clone table caused when it went stale twice in one day.
