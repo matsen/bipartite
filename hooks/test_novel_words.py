@@ -157,6 +157,43 @@ class NovelWords(unittest.TestCase):
         ])
         self.assertEqual(0, code)
 
+    def test_display_math_is_not_prose(self) -> None:
+        code, message = self.run_hook([
+            user("show the ratio"),
+            assistant("The ratio is\n$$\\frac{a}{b} \\qquad \\qquad (1)$$\nas above."),
+        ])
+        self.assertEqual(0, code, f"reported: {message}")
+
+    def test_inline_math_is_not_prose(self) -> None:
+        code, _ = self.run_hook([
+            user("what is it"),
+            assistant("With $\\lambda_{obs}$ fixed and $\\lambda_{obs}$ known, it holds."),
+        ])
+        self.assertEqual(0, code)
+
+    def test_latex_commands_outside_math_are_not_prose(self) -> None:
+        code, _ = self.run_hook([
+            user("how do I space it"),
+            assistant("Use \\qquad there, and \\qquad again after the fraction."),
+        ])
+        self.assertEqual(0, code)
+
+    def test_html_tag_names_are_not_prose(self) -> None:
+        """The tag is markup; the text between tags is prose and still counts."""
+        code, _ = self.run_hook([
+            user("show it"),
+            assistant('Here <details open="true">x</details> and <details>y</details>.'),
+        ])
+        self.assertEqual(0, code)
+
+    def test_text_inside_tags_still_counts(self) -> None:
+        code, message = self.run_hook([
+            user("show it"),
+            assistant("Here <b>crossings</b> and also <b>crossings</b> again."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
     def test_paths_are_not_prose(self) -> None:
         code, _ = self.run_hook([
             user("where is it"),
