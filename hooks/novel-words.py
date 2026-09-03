@@ -38,13 +38,20 @@ MIN_LENGTH = 4
 MAX_LENGTH = 15
 MAX_REPORTED = 12
 
-# Spans whose words are not the agent's prose: code, paths, identifiers,
-# anything quoted from elsewhere.
+# Spans whose words are not the agent's prose: code, markup, paths,
+# identifiers, anything quoted from elsewhere.
 FENCED = re.compile(r"```.*?```", re.DOTALL)
 INLINE_CODE = re.compile(r"`[^`]*`")
 QUOTED_LINE = re.compile(r"^\s*>.*$", re.MULTILINE)
 URL = re.compile(r"https?://\S+")
 PATH = re.compile(r"[~/\w.-]*/[\w./-]+")
+# LaTeX. The hook's first firing in another session was on "qquad", from a
+# \qquad inside display math. Maths is code that happens not to sit in a
+# fenced block.
+DISPLAY_MATH = re.compile(r"\$\$.*?\$\$|\\\[.*?\\\]", re.DOTALL)
+INLINE_MATH = re.compile(r"\$[^$\n]+\$|\\\(.*?\\\)", re.DOTALL)
+CONTROL_SEQUENCE = re.compile(r"\\[a-zA-Z]+")
+HTML_TAG = re.compile(r"</?[a-zA-Z][^>]*>")
 WORD = re.compile(r"[a-z]+")
 
 VOWEL = re.compile(r"[aeiouy]")
@@ -91,8 +98,9 @@ def inflection_of_seen(word: str, vocabulary: set[str]) -> bool:
 
 
 def prose_only(text: str) -> str:
-    """`text` with code, quotations, URLs and paths removed."""
-    for pattern in (FENCED, INLINE_CODE, QUOTED_LINE, URL, PATH):
+    """`text` with code, markup, quotations, URLs and paths removed."""
+    for pattern in (FENCED, INLINE_CODE, QUOTED_LINE, DISPLAY_MATH,
+                    INLINE_MATH, CONTROL_SEQUENCE, HTML_TAG, URL, PATH):
         text = pattern.sub(" ", text)
     return text
 
