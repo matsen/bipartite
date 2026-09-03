@@ -128,8 +128,8 @@ Skip the nudge entirely for a worker in `awaiting-results` with a live `check_cm
 
 5. **Recently landed** (brief): PRs merged since last poll, only if noteworthy.
 
-6. **Execute pending spawns**: If spawn intent files and idle clones both exist, propose running `/bip-conductor-spawn` for them.
-   Wait for confirmation.
+6. **Execute pending spawns**: If spawn intent files and idle clones both exist, run `/bip-conductor-spawn` for them and report after — placement and timing are the conductor's call, not a question to hold the fleet on (see `/bip-conductor`'s "Arbitration"). Escalate only a scientific question, or a risk of an actual problem: data loss, a clobbered checkout, two slots on one deliverable. Rebase friction is not that.
+   **But a full queue is not a reason to spawn.** Whether a brief is worth a slot belongs to whoever originated it — the epic agent for its own EPIC, the user for a direct or `/bip-ms`-originated request. Don't drain the queue because it is there.
 
 ### Housekeeping (do silently, don't report unless problems)
 
@@ -165,6 +165,8 @@ rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog
 
 **Before returning a clone to the pool, check what untracked output it is carrying.**
 Reclaiming is safe for tracked files and **silently destructive for untracked ones** — and untracked is where experiment output lives *by policy*. Nothing in the reclaim removes it, so it survives until the next spawn into that clone quietly destroys it. **A free clone is not an empty clone.**
+
+**The same trap catches `.epic-worklog.md`, and it is gitignored rather than untracked — so a `git status` check does not show it.** A slot that lands a PR needs nothing; a slot that **stands down or escalates** carries its entire value there, and `/bip-conductor-spawn`'s prep deletes it on the next assignment. Copy it to `$CLONE_ROOT/.preserved/<slug>/` before reclaiming. Measured 2026-09-03: eleven were rescued in one stand-down, the largest 269 lines from a slot that wrote no code at all.
 
 ```bash
 # gitignored OR untracked output under experiments/*/results

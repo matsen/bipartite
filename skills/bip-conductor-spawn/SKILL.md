@@ -44,11 +44,10 @@ Don't narrow this check to one pattern.
 - **Intent file present**: it is the base for the `IMPORTANT CONTEXT` section of Step 4's prompt below — don't re-derive what it already says.
   Your job is to check it against live fleet state (Step 2b) and append fleet facts it structurally couldn't know: which host/clone is actually free, a concurrent worker editing an overlapping file, a build running on a target remote host.
   Mark the intent file consumed after a successful launch (Step 6) — it has done its job, but the directory lives outside git, so this is a move to `consumed/`, not a delete (see Step 6).
-- **No intent file** (conductor-initiated respawn, routine maintenance, quick fix with no upstream epic session): compose the prompt from the issue directly, same as before.
-  This is the escape hatch, not the default path.
+  **An epic-written intent file must carry an `EPIC: <N>` line.** It is what lets the conductor count live slots by EPIC (`/bip-conductor` Step 5) — the only fleet-side view that makes topic drift visible, since the conductor holds no topic boundary itself. If a brief arrives without one, ask the epic rather than inferring it from the issue; a guess defeats the check. Absence is also legitimate for a user-originated spawn, which is why the count reports `(no header)` as its own row rather than an error.
+- **No intent file** — compose the prompt from the issue directly. **This is a first-class path, not an escape hatch.** It covers a user-originated spawn (the user asks directly, often from a `/bip-ms` session where issues appear as the science moves), a conductor-initiated respawn, and routine maintenance. A user-originated issue **may belong to no EPIC at all, and that is normal** — never reject it, defer it, or route it to the epic for a membership ruling. See `/bip-conductor`'s "Two intake paths" for who owns scope on each.
 
-If the intent conflicts with current fleet state in a way that isn't a mechanical fix (e.g. it asks for a clone/host that's genuinely contended, not just occupied by a finished session) — don't resolve it yourself.
-State the conflict to the user and let them decide; this mirrors the user-confirmation gate every spawn already goes through.
+If the intent conflicts with current fleet state, resolve it from measured state and say so in your report — a contended host or a taken clone is a placement decision, not a question for the user. Escalate only if either resolution risks an actual problem (see `/bip-conductor`'s "Arbitration").
 
 ## Workflow
 
@@ -562,6 +561,8 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 mark_spawn_intent_consumed "$INTENT"
 ```
 
+**Verify the worker actually started before reporting it live.** A prompt-ingested session and a working one are indistinguishable by context usage: **`context used N%` proves the prompt was read, not that work began.** Check for a created branch, or a tool call in the pane. Measured 2026-09-03: four spawns were reported as live for ~15 minutes while all four sat at a folder-trust dialog with their prompts queued, every one showing a plausible ~34% context.
+
 Report to the user:
 - Which clone was spawned
 - Which issue it's working on
@@ -582,7 +583,12 @@ REPO=$(jq -r .github_repo .epic-config.json)
 cd "$CLONE_ROOT"
 git clone "git@github.com:$REPO.git" <new-name>
 ```
-After creating, add the new name to `clone_names` in `.epic-config.json`.
+After creating, **two registration steps, and skipping either produces a slot that fails silently**:
+
+1. **Add the name to `clone_names` in `.epic-config.json`.** `bip spawn` does not consult the registry, so an unregistered clone spawns fine — but Step 1's idle-clone *selection* iterates `clone_names`, so the slot is free and **invisible to the conductor**. Measured 2026-09-03: three clones were created and only two registered; the third read as "no free slots" at the exact moment headroom was needed.
+2. **Trust the directory before spawning into it.** A fresh clone has no `hasTrustDialogAccepted` entry in `~/.claude.json`, so `claude` opens on *"Quick safety check: Is this a project you created or one you trust?"* and **queues the prompt behind a modal dialog.** The window exists, the session is up, and no work starts. Either spawn once and answer the dialog, or confirm the entry exists first.
+
+**If you must answer that dialog from the conductor, read which option is highlighted first — never send a blind `Enter`.** The default is not stable across windows: `grep -nE 'No, exit|Yes, I trust' ` the pane, then send `Down` before `Enter` when `No, exit` is the highlighted row. Measured 2026-09-03: a blind `Enter` intended to rescue four blocked workers selected `No, exit` in three of them and quit the sessions it was rescuing.
 
 **Worktree mode** — no registration needed; worktrees are created on demand in Step 1 and named `issue-<N>`.
 No config changes required.

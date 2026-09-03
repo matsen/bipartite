@@ -16,6 +16,53 @@ Use this at **session start** to establish fleet context.
 For mid-session updates, use `/bip-conductor-poll`.
 To spawn work, use `/bip-conductor-spawn`.
 
+## "epic" names three different things
+
+Keep them apart; conflating them produces malformed questions ("does epic machinery
+apply to non-epic work?").
+
+| term | what it is |
+|---|---|
+| **an EPIC** | a GitHub tracking issue for a programme of work -- `#369`, `#285`. Determines *topic membership*. A repo can have many open at once (8 on `matsengrp/phyz`, 2026-09-03). |
+| **the epic agent** | a `/bip-epic` session, scoped to **exactly one** EPIC issue, which is its exclusive purview. |
+| **the slot protocol** | `.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, phase transitions, push notifications, `bip epic watch`. |
+
+**The slot protocol is per-slot work tracking and is source-independent** -- it applies
+to every spawn regardless of where the work came from. Its `.epic-` filename prefix is
+a legacy misnomer borrowed from the other two senses; it is not "epic machinery" and
+must not be skipped for work that no epic agent originated. Renaming it is not worth
+it: 195 textual references across 15 skills, a compiled `epicStatusName` constant in
+`cmd/bip/epic_watch.go`, gitignore entries in every consuming repo, and live workers
+reading those paths mid-run.
+
+**Currently one epic agent per conductor.** What N would additionally require --
+`.epic-session` holding a single address, relay routing, cross-EPIC collision
+ownership, and the central-clone assumption -- is sketched in `matsen/bipartite#211`.
+Don't build toward it here.
+
+## Two intake paths, and the scope test differs by source
+
+Work reaches a slot two ways. **Which one it came from determines who owns scope**, and
+getting this wrong in either direction is a real failure mode.
+
+- **Epic-originated** -- the epic agent wrote a brief to `$CLONE_ROOT/.spawn-prompts/`.
+  The epic owns topic scope; it is scoped to one EPIC and is responsible for staying
+  inside it. The conductor verifies the *mechanical* things only: gates and staleness,
+  host and slot availability, file collisions.
+- **User-originated** -- the user asks for a spawn directly, often from a `/bip-ms`
+  session where issues appear as the science moves. There is no brief file and **there
+  may be no EPIC at all.** The user owns scope.
+
+**Never reject, defer, or route-to-the-epic a user-originated spawn for lacking an
+EPIC, and never apply an EPIC-membership test to one.** An issue that belongs to no
+EPIC is normal on this path, not a defect. This matters because the opposite lesson is
+easy to overgeneralise: a conductor that has just watched an epic session drift across
+four EPICs will reach for a membership check, and applying it here blocks the user's
+own work.
+
+Both paths use the same slot protocol and the same spawn machinery. Only the scope
+question is answered differently.
+
 ## Role
 
 The conductor session owns the clone pool, tmux, and host state:
@@ -23,8 +70,9 @@ The conductor session owns the clone pool, tmux, and host state:
 - Runs the pre-launch staleness check before every spawn (is the named blocker actually still open?)
 - Executes spawns — composing the fleet-fact annotation on top of intent the epic already drafted, or from scratch for conductor-initiated work
 - Cleans up finished slots and sweeps unfiled draft issues, with a filed-vs-unfiled guard that never deletes authored-but-unfiled work
-- Never adjudicates a genuine resource conflict itself — states it and asks the user (see "Arbitration" below)
+- Resolves resource conflicts from measured fleet state and reports the call; escalates only when either resolution risks an *actual problem* (see "Arbitration" below)
 - Never does topic reasoning, and does not write code or create branches for numbered issues (light triage — reading files, checking CI output, running `gh` commands — is fine)
+- Holds **no topic boundary of its own** — the epic agent is scoped to one EPIC and owns that. What the conductor does own is *mechanical* sequencing: file collisions between slots, which is a question about paths rather than purpose
 
 ### The fleet/topic line
 
@@ -45,9 +93,11 @@ The user's summary was "I feel like I am having the same convo with two agents."
 
 ## Arbitration
 
-When two things want the same clone, cache, or host, or when the epic's spawn intent conflicts with what the conductor observes live, this skill does not run a heuristic to pick a winner.
-State the conflict plainly and ask the user.
-The user-confirmation gate every spawn already goes through is the same gate that resolves this — no separate arbitration rule is needed on top of it.
+When two things want the same clone, cache, or host, or when the epic's spawn intent conflicts with what the conductor observes live, **resolve it from measured state and report the call with its reasoning.** Don't hold the fleet idle waiting for an answer to a question about hosts and slots.
+
+Escalate only when resolving it either way risks an **actual problem**: data loss, a clobbered remote checkout, two slots owning one deliverable, or a scientific question about whether work is worth doing. **Merge and rebase friction is not that.** Serializing work to avoid a conflict usually costs more science than the conflict does, and the objective is science moving, not slots staying full — an idle slot is only waste when there is work that would move if it were used.
+
+Measured 2026-09-03: three separate stoppages were put to the user over placement and spawn approval, whose answer each time was that this is the conductor's job.
 
 ## Conventions
 
@@ -329,6 +379,14 @@ The dashboard is **slot-centric** — the epic's dashboard is issue-centric; thi
 
 **Pending spawn intent**: list any `.spawn-prompts/` files found in Step 3/4 (either naming pattern), with the available slots that could run them.
 
+**EPIC distribution**: one line counting live slots by the `EPIC:` header of the brief that spawned them, with user-originated slots as their own row:
+
+```
+EPIC #369: 5 slots    user/bip-ms: 2 slots    (no header): 1 slot
+```
+
+This is counting, not topic reasoning — the conductor holds no topic boundary (see "Two intake paths") and must not judge the distribution. But it is the one fleet-side signal that makes topic drift visible at all. Measured 2026-09-03: a single-epic session had **10 of 15 live slots outside its own EPIC**, spanning four EPICs, and nothing surfaced it for most of a day because no view counted this. A row reading `#369: 5, #285: 1, #543: 3, #678: 6` would have shown it on the first poll. `(no header)` is a real category, not an error — see the spawn skill's `EPIC:` requirement for why a brief might lack one.
+
 **Negative list**: also surface decisions already taken *against* an action, with reasons — sequencing already applied, an issue already stood down for a reason that would otherwise look resolved, and similar.
 This is the one category of fleet fact the epic (or a fresh conductor) cannot re-derive from `git`/`tmux`/`gh`: it's the absence of work, which leaves no trace in any of those.
 Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
@@ -337,14 +395,14 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 ### Step 6: Propose next action
 
 First, do housekeeping automatically (no need to ask):
-- **Clean up clones whose tmux window the user has already closed**:
-  - An **open tmux window** means the user is still using that clone — even if the agent completed and the PR merged.
-    The user often does follow-up work (filing next issues, inspecting results, ad-hoc commands).
-    **Never kill a tmux window.
-    Never clean up a clone that still has a tmux window open.**
-  - Only clean up clones with **no tmux window** (the user closed it):
-    - *Clone mode*: `git checkout main && git pull --ff-only`, clear `.epic-status.json`
-    - *Worktree mode*: `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`
+
+**Closing a finished worker's window is hygiene, not a decision to escalate.** The gate is not whether a window is open — it is whether anything in it is still wanted:
+- **Reclaim** when the issue is closed (check `gh`, not `phase`), the clone is on `main` and clean, work is preserved (below), and the prompt line holds nothing authored.
+- **Hold** when there is typed-but-unsubmitted input at the prompt. Read it with `grep '^>' | tail -1` on the prompt line itself — **not** `grep -A1`, which returns the border line *below* the prompt and reports every window as empty. The line also begins with `U+00A0` (bytes `302 240`), so `tr -d ' '` does not strip it and a `-z` test fails open; strip with Python `.strip()` and confirm with `od -c`. Measured 2026-09-03: this check held two windows carrying real authored intent that every other signal said were disposable.
+- **But a ralph-loop leftover is not authored intent, and cannot be told apart by reading the prompt line alone.** When a worker finishes and cancels its loop, the stop hook's next injection is left sitting unsubmitted — "check the fleet board for what's next" and similar. Treat a line as an artifact only when *all three* hold: the pane shows a completion marker (`Cancelled the Ralph loop` / `ISSUE WORK COMPLETE`), the line is a self-directed fleet query, and the work is independently verified preserved. Pane-grep is the weakest of the three and must never be the only one — a completion marker scrolls off. Without this refinement every completed window becomes permanently unreclaimable.
+- Reclaim: *clone mode* `git checkout main && git pull --ff-only`, remove `.epic-status.json`; *worktree mode* `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`.
+
+**Preserve the worklog BEFORE reclaiming any slot whose work is not landing in a PR.** A slot that finishes via PR needs nothing — git holds it. A slot that stands down or escalates carries its entire value in `.epic-worklog.md`, which is gitignored, lives in a pooled clone, and is deleted by `/bip-conductor-spawn`'s own prep on the next assignment. Copy it to `$CLONE_ROOT/.preserved/<slug>/` with a provenance README first. Measured 2026-09-03: eleven such worklogs were rescued during one stand-down, the largest being 269 lines from a slot that wrote **no code at all** — its whole contribution existed only in that file, and reclaiming first would have destroyed it leaving no trace it had existed.
 
 Then propose executing pending spawn intent:
 
@@ -354,8 +412,9 @@ Then propose executing pending spawn intent:
 Keep the proposal at that altitude: which intent is pending, which slots are free, and any ordering constraint from the epic's Step 4b.
 If the user asks "why this one?", point at the brief rather than summarizing it — the brief is the artifact, and a conductor paraphrase of it is strictly worse than the thing itself.
 
-Wait for user confirmation, then run `/bip-conductor-spawn` (do NOT improvise tmux/claude commands).
-Deciding *which other* open issues should be spawned next isn't this skill's call — that's `/bip-epic`.
+Then run `/bip-conductor-spawn` (do NOT improvise tmux/claude commands). Scout, place, spawn, and report after — a ready brief sitting next to an idle slot is the failure this altitude exists to prevent, and the proposal above is a report, not a gate.
+
+Deciding *which other* open issues should be spawned next isn't this skill's call — that's `/bip-epic`. **Nor is "is this worth spawning at all"**: a ready brief is not by itself a reason to spawn, but that judgment belongs to whoever originated it (see "Two intake paths" above). Don't drain a queue because it is full.
 
 If a live worker's scope needs correcting *before* its next natural stopping point: the epic decides whether it's durable, drafts the line, and the conductor delivers it — see "Correcting a live worker" above for the mechanics and where the durable record goes.
 
