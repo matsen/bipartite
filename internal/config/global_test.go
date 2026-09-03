@@ -78,7 +78,6 @@ func TestLoadGlobalConfig_Valid(t *testing.T) {
 
 	cfgData := GlobalConfig{
 		NexusPath:     "~/re/nexus",
-		S2APIKey:      "test-s2-key",
 		ASTAAPIKey:    "test-asta-key",
 		SlackBotToken: "xoxb-test",
 		GitHubToken:   "ghp_test",
@@ -106,9 +105,6 @@ func TestLoadGlobalConfig_Valid(t *testing.T) {
 		t.Errorf("NexusPath = %q, want %q", cfg.NexusPath, wantPath)
 	}
 
-	if cfg.S2APIKey != "test-s2-key" {
-		t.Errorf("S2APIKey = %q, want test-s2-key", cfg.S2APIKey)
-	}
 	if cfg.ASTAAPIKey != "test-asta-key" {
 		t.Errorf("ASTAAPIKey = %q, want test-asta-key", cfg.ASTAAPIKey)
 	}
@@ -147,38 +143,6 @@ func TestLoadGlobalConfig_InvalidYAML(t *testing.T) {
 	_, err := LoadGlobalConfig()
 	if err == nil {
 		t.Error("LoadGlobalConfig() should return error for invalid YAML")
-	}
-}
-
-func TestGetS2APIKey(t *testing.T) {
-	ResetGlobalConfigCache()
-	defer ResetGlobalConfigCache()
-
-	// Save and restore XDG
-	origXDG := os.Getenv("XDG_CONFIG_HOME")
-	defer os.Setenv("XDG_CONFIG_HOME", origXDG)
-
-	// Point to empty config first
-	tmpDir := t.TempDir()
-	os.Setenv("XDG_CONFIG_HOME", tmpDir)
-
-	// Without config, returns empty
-	got := GetS2APIKey()
-	if got != "" {
-		t.Errorf("GetS2APIKey() = %q, want empty", got)
-	}
-
-	// Create config with key
-	ResetGlobalConfigCache()
-	configDir := filepath.Join(tmpDir, "bip")
-	os.MkdirAll(configDir, 0755)
-	cfgData := GlobalConfig{S2APIKey: "config-s2-key"}
-	data, _ := yaml.Marshal(cfgData)
-	os.WriteFile(filepath.Join(configDir, "config.yml"), data, 0644)
-
-	got = GetS2APIKey()
-	if got != "config-s2-key" {
-		t.Errorf("GetS2APIKey() = %q, want config-s2-key", got)
 	}
 }
 
@@ -240,7 +204,7 @@ func TestGlobalConfigCache(t *testing.T) {
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, "bip")
 	os.MkdirAll(configDir, 0755)
-	cfgData := GlobalConfig{S2APIKey: "cached-key"}
+	cfgData := GlobalConfig{ASTAAPIKey: "cached-key"}
 	data, _ := yaml.Marshal(cfgData)
 	configFile := filepath.Join(configDir, "config.yml")
 	os.WriteFile(configFile, data, 0644)
@@ -249,19 +213,19 @@ func TestGlobalConfigCache(t *testing.T) {
 
 	// First load
 	cfg1, _ := LoadGlobalConfig()
-	if cfg1.S2APIKey != "cached-key" {
-		t.Errorf("First load: S2APIKey = %q, want cached-key", cfg1.S2APIKey)
+	if cfg1.ASTAAPIKey != "cached-key" {
+		t.Errorf("First load: ASTAAPIKey = %q, want cached-key", cfg1.ASTAAPIKey)
 	}
 
 	// Modify file
-	cfgData.S2APIKey = "modified-key"
+	cfgData.ASTAAPIKey = "modified-key"
 	data, _ = yaml.Marshal(cfgData)
 	os.WriteFile(configFile, data, 0644)
 
 	// Second load should return cached value
 	cfg2, _ := LoadGlobalConfig()
-	if cfg2.S2APIKey != "cached-key" {
-		t.Errorf("Second load: S2APIKey = %q, want cached-key (cached)", cfg2.S2APIKey)
+	if cfg2.ASTAAPIKey != "cached-key" {
+		t.Errorf("Second load: ASTAAPIKey = %q, want cached-key (cached)", cfg2.ASTAAPIKey)
 	}
 
 	// Reset cache
@@ -269,8 +233,8 @@ func TestGlobalConfigCache(t *testing.T) {
 
 	// Third load should read modified file
 	cfg3, _ := LoadGlobalConfig()
-	if cfg3.S2APIKey != "modified-key" {
-		t.Errorf("Third load: S2APIKey = %q, want modified-key", cfg3.S2APIKey)
+	if cfg3.ASTAAPIKey != "modified-key" {
+		t.Errorf("Third load: ASTAAPIKey = %q, want modified-key", cfg3.ASTAAPIKey)
 	}
 }
 
@@ -359,7 +323,6 @@ func TestGetters_MalformedConfig(t *testing.T) {
 	clearTokenEnv(t)
 	writeRawConfig(t, "asta_api_key: [unterminated\n")
 	getters := map[string]func() string{
-		"GetS2APIKey":      GetS2APIKey,
 		"GetASTAAPIKey":    GetASTAAPIKey,
 		"GetGitHubToken":   GetGitHubToken,
 		"GetSlackBotToken": GetSlackBotToken,

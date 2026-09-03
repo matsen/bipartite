@@ -143,7 +143,7 @@ func outputGenericRateLimited(err error) error {
 		Error: &S2ErrorResult{
 			Code:       "rate_limited",
 			Message:    "Semantic Scholar rate limit exceeded",
-			Suggestion: fmt.Sprintf("Wait %d seconds or add s2_api_key to ~/.config/bip/config.yml", retryAfter),
+			Suggestion: fmt.Sprintf("Wait %d seconds or add asta_api_key to ~/.config/bip/config.yml", retryAfter),
 			RetryAfter: retryAfter,
 		},
 	}

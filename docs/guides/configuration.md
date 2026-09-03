@@ -23,7 +23,6 @@ The config file follows the XDG Base Directory specification:
 mkdir -p ~/.config/bip
 cat > ~/.config/bip/config.yml << 'EOF'
 nexus_path: ~/re/nexus
-s2_api_key: your-semantic-scholar-key
 asta_api_key: your-asta-key
 github_token: ghp_your-github-token
 slack_bot_token: xoxb-your-slack-bot-token
@@ -37,8 +36,7 @@ EOF
 | Field | Description |
 |-------|-------------|
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
-| `s2_api_key` | Semantic Scholar API key for higher rate limits |
-| `asta_api_key` | ASTA MCP API key ([register here](https://allenai.org/asta/resources/mcp)). Also accepts env vars: `BIP_ASTA_API_KEY`, `ASTA_API_KEY` (in that order). |
+| `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Also accepts env vars: `BIP_ASTA_API_KEY`, `ASTA_API_KEY` (in that order). |
 | `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Also accepts env vars: `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` (in that order). |
 | `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |
