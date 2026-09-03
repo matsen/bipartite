@@ -414,7 +414,11 @@ If the user asks "why this one?", point at the brief rather than summarizing it 
 
 Then run `/bip-conductor-spawn` (do NOT improvise tmux/claude commands). Scout, place, spawn, and report after — a ready brief sitting next to an idle slot is the failure this altitude exists to prevent, and the proposal above is a report, not a gate.
 
-Deciding *which other* open issues should be spawned next isn't this skill's call — that's `/bip-epic`. **Nor is "is this worth spawning at all"**: a ready brief is not by itself a reason to spawn, but that judgment belongs to whoever originated it (see "Two intake paths" above). Don't drain a queue because it is full.
+Deciding *which other* open issues should be spawned next isn't this skill's call — that's `/bip-epic`.
+
+**A busy fleet is good as long as every slot is on topic. The gate is topic, not count.** So spawn ready, in-scope, unblocked briefs freely while capacity exists — do not throttle on volume, and do not treat a full fleet as a thing to apologise for. The failure to avoid is a slot working the wrong programme, not a fleet that is fully occupied with the right one.
+
+**Do not overcorrect from a scope incident into general reluctance.** Measured 2026-09-03, in the same session that produced the scope rules above: after standing down ten out-of-scope slots, this conductor then held two briefs that were **in scope, clean, unblocked, and verified against the EPIC** — with 12 free clones and `pax` at load 0.53. The user's correction was *"why not spawn? The fleet is only moderately busy"* and then *"I am happy with a busy fleet as long as they are on topic."* Withholding ready on-topic work is its own failure, and it looks like prudence from the inside.
 
 If a live worker's scope needs correcting *before* its next natural stopping point: the epic decides whether it's durable, drafts the line, and the conductor delivers it — see "Correcting a live worker" above for the mechanics and where the durable record goes.
 

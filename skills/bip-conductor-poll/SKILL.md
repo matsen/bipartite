@@ -129,7 +129,7 @@ Skip the nudge entirely for a worker in `awaiting-results` with a live `check_cm
 5. **Recently landed** (brief): PRs merged since last poll, only if noteworthy.
 
 6. **Execute pending spawns**: If spawn intent files and idle clones both exist, run `/bip-conductor-spawn` for them and report after — placement and timing are the conductor's call, not a question to hold the fleet on (see `/bip-conductor`'s "Arbitration"). Escalate only a scientific question, or a risk of an actual problem: data loss, a clobbered checkout, two slots on one deliverable. Rebase friction is not that.
-   **But a full queue is not a reason to spawn.** Whether a brief is worth a slot belongs to whoever originated it — the epic agent for its own EPIC, the user for a direct or `/bip-ms`-originated request. Don't drain the queue because it is there.
+   **A busy fleet is fine as long as every slot is on topic — the gate is topic, not count.** Spawn ready, in-scope, unblocked briefs while capacity exists; don't throttle on volume. Whether an issue belongs to the programme at all is the originator's call (the epic agent for its own EPIC, the user for a direct or `/bip-ms` request) — but once it is in scope and ready, holding it back is a failure, not caution.
 
 ### Housekeeping (do silently, don't report unless problems)
 
