@@ -13,7 +13,6 @@ import (
 // GlobalConfig represents configuration stored in ~/.config/bip/config.yml.
 type GlobalConfig struct {
 	NexusPath     string            `yaml:"nexus_path,omitempty"`
-	S2APIKey      string            `yaml:"s2_api_key,omitempty"`
 	ASTAAPIKey    string            `yaml:"asta_api_key,omitempty"`
 	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
 	GitHubToken   string            `yaml:"github_token,omitempty"`
@@ -100,15 +99,6 @@ func firstEnvOrConfig(names []string, configValue string) string {
 	return configValue
 }
 
-// GetS2APIKey returns the Semantic Scholar API key from global config.
-func GetS2APIKey() string {
-	cfg, err := LoadGlobalConfig()
-	if err != nil || cfg == nil {
-		return ""
-	}
-	return cfg.S2APIKey
-}
-
 // ASTAAPIKeyEnvVars lists the environment variables consulted by
 // GetASTAAPIKey, in precedence order. BIP_ASTA_API_KEY is the
 // recommended bip-specific name; ASTA_API_KEY is the conventional
@@ -116,7 +106,9 @@ func GetS2APIKey() string {
 // .env file by cmd/bip/asta.go.
 var ASTAAPIKeyEnvVars = []string{"BIP_ASTA_API_KEY", "ASTA_API_KEY"}
 
-// GetASTAAPIKey returns the ASTA API key.
+// GetASTAAPIKey returns the AI2 API key used for both the ASTA MCP API
+// and the Semantic Scholar Graph API — AI2 issues a single key for both
+// as of the 2026-08 key upgrade.
 //
 // Precedence:
 //  1. $BIP_ASTA_API_KEY

@@ -89,15 +89,16 @@ See the [Getting Started guide](https://matsen.github.io/bipartite/guides/gettin
 
 ## Configuration
 
-For full functionality, add API keys ([Semantic Scholar](https://www.semanticscholar.org/product/api#api-key), [Asta](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) to your config:
+For full functionality, add API keys ([ASTA/Semantic Scholar](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) to your config:
 
 ```yaml
 nexus_path: ~/re/nexus
-s2_api_key: your-key
 asta_api_key: your-key
 github_token: ghp_...
 slack_bot_token: xoxb-...
 ```
+
+`asta_api_key` covers both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues a single key for both.
 
 Tokens may also be supplied via environment variables, which take precedence
 over the config file — useful for secrets managers (e.g. `op run` from

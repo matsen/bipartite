@@ -25,7 +25,7 @@ Use --human flag for human-readable output.`,
 }
 
 func init() {
-	// Load .env file if present (for S2_API_KEY)
+	// Load .env file if present (for ASTA_API_KEY)
 	_ = godotenv.Load()
 
 	rootCmd.AddCommand(s2Cmd)

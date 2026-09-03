@@ -71,8 +71,9 @@ func NewClient(opts ...ClientOption) *Client {
 		baseURL:    BaseURL,
 	}
 
-	// Check for API key in environment and global config
-	if key := config.GetS2APIKey(); key != "" {
+	// Check for API key in environment and global config. AI2 issues a
+	// single key shared by the ASTA MCP API and the Graph API.
+	if key := config.GetASTAAPIKey(); key != "" {
 		c.apiKey = key
 	}
 

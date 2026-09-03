@@ -10,7 +10,7 @@ Both `bip s2` and `bip asta` commands access Semantic Scholar's paper database, 
 | Rate limit | 1 req/sec | 10 req/sec |
 | Snippet search | No | Yes |
 | Add to collection | Yes | No (read-only) |
-| Auth | S2_API_KEY | ASTA_API_KEY |
+| Auth | ASTA_API_KEY (shared key) | ASTA_API_KEY |
 
 ## When to Use S2
 
@@ -111,8 +111,7 @@ bip asta search "phylogenetics" --human
 
 ```bash
 # In .env file
-S2_API_KEY=your_s2_api_key      # For bip s2 commands
-ASTA_API_KEY=your_asta_api_key  # For bip asta commands
+ASTA_API_KEY=your_asta_api_key  # For both bip s2 and bip asta commands
 ```
 
 ## Decision Flowchart
