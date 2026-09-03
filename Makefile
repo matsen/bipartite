@@ -1,11 +1,11 @@
 REPO_DIR := $(shell pwd)
 
-.PHONY: build install symlink-agents symlink-skills symlink-statusline symlink-hooks clean format check test
+.PHONY: build install symlink-agents symlink-skills symlink-statusline install-hooks test-hooks clean format check test
 
 build:
 	go build -o bip ./cmd/bip
 
-install: symlink-agents symlink-skills symlink-statusline symlink-hooks
+install: symlink-agents symlink-skills symlink-statusline install-hooks
 	go install ./cmd/bip
 	@echo "Installed bip (to \$$GOBIN if set, otherwise \$$HOME/go/bin)"
 	@echo "Ensure the Go bin directory is in your PATH."
@@ -39,12 +39,23 @@ symlink-skills:
 	done
 	@echo "Symlinked skills to ~/.claude/skills/"
 
-symlink-hooks:
+# Hooks are copied, not symlinked, unlike agents and skills. A symlink into
+# this repo dangles whenever another branch is checked out, and a hook whose
+# command is missing exits 127, which Claude Code treats as a non-blocking
+# error -- so the check would silently stop running with nothing said. Re-run
+# `make install` after editing a hook.
+install-hooks:
 	mkdir -p ~/.claude/hooks
 	@for f in $(REPO_DIR)/hooks/*.sh $(REPO_DIR)/hooks/*.py $(REPO_DIR)/hooks/termcheck-stamp; do \
-		ln -sf "$$f" ~/.claude/hooks/$$(basename "$$f"); \
+		case "$$(basename "$$f")" in test_*) continue ;; esac; \
+		cp -f "$$f" ~/.claude/hooks/$$(basename "$$f"); \
+		chmod +x ~/.claude/hooks/$$(basename "$$f"); \
 	done
-	@echo "Symlinked hooks to ~/.claude/hooks/ (add them to settings.json -- see hooks/README.md)"
+	@echo "Installed hooks to ~/.claude/hooks/ (add them to settings.json -- see hooks/README.md)"
+
+test-hooks:
+	python3 $(REPO_DIR)/hooks/test_gh_termcheck.py
+	python3 $(REPO_DIR)/hooks/test_novel_words.py
 
 symlink-statusline:
 	mkdir -p ~/.claude/statusline
