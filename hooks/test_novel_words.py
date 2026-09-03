@@ -118,6 +118,20 @@ class NovelWords(unittest.TestCase):
         ])
         self.assertEqual(0, code)
 
+    def test_a_plural_of_a_seen_word_is_not_new(self) -> None:
+        code, message = self.run_hook([
+            user("the skill will spawn a subagent"),
+            assistant("It spawns a subagent, and spawns another after that."),
+        ])
+        self.assertEqual(0, code, f"reported: {message}")
+
+    def test_a_verb_form_of_a_seen_word_is_not_new(self) -> None:
+        code, _ = self.run_hook([
+            user("please review the draft"),
+            assistant("I am reviewing it now, and reviewing the second one too."),
+        ])
+        self.assertEqual(0, code)
+
     def test_short_words_are_ignored(self) -> None:
         code, _ = self.run_hook([
             user("hello"),

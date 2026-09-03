@@ -46,7 +46,7 @@ symlink-skills:
 # `make install` after editing a hook.
 install-hooks:
 	mkdir -p ~/.claude/hooks
-	@for f in $(REPO_DIR)/hooks/*.sh $(REPO_DIR)/hooks/*.py $(REPO_DIR)/hooks/termcheck-stamp; do \
+	@for f in $(REPO_DIR)/hooks/*.sh $(REPO_DIR)/hooks/*.py; do \
 		case "$$(basename "$$f")" in test_*) continue ;; esac; \
 		cp -f "$$f" ~/.claude/hooks/$$(basename "$$f"); \
 		chmod +x ~/.claude/hooks/$$(basename "$$f"); \
@@ -54,7 +54,6 @@ install-hooks:
 	@echo "Installed hooks to ~/.claude/hooks/ (add them to settings.json -- see hooks/README.md)"
 
 test-hooks:
-	python3 $(REPO_DIR)/hooks/test_gh_termcheck.py
 	python3 $(REPO_DIR)/hooks/test_novel_words.py
 
 symlink-statusline:

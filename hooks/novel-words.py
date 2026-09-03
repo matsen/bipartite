@@ -42,6 +42,7 @@ MAX_REPORTED = 12
 # neither side ever considers the junk.
 VOWEL = re.compile(r"[aeiouy]")
 RUN = re.compile(r"(.)\1\1")
+SUFFIXES = ("s", "es", "ed", "ing", "ings", "d", "ly", "er", "ers")
 
 # Spans whose words are not the agent's prose: code, paths, identifiers,
 # anything quoted from elsewhere.
@@ -60,6 +61,20 @@ def plausible(word: str) -> bool:
         and VOWEL.search(word) is not None
         and RUN.search(word) is None
     )
+
+
+def inflection_of_seen(word: str, vocabulary: set[str]) -> bool:
+    """Is `word` just a plural or verb form of something already used?
+
+    The first live firing of this hook was on "spawns", where "spawn" was
+    already in the session. That is not a new name for anything.
+    """
+    for suffix in SUFFIXES:
+        if word.endswith(suffix) and len(word) - len(suffix) >= MIN_LENGTH:
+            base = word[: -len(suffix)]
+            if base in vocabulary or base + "e" in vocabulary:
+                return True
+    return any(word + suffix in vocabulary for suffix in ("s", "es"))
 
 
 def words_in(text: str) -> set[str]:
@@ -155,7 +170,10 @@ def main() -> None:
 
     seen, latest, position = scan(path, offset)
     vocabulary |= seen
-    novel = sorted(repeated_words(prose_only(latest)) - vocabulary)
+    novel = sorted(
+        word for word in repeated_words(prose_only(latest)) - vocabulary
+        if not inflection_of_seen(word, vocabulary)
+    )
     vocabulary |= words_in(latest)
 
     with open(state_path, "w") as handle:
