@@ -47,7 +47,7 @@ If work already in flight turns out to be outside the boundary, say so plainly
 and hand it back rather than finishing it quietly; preserving WIP to a branch
 beats both discarding it and completing it out of scope.
 For fleet state (which clones are free, what's running where, tmux/host occupancy), ask `/bip-conductor` instead — this skill does not scan clones or tmux itself.
-It does *consume* a conductor-supplied occupancy table when a conductor handshake succeeds (Step 2 below), but that table is read-only input to scoping, not something this skill goes and gets on its own.
+It does *consume* a conductor-supplied occupancy table when a conductor handshake succeeds (Step 2 below) — read-only, never fetched by this skill itself. That table has **two** consumers downstream, and reading it as serving only the first is how briefs get written for occupied slots: Step 2 uses it to scope Group A's re-verification, and **Step 6 uses it as a readiness filter**.
 
 ## Role
 
@@ -178,7 +178,7 @@ Brief:
 The window compresses further as activity rises, so an issue that is neither on an EPIC dashboard nor recently touched is reachable by neither group.
 Coverage is Group A's job plus a periodic audit for issues no EPIC references (see `matsengrp/phyz`#2093 for the audit script and the shape of that gap); Group B only answers "what moved lately".
 
-**Never ask the user a question about an issue/PR status that you could answer with a `gh` query** — verify first, then present facts.
+**Never ask the user a question you could answer yourself, and never ask a sequencing or staging one at all.** Issue/PR status is a `gh` query — verify, then present facts. Order, placement, timing, and whether an adopted priority rule still binds are for this session and the conductor to settle between them; `/bip-conductor`'s "Arbitration" section states the conductor's half and applies symmetrically here — escalate only what it names (data loss, a clobbered checkout, two slots owning one deliverable) or a genuinely scientific question about whether work is worth doing. Measured 2026-09-03: asking whether an EPIC body's "run these after the default questions" meant *sequenced* or merely *lower priority when slots are scarce* returned "I have no idea. I'm guiding this at a high level, and I'd love it if you and the Epic agent would sort these things out." **That an adopted EPIC-body decision is being revisited does not make it the user's to re-decide, when what it governs is order.**
 
 ### Step 3: Reconcile
 
@@ -188,7 +188,7 @@ Compose the reconciliation from the two reports — do not paste subagent prose 
 - Flag anything merged/closed that an EPIC body doesn't reflect yet
 - If either group's report has zero `surprises` and zero `changes_since_baseline`, send a follow-up to that subagent with a narrower question before concluding "nothing changed there."
 
-This reconciliation itself does not scan clone/tmux occupancy — that's `/bip-conductor`'s dashboard, not this one — though Step 2's handshake may already have pulled the conductor's occupancy table in for scoping purposes by the time you reach this step.
+This reconciliation does not scan clone/tmux occupancy itself — that's `/bip-conductor`'s dashboard — but Step 2's handshake table is in hand by now, and Step 6 requires it.
 
 ### Step 4a: Dependency-direction detection
 
@@ -326,7 +326,7 @@ This is the rule regardless of whose column the decision sits in: role boundarie
 
 ### Step 6: Hand spawn intent to the conductor
 
-For each issue judged ready (unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b), draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:
+For each issue judged ready — unblocked per Step 3, no unresolved dependency-direction conflict per Step 4a, no unresolved file-overlap collision per Step 4b, **and holding no live slot in the conductor's occupancy table** — draft the semantic brief — why it matters, scope, any dependency/collision warnings from Step 4a/4b — and write it to:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
@@ -343,6 +343,8 @@ conductor count live slots by EPIC on each poll — the one fleet-side view that
 catches topic drift early. A brief arriving without it should be queried, not
 guessed at, since a guess defeats the check. This is cheap to write and is the
 only mechanical guard against the drift "One EPIC at a time" describes.
+
+**Intersect the candidate set with the occupancy table as a discrete step, and state the check in the handoff message.** Group B's `action_candidates` are GitHub-derived and structurally fleet-blind — it can drop an issue with an open PR or a live branch, and cannot see a clone at all. Applying the filter is this session's job, and *having asked for the table early does not discharge it*: measured 2026-09-03, a session holding a GitHub-verified table from its own first message went on to write intent for two occupied issues and list a third as ready — 3 of 4 candidates. Write "checked against conductor table of HH:MM" in the handoff so the check is visible rather than assumed, and re-ask if that table is older than a poll cycle. Note that **no downstream guard catches this in clone mode**: `/bip-conductor-spawn`'s Step 1 check keys on worktree-mode names (`issue-<N>`, window `<N>-issue-<N>`), and `bip spawn`'s refusal keys on *directory* occupancy — so the same issue spawned into a second idle clone is refused by nothing.
 
 `clone_root` in `.epic-config.json` is tilde-form — resolve it the same way every `/bip-conductor*` skill does, or the brief silently lands in a literal `~` directory in the cwd instead of the shared intent directory, and the conductor never sees it.
 `mkdir -p` because `.spawn-prompts/` won't exist yet on a fresh repo.
