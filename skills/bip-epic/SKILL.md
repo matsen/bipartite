@@ -10,6 +10,42 @@ Fleet mechanics — clone/tmux inventory, staleness checks, spawning, pruning of
 The two roles coordinate over `SendMessage` and a shared `.spawn-prompts/` directory (see "Handing spawn intent to the conductor" below); they do not need to be the same session, though they may run side-by-side in one tmux host.
 
 Use this at **session start** to establish topic context.
+
+## One EPIC at a time — ask if the invocation does not name one
+
+**This skill is scoped to exactly one EPIC per session, and that EPIC is its
+exclusive purview.** `/bip-epic 369` means EPIC #369 and nothing else. If the
+invocation does not name an EPIC number, **ask which one before doing anything
+else** — do not infer it from the repo, from the most recently updated EPIC, or
+from what the fleet happens to be running, and do not survey every EPIC to
+decide. There may be several open EPICs; only one is yours.
+
+The failure this prevents is not a wrong answer, it is a slow drift that every
+individual step justifies. Measured on `matsengrp/phyz` 2026-09-03: an unscoped
+session scanned all eight open EPICs, then wrote spawn briefs for whatever
+looked ready across them. **Eleven of twenty-three briefed issues belonged to
+other EPICs, and ten of fifteen live slots ended up outside the session's
+actual purview** before anyone noticed. Three of four EPIC bodies it reconciled
+were not its own. No single brief was wrong on its merits; the boundary was
+never stated, so nothing ever tripped.
+
+Two corollaries, both learned the same day:
+
+- **A file collision is not EPIC membership.** Two issues editing
+  `src/core/preset.zig` can belong to different EPICs — one shipping a
+  regime-specific preset for a named downstream consumer, the other building a
+  general selection mechanism. Purpose determines membership; shared files
+  determine only sequencing. Do not adopt an out-of-scope issue because it
+  collides with an in-scope one; report the collision to the conductor and
+  leave it.
+- **Interesting is not in-scope.** A genuine defect found while working an
+  in-scope issue, but belonging to another programme, gets **filed and parked**
+  for a future epic session — not pursued because it is real and someone is
+  already looking at it.
+
+If work already in flight turns out to be outside the boundary, say so plainly
+and hand it back rather than finishing it quietly; preserving WIP to a branch
+beats both discarding it and completing it out of scope.
 For fleet state (which clones are free, what's running where, tmux/host occupancy), ask `/bip-conductor` instead — this skill does not scan clones or tmux itself.
 It does *consume* a conductor-supplied occupancy table when a conductor handshake succeeds (Step 2 below), but that table is read-only input to scoping, not something this skill goes and gets on its own.
 
@@ -86,13 +122,21 @@ In the run that motivated this rule, Group A independently found an open PR and 
 
 Dispatch two groups of `general-purpose` subagents in parallel — single message, multiple `Agent` tool calls.
 Follow the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
-Start with the cheap structured listing the primary can do directly:
+**Scope this fan-out to *your* EPIC** (see "One EPIC at a time" above). Confirm
+the number you were given resolves to a real EPIC issue, and do not enumerate
+the others:
 
 ```bash
-gh issue list --search "EPIC in:title" --json number,title
+gh issue view <your-epic-N> --json number,title,updatedAt
 ```
 
-**Group A: one subagent per EPIC.**
+Listing every `EPIC in:title` issue is only appropriate when you have been
+asked which EPIC to adopt and are presenting the options to the user — never as
+the opening move of a scan, which is how a session ends up briefing other
+EPICs' work.
+
+**Group A: one subagent for your EPIC.** (Dispatch one per EPIC only in the
+rare case the user has explicitly scoped you to more than one.)
 Brief:
 
 > Read EPIC `i<N>` and report its current state.
@@ -124,7 +168,9 @@ Brief:
 > Return under 400 words:
 > - `changes_since_baseline`: PRs merged since last session
 > - `active_items`: open PRs with state/CI status
-> - `action_candidates`: open issues ready to spawn (unblocked, unassigned, dependencies satisfied), ordered by priority
+> - `action_candidates`: open issues ready to spawn (unblocked, unassigned, dependencies satisfied), ordered by priority.
+>   **Restrict these to issues this session's EPIC tracks** — the recency window is repo-wide and will surface other
+>   EPICs' work, which is not yours to brief. List an out-of-EPIC item under `surprises` if it looks urgent, never here.
 > - `surprises`: closed/merged items the EPICs don't reflect yet, issues with unclear blocker state, `RECOMMEND DEEPER LOOK` flags
 
 **Group B does not cover the backlog, and must not be relied on as if it did.**
