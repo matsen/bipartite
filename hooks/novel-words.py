@@ -14,35 +14,29 @@ they slip past.
 A word is only reported once it is used at least twice in the same turn, on
 the theory that a word being used as a name gets used more than once while a
 word in passing does not. Measured over 3,622 turns in three real sessions:
-reporting every new word fires on 31.9% of turns, which is too often to be
-read; requiring two uses fires on 3.6%, median one word. That is a partial
-net -- of two known renamings in those transcripts it catches one -- and it
-is the version cheap enough to be worth blocking on.
+as configured it fires on 3.1% of turns, median one word, against about a
+third of turns if every new word were reported. That is a partial net -- of
+two known renamings in those transcripts it catches one -- and it is the
+version cheap enough to be worth blocking on.
 
 Vocabulary is cached per session under ~/.claude/termcheck/, with the byte
-offset already read, so each run only parses what is new.
+offset already read, so each run only parses what is new. Firings are logged
+to the same directory, and caches for sessions that have stopped are pruned.
 """
 
 import collections
+import datetime
 import json
 import os
 import re
 import sys
 
-STATE_DIR = os.path.expanduser("~/.claude/termcheck")
+CACHE_DIR = os.path.expanduser("~/.claude/termcheck")
+LOG = os.path.join(CACHE_DIR, "firings.jsonl")
+PRUNE_AFTER_DAYS = 7
 MIN_LENGTH = 4
 MAX_LENGTH = 15
 MAX_REPORTED = 12
-
-# Tool output is full of base64 and hex, which is most of what a naive
-# tokeniser finds. Left in, the vocabulary reaches 1.3 million entries on a
-# long session and costs more to load than the check saves. A word that could
-# be substituted into prose is a real word, so require a vowel and reject
-# runs of one letter. The same filter applies to the words being reported, so
-# neither side ever considers the junk.
-VOWEL = re.compile(r"[aeiouy]")
-RUN = re.compile(r"(.)\1\1")
-SUFFIXES = ("s", "es", "ed", "ing", "ings", "d", "ly", "er", "ers")
 
 # Spans whose words are not the agent's prose: code, paths, identifiers,
 # anything quoted from elsewhere.
@@ -53,6 +47,10 @@ URL = re.compile(r"https?://\S+")
 PATH = re.compile(r"[~/\w.-]*/[\w./-]+")
 WORD = re.compile(r"[a-z]+")
 
+VOWEL = re.compile(r"[aeiouy]")
+RUN = re.compile(r"(.)\1\1")
+SUFFIXES = ("s", "es", "ed", "ing", "ings", "d", "ly", "er", "ers")
+
 
 def plausible(word: str) -> bool:
     """Could this be a word someone would write in a sentence?"""
@@ -61,6 +59,21 @@ def plausible(word: str) -> bool:
         and VOWEL.search(word) is not None
         and RUN.search(word) is None
     )
+
+
+def words_in(text: str) -> set[str]:
+    return {word for word in WORD.findall(text.lower()) if plausible(word)}
+
+
+def counted_words(text: str) -> collections.Counter:
+    return collections.Counter(
+        word for word in WORD.findall(text.lower()) if plausible(word)
+    )
+
+
+def repeated_words(text: str) -> set[str]:
+    """Words used at least twice in `text`."""
+    return {word for word, count in counted_words(text).items() if count >= 2}
 
 
 def inflection_of_seen(word: str, vocabulary: set[str]) -> bool:
@@ -77,18 +90,6 @@ def inflection_of_seen(word: str, vocabulary: set[str]) -> bool:
     return any(word + suffix in vocabulary for suffix in ("s", "es"))
 
 
-def words_in(text: str) -> set[str]:
-    return {word for word in WORD.findall(text.lower()) if plausible(word)}
-
-
-def repeated_words(text: str) -> set[str]:
-    """Words used at least twice in `text`."""
-    counts = collections.Counter(
-        word for word in WORD.findall(text.lower()) if plausible(word)
-    )
-    return {word for word, count in counts.items() if count >= 2}
-
-
 def prose_only(text: str) -> str:
     """`text` with code, quotations, URLs and paths removed."""
     for pattern in (FENCED, INLINE_CODE, QUOTED_LINE, URL, PATH):
@@ -96,33 +97,45 @@ def prose_only(text: str) -> str:
     return text
 
 
-def text_of(entry: dict) -> tuple[str, str]:
-    """('assistant'|'other', the text) for one transcript entry."""
+def split_entry(entry: dict) -> tuple[str, str, str]:
+    """(assistant prose, other prose, tool text) for one transcript entry.
+
+    Kept apart because they carry different authority. What the user wrote,
+    and what this agent wrote earlier, are names in use. Tool output is
+    mostly base64 and hex, and a single appearance in it establishes nothing.
+    """
     kind = entry.get("type")
     content = entry.get("message", {}).get("content")
     if isinstance(content, str):
-        return ("assistant" if kind == "assistant" else "other", content)
+        return (content, "", "") if kind == "assistant" else ("", content, "")
     if not isinstance(content, list):
-        return ("other", "")
-    spoken, rest = [], []
+        return ("", "", "")
+    spoken, other, tools = [], [], []
     for block in content:
         if not isinstance(block, dict):
             continue
         if block.get("type") == "text":
-            (spoken if kind == "assistant" else rest).append(block.get("text", ""))
+            (spoken if kind == "assistant" else other).append(block.get("text", ""))
         elif block.get("type") == "tool_use":
-            rest.append(json.dumps(block.get("input", "")))
+            tools.append(json.dumps(block.get("input", "")))
         elif block.get("type") == "tool_result":
             body = block.get("content", "")
-            rest.append(body if isinstance(body, str) else json.dumps(body))
-    if spoken:
-        return ("assistant", "\n".join(spoken + rest))
-    return ("other", "\n".join(rest))
+            tools.append(body if isinstance(body, str) else json.dumps(body))
+    return ("\n".join(spoken), "\n".join(other), "\n".join(tools))
 
 
 def scan(path: str, offset: int) -> tuple[set[str], str, int]:
-    """Words seen from `offset` on, the last assistant prose, and the new offset."""
-    seen: set[str] = set()
+    """Words established from `offset` on, the last assistant prose, and the
+    new offset.
+
+    A word from tool output has to appear at least twice before it counts. A
+    real name recurs -- a column heading appears in every row, a function at
+    every call site -- while base64 fragments are unique by construction. On
+    one 62 MB transcript this is the difference between a 934,000-word
+    vocabulary and a 113,000-word one, with every real term surviving.
+    """
+    established: set[str] = set()
+    tool_counts: collections.Counter = collections.Counter()
     latest = ""
     with open(path, "rb") as handle:
         handle.seek(offset)
@@ -135,15 +148,30 @@ def scan(path: str, offset: int) -> tuple[set[str], str, int]:
             entry = json.loads(line)
         except ValueError:
             continue
-        kind, text = text_of(entry)
-        if not text:
+        spoken, other, tools = split_entry(entry)
+        if other:
+            established |= words_in(other)
+        if tools:
+            tool_counts.update(counted_words(tools))
+        if spoken:
+            established |= words_in(latest)  # the previous turn is history now
+            latest = spoken
+    established |= {word for word, count in tool_counts.items() if count >= 2}
+    return established, latest, position
+
+
+def prune(current: str) -> None:
+    """Drop caches for sessions that have not been written to in a while."""
+    cutoff = datetime.datetime.now().timestamp() - PRUNE_AFTER_DAYS * 86400
+    for name in os.listdir(CACHE_DIR):
+        if not name.startswith("vocab-") or name == current:
             continue
-        if kind == "assistant":
-            seen |= words_in(latest)  # the previous turn is history now
-            latest = text
-        else:
-            seen |= words_in(text)
-    return seen, latest, position
+        path = os.path.join(CACHE_DIR, name)
+        try:
+            if os.path.getmtime(path) < cutoff:
+                os.remove(path)
+        except OSError:
+            pass
 
 
 def main() -> None:
@@ -154,34 +182,47 @@ def main() -> None:
     if not path or not os.path.isfile(path):
         sys.exit(0)
 
-    os.makedirs(STATE_DIR, exist_ok=True)
+    os.makedirs(CACHE_DIR, exist_ok=True)
     session = payload.get("session_id", "unknown")
+
     # Plain text rather than JSON: the vocabulary is the bulk of the file and
     # quoting every word costs more to write and parse than it is worth. First
     # line is the byte offset already read, the rest is one word per line.
-    state_path = os.path.join(STATE_DIR, f"vocab-{session}.txt")
+    cache_name = f"vocab-{session}.txt"
+    cache_path = os.path.join(CACHE_DIR, cache_name)
     vocabulary: set[str] = set()
     offset = 0
-    if os.path.exists(state_path):
-        with open(state_path) as handle:
+    if os.path.exists(cache_path):
+        with open(cache_path) as handle:
             offset = int(handle.readline())
             vocabulary = set(handle.read().split("\n"))
         vocabulary.discard("")
 
-    seen, latest, position = scan(path, offset)
-    vocabulary |= seen
+    established, latest, position = scan(path, offset)
+    vocabulary |= established
     novel = sorted(
         word for word in repeated_words(prose_only(latest)) - vocabulary
         if not inflection_of_seen(word, vocabulary)
     )
     vocabulary |= words_in(latest)
 
-    with open(state_path, "w") as handle:
+    with open(cache_path, "w") as handle:
         handle.write(f"{position}\n")
         handle.write("\n".join(sorted(vocabulary)))
+    prune(cache_name)
 
     if not novel:
         sys.exit(0)
+
+    with open(LOG, "a") as handle:
+        handle.write(json.dumps({
+            "when": datetime.datetime.now().isoformat(timespec="seconds"),
+            "session": session,
+            "cwd": payload.get("cwd", ""),
+            "words": novel,
+            "vocabulary": len(vocabulary),
+        }) + "\n")
+
     shown = ", ".join(novel[:MAX_REPORTED])
     if len(novel) > MAX_REPORTED:
         shown += f", and {len(novel) - MAX_REPORTED} more"
