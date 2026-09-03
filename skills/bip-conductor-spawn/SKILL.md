@@ -454,12 +454,23 @@ Now read the issue and begin work:
 ```
 - Use make remote-sync + make remote-tmux for running on remote servers
 - Use /bip-scout to find an available server before remote operations
-- ALWAYS pass REMOTE_DIR=<remote_root>/<this-slot's-dir-name> on every
-  make remote-sync / remote-tmux call (clone mode: the fruit name;
-  worktree mode: issue-<N> -- create it remotely first if it doesn't
-  exist yet). The config default is shared by every slot -- using it
-  lets concurrent workers clobber each other's remote checkout.
-- Always rebuild after sync: make remote-tmux REMOTE_HOST=... REMOTE_DIR=... CMD='zig build -Doptimize=ReleaseFast'
+- REMOTE_DIR: check the repo's Makefile BEFORE deciding to pass it.
+  Many repos already derive it per-slot (e.g. phyz's Makefile has
+  `REMOTE_DIR ?= ~/re/pz/$(notdir $(CURDIR))`, a full path computed
+  per clone). Where that holds, the default is NOT shared between
+  slots, it already prevents clobbering, and you should NOT override
+  it -- passing it is the bug, not the safeguard.
+- If you do override it, it MUST be a full path. A bare slot name
+  (REMOTE_DIR=oak) replaces the whole default and is resolved by
+  rsync/ssh against the remote HOME, so work silently lands in ~/oak
+  instead of ~/re/pz/oak. Nothing errors and the run succeeds in the
+  wrong place -- observed once as a 160-job sweep reporting 230/230
+  complete while the expected path held zero output, reading as a
+  dead run.
+- Only override when the repo's Makefile does NOT derive it per-slot.
+  Confirm by reading the Makefile, not by assuming either way.
+- Always rebuild after sync: make remote-tmux REMOTE_HOST=... CMD='zig build -Doptimize=ReleaseFast'
+  (add REMOTE_DIR=<full path> only per the rule above)
 - Wrap the experiment in a Snakemake workflow
 ```
 
