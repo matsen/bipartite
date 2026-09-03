@@ -46,9 +46,12 @@ Work reaches a slot two ways. **Which one it came from determines who owns scope
 getting this wrong in either direction is a real failure mode.
 
 - **Epic-originated** -- the epic agent wrote a brief to `$CLONE_ROOT/.spawn-prompts/`.
-  The epic owns topic scope; it is scoped to one EPIC and is responsible for staying
-  inside it. The conductor verifies the *mechanical* things only: gates and staleness,
-  host and slot availability, file collisions.
+  **The epic is the filter establishing that work is worth sending an agent at** --
+  not merely that it is on-topic, but that it is ready, unblocked, and worth the
+  compute. That filter is what makes "spawn freely" safe: the conductor is not
+  second-guessing whether an issue deserves a slot, because something upstream
+  already did. The conductor verifies the *mechanical* things only: gates and
+  staleness, host and slot availability, file collisions.
 - **User-originated** -- the user asks for a spawn directly, often from a `/bip-ms`
   session where issues appear as the science moves. There is no brief file and **there
   may be no EPIC at all.** The user owns scope.
