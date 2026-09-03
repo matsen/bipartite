@@ -35,7 +35,8 @@ bip scout
 - All servers offline, or several at once: **do NOT report an outage — verify one host by direct `ssh <host> uptime` first.**
   `bip scout` reports a pre-auth SSH throttle as `OFFLINE` rather than as an error, so a burst of scouts produces a false fleet-wide outage.
   Observed 2026-08-31: five hosts (orca01, orca03, orca04, orca05, conatus) all reported `OFFLINE`; every one answered a direct `ssh` seconds later.
-  Cause inferred rather than proven — the user's `CLAUDE.md` records that Fred Hutch hosts throttle pre-auth when connections are too frequent, and that scout run followed several others in quick succession.
+  Cause confirmed 2026-09-03, having been inferred in the 08-31 case: scout reported orca01, orca03, orca04 and quokka `offline` with `handshake failed ... connection reset by peer` against `snail.fhcrc.org`; direct `ssh` seven minutes later found **orca01 at load 0.59 and orca03 at load 0.06 — the two idlest machines reachable**, and both were immediately given real jobs.
+  So the failure is not merely "scout is sometimes wrong": it is **biased toward reporting exactly the hosts you most want**, because a scout sweep hits them in the same burst that triggers the throttle. Taking it at its word cost nothing only because someone checked.
   Only report an outage once a direct `ssh` also fails; a genuine one will fail that too, so the check costs a second and the alternative is standing down a fleet that is up.
 
 ### Step 2: Parse JSON Output
