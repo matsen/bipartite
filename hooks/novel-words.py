@@ -31,7 +31,17 @@ import sys
 
 STATE_DIR = os.path.expanduser("~/.claude/termcheck")
 MIN_LENGTH = 4
+MAX_LENGTH = 15
 MAX_REPORTED = 12
+
+# Tool output is full of base64 and hex, which is most of what a naive
+# tokeniser finds. Left in, the vocabulary reaches 1.3 million entries on a
+# long session and costs more to load than the check saves. A word that could
+# be substituted into prose is a real word, so require a vowel and reject
+# runs of one letter. The same filter applies to the words being reported, so
+# neither side ever considers the junk.
+VOWEL = re.compile(r"[aeiouy]")
+RUN = re.compile(r"(.)\1\1")
 
 # Spans whose words are not the agent's prose: code, paths, identifiers,
 # anything quoted from elsewhere.
@@ -43,14 +53,23 @@ PATH = re.compile(r"[~/\w.-]*/[\w./-]+")
 WORD = re.compile(r"[a-z]+")
 
 
+def plausible(word: str) -> bool:
+    """Could this be a word someone would write in a sentence?"""
+    return (
+        MIN_LENGTH <= len(word) <= MAX_LENGTH
+        and VOWEL.search(word) is not None
+        and RUN.search(word) is None
+    )
+
+
 def words_in(text: str) -> set[str]:
-    return {word for word in WORD.findall(text.lower()) if len(word) >= MIN_LENGTH}
+    return {word for word in WORD.findall(text.lower()) if plausible(word)}
 
 
 def repeated_words(text: str) -> set[str]:
     """Words used at least twice in `text`."""
     counts = collections.Counter(
-        word for word in WORD.findall(text.lower()) if len(word) >= MIN_LENGTH
+        word for word in WORD.findall(text.lower()) if plausible(word)
     )
     return {word for word, count in counts.items() if count >= 2}
 
@@ -122,14 +141,17 @@ def main() -> None:
 
     os.makedirs(STATE_DIR, exist_ok=True)
     session = payload.get("session_id", "unknown")
-    state_path = os.path.join(STATE_DIR, f"vocab-{session}.json")
+    # Plain text rather than JSON: the vocabulary is the bulk of the file and
+    # quoting every word costs more to write and parse than it is worth. First
+    # line is the byte offset already read, the rest is one word per line.
+    state_path = os.path.join(STATE_DIR, f"vocab-{session}.txt")
     vocabulary: set[str] = set()
     offset = 0
     if os.path.exists(state_path):
         with open(state_path) as handle:
-            state = json.load(handle)
-        vocabulary = set(state["words"])
-        offset = state["offset"]
+            offset = int(handle.readline())
+            vocabulary = set(handle.read().split("\n"))
+        vocabulary.discard("")
 
     seen, latest, position = scan(path, offset)
     vocabulary |= seen
@@ -137,7 +159,8 @@ def main() -> None:
     vocabulary |= words_in(latest)
 
     with open(state_path, "w") as handle:
-        json.dump({"offset": position, "words": sorted(vocabulary)}, handle)
+        handle.write(f"{position}\n")
+        handle.write("\n".join(sorted(vocabulary)))
 
     if not novel:
         sys.exit(0)
