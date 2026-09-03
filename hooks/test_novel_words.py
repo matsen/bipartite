@@ -8,6 +8,7 @@ temporary state directory, and asserts whether it reports and what it names.
 Exit 2 means it reported; exit 0 means it stayed silent.
 """
 
+import datetime
 import json
 import os
 import shutil
@@ -82,13 +83,58 @@ class NovelWords(unittest.TestCase):
         ])
         self.assertEqual(0, code)
 
-    def test_a_word_from_a_tool_result_is_not_new(self) -> None:
+    def test_a_word_repeated_in_a_tool_result_is_not_new(self) -> None:
         code, _ = self.run_hook([
             user("read the file"),
-            tool_result("column: crossings\nrows: 42"),
+            tool_result("column: crossings\nheader: crossings\nrows: 42"),
             assistant("The crossings column has 42 rows, so crossings are common."),
         ])
         self.assertEqual(0, code)
+
+    def test_a_word_appearing_once_in_tool_output_does_not_count(self) -> None:
+        """Base64 and hex are unique per appearance; a real name recurs."""
+        code, message = self.run_hook([
+            user("read the file"),
+            tool_result("some output mentioning crossings exactly once"),
+            assistant("The crossings matter here, and the crossings are new."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_a_firing_is_logged(self) -> None:
+        self.run_hook([
+            user("go"),
+            assistant("The crossings and the crossings again."),
+        ])
+        log = os.path.join(self.directory, ".claude", "termcheck", "firings.jsonl")
+        self.assertTrue(os.path.exists(log), "no log written")
+        with open(log) as handle:
+            record = json.loads(handle.readline())
+        self.assertIn("crossings", record["words"])
+        self.assertIn("when", record)
+
+    def test_silence_is_not_logged(self) -> None:
+        self.run_hook([user("go"), assistant("Nothing new to say at all here.")])
+        log = os.path.join(self.directory, ".claude", "termcheck", "firings.jsonl")
+        self.assertFalse(os.path.exists(log))
+
+    def test_old_caches_are_pruned(self) -> None:
+        stale = os.path.join(self.directory, ".claude", "termcheck", "vocab-gone.txt")
+        os.makedirs(os.path.dirname(stale), exist_ok=True)
+        with open(stale, "w") as handle:
+            handle.write("0\n")
+        long_ago = datetime.datetime.now().timestamp() - 30 * 86400
+        os.utime(stale, (long_ago, long_ago))
+        self.run_hook([user("go"), assistant("Nothing new here at all.")])
+        self.assertFalse(os.path.exists(stale), "stale cache was not pruned")
+
+    def test_a_live_cache_is_not_pruned(self) -> None:
+        fresh = os.path.join(self.directory, ".claude", "termcheck", "vocab-live.txt")
+        os.makedirs(os.path.dirname(fresh), exist_ok=True)
+        with open(fresh, "w") as handle:
+            handle.write("0\n")
+        self.run_hook([user("go"), assistant("Nothing new here at all.")])
+        self.assertTrue(os.path.exists(fresh))
 
     def test_code_spans_are_not_prose(self) -> None:
         code, _ = self.run_hook([
