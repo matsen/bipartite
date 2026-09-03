@@ -1,11 +1,11 @@
 REPO_DIR := $(shell pwd)
 
-.PHONY: build install symlink-agents symlink-skills symlink-statusline symlink-output-styles clean format check test
+.PHONY: build install symlink-agents symlink-skills symlink-statusline symlink-output-styles symlink-hooks clean format check test
 
 build:
 	go build -o bip ./cmd/bip
 
-install: symlink-agents symlink-skills symlink-statusline symlink-output-styles
+install: symlink-agents symlink-skills symlink-statusline symlink-output-styles symlink-hooks
 	go install ./cmd/bip
 	@echo "Installed bip (to \$$GOBIN if set, otherwise \$$HOME/go/bin)"
 	@echo "Ensure the Go bin directory is in your PATH."
@@ -44,6 +44,12 @@ symlink-output-styles:
 	rm -rf ~/.claude/output-styles
 	ln -s $(REPO_DIR)/output-styles ~/.claude/output-styles
 	@echo "Symlinked output styles to ~/.claude/output-styles/"
+symlink-hooks:
+	mkdir -p ~/.claude/hooks
+	@for f in $(REPO_DIR)/hooks/*.sh $(REPO_DIR)/hooks/*.py $(REPO_DIR)/hooks/termcheck-stamp; do \
+		ln -sf "$$f" ~/.claude/hooks/$$(basename "$$f"); \
+	done
+	@echo "Symlinked hooks to ~/.claude/hooks/ (add them to settings.json -- see hooks/README.md)"
 
 symlink-statusline:
 	mkdir -p ~/.claude/statusline
