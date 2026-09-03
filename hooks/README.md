@@ -11,11 +11,11 @@ below by hand.
 One thing gets one name. An agent that calls something `requeues` and then
 `rescue` a message later, or writes `crossings` for what the user has been
 calling shared molecules, forces the reader to work out that two words mean
-one thing. Stating the rule in `CLAUDE.md` does not hold it: the instruction
-is read once, at the start of a session, and a session runs for hundreds of
+one thing. Stating the rule in `CLAUDE.md` does not hold it: the rule is read
+once, at the start of a session, and a session runs for hundreds of
 thousands of tokens after that.
 
-These three hooks restate the rule where it cannot decay, and stop a body
+Together they restate the rule where it cannot decay, and stop a body
 reaching GitHub until it has been read by
 [`terminology-checker`](../agents/terminology-checker.md).
 
