@@ -304,6 +304,13 @@ mkdir -p "$CLONE_ROOT/.spawn-prompts"
 
 `<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-epic`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory (see `skills/lib/spawn-intent.sh` in the `bipartite` repo).
 
+**Every brief must open with an `EPIC: <N>` line**, naming the EPIC this
+session owns. `/bip-conductor-spawn` requires it, and it is what lets the
+conductor count live slots by EPIC on each poll — the one fleet-side view that
+catches topic drift early. A brief arriving without it should be queried, not
+guessed at, since a guess defeats the check. This is cheap to write and is the
+only mechanical guard against the drift "One EPIC at a time" describes.
+
 `clone_root` in `.epic-config.json` is tilde-form — resolve it the same way every `/bip-conductor*` skill does, or the brief silently lands in a literal `~` directory in the cwd instead of the shared intent directory, and the conductor never sees it.
 `mkdir -p` because `.spawn-prompts/` won't exist yet on a fresh repo.
 
