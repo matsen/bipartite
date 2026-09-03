@@ -192,6 +192,39 @@ This reconciliation itself does not scan clone/tmux occupancy — that's `/bip-c
 
 ### Step 4a: Dependency-direction detection
 
+**Before writing any gate, dependency, or scope claim into a brief or an EPIC
+body, read that claim in the issue's own text — its Dependencies block, its
+Scope section, and its Out-of-scope section. A scanner's summary of a gate is
+not the gate.**
+
+Subagent scan reports are reliable about *whether* something is worth looking
+at and unreliable about *why*. Measured on `matsengrp/phyz` 2026-09-03, three
+times in one session, each time from relaying a summary instead of opening the
+issue:
+
+- A brief said an issue was unblocked because a landscape study had completed.
+  Its own Dependencies block named three different items (all closed, so the
+  conclusion held and the route was wrong).
+- An issue was reported as "needs re-scoping before it is worth a slot." Its
+  body had already *been* re-scoped the previous day — retitled, with the dead
+  items struck. The summary described completed work as outstanding. That claim
+  reached two EPIC bodies before being caught.
+- A brief put "re-verify this label first" at the top as a precondition. The
+  issue's **Out-of-scope** section excluded exactly that work, so a worker
+  reading both would have hit a contradiction. Reading Dependencies alone would
+  not have caught it — the conflict was only visible in Out-of-scope.
+
+The third case is why the rule names three sections rather than one. The
+resolution there is also the general one: when a needed precondition is
+genuinely out of an issue's scope, **file it as its own issue and let both run**
+rather than amending the scope to admit it or asking a worker to ignore the
+boundary.
+
+Note the failures all *survived* — the conclusions were right and the reasoning
+was wrong — which is exactly why nothing tripped. A wrong route that reaches a
+right answer teaches a worker to trust the wrong route.
+
+
 Run this before proposing any issue as ready to spawn, not after — once a branch exists the cost of a collision is sunk.
 
 1. For every currently open, unassigned (or about-to-be-spawned) issue, read its body against every other such issue's body and ask: can both land as currently written, in either order?
