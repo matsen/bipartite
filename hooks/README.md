@@ -51,32 +51,50 @@ is no help — `rescue`, `crossings` and `residue` are all ordinary English,
 which is why they slip past.
 
 A word is reported only if it is used at least twice in the turn, on the
-theory that a word being used as a name gets used more than once. Measured
-over 3,622 turns in three real sessions:
+theory that a word being used as a name gets used more than once. Plurals and
+verb forms of words already used are ignored: the first live firing was on
+`spawns`, with `spawn` already in the session, which is not a new name for
+anything.
 
-| rule | fires on |
-|---|---|
-| any word new to the session | 31.9% |
-| a new word reused in a later turn | 29.7% |
-| a new word used twice in one turn | 4.8% |
-| the same, ignoring plurals and verb forms of words already seen | **3.8%** |
+As configured it fires on **3.1%** of turns, measured over 3,622 turns in
+three real sessions, median one word. Reporting every word new to the session
+instead, with no two-use rule, fires on about a third of turns — too often to
+be read, which is the failure this exists to avoid. It is a partial net: of
+two known renamings in those transcripts it catches one.
 
-The first two are too frequent to be read, which is the failure this exists
-to avoid. The last is what runs. It is a partial net: of two known renamings
-in those transcripts it catches one.
+Not counted as the agent's own prose, and so removed before the comparison:
+code blocks, inline code, quoted lines, URLs and paths.
 
-Not counted as the agent's own prose, and so excluded before the comparison:
-code blocks, inline code, quoted lines, URLs and paths. Nor are tokens that
-could not be words — tool output is full of base64 and hex, which reached 1.3
-million vocabulary entries on one long session, so a token needs a vowel, no
-letter repeated three times over, and at most 15 characters.
+## What counts as a word already in use
 
-Inflections are dropped too. The first live firing was on `spawns`, with
-`spawn` already in the session, which is not a new name for anything.
+Anything you wrote, and anything this agent wrote in an earlier turn, counts
+straight away — those are names in use.
 
-Vocabulary is cached per session under `~/.claude/termcheck/` with the byte
-offset already read, so each run parses only what is new: 0.8s a turn on a
-62 MB transcript, against 3.3s with no cache.
+Tool output is different. It is mostly base64 and hex, and taken at face
+value it reached a 934,000-word vocabulary on one session, nearly all of it
+junk that a vowel-and-no-tripled-letter filter waved through. So a word from
+tool output has to appear **at least twice** before it counts. A real name
+recurs — a column heading appears in every row, a function at every call site
+— while base64 fragments are unique by construction. On the same session that
+gives 114,000 words, with `crossings`, `residue`, `partis`, `conscount`,
+`subagent` and `termcheck` all surviving.
+
+Tool output has to count for something, or every term picked up from a file
+would look new. A column called `crossings` makes "the crossings" the data's
+own name, not an invention.
+
+## Cache, log and cleanup
+
+Vocabulary is cached per session under `~/.claude/termcheck/`, with the byte
+offset already read, so each run parses only what is new: **0.10s** a turn on
+a 62 MB transcript and a 774 KB cache, against 3.2s with no cache.
+
+Every firing is appended to `~/.claude/termcheck/firings.jsonl` — time,
+session, working directory, the words, and the vocabulary size — so the
+question of whether this is worth running has an answer after a few weeks
+rather than an impression. Silence is not logged.
+
+Caches for sessions untouched for a week are removed on each run.
 
 ## `terminology.sh`
 
