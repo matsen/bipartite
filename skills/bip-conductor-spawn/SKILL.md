@@ -144,8 +144,13 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
-rm -f .epic-status.json .epic-worklog.md
+rm -f .epic-status.json .epic-worklog.md .claude/ralph-loop.local.md
 ```
+
+**`.claude/ralph-loop.local.md` is the third stale-state file and the one that gets forgotten.**
+It is the ralph-loop plugin's own state (iteration count, max, completion promise, and the `session_id` that owns it).
+The hook exits on a `session_id` mismatch, so a file left by a dead session cannot actually drive a new worker — but it reads as a live loop to anyone inspecting the clone, including a conductor deciding whether a slot is busy.
+Observed 2026-09-04: one clone in a 17-clone pool carried a state file from a session dead 3 hours, while every other signal said the slot was free.
 
 **Fetch inside each clone, never once in the conductor.**
 Each clone has its own `origin/main`, so a conductor-level fetch followed by `git -C <clone> reset --hard origin/main` resets the clone to *its own stale* ref and silently bases the worker on an old commit.
@@ -154,7 +159,7 @@ The `cd` above is what makes this correct — don't collapse it in a batch-spawn
 
 **Worktree mode**: worktree was just created fresh from main — just clear any stale status files from a previous run on this same issue:
 ```bash
-rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md"
+rm -f "$SLOT/.epic-status.json" "$SLOT/.epic-worklog.md" "$SLOT/.claude/ralph-loop.local.md"
 ```
 
 **State cleanup is mandatory** — stale files from a previous assignment will confuse the worker and lead.
@@ -585,10 +590,20 @@ REPO=$(jq -r .github_repo .epic-config.json)
 cd "$CLONE_ROOT"
 git clone "git@github.com:$REPO.git" <new-name>
 ```
-After creating, **two registration steps, and skipping either produces a slot that fails silently**:
+After creating, **four registration steps, and skipping any one produces a slot that fails silently**:
 
 1. **Add the name to `clone_names` in `.epic-config.json`.** `bip spawn` does not consult the registry, so an unregistered clone spawns fine — but Step 1's idle-clone *selection* iterates `clone_names`, so the slot is free and **invisible to the conductor**. Measured 2026-09-03: three clones were created and only two registered; the third read as "no free slots" at the exact moment headroom was needed.
 2. **Trust the directory before spawning into it.** A fresh clone has no `hasTrustDialogAccepted` entry in `~/.claude.json`, so `claude` opens on *"Quick safety check: Is this a project you created or one you trust?"* and **queues the prompt behind a modal dialog.** The window exists, the session is up, and no work starts. Either spawn once and answer the dialog, or confirm the entry exists first.
+3. **Restart `bip epic watch`.** The watcher enumerates slots when it starts and does not rediscover the pool afterwards, so a clone added to `clone_names` after the watcher launched emits **no phase transitions at all** — the slot works, does real work, and is silently unmonitored. Kill and relaunch it (`ps -eo pid,args | grep -E '^\s*[0-9]+ bip epic watch'` to find it — **never** `pgrep -af`, which matches the literal string inside every worker's spawn prompt and dumps tens of KB). Measured 2026-09-03: four slots ran blind for most of a day because this step did not exist.
+4. **Verify `.epic-config.json` actually resolves from the new clone, and fail loudly if it does not.** Every helper here calls `resolve_clone_root .epic-config.json` against the *current* directory, so the file must be findable from wherever the caller runs. A missing or unparseable file makes `jq -r .github_repo` print `null` and `resolve_clone_root` return empty — after which `cd "$CLONE_ROOT/<clone>"` resolves against `$HOME` and the work lands in the wrong place with **no error at any step**. Gate it explicitly rather than letting an empty value flow onward:
+
+   ```bash
+   CLONE_ROOT=$(resolve_clone_root .epic-config.json) || { echo "FATAL: cannot resolve clone_root" >&2; exit 1; }
+   [ -n "$CLONE_ROOT" ] && [ -d "$CLONE_ROOT" ] || { echo "FATAL: clone_root '$CLONE_ROOT' missing" >&2; exit 1; }
+   [ -d "$CLONE_ROOT/<new-name>" ] || { echo "FATAL: clone <new-name> not created" >&2; exit 1; }
+   ```
+
+   This is the same failure class as the `REMOTE_DIR` note below: a path component that silently resolves to something plausible is worse than one that errors, because the run succeeds in the wrong place and only a later `ls` of the expected path reveals it.
 
 **If you must answer that dialog from the conductor, read which option is highlighted first — never send a blind `Enter`.** The default is not stable across windows: `grep -nE 'No, exit|Yes, I trust' ` the pane, then send `Down` before `Enter` when `No, exit` is the highlighted row. Measured 2026-09-03: a blind `Enter` intended to rescue four blocked workers selected `No, exit` in three of them and quit the sessions it was rescuing.
 

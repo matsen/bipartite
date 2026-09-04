@@ -71,7 +71,7 @@ Brief:
 >    For each slot, read `.epic-status.json` and surface: phase, summary, scope, stop_reason, lead_guidance.
 >    Migrate legacy phases: `blocked → needs-human`, `pr-review → quality-gate`.
 > 6. For active slots, `git -C <slot> log --oneline main..HEAD | head -5` to see recent commits.
-> 7. For slots that look finished or blocked, capture the last 20 lines of tmux: `tmux capture-pane -t <window> -p | tail -20`.
+> 7. For slots that look finished or blocked, capture the last 20 lines of tmux: `tmux capture-pane -t <window> -p | tail -20`. **Do not read text at the `❯` prompt in that output as pending user input** — `-p` strips escapes, and Claude Code's autosuggest puts dim placeholder text at the prompt of essentially every idle window. See `/bip-conductor` Step 6 for the cursor-position test that distinguishes them.
 > 8. Verify state with `gh pr view --json state` / `gh issue view --json state` for anything you plan to flag — never claim "open" or "merged" without a live confirmation.
 >
 > Return under 400 words, structured per `SUBAGENT-SCAN.md`:
