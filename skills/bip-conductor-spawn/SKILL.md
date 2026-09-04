@@ -293,20 +293,27 @@ silently prevent it.** A probe that exits 0 regardless either reports "done"
 immediately or "still running" forever; the loop then advances on nothing or
 spins, and in both cases the status file reads as though someone checked.
 
-Measured on `matsengrp/phyz` 2026-09-04, auditing six live slots: **two had
-probes that could not report not-done** -- `... || echo NOTREADY`, and
-`grep -c ... || echo 0` where the `grep -c` was **correctly** exit-coded and
-the `|| echo 0` had been added to suppress noise. The second is the
-instructive one: a defensive habit converting a working probe into a broken
-one, which is why "just don't write sloppy checks" does not reach it. Both
-idioms had already been diagnosed and corrected in other slots **the same
-day**, by message -- and reappeared anyway. **That is why this rule lives in
-the spawn prompt rather than in a per-slot correction: the fix has to be
-where the prompt is written, not in something each worker must remember.**
+**This is a standing defect, not one bad day.** On `matsengrp/phyz`
+2026-09-03 a completed grid (i2197) sat unseen because the worker's
+`check_cmd` was fail-open; the next day a finished sweep sat unseen for 35
+minutes, for the same reason.
+
+Measured 2026-09-04 across two sweeps: **four of eleven live-slot probes
+could not report not-done**, in two idioms -- `check_cmd: "true"`, and the
+`... || echo NOT_READY` family (including `grep -c ... || echo 0`, where the
+`grep -c` was **correctly** exit-coded and the `|| echo 0` had been added to
+suppress noise). That last is the instructive case: a defensive habit
+converting a working probe into a broken one, which is why "don't write
+sloppy checks" does not reach it. **Two of the four appeared after the same
+idiom had already been corrected in another slot, by message, hours earlier
+the same day.** That is why this rule lives in the spawn prompt: the fix has
+to be where the prompt is written, not in something each worker must
+remember.
 
 Prefer a command whose exit status *is* the answer -- `test -f`/`test -s` on
 the artifact, or the tool's own status. If you must post-process, keep the
-status (`set -o pipefail`; a bare `print()`/`echo` sets none). **Never wrap
+status (`set -o pipefail` -- a trailing `| tail`/`| head` otherwise
+steals it; a bare `print()`/`echo` sets none). **Never wrap
 the whole probe in `|| echo`.**
 
 PUSH NOTIFICATION — When you set phase to needs-human or completed, read
