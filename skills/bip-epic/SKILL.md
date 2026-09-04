@@ -269,7 +269,7 @@ Do this whenever findings come in, items complete, or new work starts — not on
 The observed failure mode is accretion, not staleness: a body cut from 524 to 146 lines had almost nothing stale in what was removed — it was cut because the work had *finished* (checked-off phases, a fully-ticked table) and kept getting appended around instead of trimmed.
 Whenever you touch a body to add a finding or check a box, also look for sections whose work is now fully complete and cut them in the same edit, rather than letting them ride to the next dedicated cleanup.
 
-**Before writing a correction, a retraction, or a unification of two findings**, apply the three checks in `PROSE-DISCIPLINE.md` ("Before writing a correction or a unification").
+**Before writing a correction, a retraction, or a unification of two findings**, apply the three checks in `EVIDENCE-DISCIPLINE.md` ("Before writing a correction or a unification").
 
 **Identified work needs an issue number, or it is not tracked.**
 Every mechanism downstream of this skill keys on issue numbers: Group A's scanner resolves each dashboard item with `gh issue view <N>`, spawn intent files are named `<N>.md`, the conductor's dashboard maps slots to issues, and blocker sets are lists of numbers.
@@ -296,7 +296,7 @@ Note the inverse trap too: two modules can export the same type name (`SearchRes
 Re-derive anything load-bearing that arrived from a conductor, a worker, or your own earlier round, and quote the command.
 Measured the same day: an inherited `12M` for a preserved artifact set was actually `6.0M` (a `find` list that pulled in a sibling directory), a subagent's per-topology timing was ~20% high, and an "it costs nothing to capture" assertion turned out to describe a column the harness was discarding before it reached disk.
 None changed a conclusion; all three would have shipped into an issue body unchallenged.
-See `PROSE-DISCIPLINE.md`'s "Before citing a measurement" for the issue-body form of this — the cross-session form is the same failure with a different surface.
+See `EVIDENCE-DISCIPLINE.md`'s "Before citing a measurement" for the issue-body form of this — the cross-session form is the same failure with a different surface.
 
 **Fleet state is derived, never authored — don't let it back into the body.**
 Which clone holds which issue, which slots are free, which tmux windows are live: recompute this from `git`/`tmux`/`gh` (that's `/bip-conductor`'s Step 5 dashboard) whenever you need it.

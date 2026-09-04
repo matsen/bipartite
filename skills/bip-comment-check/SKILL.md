@@ -116,7 +116,7 @@ For each claim, assign a verdict:
 
 ### Step 6: Report
 
-Apply `PROSE-DISCIPLINE.md` (bipartite repo root) when writing the verdict.
+Apply `PROSE-DISCIPLINE.md` (bipartite repo root) when writing the verdict, and `EVIDENCE-DISCIPLINE.md` to every number it rests on.
 
 Present findings as a numbered list matching the original review's numbering.
 For each claim:

@@ -1,0 +1,30 @@
+# Evidence discipline for issues, PRs, and comments
+
+Whether a claim is **true**, as distinct from how it is written — that is `PROSE-DISCIPLINE.md`'s job, and these two were one file until 2026-09-04, when the evidence half had grown to 48% of a document titled for style.
+
+**Apply these whenever you cite a number or write a correction** — drafting a body is the common case, not the trigger. A figure quoted in a commit message, a cross-session message, or a doc comment needs the same checks and gets them less often.
+
+**Budget.** This is the half that grows: ten consecutive kaizen commits to this repo added 166 lines and deleted 7, and nearly all of it landed here. Prefer a change that is roughly line-neutral — a new rule can usually pay for itself out of the previous rule's justification prose. Keep the clause that makes a measured example undeniable; cut the parameter-space texture around it.
+
+## Before citing a measurement
+
+A number in an issue body licenses work. Before one goes in, establish what its presence in a file does not establish on its own.
+
+- **Is it derived from the data, or from the configuration?** A field can vary across runs, carry a plausible name, and still be a restatement of the flags. Measured on `matsengrp/phyz` 2026-09-02: `--summary-tsv`'s `search_rounds` read exactly 42 in all 43 cells of a sweep, because it resolved to `max_failures + free_pool_slots` — inputs the operator had chosen. It looked like search depth and was an echo of the command line. The cheap tell is to predict the value from the flags alone before opening the file; if you can, it is not evidence. A field that varies with `num_leaves` is the harder case, because tracking one input looks more like measurement than tracking none.
+- **Does it reach disk, where a reader can open it?** Four separate times in one day the answer was no, in four different ways: a cited `results/raw/` path was gitignored and absent from a fresh clone; the stderr files holding an experiment's primary evidence matched no `*.tsv` negation at any depth; a harness discarded the subprocess stdout carrying the column it was there to collect; and a rescued copy lived at a path nothing committed referenced. Each was invisible in the same way — the run produced the quantity, and nothing that survived the run recorded it.
+
+- **Is it a census, or the items you already had?** Re-derivation validates the members of a set and cannot find a missing one — every item checks out and the count is still wrong. For any "which items have property P" claim, derive the population from P rather than from familiarity, then enumerate it: if P is "merged before commit X," the population is every merge, not the issues you can name. Checking your list again is a different operation, not a more careful version of this one.
+
+- **Is it the whole result, or the part that arrived first?** A partial result licenses no direction, and hedging it does not fix that. Measured 2026-09-02: the first band of a four-band experiment showed a lever helping where prior work said it hurt; two sessions independently hedged and then stated the direction anyway. It reversed on the full table. **The hedge travelled less far than the direction did.** Report the partial number if it is useful; do not attach a reading to it, because the reading is what gets quoted.
+
+The two failures compose, and the composition is the one to watch for: a number that is a configuration artifact **and** unreadable by the next person reads exactly like a hard-won result, because nobody can check it. Verify the capture path end to end on one case before running anything at scale, and quote the command that produced the number rather than the file it landed in.
+
+This is the evidence-side twin of the guard rule above: there, a check that cannot read its input reports a safety it never established; here, a citation that cannot be opened reports an observation nobody made.
+
+## Before writing a correction or a unification
+
+Three checks, each answerable in about a minute by someone who does not yet understand the finding — which is what makes them usable, since motivated correction and over-unification both happen under time pressure.
+
+- **A correction that reduces a previously-reported quantity to *no* information deserves a second look before it's written.** Debunking has its own momentum: before recording the stronger retraction, check whether a weaker, still-true claim survives. A count found to be guaranteed in direction by construction is not thereby guaranteed in magnitude — "carries no information" is a more quotable sentence than "carries less than it appears to, in this specific way," and only one of them is usually true.
+- **Before accepting a critique of a result: would this objection have been raised if the result had come out the other way?** This separates a validity critique from moving the goalposts, and pre-registration does not — pre-registration protects against choosing a lens after seeing the numbers, not against a measurement having been confounded. "The median is -5.4, so let me find a weighting that shrinks it" fails the test. "The two engines did 13x different amounts of work, so the quantity the rule was applied to may not be the quantity it was designed to judge" passes it — that would be worth stating at +5.4 exactly as much as at -5.4.
+- **Before merging two findings into one story: do their remedies land in the same subsystem?** A shared *symptom* is not a shared *mechanism*, and the remedy test is the cheap tell. Two failures both presenting as "far less topology search than the configuration implies" were one search that ran and was cut short by an adaptive stopping rule and one that never started because the tree handed to it had immovable branches — fixes in different subsystems, so not one pattern, and presenting them as one invites a single fix that addresses neither. "Two independent defects with a common symptom" is still a strong claim and a more useful one.

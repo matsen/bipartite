@@ -110,7 +110,7 @@ Every adjective must have a measurable criterion.
 No "fast", "scalable", "robust" without numbers.
 
 **Apply prose discipline.**
-Read `PROSE-DISCIPLINE.md` at the bipartite repo root before drafting and apply its rules.
+Read `PROSE-DISCIPLINE.md` at the bipartite repo root before drafting and apply its rules. Apply `EVIDENCE-DISCIPLINE.md` to every number the draft cites.
 Defaults toward shorter: lead with the deliverable, state each fact once, bullets for enumerations, show the change site (not its surroundings), drop non-contested options, list bug-catching tests (not invariants).
 
 **No hard-wrapping.**

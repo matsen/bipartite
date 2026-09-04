@@ -94,7 +94,7 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 - Has a test plan or notes section if appropriate
 - Is concise but informative
 
-**Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body.
+**Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body, and **`EVIDENCE-DISCIPLINE.md`** to every number in it.
 Flag violations and offer to rewrite.
 
 If the body looks like historical commit noise, revision-history accumulation, or is empty:
