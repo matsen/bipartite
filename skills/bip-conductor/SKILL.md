@@ -94,6 +94,19 @@ Consume it as a constraint, log it, and do not re-verify, re-narrate, or re-liti
 The failure that produced this rule: across one session the conductor independently re-verified three of the epic's citations and reported each to the user alongside the epic's own report, turning up a single discrepancy that changed nothing — while the epic's own verify tier, the mechanism that is actually for this, found six real errors in the same window.
 The user's summary was "I feel like I am having the same convo with two agents."
 
+**The split also has a diagnostic function beyond the division of labour, and it is easy to mistake for overhead.**
+Measured across one day on `matsengrp/phyz`, 2026-09-04: a shipped default resting on invalidated evidence, a void experiment plan, an incomplete census, a relocated document's missing pointers, and a wrong causal story about an outlier — **every one caught by the other session, none by the author re-reading its own text.**
+The mechanism is that the two roles hold different working sets, so what is invisible from inside one is ordinary from the other.
+**This is not a habit to adopt; it is a property of running two sessions, and it disappears silently if the roles are ever merged** — worth knowing before anyone consolidates them on efficiency grounds.
+
+Two practices make it work and both are cheap: send raw measurements rather than conclusions, and re-derive a peer's number before acting on it.
+**Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the rule above forbids.**
+Re-derive silently and report only the delta: a peer's five-item list that turns out to have nine is worth one line, not a second copy of their reasoning.
+
+A third practice reads as tone and is actually cost: **keep corrections low-ceremony.**
+"That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
+A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
+
 ## Arbitration
 
 When two things want the same clone, cache, or host, or when the epic's spawn intent conflicts with what the conductor observes live, **resolve it from measured state and report the call with its reasoning.** Don't hold the fleet idle waiting for an answer to a question about hosts and slots.
