@@ -282,9 +282,32 @@ AWAITING RESULTS:
 If you launch a long-running experiment:
 1. Set phase to awaiting-results in .epic-status.json
 2. Set the awaiting field with check_cmd and check_files
-3. Each ralph-loop iteration: run check_cmd, if not ready end the turn
-4. After 3 consecutive check failures, set stop_reason to
+3. **Run check_cmd once while the work is definitely unfinished and confirm
+   it says not-done.** A probe you have never seen fail is not a probe.
+4. Each ralph-loop iteration: run check_cmd, if not ready end the turn
+5. After 3 consecutive check failures, set stop_reason to
    mechanical-blocker and invoke the lead
+
+**`check_cmd` must be able to report not-done, and the ordinary idioms
+silently prevent it.** A probe that exits 0 regardless either reports "done"
+immediately or "still running" forever; the loop then advances on nothing or
+spins, and in both cases the status file reads as though someone checked.
+
+Measured on `matsengrp/phyz` 2026-09-04, auditing six live slots: **two had
+probes that could not report not-done** -- `... || echo NOTREADY`, and
+`grep -c ... || echo 0` where the `grep -c` was **correctly** exit-coded and
+the `|| echo 0` had been added to suppress noise. The second is the
+instructive one: a defensive habit converting a working probe into a broken
+one, which is why "just don't write sloppy checks" does not reach it. Both
+idioms had already been diagnosed and corrected in other slots **the same
+day**, by message -- and reappeared anyway. **That is why this rule lives in
+the spawn prompt rather than in a per-slot correction: the fix has to be
+where the prompt is written, not in something each worker must remember.**
+
+Prefer a command whose exit status *is* the answer -- `test -f`/`test -s` on
+the artifact, or the tool's own status. If you must post-process, keep the
+status (`set -o pipefail`; a bare `print()`/`echo` sets none). **Never wrap
+the whole probe in `|| echo`.**
 
 PUSH NOTIFICATION — When you set phase to needs-human or completed, read
 `$CLONE_ROOT/.conductor-session` (resolve `CLONE_ROOT` from
