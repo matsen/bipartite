@@ -100,7 +100,7 @@ The mechanism is that the two roles hold different working sets, so what is invi
 **This is not a habit to adopt; it is a property of running two sessions, and it disappears silently if the roles are ever merged** — worth knowing before anyone consolidates them on efficiency grounds.
 
 Two practices make it work and both are cheap: send raw measurements rather than conclusions, and re-derive a peer's number before acting on it.
-**Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the rule above forbids.**
+**Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the fleet/topic rule above forbids** ("consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it").
 Re-derive silently and report only the delta: a peer's five-item list that turns out to have nine is worth one line, not a second copy of their reasoning.
 
 A third practice reads as tone and is actually cost: **keep corrections low-ceremony.**
