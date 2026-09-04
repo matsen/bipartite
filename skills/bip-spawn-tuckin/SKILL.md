@@ -59,7 +59,7 @@ A branch that only exists locally in a tmux pane doesn't survive the pane closin
 gh pr view --json number,url,body,state 2>/dev/null
 ```
 
-If a PR is open, make sure its body reflects where things actually stand right now — apply `PROSE-DISCIPLINE.md` before writing anything.
+If a PR is open, make sure its body reflects where things actually stand right now — apply `PROSE-DISCIPLINE.md` before writing anything, and `EVIDENCE-DISCIPLINE.md` to every number it carries.
 Two cases:
 
 - **Session reached a real stopping point (done, or blocked on the user)** — rewrite the body to read as current state (premise, results, interpretation), not as a log of how it got there.
