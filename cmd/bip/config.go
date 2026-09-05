@@ -27,7 +27,7 @@ Usage:
 Keys:
   pdf-root     Path to PDF folder (e.g., ~/Google Drive/Paperpile)
   pdf-reader   PDF reader preference (system, skim, zathura, evince, okular)
-  papers-repo  Path to bip-papers repository for knowledge graph`,
+  papers-repo  Path to bip-papers repository`,
 	Args: cobra.MaximumNArgs(2),
 	RunE: runConfig,
 }

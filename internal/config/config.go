@@ -20,8 +20,6 @@ const (
 	BipartiteDir = ".bipartite"
 	ConfigFile   = "config.yml"
 	RefsFile     = "refs.jsonl"
-	EdgesFile    = "edges.jsonl"
-	ConceptsFile = "concepts.jsonl"
 	ProjectsFile = "projects.jsonl"
 	ReposFile    = "repos.jsonl"
 	CacheDir     = "cache"
@@ -44,16 +42,6 @@ func ConfigPath(root string) string {
 // RefsPath returns the path to refs.jsonl from a root path.
 func RefsPath(root string) string {
 	return filepath.Join(root, BipartiteDir, RefsFile)
-}
-
-// EdgesPath returns the path to edges.jsonl from a root path.
-func EdgesPath(root string) string {
-	return filepath.Join(root, BipartiteDir, EdgesFile)
-}
-
-// ConceptsPath returns the path to concepts.jsonl from a root path.
-func ConceptsPath(root string) string {
-	return filepath.Join(root, BipartiteDir, ConceptsFile)
 }
 
 // ProjectsPath returns the path to projects.jsonl from a root path.

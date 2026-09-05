@@ -16,7 +16,7 @@ var (
 
 func init() {
 	dedupeCmd.Flags().BoolVar(&dedupeDryRun, "dry-run", false, "Show duplicates without making changes")
-	dedupeCmd.Flags().BoolVar(&dedupeMerge, "merge", false, "Merge duplicates (keep first, update edges)")
+	dedupeCmd.Flags().BoolVar(&dedupeMerge, "merge", false, "Merge duplicates (keep first, remove others)")
 	rootCmd.AddCommand(dedupeCmd)
 }
 
@@ -27,7 +27,7 @@ var dedupeCmd = &cobra.Command{
 
 Examples:
   bip dedupe --dry-run    # Show duplicates without making changes
-  bip dedupe --merge      # Merge duplicates: keep first, remove others, update edges`,
+  bip dedupe --merge      # Merge duplicates: keep first, remove others`,
 	RunE: runDedupe,
 }
 
@@ -41,10 +41,9 @@ type DuplicateGroup struct {
 
 // DedupeResult represents the result of a dedupe operation.
 type DedupeResult struct {
-	DryRun        bool             `json:"dry_run"`
-	Groups        []DuplicateGroup `json:"groups"`
-	TotalDupes    int              `json:"total_duplicates"`
-	EdgesModified int              `json:"edges_modified,omitempty"`
+	DryRun     bool             `json:"dry_run"`
+	Groups     []DuplicateGroup `json:"groups"`
+	TotalDupes int              `json:"total_duplicates"`
 }
 
 func runDedupe(cmd *cobra.Command, args []string) error {
@@ -99,23 +98,18 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Merge mode: actually remove duplicates and update edges
-	edgesModified, err := performMerge(repoRoot, refs, groups)
-	if err != nil {
+	// Merge mode: actually remove duplicates
+	if err := performMerge(repoRoot, refs, groups); err != nil {
 		exitWithError(ExitDataError, "performing merge: %v", err)
 	}
 
 	if humanOutput {
 		fmt.Printf("Merged %d duplicate groups (%d duplicates removed)\n", len(groups), totalDupes)
-		if edgesModified > 0 {
-			fmt.Printf("Modified %d edges\n", edgesModified)
-		}
 	} else {
 		outputJSON(DedupeResult{
-			DryRun:        false,
-			Groups:        groups,
-			TotalDupes:    totalDupes,
-			EdgesModified: edgesModified,
+			DryRun:     false,
+			Groups:     groups,
+			TotalDupes: totalDupes,
 		})
 	}
 
@@ -159,14 +153,12 @@ func findDuplicateGroups(refs []reference.Reference) []DuplicateGroup {
 	return groups
 }
 
-// performMerge removes duplicates and updates edge references.
-func performMerge(repoRoot string, refs []reference.Reference, groups []DuplicateGroup) (int, error) {
-	// Build redirect map: duplicate ID -> primary ID
-	redirectMap := make(map[string]string)
+// performMerge removes duplicate references.
+func performMerge(repoRoot string, refs []reference.Reference, groups []DuplicateGroup) error {
+	// Build the set of duplicate IDs to drop
 	dupeSet := make(map[string]bool)
 	for _, g := range groups {
 		for _, dupeID := range g.Duplicates {
-			redirectMap[dupeID] = g.Primary
 			dupeSet[dupeID] = true
 		}
 	}
@@ -182,37 +174,8 @@ func performMerge(repoRoot string, refs []reference.Reference, groups []Duplicat
 	// Write cleaned refs
 	refsPath := config.RefsPath(repoRoot)
 	if err := storage.WriteAll(refsPath, cleanRefs); err != nil {
-		return 0, fmt.Errorf("writing refs: %w", err)
+		return fmt.Errorf("writing refs: %w", err)
 	}
 
-	// Update edges that reference duplicates
-	edgesPath := config.EdgesPath(repoRoot)
-	edges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		return 0, fmt.Errorf("reading edges: %w", err)
-	}
-
-	edgesModified := 0
-	for i := range edges {
-		modified := false
-		if newID, ok := redirectMap[edges[i].SourceID]; ok {
-			edges[i].SourceID = newID
-			modified = true
-		}
-		if newID, ok := redirectMap[edges[i].TargetID]; ok {
-			edges[i].TargetID = newID
-			modified = true
-		}
-		if modified {
-			edgesModified++
-		}
-	}
-
-	if edgesModified > 0 {
-		if err := storage.WriteAllEdges(edgesPath, edges); err != nil {
-			return 0, fmt.Errorf("writing edges: %w", err)
-		}
-	}
-
-	return edgesModified, nil
+	return nil
 }

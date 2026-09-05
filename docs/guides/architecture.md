@@ -10,23 +10,23 @@ A **nexus** is a git repository containing your research data. It's the central 
 
 ```
 my-nexus/
-├── refs.jsonl            # Paper library (source of truth)
-├── edges.jsonl           # Knowledge graph connections
-├── concepts.jsonl        # Topic definitions
+├── .bipartite/               # Tracked in git, except cache/
+│   ├── refs.jsonl            # Paper library (source of truth)
+│   ├── projects.jsonl        # Projects
+│   ├── repos.jsonl           # Tracked repositories
+│   ├── config.yml            # Local settings (PDF paths, etc.)
+│   └── cache/                # Ephemeral, gitignored
+│       ├── refs.db           # SQLite FTS index
+│       └── semantic.gob      # Embedding vectors
 │
-├── servers.yml           # Remote servers for bip scout
-├── sources.yml          # GitHub repos for activity tracking
-├── config.yml           # Local settings (PDF paths, etc.)
+├── servers.yml               # Remote servers for bip scout
+├── sources.yml               # GitHub repos for activity tracking
 │
-├── context/              # Project context files
-├── narrative/            # Generated digest output
-│
-└── .bipartite/           # Cache directory (gitignored)
-    ├── cache/refs.db     # SQLite FTS index
-    └── vectors.gob       # Embedding vectors
+├── context/                  # Project context files
+└── narrative/                # Generated digest output
 ```
 
-**Key principle:** JSONL files are the source of truth. The `.bipartite/` cache is ephemeral and rebuilt via `bip rebuild`.
+**Key principle:** JSONL files are the source of truth. The `.bipartite/cache/` directory is ephemeral and rebuilt via `bip rebuild`.
 
 The [nexus-template](https://github.com/matsen/nexus-template) provides a ready-to-use starting point.
 

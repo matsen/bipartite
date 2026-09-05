@@ -67,7 +67,7 @@ func TestProjectImportCommand(t *testing.T) {
 	}
 
 	// Create empty JSONL files
-	files := []string{"refs.jsonl", "concepts.jsonl", "projects.jsonl", "repos.jsonl", "edges.jsonl"}
+	files := []string{"refs.jsonl", "projects.jsonl", "repos.jsonl"}
 	for _, f := range files {
 		path := filepath.Join(bipDir, f)
 		if err := os.WriteFile(path, []byte{}, 0644); err != nil {
@@ -181,7 +181,7 @@ func TestProjectImportWithRepos(t *testing.T) {
 	}
 
 	// Create empty JSONL files
-	files := []string{"refs.jsonl", "concepts.jsonl", "projects.jsonl", "repos.jsonl", "edges.jsonl"}
+	files := []string{"refs.jsonl", "projects.jsonl", "repos.jsonl"}
 	for _, f := range files {
 		path := filepath.Join(bipDir, f)
 		if err := os.WriteFile(path, []byte{}, 0644); err != nil {
@@ -243,86 +243,6 @@ func TestProjectImportWithRepos(t *testing.T) {
 	}
 }
 
-func TestProjectImportWithConcepts(t *testing.T) {
-	// Create temp directory for test
-	tmpDir := t.TempDir()
-
-	// Set up test environment with global config
-	cleanup := setupTestEnvironment(t, tmpDir)
-	defer cleanup()
-
-	// Initialize bipartite structure
-	bipDir := filepath.Join(tmpDir, ".bipartite")
-	if err := os.MkdirAll(bipDir, 0755); err != nil {
-		t.Fatalf("Failed to create .bipartite directory: %v", err)
-	}
-	cacheDir := filepath.Join(bipDir, "cache")
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
-		t.Fatalf("Failed to create cache directory: %v", err)
-	}
-
-	// Create empty JSONL files
-	files := []string{"refs.jsonl", "projects.jsonl", "repos.jsonl", "edges.jsonl"}
-	for _, f := range files {
-		path := filepath.Join(bipDir, f)
-		if err := os.WriteFile(path, []byte{}, 0644); err != nil {
-			t.Fatalf("Failed to create %s: %v", f, err)
-		}
-	}
-
-	// Create concepts file with some concepts
-	conceptsPath := filepath.Join(bipDir, "concepts.jsonl")
-	conceptsData := `{"id":"bcr-phylogenetics","name":"BCR Phylogenetics"}
-{"id":"somatic-hypermutation","name":"Somatic Hypermutation"}`
-	if err := os.WriteFile(conceptsPath, []byte(conceptsData), 0644); err != nil {
-		t.Fatalf("Failed to create concepts file: %v", err)
-	}
-
-	// Create test config with concepts
-	configData := map[string]ProjectConfig{
-		"test-project": {
-			Name:     "Test Project",
-			Concepts: []string{"bcr-phylogenetics", "somatic-hypermutation", "nonexistent-concept"},
-		},
-	}
-
-	configBytes, err := yaml.Marshal(configData)
-	if err != nil {
-		t.Fatalf("Failed to marshal config: %v", err)
-	}
-
-	configPath := filepath.Join(tmpDir, "test-projects.yml")
-	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
-		t.Fatalf("Failed to write config file: %v", err)
-	}
-
-	// Execute import with --link-concepts
-	cmd := projectImportCmd
-	cmd.Flags().Set("link-concepts", "true")
-	cmd.Flags().Set("dry-run", "false")
-	if err := cmd.RunE(cmd, []string{configPath}); err != nil {
-		t.Fatalf("Import failed: %v", err)
-	}
-
-	// Verify edges were created
-	edgesPath := filepath.Join(bipDir, "edges.jsonl")
-	edgesData, err := os.ReadFile(edgesPath)
-	if err != nil {
-		t.Fatalf("Failed to read edges: %v", err)
-	}
-
-	// Should have 2 edges (2 valid concepts, 1 skipped)
-	lines := 0
-	for _, b := range edgesData {
-		if b == '\n' {
-			lines++
-		}
-	}
-	if lines != 2 {
-		t.Errorf("Expected 2 edges (newlines), got %d, content: %q", lines, string(edgesData))
-	}
-}
-
 func TestProjectImportRepoIDCollision(t *testing.T) {
 	// Create temp directory for test
 	tmpDir := t.TempDir()
@@ -342,7 +262,7 @@ func TestProjectImportRepoIDCollision(t *testing.T) {
 	}
 
 	// Create empty JSONL files
-	files := []string{"refs.jsonl", "concepts.jsonl", "projects.jsonl", "repos.jsonl", "edges.jsonl"}
+	files := []string{"refs.jsonl", "projects.jsonl", "repos.jsonl"}
 	for _, f := range files {
 		path := filepath.Join(bipDir, f)
 		if err := os.WriteFile(path, []byte{}, 0644); err != nil {

@@ -149,7 +149,7 @@ bip resolve --interactive # Prompt for true conflicts
 
 ```bash
 bip dedupe --dry-run      # Find duplicates by source ID
-bip dedupe --merge        # Merge duplicates, keeping first and updating edges
+bip dedupe --merge        # Merge duplicates, keeping the first
 bip check                 # Verify repository integrity
 ```
 

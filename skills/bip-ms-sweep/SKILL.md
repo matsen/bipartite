@@ -253,7 +253,6 @@ Re-dispatch any scan whose output is empty or shorter than 50 words — that's t
 | **Pre-share / pre-submission polish sweep of the paper itself** | **this skill** |
 | Per-PR review against guidelines | `/bip-pr-review` |
 | Fact-check a reviewer's comment against the code | `/bip-comment-check` |
-| Add new TeX citations to the bipartite knowledge graph | `/bip-lit-edges` |
 
 ## Why this shape
 

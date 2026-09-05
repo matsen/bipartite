@@ -134,7 +134,7 @@ If neither is set, `slack_bot_token` from `~/.config/bip/config.yml` is used.
 
 ## A Workflow in Practice
 
-**Alice**, a graduate student, downloads two new papers to her Paperpile folder. Her coding agent reads both papers, determines relevance, fetches missing references via Semantic Scholar, and adds them to the library with edges linking to the group's concepts.
+**Alice**, a graduate student, downloads two new papers to her Paperpile folder. Her coding agent reads both papers, determines relevance, fetches missing references via Semantic Scholar, and adds them to the library.
 
 **Bernadetta**, the PI, pulls the changes and runs `bip rebuild`. Her agent scans the additions against her manuscripts and adds relevant papers to the references.
 

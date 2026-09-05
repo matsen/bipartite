@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/config"
-	"github.com/matsen/bipartite/internal/edge"
 	"github.com/matsen/bipartite/internal/github"
 	"github.com/matsen/bipartite/internal/project"
 	"github.com/matsen/bipartite/internal/repo"
@@ -19,7 +18,6 @@ import (
 
 func init() {
 	// project import flags
-	projectImportCmd.Flags().Bool("link-concepts", false, "Create concept↔project edges for listed concepts")
 	projectImportCmd.Flags().Bool("dry-run", false, "Show what would be created without making changes")
 	projectImportCmd.Flags().Bool("no-fetch", false, "Skip GitHub metadata fetch (create repos with minimal data)")
 	projectCmd.AddCommand(projectImportCmd)
@@ -27,10 +25,9 @@ func init() {
 
 // ProjectConfig represents a project entry in the config file.
 type ProjectConfig struct {
-	Name     string   `yaml:"name,omitempty"`     // Optional: display name (defaults to key)
-	Repos    []string `yaml:"repos,omitempty"`    // GitHub org/repo entries
-	Concepts []string `yaml:"concepts,omitempty"` // Concept IDs for edge creation
-	Context  string   `yaml:"context,omitempty"`  // Path to context markdown file
+	Name    string   `yaml:"name,omitempty"`    // Optional: display name (defaults to key)
+	Repos   []string `yaml:"repos,omitempty"`   // GitHub org/repo entries
+	Context string   `yaml:"context,omitempty"` // Path to context markdown file
 }
 
 // ProjectImportResult is the response for the project import command.
@@ -41,8 +38,6 @@ type ProjectImportResult struct {
 	ReposCreated    int                   `json:"repos_created"`
 	ReposSkipped    int                   `json:"repos_skipped"`
 	ReposFailed     int                   `json:"repos_failed"`
-	EdgesCreated    int                   `json:"edges_created"`
-	EdgesSkipped    int                   `json:"edges_skipped"`
 	Warnings        []string              `json:"warnings,omitempty"`
 	Details         *ProjectImportDetails `json:"details,omitempty"`
 }
@@ -51,7 +46,6 @@ type ProjectImportResult struct {
 type ProjectImportDetails struct {
 	Projects []ProjectImportAction `json:"projects"`
 	Repos    []RepoImportAction    `json:"repos"`
-	Edges    []EdgeImportAction    `json:"edges,omitempty"`
 }
 
 // ProjectImportAction describes what happened to a project during import.
@@ -70,34 +64,22 @@ type RepoImportAction struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
-// EdgeImportAction describes what happened to an edge during import.
-type EdgeImportAction struct {
-	SourceID string `json:"source_id"`
-	TargetID string `json:"target_id"`
-	Action   string `json:"action"` // "created" or "skipped"
-	Reason   string `json:"reason,omitempty"`
-}
-
 var projectImportCmd = &cobra.Command{
 	Use:   "import <file>",
 	Short: "Import projects from a config file",
 	Long: `Import projects and repos from a YAML config file.
 
-The config file should have project IDs as keys with optional name, repos, and concepts:
+The config file should have project IDs as keys with optional name and repos:
 
 dasm:
   name: DASM
   repos:
     - matsengrp/netam
     - matsengrp/dasm2-experiments
-  concepts:
-    - somatic-hypermutation
-    - antibody-fitness-prediction
   context: context/dasm.md
 
 Examples:
   bip project import projects.yml
-  bip project import projects.yml --link-concepts
   bip project import projects.yml --dry-run`,
 	Args: cobra.ExactArgs(1),
 	RunE: runProjectImport,
@@ -108,7 +90,6 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 	configPath := args[0]
 
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
-	linkConcepts, _ := cmd.Flags().GetBool("link-concepts")
 	noFetch, _ := cmd.Flags().GetBool("no-fetch")
 
 	// Read and parse config file
@@ -139,19 +120,6 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "reading repos: %v", err)
 	}
 
-	edgesPath := config.EdgesPath(repoRoot)
-	existingEdges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading edges: %v", err)
-	}
-
-	// Load concept IDs for validation
-	conceptsPath := config.ConceptsPath(repoRoot)
-	conceptIDs, err := storage.LoadConceptIDSet(conceptsPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading concepts: %v", err)
-	}
-
 	// Build lookup maps
 	existingProjectIDs := make(map[string]bool)
 	for _, p := range existingProjects {
@@ -167,24 +135,17 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	existingEdgeKeys := make(map[edge.EdgeKey]bool)
-	for _, e := range existingEdges {
-		existingEdgeKeys[e.Key()] = true
-	}
-
 	// Process imports
 	result := &ProjectImportResult{
 		Warnings: []string{},
 		Details: &ProjectImportDetails{
 			Projects: []ProjectImportAction{},
 			Repos:    []RepoImportAction{},
-			Edges:    []EdgeImportAction{},
 		},
 	}
 
 	var newProjects []project.Project
 	var newRepos []repo.Repo
-	var newEdges []edge.Edge
 
 	now := time.Now().UTC().Format(time.RFC3339)
 	ghClient := github.NewClient()
@@ -242,15 +203,6 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 				existingRepoIDs, existingRepoURLs, &newRepos, result)
 			result.Details.Repos = append(result.Details.Repos, repoAction)
 		}
-
-		// Process concept edges if requested
-		if linkConcepts {
-			for _, conceptID := range cfg.Concepts {
-				edgeAction := processEdgeImport(conceptID, projectID, now,
-					conceptIDs, existingEdgeKeys, &newEdges, result)
-				result.Details.Edges = append(result.Details.Edges, edgeAction)
-			}
-		}
 	}
 
 	// Handle dry run
@@ -277,13 +229,6 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if len(newEdges) > 0 {
-		existingEdges = append(existingEdges, newEdges...)
-		if err := storage.WriteAllEdges(edgesPath, existingEdges); err != nil {
-			exitWithError(ExitDataError, "writing edges: %v", err)
-		}
-	}
-
 	// Rebuild SQLite indexes
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
@@ -297,12 +242,6 @@ func runProjectImport(cmd *cobra.Command, args []string) error {
 	if len(newRepos) > 0 {
 		if _, err := db.RebuildReposFromJSONL(reposPath); err != nil {
 			exitWithError(ExitDataError, "updating repos index: %v", err)
-		}
-	}
-
-	if len(newEdges) > 0 {
-		if _, err := db.RebuildEdgesFromJSONL(edgesPath); err != nil {
-			exitWithError(ExitDataError, "updating edges index: %v", err)
 		}
 	}
 
@@ -464,52 +403,6 @@ func processRepoImport(repoSpec, projectID, now string, ghClient *github.Client,
 	}
 }
 
-// processEdgeImport handles creating a concept↔project edge.
-func processEdgeImport(conceptID, projectID, now string,
-	conceptIDs map[string]bool, existingEdgeKeys map[edge.EdgeKey]bool, newEdges *[]edge.Edge, result *ProjectImportResult) EdgeImportAction {
-
-	// Validate concept exists
-	if !conceptIDs[conceptID] {
-		result.EdgesSkipped++
-		return EdgeImportAction{
-			SourceID: "concept:" + conceptID,
-			TargetID: "project:" + projectID,
-			Action:   "skipped",
-			Reason:   fmt.Sprintf("concept %q not found", conceptID),
-		}
-	}
-
-	// Create edge (concept → project)
-	e := edge.Edge{
-		SourceID:         "concept:" + conceptID,
-		TargetID:         "project:" + projectID,
-		RelationshipType: "applied-in",
-		Summary:          fmt.Sprintf("Concept %s is applied in project %s", conceptID, projectID),
-		CreatedAt:        now,
-	}
-
-	// Check for existing edge
-	if existingEdgeKeys[e.Key()] {
-		result.EdgesSkipped++
-		return EdgeImportAction{
-			SourceID: e.SourceID,
-			TargetID: e.TargetID,
-			Action:   "skipped",
-			Reason:   "edge already exists",
-		}
-	}
-
-	*newEdges = append(*newEdges, e)
-	existingEdgeKeys[e.Key()] = true
-	result.EdgesCreated++
-
-	return EdgeImportAction{
-		SourceID: e.SourceID,
-		TargetID: e.TargetID,
-		Action:   "created",
-	}
-}
-
 // outputImportResult outputs the import result in the appropriate format.
 func outputImportResult(result *ProjectImportResult) {
 	if humanOutput {
@@ -520,19 +413,12 @@ func outputImportResult(result *ProjectImportResult) {
 
 		fmt.Printf("Projects: %d created, %d skipped\n", result.ProjectsCreated, result.ProjectsSkipped)
 		fmt.Printf("Repos: %d created, %d skipped, %d failed\n", result.ReposCreated, result.ReposSkipped, result.ReposFailed)
-		if result.EdgesCreated > 0 || result.EdgesSkipped > 0 {
-			fmt.Printf("Edges: %d created, %d skipped\n", result.EdgesCreated, result.EdgesSkipped)
-		}
 
 		if len(result.Warnings) > 0 {
 			fmt.Println("\nWarnings:")
 			for _, w := range result.Warnings {
 				fmt.Printf("  %s\n", w)
 			}
-		}
-
-		if result.Status == "completed" && (result.ProjectsCreated > 0 || result.ReposCreated > 0) {
-			fmt.Println("\nRun `bip viz --open` to see the updated knowledge graph")
 		}
 	} else {
 		outputJSON(result)

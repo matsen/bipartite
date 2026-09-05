@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/config"
-	"github.com/matsen/bipartite/internal/edge"
 	"github.com/matsen/bipartite/internal/project"
 	"github.com/matsen/bipartite/internal/repo"
 	"github.com/matsen/bipartite/internal/storage"
@@ -17,7 +16,7 @@ import (
 // Exit codes for project commands (per CLI contract)
 const (
 	ExitProjectNotFound   = 2 // Project not found
-	ExitProjectValidation = 3 // Validation error (invalid ID, duplicate, has edges)
+	ExitProjectValidation = 3 // Validation error (invalid ID, duplicate, has repos)
 )
 
 func init() {
@@ -41,24 +40,17 @@ func init() {
 	projectCmd.AddCommand(projectUpdateCmd)
 
 	// project delete flags
-	projectDeleteCmd.Flags().BoolP("force", "f", false, "Delete even if edges or repos exist")
+	projectDeleteCmd.Flags().BoolP("force", "f", false, "Delete even if repos exist")
 	projectCmd.AddCommand(projectDeleteCmd)
 
 	// project repos - no extra flags
 	projectCmd.AddCommand(projectReposCmd)
-
-	// project concepts flags
-	projectConceptsCmd.Flags().StringP("type", "t", "", "Filter by relationship type")
-	projectCmd.AddCommand(projectConceptsCmd)
-
-	// project papers - no extra flags
-	projectCmd.AddCommand(projectPapersCmd)
 }
 
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "Manage project nodes",
-	Long:  `Commands for managing project nodes in the knowledge graph.`,
+	Short: "Manage projects",
+	Long:  `Commands for managing projects.`,
 }
 
 // ProjectAddResult is the response for the project add command.
@@ -70,7 +62,7 @@ type ProjectAddResult struct {
 var projectAddCmd = &cobra.Command{
 	Use:   "add <id>",
 	Short: "Add a new project",
-	Long:  `Add a new project node to the knowledge graph.`,
+	Long:  `Add a new project.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectAdd,
 }
@@ -98,7 +90,7 @@ func runProjectAdd(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitProjectValidation, "invalid project: %v", err)
 	}
 
-	// Check for global ID collision (papers, concepts, projects)
+	// Check for global ID collision (papers, projects)
 	if err := checkGlobalIDCollision(repoRoot, projectID); err != nil {
 		exitWithError(ExitProjectValidation, "%v", err)
 	}
@@ -144,7 +136,7 @@ func runProjectAdd(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// checkGlobalIDCollision checks if the project ID conflicts with existing papers or concepts.
+// checkGlobalIDCollision checks if the project ID conflicts with existing papers.
 func checkGlobalIDCollision(repoRoot, projectID string) error {
 	// Check papers (refs)
 	refsPath := config.RefsPath(repoRoot)
@@ -158,23 +150,13 @@ func checkGlobalIDCollision(repoRoot, projectID string) error {
 		}
 	}
 
-	// Check concepts
-	conceptsPath := config.ConceptsPath(repoRoot)
-	conceptIDs, err := storage.LoadConceptIDSet(conceptsPath)
-	if err != nil {
-		return fmt.Errorf("reading concepts: %w", err)
-	}
-	if conceptIDs[projectID] {
-		return fmt.Errorf("id %q already exists as a concept", projectID)
-	}
-
 	return nil
 }
 
 var projectGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get a project by ID",
-	Long:  `Retrieve a project node by its ID.`,
+	Long:  `Retrieve a project by its ID.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectGet,
 }
@@ -217,7 +199,7 @@ type ProjectListResult struct {
 var projectListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all projects",
-	Long:  `List all project nodes in the knowledge graph.`,
+	Long:  `List all projects.`,
 	RunE:  runProjectList,
 }
 
@@ -270,7 +252,7 @@ type ProjectUpdateResult struct {
 var projectUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update a project",
-	Long:  `Update an existing project node.`,
+	Long:  `Update an existing project.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectUpdate,
 }
@@ -350,20 +332,18 @@ type ProjectDeleteResult struct {
 	Status       string `json:"status"`
 	ID           string `json:"id"`
 	ReposRemoved int    `json:"repos_removed"`
-	EdgesRemoved int    `json:"edges_removed"`
 }
 
-// ProjectDeleteBlockedResult is the response when delete is blocked by edges or repos.
+// ProjectDeleteBlockedResult is the response when delete is blocked by repos.
 type ProjectDeleteBlockedResult struct {
 	Error     string `json:"error"`
-	EdgeCount int    `json:"edge_count"`
 	RepoCount int    `json:"repo_count"`
 }
 
 var projectDeleteCmd = &cobra.Command{
 	Use:   "delete <id>",
 	Short: "Delete a project",
-	Long:  `Delete a project node from the knowledge graph.`,
+	Long:  `Delete a project.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectDelete,
 }
@@ -374,24 +354,24 @@ func runProjectDelete(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")
 
 	// Validate project exists and check dependencies
-	projects, repos, repoCount, edgeCount := validateProjectForDelete(repoRoot, projectID)
+	projects, repos, repoCount := validateProjectForDelete(repoRoot, projectID)
 
 	// Block if not force and has dependencies
-	if !force && (repoCount > 0 || edgeCount > 0) {
-		outputDeleteBlocked(projectID, repoCount, edgeCount)
+	if !force && repoCount > 0 {
+		outputDeleteBlocked(projectID, repoCount)
 		os.Exit(ExitProjectValidation)
 	}
 
 	// Perform cascade delete
-	reposRemoved, edgesRemoved := cascadeDeleteProject(repoRoot, projectID, projects, repos, repoCount, edgeCount)
+	reposRemoved := cascadeDeleteProject(repoRoot, projectID, projects, repos, repoCount)
 
 	// Output result
-	outputDeleteResult(projectID, reposRemoved, edgesRemoved)
+	outputDeleteResult(projectID, reposRemoved)
 	return nil
 }
 
 // validateProjectForDelete checks project exists and counts dependencies.
-func validateProjectForDelete(repoRoot, projectID string) ([]project.Project, []repo.Repo, int, int) {
+func validateProjectForDelete(repoRoot, projectID string) ([]project.Project, []repo.Repo, int) {
 	projectsPath := config.ProjectsPath(repoRoot)
 	projects, err := storage.ReadAllProjects(projectsPath)
 	if err != nil {
@@ -408,26 +388,24 @@ func validateProjectForDelete(repoRoot, projectID string) ([]project.Project, []
 	}
 
 	repoCount := countReposByProject(repos, projectID)
-	edgeCount := countEdgesForProject(repoRoot, projectID)
 
-	return projects, repos, repoCount, edgeCount
+	return projects, repos, repoCount
 }
 
 // outputDeleteBlocked outputs error when delete is blocked by dependencies.
-func outputDeleteBlocked(projectID string, repoCount, edgeCount int) {
+func outputDeleteBlocked(projectID string, repoCount int) {
 	if humanOutput {
-		fmt.Fprintf(os.Stderr, "error: project %q has %d repos and %d linked edges; use --force to delete anyway\n", projectID, repoCount, edgeCount)
+		fmt.Fprintf(os.Stderr, "error: project %q has %d repos; use --force to delete anyway\n", projectID, repoCount)
 	} else {
 		outputJSON(ProjectDeleteBlockedResult{
-			Error:     fmt.Sprintf("project %q has %d repos and %d linked edges; use --force to delete anyway", projectID, repoCount, edgeCount),
-			EdgeCount: edgeCount,
+			Error:     fmt.Sprintf("project %q has %d repos; use --force to delete anyway", projectID, repoCount),
 			RepoCount: repoCount,
 		})
 	}
 }
 
-// cascadeDeleteProject deletes a project and its dependent repos/edges.
-func cascadeDeleteProject(repoRoot, projectID string, projects []project.Project, repos []repo.Repo, repoCount, edgeCount int) (reposRemoved, edgesRemoved int) {
+// cascadeDeleteProject deletes a project and its dependent repos.
+func cascadeDeleteProject(repoRoot, projectID string, projects []project.Project, repos []repo.Repo, repoCount int) (reposRemoved int) {
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
 
@@ -445,11 +423,6 @@ func cascadeDeleteProject(repoRoot, projectID string, projects []project.Project
 		}
 	}
 
-	// Delete edges involving this project
-	if edgeCount > 0 {
-		edgesRemoved = deleteEdgesForProject(repoRoot, projectID, db)
-	}
-
 	// Delete project from JSONL
 	projects, _ = storage.DeleteProjectFromSlice(projects, projectID)
 	if err := storage.WriteAllProjects(projectsPath, projects); err != nil {
@@ -461,14 +434,14 @@ func cascadeDeleteProject(repoRoot, projectID string, projects []project.Project
 		exitWithError(ExitDataError, "updating index: %v", err)
 	}
 
-	return reposRemoved, edgesRemoved
+	return reposRemoved
 }
 
 // outputDeleteResult outputs the delete result.
-func outputDeleteResult(projectID string, reposRemoved, edgesRemoved int) {
+func outputDeleteResult(projectID string, reposRemoved int) {
 	if humanOutput {
-		if reposRemoved > 0 || edgesRemoved > 0 {
-			fmt.Printf("Deleted project %q with %d repos and %d edges\n", projectID, reposRemoved, edgesRemoved)
+		if reposRemoved > 0 {
+			fmt.Printf("Deleted project %q with %d repos\n", projectID, reposRemoved)
 		} else {
 			fmt.Printf("Deleted project %q\n", projectID)
 		}
@@ -477,7 +450,6 @@ func outputDeleteResult(projectID string, reposRemoved, edgesRemoved int) {
 			Status:       "deleted",
 			ID:           projectID,
 			ReposRemoved: reposRemoved,
-			EdgesRemoved: edgesRemoved,
 		})
 	}
 }
@@ -505,54 +477,6 @@ func deleteReposByProject(repos []repo.Repo, projectID string) ([]repo.Repo, int
 		}
 	}
 	return remaining, removed
-}
-
-// countEdgesForProject counts edges involving a project (either source or target).
-func countEdgesForProject(repoRoot, projectID string) int {
-	edgesPath := config.EdgesPath(repoRoot)
-	edges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		return 0
-	}
-
-	prefixedID := "project:" + projectID
-	count := 0
-	for _, e := range edges {
-		if e.SourceID == prefixedID || e.TargetID == prefixedID {
-			count++
-		}
-	}
-	return count
-}
-
-// deleteEdgesForProject removes all edges involving a project.
-func deleteEdgesForProject(repoRoot, projectID string, db *storage.DB) int {
-	edgesPath := config.EdgesPath(repoRoot)
-	edges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		exitWithError(ExitDataError, "reading edges: %v", err)
-	}
-
-	prefixedID := "project:" + projectID
-	var remaining []edge.Edge
-	removed := 0
-	for _, e := range edges {
-		if e.SourceID != prefixedID && e.TargetID != prefixedID {
-			remaining = append(remaining, e)
-		} else {
-			removed++
-		}
-	}
-
-	if err := storage.WriteAllEdges(edgesPath, remaining); err != nil {
-		exitWithError(ExitDataError, "writing edges: %v", err)
-	}
-
-	if _, err := db.RebuildEdgesFromJSONL(edgesPath); err != nil {
-		exitWithError(ExitDataError, "rebuilding edges index: %v", err)
-	}
-
-	return removed
 }
 
 // ProjectReposResult is the response for the project repos command.
@@ -628,239 +552,4 @@ func runProjectRepos(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
-}
-
-// ProjectConceptsResult is the response for the project concepts command.
-type ProjectConceptsResult struct {
-	ProjectID string               `json:"project_id"`
-	Concepts  []ProjectConceptEdge `json:"concepts"`
-	Count     int                  `json:"count"`
-}
-
-// ProjectConceptEdge represents a concept linked to a project.
-type ProjectConceptEdge struct {
-	ConceptID        string `json:"concept_id"`
-	RelationshipType string `json:"relationship_type"`
-	Summary          string `json:"summary"`
-}
-
-var projectConceptsCmd = &cobra.Command{
-	Use:   "concepts <id>",
-	Short: "List concepts linked to a project",
-	Long:  `Query all concepts linked to a specific project.`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runProjectConcepts,
-}
-
-func runProjectConcepts(cmd *cobra.Command, args []string) error {
-	repoRoot := mustFindRepository()
-	projectID := args[0]
-	relType, _ := cmd.Flags().GetString("type")
-
-	db := mustOpenDatabase(repoRoot)
-	defer db.Close()
-
-	// Verify project exists
-	p, err := db.GetProjectByID(projectID)
-	if err != nil {
-		exitWithError(ExitDataError, "querying project: %v", err)
-	}
-	if p == nil {
-		exitWithError(ExitProjectNotFound, "project %q not found", projectID)
-	}
-
-	// Get edges involving this project
-	concepts, err := getConceptsForProject(repoRoot, projectID, relType)
-	if err != nil {
-		exitWithError(ExitDataError, "querying concepts: %v", err)
-	}
-
-	if humanOutput {
-		fmt.Printf("Concepts linked to project: %s\n", projectID)
-		if len(concepts) == 0 {
-			fmt.Println("\n(no concepts)")
-		} else {
-			fmt.Println()
-			for _, c := range concepts {
-				fmt.Printf("  %s --[%s]--> project:%s\n", c.ConceptID, c.RelationshipType, projectID)
-				fmt.Printf("    %q\n", c.Summary)
-			}
-		}
-		fmt.Printf("\nTotal: %d concepts\n", len(concepts))
-	} else {
-		if concepts == nil {
-			concepts = []ProjectConceptEdge{}
-		}
-		outputJSON(ProjectConceptsResult{
-			ProjectID: projectID,
-			Concepts:  concepts,
-			Count:     len(concepts),
-		})
-	}
-
-	return nil
-}
-
-// getConceptsForProject queries edges where the project is target and source is a concept.
-func getConceptsForProject(repoRoot, projectID, relType string) ([]ProjectConceptEdge, error) {
-	edgesPath := config.EdgesPath(repoRoot)
-	edges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		return nil, err
-	}
-
-	prefixedID := "project:" + projectID
-	var results []ProjectConceptEdge
-	for _, e := range edges {
-		// Check if this edge targets our project
-		if e.TargetID == prefixedID {
-			// Check if source is a concept (has concept: prefix)
-			if strings.HasPrefix(e.SourceID, "concept:") {
-				if relType == "" || e.RelationshipType == relType {
-					results = append(results, ProjectConceptEdge{
-						ConceptID:        e.SourceID,
-						RelationshipType: e.RelationshipType,
-						Summary:          e.Summary,
-					})
-				}
-			}
-		}
-		// Also check if project is source (project→concept edges)
-		if e.SourceID == prefixedID {
-			if strings.HasPrefix(e.TargetID, "concept:") {
-				if relType == "" || e.RelationshipType == relType {
-					results = append(results, ProjectConceptEdge{
-						ConceptID:        e.TargetID,
-						RelationshipType: e.RelationshipType,
-						Summary:          e.Summary,
-					})
-				}
-			}
-		}
-	}
-	return results, nil
-}
-
-// ProjectPapersResult is the response for the project papers command.
-type ProjectPapersResult struct {
-	ProjectID string             `json:"project_id"`
-	Papers    []ProjectPaperEdge `json:"papers"`
-	Count     int                `json:"count"`
-}
-
-// ProjectPaperEdge represents a paper linked to a project via a concept.
-type ProjectPaperEdge struct {
-	PaperID          string `json:"paper_id"`
-	ViaConcept       string `json:"via_concept"`
-	RelationshipType string `json:"relationship_type"`
-	Summary          string `json:"summary"`
-}
-
-var projectPapersCmd = &cobra.Command{
-	Use:   "papers <id>",
-	Short: "List papers relevant to a project (via concepts)",
-	Long:  `Query all papers linked to concepts that are linked to the project.`,
-	Args:  cobra.ExactArgs(1),
-	RunE:  runProjectPapers,
-}
-
-func runProjectPapers(cmd *cobra.Command, args []string) error {
-	repoRoot := mustFindRepository()
-	projectID := args[0]
-
-	db := mustOpenDatabase(repoRoot)
-	defer db.Close()
-
-	// Verify project exists
-	p, err := db.GetProjectByID(projectID)
-	if err != nil {
-		exitWithError(ExitDataError, "querying project: %v", err)
-	}
-	if p == nil {
-		exitWithError(ExitProjectNotFound, "project %q not found", projectID)
-	}
-
-	// Get papers transitively via concepts
-	papers, err := getPapersForProjectTransitive(repoRoot, projectID)
-	if err != nil {
-		exitWithError(ExitDataError, "querying papers: %v", err)
-	}
-
-	if humanOutput {
-		fmt.Printf("Papers relevant to project: %s (via concepts)\n", projectID)
-		if len(papers) == 0 {
-			fmt.Println("\n(no papers found via linked concepts)")
-		} else {
-			fmt.Println()
-			for _, pe := range papers {
-				fmt.Printf("  %s\n", pe.PaperID)
-				fmt.Printf("    via %s --[%s]--> paper\n", pe.ViaConcept, pe.RelationshipType)
-				fmt.Printf("    %q\n", pe.Summary)
-			}
-		}
-		fmt.Printf("\nTotal: %d papers\n", len(papers))
-	} else {
-		if papers == nil {
-			papers = []ProjectPaperEdge{}
-		}
-		outputJSON(ProjectPapersResult{
-			ProjectID: projectID,
-			Papers:    papers,
-			Count:     len(papers),
-		})
-	}
-
-	return nil
-}
-
-// getPapersForProjectTransitive finds papers via: project ← concepts ← papers
-func getPapersForProjectTransitive(repoRoot, projectID string) ([]ProjectPaperEdge, error) {
-	// Step 1: Find all concepts linked to this project
-	concepts, err := getConceptsForProject(repoRoot, projectID, "")
-	if err != nil {
-		return nil, err
-	}
-
-	if len(concepts) == 0 {
-		return nil, nil
-	}
-
-	// Build set of concept IDs (keeping concept: prefix for edge lookup)
-	// Since paper→concept edges now use prefixed targets like "concept:vi"
-	conceptIDs := make(map[string]bool)
-	for _, c := range concepts {
-		conceptIDs[c.ConceptID] = true
-	}
-
-	// Step 2: Find all papers linked to those concepts
-	edgesPath := config.EdgesPath(repoRoot)
-	edges, err := storage.ReadAllEdges(edgesPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var results []ProjectPaperEdge
-	seen := make(map[string]bool) // Deduplicate paper+concept combinations
-
-	for _, e := range edges {
-		// Paper→concept edges have unprefixed paper ID as source and "concept:X" as target
-		// Check if target is one of our concepts
-		if conceptIDs[e.TargetID] {
-			// Source should be a paper (not prefixed with concept: or project:)
-			if !strings.Contains(e.SourceID, ":") {
-				key := e.SourceID + "|" + e.TargetID
-				if !seen[key] {
-					seen[key] = true
-					results = append(results, ProjectPaperEdge{
-						PaperID:          e.SourceID,
-						ViaConcept:       e.TargetID, // Already prefixed with "concept:"
-						RelationshipType: e.RelationshipType,
-						Summary:          e.Summary,
-					})
-				}
-			}
-		}
-	}
-
-	return results, nil
 }

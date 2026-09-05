@@ -8,27 +8,9 @@ import (
 	"testing"
 )
 
-// setupTestRepoWithConcepts creates a repo with papers and concepts for project testing.
-func setupTestRepoWithConcepts(t *testing.T) string {
-	t.Helper()
-	tmpDir := setupTestRepo(t)
-
-	bpDir := filepath.Join(tmpDir, ".bipartite")
-
-	// Create concepts.jsonl with test concepts
-	conceptsContent := `{"id":"vi","name":"Variational Inference","aliases":["VI"],"description":"Approximate inference method"}
-{"id":"mcmc","name":"MCMC","aliases":["Markov chain Monte Carlo"],"description":"Sampling-based inference"}
-`
-	if err := os.WriteFile(filepath.Join(bpDir, "concepts.jsonl"), []byte(conceptsContent), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	return tmpDir
-}
-
 // T030: Integration test for project CRUD
 func TestProjectCRUD(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Test project add
 	output, err := runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2", "--description", "Distance-based antibody modeling")
@@ -148,24 +130,18 @@ func TestProjectCRUD(t *testing.T) {
 
 // Test project ID collision with papers
 func TestProjectIDCollision(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Try to create project with ID that matches a paper
 	_, err := runBP(t, repoDir, "project", "add", "PaperA", "--name", "Collision")
 	if err == nil {
 		t.Fatal("expected error for project ID collision with paper")
 	}
-
-	// Try to create project with ID that matches a concept
-	_, err = runBP(t, repoDir, "project", "add", "vi", "--name", "Collision")
-	if err == nil {
-		t.Fatal("expected error for project ID collision with concept")
-	}
 }
 
 // T038: Integration test for repo CRUD
 func TestRepoCRUD(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Create a project first
 	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
@@ -333,154 +309,9 @@ func TestRepoCRUD(t *testing.T) {
 	}
 }
 
-// T049-T051: Integration tests for concept↔project edges and validation
-func TestConceptProjectEdges(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
-
-	// Create a project
-	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
-
-	// T049: Test adding concept↔project edge
-	output, err := runBP(t, repoDir, "edge", "add",
-		"--source", "concept:vi",
-		"--target", "project:dasm2",
-		"--type", "implemented-in",
-		"--summary", "DASM2 uses VI for latent space")
-	if err != nil {
-		t.Fatalf("concept→project edge add failed: %v\nOutput: %s", err, output)
-	}
-
-	var edgeResult struct {
-		Action string `json:"action"`
-		Edge   struct {
-			SourceID string `json:"source_id"`
-			TargetID string `json:"target_id"`
-		} `json:"edge"`
-	}
-	if err := json.Unmarshal([]byte(output), &edgeResult); err != nil {
-		t.Fatalf("failed to parse edge output: %v", err)
-	}
-	if edgeResult.Action != "added" {
-		t.Errorf("expected action 'added', got %q", edgeResult.Action)
-	}
-	if edgeResult.Edge.SourceID != "concept:vi" {
-		t.Errorf("expected source 'concept:vi', got %q", edgeResult.Edge.SourceID)
-	}
-
-	// Test project→concept edge (reverse direction)
-	output, err = runBP(t, repoDir, "edge", "add",
-		"--source", "project:dasm2",
-		"--target", "concept:mcmc",
-		"--type", "introduces",
-		"--summary", "DASM2 introduces novel MCMC approach")
-	if err != nil {
-		t.Fatalf("project→concept edge add failed: %v\nOutput: %s", err, output)
-	}
-
-	// T050: Test rejection of paper↔project edges
-	_, err = runBP(t, repoDir, "edge", "add",
-		"--source", "PaperA",
-		"--target", "project:dasm2",
-		"--type", "applies",
-		"--summary", "Should be rejected")
-	if err == nil {
-		t.Fatal("expected error for paper→project edge")
-	}
-
-	_, err = runBP(t, repoDir, "edge", "add",
-		"--source", "project:dasm2",
-		"--target", "PaperA",
-		"--type", "cites",
-		"--summary", "Should be rejected")
-	if err == nil {
-		t.Fatal("expected error for project→paper edge")
-	}
-
-	// T051: Test rejection of *↔repo edges
-	// First add a manual repo
-	runBP(t, repoDir, "repo", "add", "--manual",
-		"--project", "dasm2",
-		"--id", "dasm2-code",
-		"--name", "DASM2 Code")
-
-	_, err = runBP(t, repoDir, "edge", "add",
-		"--source", "concept:vi",
-		"--target", "repo:dasm2-code",
-		"--type", "implemented-in",
-		"--summary", "Should be rejected")
-	if err == nil {
-		t.Fatal("expected error for concept→repo edge")
-	}
-
-	_, err = runBP(t, repoDir, "edge", "add",
-		"--source", "repo:dasm2-code",
-		"--target", "concept:vi",
-		"--type", "implements",
-		"--summary", "Should be rejected")
-	if err == nil {
-		t.Fatal("expected error for repo→concept edge")
-	}
-}
-
-// T061: Integration test for transitive paper query
-func TestProjectPapersTransitive(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
-
-	// Create project and edge
-	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
-
-	// Link concept to project
-	runBP(t, repoDir, "edge", "add",
-		"--source", "concept:vi",
-		"--target", "project:dasm2",
-		"--type", "implemented-in",
-		"--summary", "DASM2 uses VI")
-
-	// Link papers to concept (using concept: prefix)
-	runBP(t, repoDir, "edge", "add",
-		"--source", "PaperA",
-		"--target", "concept:vi",
-		"--type", "introduces",
-		"--summary", "Paper A introduces VI")
-
-	runBP(t, repoDir, "edge", "add",
-		"--source", "PaperB",
-		"--target", "concept:vi",
-		"--type", "applies",
-		"--summary", "Paper B applies VI")
-
-	// Test project papers command (transitive query)
-	output, err := runBP(t, repoDir, "project", "papers", "dasm2")
-	if err != nil {
-		t.Fatalf("project papers failed: %v\nOutput: %s", err, output)
-	}
-
-	var papersResult struct {
-		ProjectID string `json:"project_id"`
-		Papers    []struct {
-			PaperID    string `json:"paper_id"`
-			ViaConcept string `json:"via_concept"`
-		} `json:"papers"`
-		Count int `json:"count"`
-	}
-	if err := json.Unmarshal([]byte(output), &papersResult); err != nil {
-		t.Fatalf("failed to parse papers output: %v\nOutput: %s", err, output)
-	}
-	if papersResult.Count != 2 {
-		t.Errorf("expected 2 papers via transitive query, got %d", papersResult.Count)
-	}
-
-	// Verify papers came via the right concept
-	for _, p := range papersResult.Papers {
-		if p.ViaConcept != "concept:vi" {
-			t.Errorf("expected via_concept 'concept:vi', got %q", p.ViaConcept)
-		}
-	}
-}
-
 // T069: Integration test for rebuild with projects/repos
 func TestRebuildWithProjectsRepos(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Add projects and repos
 	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
@@ -537,7 +368,7 @@ func TestRebuildWithProjectsRepos(t *testing.T) {
 
 // T070: Integration test for check with project/repo constraints
 func TestCheckWithProjectsRepos(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Add valid project and repo
 	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
@@ -580,24 +411,19 @@ func TestCheckWithProjectsRepos(t *testing.T) {
 
 // Test project delete with cascade
 func TestProjectDeleteCascade(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
-	// Create project, repo, and edge
+	// Create project and repo
 	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
 	runBP(t, repoDir, "repo", "add", "--manual",
 		"--project", "dasm2",
 		"--id", "dasm2-code",
 		"--name", "DASM2 Code")
-	runBP(t, repoDir, "edge", "add",
-		"--source", "concept:vi",
-		"--target", "project:dasm2",
-		"--type", "implemented-in",
-		"--summary", "Test edge")
 
 	// Try to delete without force (should fail)
 	_, err := runBP(t, repoDir, "project", "delete", "dasm2")
 	if err == nil {
-		t.Fatal("expected error when deleting project with repos/edges without --force")
+		t.Fatal("expected error when deleting project with repos without --force")
 	}
 
 	// Delete with force
@@ -609,7 +435,6 @@ func TestProjectDeleteCascade(t *testing.T) {
 	var deleteResult struct {
 		Status       string `json:"status"`
 		ReposRemoved int    `json:"repos_removed"`
-		EdgesRemoved int    `json:"edges_removed"`
 	}
 	if err := json.Unmarshal([]byte(output), &deleteResult); err != nil {
 		t.Fatalf("failed to parse delete output: %v", err)
@@ -620,9 +445,6 @@ func TestProjectDeleteCascade(t *testing.T) {
 	}
 	if deleteResult.ReposRemoved != 1 {
 		t.Errorf("expected 1 repo removed, got %d", deleteResult.ReposRemoved)
-	}
-	if deleteResult.EdgesRemoved != 1 {
-		t.Errorf("expected 1 edge removed, got %d", deleteResult.EdgesRemoved)
 	}
 
 	// Verify repos are gone
@@ -643,7 +465,7 @@ func TestProjectDeleteCascade(t *testing.T) {
 
 // T065/T066: Test repo refresh (manual repo should fail)
 func TestRepoRefreshManual(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
+	repoDir := setupTestRepo(t)
 
 	// Create a project and manual repo
 	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
@@ -656,50 +478,5 @@ func TestRepoRefreshManual(t *testing.T) {
 	_, err := runBP(t, repoDir, "repo", "refresh", "dasm2-code")
 	if err == nil {
 		t.Fatal("expected error when refreshing manual repo")
-	}
-}
-
-// Test edge list with project filter
-func TestEdgeListByProject(t *testing.T) {
-	repoDir := setupTestRepoWithConcepts(t)
-
-	// Create project and edges
-	runBP(t, repoDir, "project", "add", "dasm2", "--name", "DASM2")
-	runBP(t, repoDir, "edge", "add",
-		"--source", "concept:vi",
-		"--target", "project:dasm2",
-		"--type", "implemented-in",
-		"--summary", "VI in DASM2")
-	runBP(t, repoDir, "edge", "add",
-		"--source", "concept:mcmc",
-		"--target", "project:dasm2",
-		"--type", "applied-in",
-		"--summary", "MCMC in DASM2")
-
-	// Also add a non-project edge
-	runBP(t, repoDir, "edge", "add",
-		"--source", "PaperA",
-		"--target", "PaperB",
-		"--type", "cites",
-		"--summary", "Paper edge")
-
-	// Test edge list with --project filter
-	output, err := runBP(t, repoDir, "edge", "list", "--project", "dasm2")
-	if err != nil {
-		t.Fatalf("edge list --project failed: %v\nOutput: %s", err, output)
-	}
-
-	var listResult struct {
-		Edges []struct {
-			SourceID string `json:"source_id"`
-			TargetID string `json:"target_id"`
-		} `json:"edges"`
-		Count int `json:"count"`
-	}
-	if err := json.Unmarshal([]byte(output), &listResult); err != nil {
-		t.Fatalf("failed to parse list output: %v\nOutput: %s", err, output)
-	}
-	if listResult.Count != 2 {
-		t.Errorf("expected 2 edges for project, got %d", listResult.Count)
 	}
 }
