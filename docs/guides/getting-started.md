@@ -143,9 +143,9 @@ For an empty nexus without using the template:
 ```bash
 mkdir my-nexus && cd my-nexus
 git init
-touch refs.jsonl
-mkdir -p .bipartite/cache
-echo ".bipartite/" >> .gitignore
+mkdir -p .bipartite
+touch .bipartite/refs.jsonl
+echo ".bipartite/cache/" >> .gitignore
 bip rebuild
 ```
 
@@ -155,19 +155,20 @@ This creates the minimal structure needed to start adding papers.
 
 ```
 my-nexus/
-├── .bipartite/           # Cache directory (gitignored, ephemeral)
-│   ├── cache/
-│   │   └── refs.db       # SQLite FTS index
-│   └── vectors.gob       # Embedding vectors
+├── .bipartite/               # Tracked in git, except cache/
+│   ├── refs.jsonl            # Paper references (source of truth)
+│   ├── projects.jsonl        # Projects
+│   ├── repos.jsonl           # Tracked repositories
+│   ├── config.yml            # (optional) Local paths, API keys
+│   └── cache/                # (gitignored, ephemeral)
+│       ├── refs.db           # SQLite FTS index
+│       └── semantic.gob      # Embedding vectors
 │
-├── refs.jsonl            # Paper references (source of truth)
+├── servers.yml               # (optional) Remote servers for bip scout
+├── sources.yml               # (optional) GitHub repos for activity tracking
 │
-├── servers.yml           # (optional) Remote servers for bip scout
-├── sources.yml           # (optional) GitHub repos for activity tracking
-├── config.yml            # (optional) Local paths, API keys
-│
-├── context/              # (optional) Project context files
-└── narrative/            # (optional) Generated digest output
+├── context/                  # (optional) Project context files
+└── narrative/                # (optional) Generated digest output
 ```
 
 ### Core Files (Source of Truth)
@@ -180,16 +181,16 @@ These files are the source of truth. They're plain text, git-friendly, and desig
 
 ### Cache Directory (Ephemeral)
 
-The `.bipartite/` directory contains:
+The `.bipartite/cache/` subdirectory contains:
 
 - **refs.db** — SQLite full-text search index
-- **vectors.gob** — Embedding vectors for semantic search
+- **semantic.gob** — Embedding vectors for semantic search
 
-This directory is gitignored because it's rebuilt from source files via `bip rebuild`. Delete it and rebuild anytime.
+Only `cache/` is gitignored — the JSONL files above it are tracked. The cache is rebuilt from those source files via `bip rebuild`, so you can delete it and rebuild anytime.
 
 ### Configuration Files (Optional)
 
-- **config.yml** — Local paths (PDF root), Ollama settings
+- **.bipartite/config.yml** — Local paths (PDF root), Ollama settings
 - **servers.yml** — Remote servers for `bip scout`
 - **sources.yml** — GitHub repos and boards for `bip checkin`, `bip digest`
 
@@ -199,7 +200,7 @@ This directory is gitignored because it's rebuilt from source files via `bip reb
 bip s2 add DOI:10.1038/s41586-021-03819-2
 ```
 
-This fetches metadata from Semantic Scholar and appends to `refs.jsonl`.
+This fetches metadata from Semantic Scholar and appends to `.bipartite/refs.jsonl`.
 
 ## Searching
 
