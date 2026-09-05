@@ -21,7 +21,7 @@ from what the fleet happens to be running, and do not survey every EPIC to
 decide. There may be several open EPICs; only one is yours.
 
 The failure this prevents is not a wrong answer, it is a slow drift that every
-individual step justifies. Measured on `matsengrp/phyz` 2026-09-03: an unscoped
+individual step justifies. Measured 2026-09-03: an unscoped
 session scanned all eight open EPICs, then wrote spawn briefs for whatever
 looked ready across them. **Eleven of twenty-three briefed issues belonged to
 other EPICs, and ten of fifteen live slots ended up outside the session's
@@ -73,10 +73,9 @@ Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics
 
 Cross-session messages are nudges, not transcripts: lead with the decision or the ask, give the reasoning the receiver cannot reconstruct, and cite the EPIC body, the issue, or `.epic-decisions.md` for the rest instead of restating it. There is no word limit, but a message that recaps the thread, or reproduces what you just wrote to a durable artifact, spends context the fleet needs elsewhere. This never licenses a bare pointer where Step 7 requires substance: a drafted worker correction states the change itself, not "re-read the EPIC body." See `/bip-conductor`'s "Message economy" section for the full convention; it applies symmetrically here.
 
-**The epic/conductor split also has a diagnostic function beyond the division of labour, and it is easy to mistake for overhead.**
-Measured across one day on `matsengrp/phyz`, 2026-09-04: a shipped default resting on invalidated evidence, a void experiment plan, an incomplete census, a relocated document's missing pointers, and a wrong causal story about an outlier — **every one caught by the other session, none by the author re-reading its own text.**
-The mechanism is that the two roles hold different working sets, so what is invisible from inside one is ordinary from the other.
-**This is not a habit to adopt; it is a property of running two sessions, and it disappears silently if the roles are ever merged** — worth knowing before anyone consolidates them on efficiency grounds.
+**The epic/conductor split also has a diagnostic function, easily mistaken for overhead.**
+The two roles hold different working sets, so what is invisible from inside one is ordinary from the other — across one measured day (2026-09-04): a shipped default resting on invalidated evidence, a void experiment plan, an incomplete census, a relocated document's missing pointers, a wrong causal story — **every one caught by the other session and none by the author re-reading its own text.**
+**This is a property of running two sessions, not a habit to adopt, and it disappears silently if the roles are merged — worth knowing before anyone consolidates them on efficiency grounds.**
 
 Two practices make it work and both are cheap: send raw measurements rather than conclusions, and re-derive a peer's number before acting on it.
 **Neither licenses re-narrating the peer's analysis to the user** — that is exactly the duplication `/bip-conductor`'s fleet/topic rule forbids ("consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it").
@@ -187,7 +186,7 @@ Brief:
 > - `surprises`: closed/merged items the EPICs don't reflect yet, issues with unclear blocker state, `RECOMMEND DEEPER LOOK` flags
 
 **Group B does not cover the backlog, and must not be relied on as if it did.**
-`sort:updated-desc --limit 20` reaches back only as far as the last 20 touched issues, which on an active repo is a couple of days: measured on `matsengrp/phyz` 2026-08-28, that window spanned 08-26 to 08-28 and saw 20 of 65 open issues.
+`sort:updated-desc --limit 20` reaches back only as far as the last 20 touched issues, which on an active repo is a couple of days: measured 2026-08-28, that window spanned 08-26 to 08-28 and saw 20 of 65 open issues.
 The window compresses further as activity rises, so an issue that is neither on an EPIC dashboard nor recently touched is reachable by neither group.
 Coverage is Group A's job plus a periodic audit for issues no EPIC references (see `matsengrp/phyz`#2093 for the audit script and the shape of that gap); Group B only answers "what moved lately".
 
@@ -211,7 +210,7 @@ Scope section, and its Out-of-scope section. A scanner's summary of a gate is
 not the gate.**
 
 Subagent scan reports are reliable about *whether* something is worth looking
-at and unreliable about *why*. Measured on `matsengrp/phyz` 2026-09-03, three
+at and unreliable about *why*. Measured 2026-09-03, three
 times in one session, each time from relaying a summary instead of opening the
 issue:
 
@@ -317,7 +316,7 @@ Never write it into an EPIC body or a continuation doc — it goes stale within 
 
 **The rule is about the claim, not the artifact, and reading it as artifact-only is the way it gets obeyed and defeated at once.**
 Keeping a clone table out of the EPIC body while telling the user "cedar is working on it" repeats the same stale fact in the place they will actually act on, and skips the recompute that would have caught it — the body is protected and the user is not.
-Three instances in one session on `matsengrp/phyz`, all inherited from an earlier message rather than a command: a PR reported `DIRTY` after it had been rebased clean, a build target reported red after a merge turned it green, and a slot reported working after its issue had closed and merged.
+Three instances in one session, all inherited from an earlier message rather than a command: a PR reported `DIRTY` after it had been rebased clean, a build target reported red after a merge turned it green, and a slot reported working after its issue had closed and merged.
 The tell they share is grammatical: **a claim in the present continuous about what a slot, host, PR, or target is doing *right now* is fleet state**, whoever it is addressed to and whether or not it is being written down.
 Ask the conductor or run the command; do not carry it forward from a message, including your own earlier one.
 The asymmetry is the point — the conductor can re-derive all of this in a single command and this session structurally cannot see any of it, so the cost of asking is one message and the cost of guessing is a confident wrong statement to the person deciding what to do next.
@@ -436,7 +435,7 @@ fi
 The emptiness guard above is not defensive padding; without it this snippet **fails open on exactly the failures it exists to survive.**
 When `gh` cannot reach the API it prints to stderr, exits non-zero, and leaves the variable empty — so `[ "$PULLED_AT" != "$CURRENT_AT" ]` compares `""` against `""`, concludes nobody else edited, and pushes whatever is in the local file. Observed live: an unreachable `api.github.com` produced two empty timestamps, the guard passed, and the push went ahead against a stale body.
 
-The class is worth recognising beyond this snippet, because four instances turned up in one day on `matsengrp/phyz` and each looked like a working check:
+The class is worth recognising beyond this snippet, because four instances turned up in one day and each looked like a working check:
 - a harness's "the two arms differ" assertion that included a wall-time field, so it passed unconditionally;
 - a sweep's `check_cmd`, which exited 0 whether or not the sweep had finished;
 - this conflict guard;
