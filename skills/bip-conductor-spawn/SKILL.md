@@ -416,13 +416,9 @@ COMPLETION: When done (or when lead says completed):
    approval plus a wait, and it degrades exactly when both reviewers are
    busy, which is when review matters most.
 
-   A worker inferred the opposite from an earlier draft of this list,
-   where the timeout bullet sat directly under one ending "land it
-   yourself" — so the rule is stated positively here rather than left to
-   be read off the branch structure. Requesting the gate yourself rather
-   than waiting is the other half: a gate that only fires when a
-   conductor happens to be watching is a single point of failure wearing
-   a gate's clothes.
+   Requesting the gate yourself is the other half of the same rule: a
+   gate that only fires when a reviewer happens to be watching is a
+   single point of failure wearing a gate's clothes.
    - Print a FINAL RECAP (see below), then the completion promise
      ISSUE WORK COMPLETE
 6. STOP only if a finding requires genuine user judgment (design

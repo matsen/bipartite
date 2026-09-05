@@ -99,7 +99,9 @@ Measured across one day on `matsengrp/phyz`, 2026-09-04: a shipped default resti
 The mechanism is that the two roles hold different working sets, so what is invisible from inside one is ordinary from the other.
 **This is not a habit to adopt; it is a property of running two sessions, and it disappears silently if the roles are ever merged** — worth knowing before anyone consolidates them on efficiency grounds.
 
-Two practices make it work and both are cheap: send raw measurements rather than conclusions, and re-derive a peer's number before acting on it.
+Three practices make it work and all are cheap: send raw measurements rather than conclusions; re-derive a peer's number before acting on it; and **name which question a check answers, not which one you asked**.
+
+That third one is the whole of the most common failure here — a check that answers an *adjacent* question to the one it is reported as answering. `diff` for "same code" (same delta only). `comm -12` for "no interaction" (no *file* overlap). `grep | head` for "not present" (not in the first N lines of output). `pgrep -f` for "still running" (it matches its own argv). Matching dimensions for "identical content". Two corollaries worth stating outright: **a negative result needs evidence the test could have produced a positive one** — print the denominator, the row count, the confirmed variation in the input — and **naming a risk is not checking it**, since a warning written into a document reads to its own author as though the work is done.
 **Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the fleet/topic rule above forbids** ("consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it").
 Re-derive silently and report only the delta: a peer's five-item list that turns out to have nine is worth one line, not a second copy of their reasoning.
 
@@ -453,7 +455,13 @@ Deciding *which other* open issues should be spawned next isn't this skill's cal
 
 **A busy fleet is good as long as every slot is on topic. The gate is topic, not count.** So spawn ready, in-scope, unblocked briefs freely while capacity exists — do not throttle on volume, and do not treat a full fleet as a thing to apologise for. The failure to avoid is a slot working the wrong programme, not a fleet that is fully occupied with the right one.
 
-**Do not overcorrect from a scope incident into general reluctance.** Measured 2026-09-03, in the same session that produced the scope rules above: after standing down ten out-of-scope slots, this conductor then held two briefs that were **in scope, clean, unblocked, and verified against the EPIC** — with 12 free clones and `pax` at load 0.53. The user's correction was *"why not spawn? The fleet is only moderately busy"* and then *"I am happy with a busy fleet as long as they are on topic."* Withholding ready on-topic work is its own failure, and it looks like prudence from the inside.
+**This is a trigger, not a disposition. When a slot completes, re-assess and spawn in the same step — do not report the completion and wait.** The paragraph above has been in this skill through sessions where the conductor still sat on ready briefs until the user asked. A disposition buried in a long document does not fire; an event does. The event is: a slot finished, a PR merged, a brief appeared.
+
+**Match worker count to the shape of the work, not to caution:**
+- One issue whose result informs the others → spawn that one, alone, and wait for it.
+- N independent ready issues → spawn N.
+
+Withholding ready on-topic work is its own failure, and it looks like prudence from the inside.
 
 If a live worker's scope needs correcting *before* its next natural stopping point: the epic decides whether it's durable, drafts the line, and the conductor delivers it — see "Correcting a live worker" above for the mechanics and where the durable record goes.
 

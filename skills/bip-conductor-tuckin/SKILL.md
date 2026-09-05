@@ -91,6 +91,26 @@ List `$CLONE_ROOT/.spawn-prompts/` and report two groups separately — these ar
 Reporting these separately matters: a consumed file left in the top level (or a queued one reported as consumed) invites either a re-spawn of work that's already running or merged, or a queued brief getting ignored as if it were stale.
 Report both groups so the next conductor session (or the user) knows what's actually queued vs already launched.
 
+### Step 3.5: Environment check
+
+Conditions that bite the next session and are invisible to `git`/`tmux`/`gh`.
+Run these; don't reason about whether they're likely.
+
+```bash
+ps -eo pid,etime,rss,comm --sort=-rss | head -5   # long-lived process, outsized RSS
+df -h "$CLONE_ROOT" /tmp                          # headroom where the fleet writes
+uptime; free -g | sed -n 2p                       # load and available memory
+```
+
+Flag anything **out of proportion to its job** — a mount daemon or stale build
+server holding tens of GB, a partition near full, swap consumed while RAM is
+free (that combination trips low-memory guards and looks like OOM without being
+one). Age is the tell: a process up for weeks is the one nobody is watching.
+
+Report; don't remediate. A remount or a kill is the user's call, and may break
+another project's live session. Say what you measured and what it would
+reclaim — not "should I?".
+
 ### Step 4: Filter and route fleet-level findings
 
 Most state should already be in `.epic-status.json` per slot.
