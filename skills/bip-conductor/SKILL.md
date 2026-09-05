@@ -95,7 +95,7 @@ The failure that produced this rule: across one session the conductor independen
 The user's summary was "I feel like I am having the same convo with two agents."
 
 **The split also has a diagnostic function, easily mistaken for overhead.**
-The two roles hold different working sets, so what is invisible from inside one is ordinary from the other — across one measured day (2026-09-04): a shipped default resting on invalidated evidence, a void experiment plan, an incomplete census, a document's dangling pointers, a wrong causal story — every one caught by the other session and none by the author re-reading its own text.
+The two roles hold different working sets, so what is invisible from inside one is ordinary from the other — across one measured day (2026-09-04): a shipped default resting on invalidated evidence, a void experiment plan, an incomplete census, a relocated document's missing pointers, a wrong causal story — **every one caught by the other session and none by the author re-reading its own text.**
 **This is a property of running two sessions, not a habit to adopt, and it disappears silently if the roles are merged — worth knowing before anyone consolidates them on efficiency grounds.**
 
 Three practices make it work and all are cheap: send raw measurements rather than conclusions; re-derive a peer's number before acting on it; and **name which question a check answers, not which one you asked**.
@@ -400,7 +400,7 @@ The dashboard is **slot-centric** — the epic's dashboard is issue-centric; thi
 EPIC #369: 5 slots    user/bip-ms: 2 slots    (no header): 1 slot
 ```
 
-This is counting, not topic reasoning — the conductor holds no topic boundary (see "Two intake paths") and must not judge the distribution. But it is the one fleet-side signal that makes topic drift visible at all. Measured 2026-09-03: a single-epic session had **10 of 15 live slots outside its own EPIC**, spanning four EPICs, and nothing surfaced it for most of a day because no view counted this. A row reading `#369: 5, #285: 1, #543: 3, #678: 6` would have shown it on the first poll. `(no header)` is a real category, not an error — see the spawn skill's `EPIC:` requirement for why a brief might lack one.
+This is counting, not topic reasoning — the conductor holds no topic boundary (see "Two intake paths") and must not judge the distribution. But it is the one fleet-side signal that makes topic drift visible at all. Measured 2026-09-03: a single-epic session had **10 of 15 live slots outside its own EPIC**, spanning four EPICs, and nothing surfaced it for most of a day because no view counted this. The distribution row would have shown it on the first poll. `(no header)` is a real category, not an error — see the spawn skill's `EPIC:` requirement for why a brief might lack one.
 
 **Negative list**: also surface decisions already taken *against* an action, with reasons — sequencing already applied, an issue already stood down for a reason that would otherwise look resolved, and similar.
 This is the one category of fleet fact the epic (or a fresh conductor) cannot re-derive from `git`/`tmux`/`gh`: it's the absence of work, which leaves no trace in any of those.

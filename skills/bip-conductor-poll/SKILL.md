@@ -212,10 +212,10 @@ find "$CLONE_ROOT/<clone>/.epic-worklog.md" -mmin +45   # empty output = worklog
 
 **The `ps` leg is a veto on both branches, not a tiebreak on one.** Run it before reporting either verdict:
 
-- **Compute running → not stalled, whatever the mtimes say.** A worker in a quality-gate loop runs multi-minute builds and full suites and writes no worklog entry for hours. Measured 2026-09-01: a slot **243 minutes stale on status and 234 on worklog** — both legs firmly "stalled" — was at that moment running `zig build-exe` at **99.9% CPU** under its own cache, rebuilding to re-run the suite before pushing. Reporting it dead would have been exactly wrong, and it held the PR gating the whole queue.
+- **Compute running → not stalled, whatever the mtimes say.** A worker in a quality-gate loop runs multi-minute builds and full suites and writes no worklog entry for hours. Measured 2026-09-01: a slot **243 minutes stale on status and 234 on worklog** — both legs firmly "stalled" — was at that moment running `zig build-exe` at **99.9% CPU** under its own cache. Reporting it dead would have been exactly wrong, and it held the PR gating the whole queue.
 - **No compute → now the mtimes decide**, per the two branches above.
 
-**And on the other branch, a fresh worklog is necessary and not sufficient.** "Worklog fresh" bounds how long ago the worker last *thought*, not whether its background job is still alive — a worker can write a perfectly accurate "waiting on the sweep to finish" entry and then wait forever on a job that already died. Measured 2026-09-01: a slot passed the worklog check, and its pane said "3 shells still running", while `ps` showed no process at all under its clone and machine load was 0.31.
+**And on the other branch, a fresh worklog is necessary and not sufficient.** "Worklog fresh" bounds how long ago the worker last *thought*, not whether its background job is still alive — a worker can write a perfectly accurate "waiting on the sweep to finish" entry and then wait forever on a job that already died. Measured 2026-09-01: a slot passed the worklog check, and its pane said "3 shells still running", while `ps` showed no process at all under its clone.
 
 ```bash
 ps -eo pid,args | grep -F "$CLONE_ROOT/<clone>" | grep -v grep   # any compute still alive?
