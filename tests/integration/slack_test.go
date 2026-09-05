@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
@@ -380,9 +379,6 @@ func TestSlackIngestIdempotency(t *testing.T) {
 		t.Errorf("expected second run to ingest 0 new messages, got %d", result2.Ingested)
 	}
 }
-
-// Ensure we import runtime (used by getBPBinary in edge_test.go)
-var _ = runtime.GOOS
 
 // testEnvSetup holds paths for integration test environment setup.
 type testEnvSetup struct {

@@ -45,8 +45,6 @@ func init() {
 
 	// project repos - no extra flags
 	projectCmd.AddCommand(projectReposCmd)
-
-	// project papers - no extra flags
 }
 
 var projectCmd = &cobra.Command{
@@ -158,7 +156,7 @@ func checkGlobalIDCollision(repoRoot, projectID string) error {
 var projectGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get a project by ID",
-	Long:  `Retrieve a project node by its ID.`,
+	Long:  `Retrieve a project by its ID.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectGet,
 }
@@ -254,7 +252,7 @@ type ProjectUpdateResult struct {
 var projectUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update a project",
-	Long:  `Update an existing project node.`,
+	Long:  `Update an existing project.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runProjectUpdate,
 }

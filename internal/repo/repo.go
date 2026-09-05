@@ -1,4 +1,4 @@
-// Package repo defines the core domain types for repository nodes.
+// Package repo defines the core domain types for repositories.
 package repo
 
 import (

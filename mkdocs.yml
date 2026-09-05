@@ -62,6 +62,7 @@ nav:
     - Getting Started: guides/getting-started.md
     - Configuration: guides/configuration.md
     - Reference Management: guides/reference-management.md
+    - Projects, Repos, and Stores: guides/projects-and-stores.md
     - Workflow Coordination: guides/workflow-coordination.md
     - Server Scout: guides/server-scout.md
     - How It Works: guides/architecture.md

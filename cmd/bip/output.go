@@ -35,12 +35,6 @@ func outputJSON(v interface{}) error {
 	return enc.Encode(v)
 }
 
-// outputJSONCompact writes a value as compact JSON to stdout.
-func outputJSONCompact(v interface{}) error {
-	enc := json.NewEncoder(os.Stdout)
-	return enc.Encode(v)
-}
-
 // outputHuman writes a human-readable string to stdout.
 func outputHuman(format string, args ...interface{}) {
 	fmt.Printf(format, args...)

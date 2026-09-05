@@ -1,4 +1,4 @@
-// Package project defines the core domain types for project nodes.
+// Package project defines the core domain types for projects.
 package project
 
 import (

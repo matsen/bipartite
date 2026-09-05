@@ -37,8 +37,6 @@ type CheckIssue struct {
 	IDs      []string `json:"ids,omitempty"`
 	Expected string   `json:"expected,omitempty"`
 	DOI      string   `json:"doi,omitempty"`
-	SourceID string   `json:"source_id,omitempty"`
-	TargetID string   `json:"target_id,omitempty"`
 	Reason   string   `json:"reason,omitempty"`
 }
 

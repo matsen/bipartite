@@ -258,7 +258,7 @@ func parseTopics(s string) []string {
 var repoGetCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get a repo by ID",
-	Long:  `Retrieve a repository node by its ID.`,
+	Long:  `Retrieve a repository by its ID.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runRepoGet,
 }
@@ -379,7 +379,7 @@ type RepoUpdateResult struct {
 var repoUpdateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update a repo",
-	Long:  `Update an existing repository node.`,
+	Long:  `Update an existing repository.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runRepoUpdate,
 }

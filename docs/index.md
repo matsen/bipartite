@@ -10,6 +10,7 @@ A context layer for research groups: connecting your internal world (projects, r
 
 - **[Getting Started](guides/getting-started.md)** — Installation, configuration, and first steps
 - **[Reference Management](guides/reference-management.md)** — Search, import, cite, and collaborate on a git-backed paper library
+- **[Projects, Repos, and Stores](guides/projects-and-stores.md)** — Track projects and repositories, and keep custom records in generic stores
 - **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, boards, and Slack integration across repos
 - **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
 - **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code integration explained

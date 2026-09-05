@@ -170,11 +170,13 @@ my-nexus/
 └── narrative/            # (optional) Generated digest output
 ```
 
-### Core File (Source of Truth)
+### Core Files (Source of Truth)
 
 - **refs.jsonl** — Your paper library. Each line is a JSON object with paper metadata.
+- **projects.jsonl** — Project definitions (see [Projects, Repos, and Stores](projects-and-stores.md)).
+- **repos.jsonl** — Tracked repositories.
 
-This file is the source of truth. It's plain text, git-friendly, and designed for collaboration.
+These files are the source of truth. They're plain text, git-friendly, and designed for collaboration.
 
 ### Cache Directory (Ephemeral)
 
@@ -210,5 +212,6 @@ bip search "title:phylogenetics"     # Title search
 ## Next Steps
 
 - [Reference Management](reference-management.md) — Search, import, and organize papers
+- [Projects, Repos, and Stores](projects-and-stores.md) — Track projects, repos, and custom record stores
 - [Workflow Coordination](workflow-coordination.md) — GitHub activity tracking and Slack integration
 - [Server Scout](server-scout.md) — Monitor remote compute resources
