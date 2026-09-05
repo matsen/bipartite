@@ -11,8 +11,6 @@ A **nexus** is a git repository containing your research data. It's the central 
 ```
 my-nexus/
 ├── refs.jsonl            # Paper library (source of truth)
-├── edges.jsonl           # Knowledge graph connections
-├── concepts.jsonl        # Topic definitions
 │
 ├── servers.yml           # Remote servers for bip scout
 ├── sources.yml          # GitHub repos for activity tracking

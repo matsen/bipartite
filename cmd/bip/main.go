@@ -34,7 +34,7 @@ var rootCmd = &cobra.Command{
 	Long: `bip is an agent-first CLI for research workflows.
 
 Core features:
-  - Academic references with knowledge graph (papers, concepts, edges)
+  - Academic reference library (papers, projects, repos)
   - Semantic search via embeddings
   - GitHub project tracking (issues, PRs, boards, activity digests)
   - Slack integration for team updates

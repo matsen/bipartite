@@ -143,7 +143,7 @@ For an empty nexus without using the template:
 ```bash
 mkdir my-nexus && cd my-nexus
 git init
-touch refs.jsonl edges.jsonl concepts.jsonl
+touch refs.jsonl
 mkdir -p .bipartite/cache
 echo ".bipartite/" >> .gitignore
 bip rebuild
@@ -161,8 +161,6 @@ my-nexus/
 │   └── vectors.gob       # Embedding vectors
 │
 ├── refs.jsonl            # Paper references (source of truth)
-├── edges.jsonl           # Knowledge graph edges
-├── concepts.jsonl        # Concept/topic definitions
 │
 ├── servers.yml           # (optional) Remote servers for bip scout
 ├── sources.yml           # (optional) GitHub repos for activity tracking
@@ -172,13 +170,11 @@ my-nexus/
 └── narrative/            # (optional) Generated digest output
 ```
 
-### Core Files (Source of Truth)
+### Core File (Source of Truth)
 
 - **refs.jsonl** — Your paper library. Each line is a JSON object with paper metadata.
-- **edges.jsonl** — Knowledge graph connections between papers, concepts, and projects.
-- **concepts.jsonl** — Topic and concept definitions for organizing your literature.
 
-These files are the source of truth. They're plain text, git-friendly, and designed for collaboration.
+This file is the source of truth. It's plain text, git-friendly, and designed for collaboration.
 
 ### Cache Directory (Ephemeral)
 
@@ -214,6 +210,5 @@ bip search "title:phylogenetics"     # Title search
 ## Next Steps
 
 - [Reference Management](reference-management.md) — Search, import, and organize papers
-- [Knowledge Graph](knowledge-graph.md) — Connect papers to your projects
 - [Workflow Coordination](workflow-coordination.md) — GitHub activity tracking and Slack integration
 - [Server Scout](server-scout.md) — Monitor remote compute resources

@@ -5,8 +5,7 @@ load-bearing choices — changing them has wide impact.
 
 ## I. JSONL Source of Truth
 
-All persistent data lives in JSONL files (refs, concepts, edges,
-projects, repos). SQLite indexes are ephemeral — rebuilt from JSONL via
+All persistent data lives in JSONL files (refs, projects, repos). SQLite indexes are ephemeral — rebuilt from JSONL via
 `bip rebuild`. Schema changes require deleting the database file and
 rebuilding, never migration scripts.
 

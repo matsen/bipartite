@@ -55,8 +55,8 @@ func init() {
 
 var repoCmd = &cobra.Command{
 	Use:   "repo",
-	Short: "Manage repository nodes",
-	Long:  `Commands for managing repository nodes in the knowledge graph.`,
+	Short: "Manage repositories",
+	Long:  `Commands for managing tracked repositories.`,
 }
 
 // RepoAddResult is the response for the repo add command.
@@ -312,7 +312,7 @@ type RepoListResult struct {
 var repoListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List all repos",
-	Long:  `List all repository nodes in the knowledge graph.`,
+	Long:  `List all tracked repositories.`,
 	RunE:  runRepoList,
 }
 
@@ -475,7 +475,7 @@ type RepoDeleteResult struct {
 var repoDeleteCmd = &cobra.Command{
 	Use:   "delete <id>",
 	Short: "Delete a repo",
-	Long:  `Delete a repository node from the knowledge graph.`,
+	Long:  `Delete a tracked repository.`,
 	Args:  cobra.ExactArgs(1),
 	RunE:  runRepoDelete,
 }

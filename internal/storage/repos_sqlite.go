@@ -75,10 +75,10 @@ func (d *DB) RebuildReposFromJSONL(jsonlPath string) (int, error) {
 
 		_, err = stmt.Exec(
 			r.ID, r.Project, r.Type, r.Name,
-			nullableStringFromGo(r.GitHubURL),
-			nullableStringFromGo(r.Description),
-			nullableStringFromGo(topicsJSON),
-			nullableStringFromGo(r.Language),
+			nullableStringValue(r.GitHubURL),
+			nullableStringValue(r.Description),
+			nullableStringValue(topicsJSON),
+			nullableStringValue(r.Language),
 			r.CreatedAt, r.UpdatedAt,
 		)
 		if err != nil {

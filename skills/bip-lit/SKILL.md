@@ -74,19 +74,6 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 4. **Only after exhausting local options**, ask user if they want to search externally
 5. For title searches, use the full title; for topic searches, use key terms
 
-## Proactive Concept Discovery
-
-When discussing papers, **always look for opportunities to create concept nodes**:
-
-- Papers that **introduce** new methods, models, or techniques (e.g., "categorical Jacobian")
-- Papers that **apply** existing concepts in novel ways
-- Connections between papers through shared concepts
-
-Suggest creating concepts when you notice:
-- A named method or algorithm being introduced
-- A technique being reused across multiple papers
-- A bridge between the user's work and external literature
-
 ## Quick Reference
 
 | Task | Command |
@@ -111,12 +98,7 @@ Suggest creating concepts when you notice:
 | One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |
 | Fast paper search (external) | `bip asta search "query"` |
 | Find text snippets | `bip asta snippet "query"` |
-| Create concept | `bip concept add <id> --name "Name"` |
-| Link paper to concept | `bip edge add -s <paper> -t concept:<concept> -r <type> -m "summary"` |
-| Papers for concept | `bip concept papers <concept-id>` |
-| Concepts for paper | `bip paper concepts <paper-id>` |
 | Import projects from config | `bip project import <file>` |
-| Import with concept edges | `bip project import <file> --link-concepts` |
 
 ## Search Strategy
 
@@ -344,79 +326,6 @@ open -a "Google Chrome" "https://www.semanticscholar.org/paper/<sha>"
 
 Note: the bare `https://www.semanticscholar.org/paper/CorpusID:...` form does NOT resolve (404s) — you must use the SHA paper ID.
 To resolve a CorpusId instead of a DOI, swap `DOI:$doi` above for `CorpusId:236964352`.
-
-## Concept Nodes (Knowledge Graph)
-
-Build a knowledge graph by creating concepts and linking papers to them.
-
-### Create Concepts
-
-```bash
-# Add a concept with name, aliases, and description
-bip concept add somatic-hypermutation \
-  --name "Somatic Hypermutation" \
-  --aliases "SHM,shm" \
-  --description "Process by which B cells diversify antibody genes"
-
-# List all concepts
-bip concept list --human
-
-# Get a specific concept
-bip concept get somatic-hypermutation --human
-```
-
-### Link Papers to Concepts
-
-```bash
-# Use flags: -s (source paper), -t (target concept with concept: prefix), -r (relationship type), -m (summary)
-bip edge add -s Halpern1998-yc -t concept:mutation-selection-model -r introduces \
-  -m "Foundational paper defining the mutation-selection model"
-
-bip edge add -s Yaari2013-dg -t concept:somatic-hypermutation -r models \
-  -m "Introduces S5F model for SHM targeting"
-```
-
-**Note**: Use `concept:` prefix for concept targets, `project:` for project targets.
-
-### Standard Relationship Types
-
-| Type | When to Use |
-|------|-------------|
-| `introduces` | Paper first presents or defines this concept |
-| `applies` | Paper uses concept as a tool or method |
-| `models` | Paper creates computational/mathematical model |
-| `evaluates-with` | Paper uses concept for evaluation/benchmarking |
-| `critiques` | Paper identifies limitations or problems |
-| `extends` | Paper builds upon or extends the concept |
-
-### Query the Knowledge Graph
-
-```bash
-# Find all papers linked to a concept
-bip concept papers somatic-hypermutation --human
-
-# Filter by relationship type
-bip concept papers somatic-hypermutation --type introduces
-
-# Find what concepts a paper relates to
-bip paper concepts Halpern1998-yc --human
-```
-
-### Manage Concepts
-
-```bash
-# Update a concept
-bip concept update somatic-hypermutation --description "Updated description"
-
-# Delete a concept (warns if papers linked)
-bip concept delete unused-concept
-
-# Force delete (removes linked edges too)
-bip concept delete old-concept --force
-
-# Merge duplicate concepts
-bip concept merge shm somatic-hypermutation --human
-```
 
 ## Troubleshooting
 

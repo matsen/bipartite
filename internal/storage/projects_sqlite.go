@@ -53,7 +53,7 @@ func (d *DB) RebuildProjectsFromJSONL(jsonlPath string) (int, error) {
 	defer stmt.Close()
 
 	for _, p := range projects {
-		_, err = stmt.Exec(p.ID, p.Name, nullableStringFromGo(p.Description), p.CreatedAt, p.UpdatedAt)
+		_, err = stmt.Exec(p.ID, p.Name, nullableStringValue(p.Description), p.CreatedAt, p.UpdatedAt)
 		if err != nil {
 			return 0, fmt.Errorf("inserting project %s: %w", p.ID, err)
 		}

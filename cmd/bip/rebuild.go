@@ -25,8 +25,6 @@ Use this after pulling changes from git or if the database becomes corrupted.`,
 type RebuildResult struct {
 	Status     string `json:"status"`
 	References int    `json:"references"`
-	Edges      int    `json:"edges"`
-	Concepts   int    `json:"concepts"`
 	Projects   int    `json:"projects"`
 	Repos      int    `json:"repos"`
 }
@@ -50,20 +48,6 @@ func runRebuild(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitDataError, "rebuilding refs database: %v", err)
 	}
 
-	// Rebuild edges from JSONL
-	edgesPath := config.EdgesPath(repoRoot)
-	edgesCount, err := db.RebuildEdgesFromJSONL(edgesPath)
-	if err != nil {
-		exitWithError(ExitDataError, "rebuilding edges database: %v", err)
-	}
-
-	// Rebuild concepts from JSONL
-	conceptsPath := config.ConceptsPath(repoRoot)
-	conceptsCount, err := db.RebuildConceptsFromJSONL(conceptsPath)
-	if err != nil {
-		exitWithError(ExitDataError, "rebuilding concepts database: %v", err)
-	}
-
 	// Rebuild projects from JSONL
 	projectsPath := config.ProjectsPath(repoRoot)
 	projectsCount, err := db.RebuildProjectsFromJSONL(projectsPath)
@@ -80,13 +64,11 @@ func runRebuild(cmd *cobra.Command, args []string) error {
 
 	// Output results
 	if humanOutput {
-		fmt.Printf("Rebuilt query database with %d references, %d edges, %d concepts, %d projects, and %d repos\n", refsCount, edgesCount, conceptsCount, projectsCount, reposCount)
+		fmt.Printf("Rebuilt query database with %d references, %d projects, and %d repos\n", refsCount, projectsCount, reposCount)
 	} else {
 		outputJSON(RebuildResult{
 			Status:     "rebuilt",
 			References: refsCount,
-			Edges:      edgesCount,
-			Concepts:   conceptsCount,
 			Projects:   projectsCount,
 			Repos:      reposCount,
 		})
