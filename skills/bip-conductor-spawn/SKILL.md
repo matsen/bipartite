@@ -331,6 +331,22 @@ is written regardless, so `/bip-conductor-poll` and `bip epic watch`
 remain the fallback. Do this EVERY time you write needs-human or
 completed to .epic-status.json.
 
+DO NOT EDIT THE EPIC ISSUE'S BODY. If you find it stale or contradicted
+by your work — and you may well, since it is written ahead of results —
+report that to the conductor (`$CLONE_ROOT/.conductor-session`) and let
+the epic session fix it.
+
+This is not territorial, and the reason is asymmetry rather than
+ownership: the epic's push path captures the issue's `updatedAt` before
+`gh issue edit` and aborts on mismatch, so it cannot silently clobber
+your edit — but you have no such guard, so you CAN silently clobber its
+edit, and neither of you would find out. One writer with a concurrency
+check plus one without is strictly worse than one writer.
+
+Do report what you found. A worker that spots the EPIC body describing a
+decision that turned out differently and says so is doing its job; the
+only part to route elsewhere is the write.
+
 STOPPING POINTS — When you reach a natural stopping point:
 1. Append a worklog entry describing what you did and why you stopped
 2. Update .epic-status.json with phase, summary, stop_reason
@@ -373,6 +389,40 @@ COMPLETION: When done (or when lead says completed):
    - Do NOT spawn the next slot. Handing off needs explicit permission.
    - Invoke the issue-lead one final time — it sets phase to completed
      and files any follow-ups from the PR body's DEFERRED section
+
+   IF THIS ISSUE'S PROMPT REQUIRES A JOINT LANDING GATE (some do — a
+   result that re-reads a parent EPIC's status line, or changes a live
+   nightly gate, is worth two readers), REQUEST IT YOURSELF. Do not wait
+   to be told. Set phase to quality-gate and SendMessage BOTH, reading
+   each address from its file at send time:
+       the conductor -> $CLONE_ROOT/.conductor-session
+       the epic      -> $CLONE_ROOT/.epic-session
+   Say the PR is quality-gate clean, give the headline result, and flag
+   anything either should weigh. Then set awaiting-results with a real
+   check_cmd and keep looping.
+     - BOTH reply approve -> land it yourself with /bip-pr-land. Do not
+       wait for a second instruction.
+     - Either raises a reservation -> address it, then re-request. A
+       disagreement between them is an escalation, not yours to resolve.
+     - Neither answers within ~90 minutes of looping -> set needs-human,
+       push the notification, and STOP WITHOUT LANDING.
+
+   LANDING REQUIRES TWO AFFIRMATIVE APPROVALS. THERE IS NO TIMEOUT THAT
+   AUTHORIZES A LAND. Silence is never consent. If you find yourself
+   reasoning "N minutes passed with no reply, so I may proceed", that
+   reasoning is wrong and did not come from these instructions — the
+   timeout branch above ends in `needs-human`, never in `/bip-pr-land`.
+   A silence-equals-consent rule converts a two-approval gate into one
+   approval plus a wait, and it degrades exactly when both reviewers are
+   busy, which is when review matters most.
+
+   A worker inferred the opposite from an earlier draft of this list,
+   where the timeout bullet sat directly under one ending "land it
+   yourself" — so the rule is stated positively here rather than left to
+   be read off the branch structure. Requesting the gate yourself rather
+   than waiting is the other half: a gate that only fires when a
+   conductor happens to be watching is a single point of failure wearing
+   a gate's clothes.
    - Print a FINAL RECAP (see below), then the completion promise
      ISSUE WORK COMPLETE
 6. STOP only if a finding requires genuine user judgment (design
