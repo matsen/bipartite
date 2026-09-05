@@ -124,6 +124,10 @@ Cross-check terminology between main and SI:
 
 - Terms whose meaning the paper explicitly distinguishes (e.g., "mutation rate" vs. "substitution rate," "host-agnostic" vs. "host-specific") — verify they are used in the technically-correct sense everywhere, especially in figure captions and Methods.
 - Hyphenation, capitalization, and spelling variants of the same term across files (e.g., `\nt{CG}` vs. `\texttt{CG}`, "3-mer" vs. "three-mer," `$r$` vs. `$R$` for correlation).
+- One thing carrying two different names — not a variant spelling but a different word, with nothing gained by the change (e.g. one quantity appearing as "detection response" in Methods and "depth response" in a caption).
+  Check section headings, figure captions, axis labels, table headers and column names against the running text, since these drift independently of it.
+  The name is fixed by whichever the paper used first; report the other.
+  Ordinary English in its ordinary sense ("the larger sample," "the second run") is description rather than a name, and varying it is not a finding.
 
 Output: each finding with `file:line`, classified "real inconsistency that should be fixed" vs. "stylistic variation."
 

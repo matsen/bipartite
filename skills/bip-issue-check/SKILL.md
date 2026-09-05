@@ -248,6 +248,21 @@ Run each verification command mentally against the prescribed content.
 
 **Recommend:** Name the conflicting locations and propose which side should change — usually the prescriptive section reflects author intent and the verification should match it, but the author confirms.
 
+10c.
+**One name per thing**: the issue may call one thing by two different names.
+Not a variant spelling but a different word for the same thing, with nothing gained by the change — `record` for what the code calls a `stamp`, "the instruction" for what the issue established as "the rule", `crossings` for what the discussion has been calling shared molecules.
+The reader has to work out that the two words mean one thing, and a worker implementing the issue may conclude they are two separate requirements.
+
+**How to check:** For each thing the issue names, collect every word it uses for that thing.
+Compare against the code, data and tool output the issue cites, which hold the authoritative name.
+Check headings, table headers and column names as well as running prose — those drift independently.
+
+**Flag as HIGH if** the two names appear in different sections, so the worker could read them as two things; **MEDIUM** if both appear close enough to be obviously the same.
+
+**Recommend:** the name used first — by the user, then by the code or data, then by the issue itself — and name every line to change.
+Do not flag ordinary English used in its ordinary sense: "the larger sample", "the second run" are descriptions, not names.
+If two words might name genuinely different things, say what would distinguish them rather than recommending a change.
+
 #### Validation and benchmarking checks
 
 11. **Success criteria**: Are there concrete, measurable success criteria?
