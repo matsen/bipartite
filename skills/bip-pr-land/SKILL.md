@@ -146,7 +146,7 @@ if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ];
         echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate, or copy $LAND_DIR/.epic-worklog.md somewhere durable by hand (e.g. _ignore/$(date -I)-landing/) before continuing" >&2
     fi
 fi
-[ -n "$PRIMARY" ] && cd "$PRIMARY"
+if [ -n "$PRIMARY" ]; then cd "$PRIMARY"; fi
 ```
 
 `preserve_epic_state` (from `skills/lib/spawn-intent.sh`) is the shared preserve-then-report pipeline all four preserve sites in this repo now use — extracted per issue #2216 after unchecked `cp`, wrong-order `resolve_clone_root`, and guard-tripping wording each independently recurred across the sites that used to hand-roll it. It produces the un-dotted, clone-namespaced filenames (`i<issue>-<clone>.worklog.md`/`.status.json`) matching this repo's existing `.preserved/` convention (23 of 25 prior entries use this form) rather than the dotted originals, which a plain `ls` or `*` glob would otherwise show as an empty directory. Its return code distinguishes "nothing to preserve" (1, silent) from "preservation failed" (2, must not proceed to delete) — check `$rc` immediately after the assignment, in the same command, since a later command would not see it.

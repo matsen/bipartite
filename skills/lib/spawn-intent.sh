@@ -50,14 +50,26 @@ find_spawn_intent() {
 # README recording <reason>. Extracted per issue #2216 after the same
 # preserve-then-delete pipeline was independently written -- and
 # independently mis-written (unchecked cp, wrong-order
-# resolve_clone_root, guard-tripping wording) -- four times across
-# bip-pr-land, bip-conductor-spawn (x2), and bip-conductor-poll.
+# resolve_clone_root, guard-tripping wording, an &&-chained cp pair
+# that dropped the status file entirely whenever the worklog was
+# merely absent -- caught before this landed, not after) -- four times
+# across bip-pr-land, bip-conductor-spawn (x2), and bip-conductor-poll.
+#
+# The two copies are attempted independently rather than &&-chained:
+# .epic-status.json is required (its presence is the whole precondition
+# for calling this function), but .epic-worklog.md may legitimately not
+# exist yet (an early-crash slot, or the window between the session-start
+# status write and the first worklog append), and that must not cost the
+# status file too. Removes the destination directory again on total
+# failure so a failed preserve doesn't litter .preserved/ with an empty
+# directory a later reader could mistake for a successful rescue.
 #
 # Prints the destination directory to stdout on success. Returns:
-#   0 - preserved successfully (stdout has the path)
+#   0 - .epic-status.json preserved (stdout has the path); the README
+#       notes if .epic-worklog.md wasn't found to preserve alongside it
 #   1 - no .epic-status.json in <source_dir>; nothing to do, not an error
-#   2 - .epic-status.json present but the copy failed; caller must NOT
-#       proceed to delete the originals
+#   2 - .epic-status.json present but could not be copied; caller must
+#       NOT proceed to delete the originals
 #
 # Does not resolve clone_root itself and does not post any "committed
 # pointer" comment -- callers differ on where clone_root comes from
@@ -70,18 +82,29 @@ preserve_epic_state() {
     if [ ! -f "$source_dir/.epic-status.json" ]; then
         return 1
     fi
-    local issue_n clone_name dest
+    local issue_n clone_name dest status_ok=0 worklog_ok=0
     issue_n=$(jq -r '.issue // "unknown"' "$source_dir/.epic-status.json" 2>/dev/null)
     clone_name=$(basename "$source_dir")
     dest="$clone_root/.preserved/$issue_n-$(date -I)"
     mkdir -p "$dest"
-    if cp "$source_dir/.epic-worklog.md" "$dest/i$issue_n-$clone_name.worklog.md" \
-       && cp "$source_dir/.epic-status.json" "$dest/i$issue_n-$clone_name.status.json"; then
-        printf 'Preserved from %s, %s.%s\n' "$source_dir" "$(date -I)" "${reason:+ $reason}" > "$dest/README.md"
-        echo "$dest"
-        return 0
+
+    cp "$source_dir/.epic-status.json" "$dest/i$issue_n-$clone_name.status.json" && status_ok=1
+    if [ -f "$source_dir/.epic-worklog.md" ]; then
+        cp "$source_dir/.epic-worklog.md" "$dest/i$issue_n-$clone_name.worklog.md" && worklog_ok=1
     fi
-    return 2
+
+    if [ "$status_ok" -eq 0 ]; then
+        rmdir "$dest" 2>/dev/null
+        return 2
+    fi
+    if [ "$worklog_ok" -eq 1 ]; then
+        printf 'Preserved from %s, %s.%s\n' "$source_dir" "$(date -I)" "${reason:+ $reason}" > "$dest/README.md"
+    else
+        printf 'Preserved from %s, %s.%s No .epic-worklog.md was found in %s to preserve alongside it.\n' \
+            "$source_dir" "$(date -I)" "${reason:+ $reason}" "$source_dir" > "$dest/README.md"
+    fi
+    echo "$dest"
+    return 0
 }
 
 # mark_spawn_intent_consumed <intent-file-path>
