@@ -117,53 +117,45 @@ Follow the squash merge conventions from global CLAUDE.md — PR title becomes t
 
 ### Step 6a: Detect worktree mode, and preserve EPIC state before anything can destroy it
 
-Before pulling the base branch, check whether you are landing from a linked git worktree (created by `bip spawn` in worktree mode):
+**Run this whole step as a single Bash invocation, start to finish — do not split it across separate tool calls.** Cross-invocation persistence is **thread-type dependent**, not a fixed rule: in an agent/subagent thread, both shell variables *and* the working directory reset between separate Bash calls (measured directly this session); in a main interactive session, cwd persists but shell variables still do not. Either way, `$PRIMARY`, `$LAND_DIR`, and `$DEST` below must be set and consumed within this one script to be safe across both thread types. An earlier version of this step split the `cd "$PRIMARY"` out into its own later command, which silently broke worktree-mode landing (`git checkout` in Step 7 would run inside the about-to-be-removed worktree instead of the primary clone) — see issue #2216's follow-up finding.
+
+Before pulling the base branch, check whether you are landing from a linked git worktree (created by `bip spawn` in worktree mode), and — before doing anything else, including the `cd` below — preserve `.epic-status.json`/`.epic-worklog.md` from `$LAND_DIR` if this is an EPIC-managed clone (issue #2216). This has to happen here, not at the old Step 9.5: in worktree mode, Step 8 below runs `bip worktree remove --force "$LAND_DIR"`, which deletes the whole worktree directory — gitignored files included — before Step 9.5 ever gets a chance to run. Doing it here, before any `cd` or removal, covers both modes uniformly: in clone mode `$LAND_DIR` never disappears, so this is equivalent to preserving right before the eventual `rm`; in worktree mode it's the only point that isn't already destroyed.
 
 ```bash
 LAND_DIR=$(pwd -P)
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 if PRIMARY=$(bip worktree primary 2>/dev/null); then
     echo "Landing from worktree $LAND_DIR (primary: $PRIMARY)"
 fi
-```
-
-`bip worktree primary` exits 0 and prints the primary clone path **only** when the current directory is a linked worktree.
-In every other case (primary clone, non-bip checkout, non-git directory) it exits non-zero with no stdout — `$PRIMARY` remains empty.
-
-**Preserve `.epic-status.json`/`.epic-worklog.md` from `$LAND_DIR` right here, before doing anything else** (issue #2216). This has to happen in this exact spot, not later: in worktree mode, Step 8 below runs `bip worktree remove --force "$LAND_DIR"`, which deletes the whole worktree directory — gitignored files included — before Step 9.5 (the old, clone-mode-only cleanup point) ever gets a chance to run. Preserving after that point is too late; the files are already gone. Doing it here, immediately after computing `$LAND_DIR` and before any `cd` or removal, covers both modes uniformly: in clone mode `$LAND_DIR` never disappears, so this is equivalent to preserving right before the eventual `rm`; in worktree mode it's the only point that isn't already destroyed.
-
-```bash
-source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ]; then
     if CLONE_ROOT=$(resolve_clone_root "$LAND_DIR/.epic-config.json"); then
-        ISSUE_N=$(jq -r '.issue // "unknown"' "$LAND_DIR/.epic-status.json" 2>/dev/null)
-        DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
-        mkdir -p "$DEST"
-        if cp "$LAND_DIR/.epic-worklog.md" "$LAND_DIR/.epic-status.json" "$DEST/"; then
-            {
-                printf 'Preserved from %s at land of PR #%s ("%s"), %s.\n' \
-                    "$LAND_DIR" "<PR number from Step 2>" "<PR title from Step 2>" "$(date -I)"
-                echo "Named <issue>-<date>, not this repo's usual <issue>-<slug>: a date is trivially derivable and collision-free at this step, at the cost of a visibly different naming convention here."
-            } > "$DEST/README.md"
-            PRESERVED_DEST="$DEST"
+        DEST=$(preserve_epic_state "$LAND_DIR" "$CLONE_ROOT" \
+            "at land of PR #<PR number from Step 2> (\"<PR title from Step 2>\").")
+        rc=$?
+        if [ "$rc" -eq 0 ]; then
             echo "Preserved worklog+status to $DEST"
-        else
-            echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
+            if gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$DEST\` (issue #2216)."; then
+                echo "Posted preservation pointer to PR #<PR number from Step 2>"
+            else
+                echo "WARNING: preservation succeeded ($DEST) but the gh pr comment pointer failed to post -- note the path in Step 10's report so it isn't lost" >&2
+            fi
+        elif [ "$rc" -eq 2 ]; then
+            echo "PRESERVATION FAILED: cp into .preserved did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
         fi
     else
         echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate, or copy $LAND_DIR/.epic-worklog.md somewhere durable by hand (e.g. _ignore/$(date -I)-landing/) before continuing" >&2
     fi
 fi
+if [ -n "$PRIMARY" ]; then cd "$PRIMARY"; fi
 ```
 
-**No `.epic-config.json` at all is not a failure — it means this land isn't part of a multi-clone EPIC fleet, and there is nothing to preserve into.** Every session on the machine picks up this skill the moment it merges (it's a symlink into `~/.claude/skills/bip-pr-land`), including plain non-EPIC repos that have never heard of `$CLONE_ROOT`. Those must see nothing here, not a scary-looking failure message — hence gating on `.epic-config.json`'s presence too, not just `.epic-status.json`'s. A repo that *has* `.epic-config.json` but still fails to resolve `clone_root` from it is a genuinely broken EPIC clone, and that case keeps the loud report.
+`preserve_epic_state` (from `skills/lib/spawn-intent.sh`) is the shared preserve-then-report pipeline all four preserve sites in this repo now use — extracted per issue #2216 after unchecked `cp`, wrong-order `resolve_clone_root`, and guard-tripping wording each independently recurred across the sites that used to hand-roll it. It produces the un-dotted, clone-namespaced filenames (`i<issue>-<clone>.worklog.md`/`.status.json`) matching this repo's existing `.preserved/` convention (23 of 25 prior entries use this form) rather than the dotted originals, which a plain `ls` or `*` glob would otherwise show as an empty directory. Its return code distinguishes "nothing to preserve" (1, silent) from "preservation failed" (2, must not proceed to delete) — check `$rc` immediately after the assignment, in the same command, since a later command would not see it.
+
+The `gh pr comment` runs immediately, inside this same step, rather than being deferred to Step 9.5 — the PR was already merged in Step 6 above, so the PR number is available here, and posting now means the "committed pointer" `bip-conductor-poll`'s three-part rescue rule requires doesn't depend on a variable surviving through Steps 7/7.5/8/9 to reach Step 9.5 (it wouldn't: same cross-invocation problem as `$PRIMARY`, just further away).
+
+`bip worktree primary` exits 0 and prints the primary clone path **only** when the current directory is a linked worktree; in every other case (primary clone, non-bip checkout, non-git directory) it exits non-zero with no stdout and `$PRIMARY` remains empty. **No `.epic-config.json` at all is not a failure** — it means this land isn't part of a multi-clone EPIC fleet, and there is nothing to preserve into. Every session on the machine picks up this skill the moment it merges (it's a symlink into `~/.claude/skills/bip-pr-land`), including plain non-EPIC repos that have never heard of `$CLONE_ROOT`. Those must see nothing here, not a scary-looking failure message — hence gating on `.epic-config.json`'s presence too, not just `.epic-status.json`'s. A repo that *has* `.epic-config.json` but still fails to resolve `clone_root` from it is a genuinely broken EPIC clone, and that case keeps the loud report.
 
 `resolve_clone_root` (from `skills/lib/spawn-intent.sh`, already used by `bip-conductor-spawn` and `bip-conductor-poll`) fails loudly on stderr and returns non-zero if `.clone_root` is missing or unresolvable, rather than silently yielding an empty path — use it here instead of hand-rolling the same jq+tilde-expand logic a third time (that duplication is exactly what the helper was extracted to stop, per its own header comment). If either failure branch above fires, **do not proceed past it silently** — the whole point of this step is that a `cp` or `mkdir` failure must not read as success.
-
-Now perform the primary-clone `cd`, if applicable — as its own command, since `bip worktree remove` in Step 8 needs `$LAND_DIR` to still resolve correctly relative to wherever Step 8 runs from:
-
-```bash
-[ -n "$PRIMARY" ] && cd "$PRIMARY"
-```
 
 If `$PRIMARY` was set, Steps 7 and 7.5 below run in the primary clone; otherwise they run in `$LAND_DIR` exactly as today.
 
@@ -222,14 +214,16 @@ If any untracked or modified files remain on main:
 
 The goal is a **totally clean `git status`** on main when landing is done.
 
-### Step 9.5: Clean up orchestration files, and record the preserved pointer
+### Step 9.5: Clean up orchestration files
 
-`.epic-status.json` and `.epic-worklog.md` were already preserved in Step 6a
-(issue #2216 — see that step for why the preservation has to happen there,
-before Step 8's worktree removal, rather than here). If Step 6a reported a
-`PRESERVATION FAILED` line, **stop and resolve it before deleting anything**
-— do not let this step destroy the only copy of a file Step 6a couldn't
-back up.
+`.epic-status.json` and `.epic-worklog.md` were already preserved — and, if
+preservation succeeded, the "committed pointer" `bip-conductor-poll`'s
+three-part rescue rule requires was already posted via `gh pr comment` —
+inside Step 6a (issue #2216; see that step for why both have to happen
+there, before Step 8's worktree removal, rather than here). If Step 6a
+reported a `PRESERVATION FAILED` line, **stop and resolve it before
+deleting anything** — do not let this step destroy the only copy of a
+file Step 6a couldn't back up.
 
 If `$LAND_DIR/.epic-status.json` is present, remove the now-redundant
 originals as a command with no `$` in it at all (avoids Claude Code's
@@ -243,15 +237,6 @@ nothing left here to remove and this is a no-op:
 rm -f .epic-status.json .epic-worklog.md
 ```
 
-If Step 6a's preservation block set `$PRESERVED_DEST`, land the "committed
-pointer" its own three-part rescue rule requires (see `bip-conductor-poll`'s
-"before returning a clone to the pool" section) — a chat-only report is not
-enough, since nothing reads this session's transcript later:
-
-```bash
-gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$PRESERVED_DEST\` (issue #2216)."
-```
-
 ### Step 10: Confirm
 
 Report: "Landed #42.
@@ -260,4 +245,4 @@ Branch `<branch>` deleted."
 If any files were moved to `_ignore/`, list them.
 If the primary clone was synced in Step 7.5, say so: "Primary clone `<path>` pulled."
 If Step 8 removed a linked worktree, say so: "Worktree `<path>` removed."
-If Step 6a preserved EPIC state, say so: "Worklog preserved to `<PRESERVED_DEST>`, noted on the PR."
+If Step 6a preserved EPIC state, say so: "Worklog preserved to `<DEST>`, noted on the PR." (recall the exact path from what Step 6a printed earlier in this same session — it was not carried forward as a shell variable)

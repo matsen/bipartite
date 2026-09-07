@@ -165,20 +165,20 @@ git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 # (issue #2216). The block below is defense in depth for a land that
 # bypassed /bip-pr-land; if the files are still present, preserve before
 # deleting rather than assuming reclaim is a safe place to drop them
-# silently. Match Step 6a's preservation exactly (same README, same
-# failure handling) rather than a thinner variant -- a backstop that
-# behaves differently from what it backstops is its own silent gap.
+# silently. Uses the same preserve_epic_state() helper Step 6a does
+# (issue #2216 follow-up) rather than a hand-rolled variant -- a
+# backstop that behaves differently from what it backstops is its own
+# silent gap.
 if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
     ISSUE_N=$(jq -r '.issue // "unknown"' "$CLONE_ROOT/<clone>/.epic-status.json" 2>/dev/null)
-    DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
-    mkdir -p "$DEST"
-    if cp "$CLONE_ROOT/<clone>/.epic-worklog.md" "$CLONE_ROOT/<clone>/.epic-status.json" "$DEST/"; then
-        printf 'Preserved from %s at reclaim, %s. This clone landed a PR without /bip-pr-land preserving first -- investigate why.\n' \
-            "$CLONE_ROOT/<clone>" "$(date -I)" > "$DEST/README.md"
+    DEST=$(preserve_epic_state "$CLONE_ROOT/<clone>" "$CLONE_ROOT" \
+        "at reclaim. This clone landed a PR without /bip-pr-land preserving first -- investigate why.")
+    rc=$?
+    if [ "$rc" -eq 0 ]; then
         echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 6a)"
         gh issue comment "$ISSUE_N" --body "🤖 EPIC worklog preserved to \`$DEST\` at reclaim (the land that closed this issue skipped /bip-pr-land's preservation step)." 2>&1
-    else
-        echo "PRESERVATION FAILED at reclaim for issue $ISSUE_N -- stop, do not let the rm below run until this is resolved by hand" >&2
+    elif [ "$rc" -eq 2 ]; then
+        echo "PRESERVATION FAILED at reclaim for issue $ISSUE_N -- stop, do not let the delete below run until this is resolved by hand" >&2
     fi
 fi
 cd "$CLONE_ROOT/<clone>"
