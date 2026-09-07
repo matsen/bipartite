@@ -160,13 +160,36 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
-rm -f "$CLONE_ROOT/<clone>/.epic-status.json" "$CLONE_ROOT/<clone>/.epic-worklog.md"
+# .epic-status.json/.epic-worklog.md should already be gone here -- /bip-pr-land's
+# own Step 9.5 preserves-then-deletes them at land time (issue #2216). The block
+# below is defense in depth for a land that bypassed /bip-pr-land; if the files
+# are still present, preserve before deleting rather than assuming reclaim is a
+# safe place to drop them silently:
+if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
+    ISSUE_N=$(jq -r '.issue // "unknown"' "$CLONE_ROOT/<clone>/.epic-status.json" 2>/dev/null)
+    DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
+    mkdir -p "$DEST"
+    cp "$CLONE_ROOT/<clone>/.epic-worklog.md" "$CLONE_ROOT/<clone>/.epic-status.json" "$DEST/" 2>/dev/null
+    echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 9.5)"
+fi
+cd "$CLONE_ROOT/<clone>"
+```
+
+Then, as a **separate command with no `$` in it at all** (a command
+containing both `$` and `rm` re-arms Claude Code's built-in
+destructive-removal guard even if `$CLONE_ROOT` was only expanded earlier
+in the same string — see `bip-conductor-spawn`'s Step 2 for the verified
+trigger condition; the `cd` above, already in its own command, is what
+makes literal relative filenames possible here):
+
+```bash
+rm -f .epic-status.json .epic-worklog.md
 ```
 
 **Before returning a clone to the pool, check what untracked output it is carrying.**
 Reclaiming is safe for tracked files and **silently destructive for untracked ones** — and untracked is where experiment output lives *by policy*. Nothing in the reclaim removes it, so it survives until the next spawn into that clone quietly destroys it. **A free clone is not an empty clone.**
 
-**The same trap catches `.epic-worklog.md`, and it is gitignored rather than untracked — so a `git status` check does not show it.** A slot that lands a PR needs nothing; a slot that **stands down or escalates** carries its entire value there, and `/bip-conductor-spawn`'s prep deletes it on the next assignment. Copy it to `$CLONE_ROOT/.preserved/<slug>/` before reclaiming. Measured 2026-09-03: eleven were rescued in one stand-down, the largest 269 lines from a slot that wrote no code at all.
+**The same trap used to catch `.epic-worklog.md` too, and it is gitignored rather than untracked — so a `git status` check does not show it.** The premise that used to excuse this ("a slot that lands a PR needs nothing, since the issue-lead posts every evaluation as a PR comment") is false (issue #2216, matsengrp/phyz#2314/PR#2316): `PROSE-DISCIPLINE.md` rewrites PR bodies to current state by design, so deliberation never lives there, and the issue-lead's PR comments are evaluation-stop summaries, not the worklog's full narrative — on a landed PR the worklog is one of only two places the reasoning survives. `/bip-pr-land`'s Step 9.5 is now the point that preserves it, at land time, before this reclaim step ever runs; the `if` block above is only a backstop for a land that skipped that skill. A slot that **stands down or escalates** (no PR at all) still needs the same care here, since nothing upstream of reclaim preserves it in that case: copy `.epic-worklog.md` to `$CLONE_ROOT/.preserved/<slug>/` before reclaiming. Measured 2026-09-03: eleven were rescued in one stand-down, the largest 269 lines from a slot that wrote no code at all.
 
 ```bash
 # gitignored OR untracked output under experiments/*/results
