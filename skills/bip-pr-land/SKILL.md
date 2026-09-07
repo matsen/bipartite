@@ -130,7 +130,7 @@ fi
 if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ]; then
     if CLONE_ROOT=$(resolve_clone_root "$LAND_DIR/.epic-config.json"); then
         DEST=$(preserve_epic_state "$LAND_DIR" "$CLONE_ROOT" \
-            "at land of PR #<PR number from Step 2> (\"<PR title from Step 2>\"). Named <issue>-<date>, not this repo's usual <issue>-<slug>: a date is trivially derivable and collision-free at this step, at the cost of a visibly different naming convention here.")
+            "at land of PR #<PR number from Step 2> (\"<PR title from Step 2>\").")
         rc=$?
         if [ "$rc" -eq 0 ]; then
             echo "Preserved worklog+status to $DEST"

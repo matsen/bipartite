@@ -84,10 +84,11 @@ preserve_epic_state() {
     if [ ! -f "$source_dir/.epic-status.json" ]; then
         return 1
     fi
-    local issue_n clone_name dest status_ok=0 worklog_ok=0
+    local issue_n clone_name today dest status_ok=0 worklog_ok=0
     issue_n=$(jq -r '.issue // "unknown"' "$source_dir/.epic-status.json" 2>/dev/null)
     clone_name=$(basename "$source_dir")
-    dest="$clone_root/.preserved/$issue_n-$(date -I)"
+    today=$(date -I)
+    dest="$clone_root/.preserved/$issue_n-$today"
     mkdir -p "$dest"
 
     # Never silently overwrite an existing preserved copy. Same issue,
@@ -119,12 +120,12 @@ preserve_epic_state() {
         rmdir "$dest" 2>/dev/null
         return 2
     fi
-    if [ "$worklog_ok" -eq 1 ]; then
-        printf 'Preserved from %s, %s.%s\n' "$source_dir" "$(date -I)" "${reason:+ $reason}" > "$dest/README.md"
-    else
-        printf 'Preserved from %s, %s.%s No .epic-worklog.md was found in %s to preserve alongside it.\n' \
-            "$source_dir" "$(date -I)" "${reason:+ $reason}" "$source_dir" > "$dest/README.md"
-    fi
+    {
+        printf 'Preserved from %s, %s.%s\n' "$source_dir" "$today" "${reason:+ $reason}"
+        printf 'Directory named %s-%s: the usual .preserved/ convention in this repo is <issue>-<slug>, but a date is trivially derivable and collision-free at this exact step, at the cost of a visibly different naming scheme here.\n' \
+            "$issue_n" "$today"
+        [ "$worklog_ok" -eq 1 ] || printf 'No .epic-worklog.md was found in %s to preserve alongside it.\n' "$source_dir"
+    } > "$dest/README.md"
     echo "$dest"
     return 0
 }
