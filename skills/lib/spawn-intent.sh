@@ -42,6 +42,48 @@ find_spawn_intent() {
        "$clone_root/.spawn-prompts/spawn-$issue_number.txt" 2>/dev/null | head -1
 }
 
+# preserve_epic_state <source_dir> <clone_root> [reason]
+# Copies <source_dir>/.epic-status.json and .epic-worklog.md, if
+# present, to <clone_root>/.preserved/<issue>-<date>/ with un-dotted,
+# clone-namespaced filenames (i<issue>-<clone>.worklog.md/.status.json,
+# matching this repo's own .preserved/ convention) and a provenance
+# README recording <reason>. Extracted per issue #2216 after the same
+# preserve-then-delete pipeline was independently written -- and
+# independently mis-written (unchecked cp, wrong-order
+# resolve_clone_root, guard-tripping wording) -- four times across
+# bip-pr-land, bip-conductor-spawn (x2), and bip-conductor-poll.
+#
+# Prints the destination directory to stdout on success. Returns:
+#   0 - preserved successfully (stdout has the path)
+#   1 - no .epic-status.json in <source_dir>; nothing to do, not an error
+#   2 - .epic-status.json present but the copy failed; caller must NOT
+#       proceed to delete the originals
+#
+# Does not resolve clone_root itself and does not post any "committed
+# pointer" comment -- callers differ on where clone_root comes from
+# (an absolute .epic-config.json path vs. the default cwd one) and on
+# gh pr comment vs. gh issue comment, so those stay call-site-specific.
+preserve_epic_state() {
+    local source_dir="$1"
+    local clone_root="$2"
+    local reason="${3:-}"
+    if [ ! -f "$source_dir/.epic-status.json" ]; then
+        return 1
+    fi
+    local issue_n clone_name dest
+    issue_n=$(jq -r '.issue // "unknown"' "$source_dir/.epic-status.json" 2>/dev/null)
+    clone_name=$(basename "$source_dir")
+    dest="$clone_root/.preserved/$issue_n-$(date -I)"
+    mkdir -p "$dest"
+    if cp "$source_dir/.epic-worklog.md" "$dest/i$issue_n-$clone_name.worklog.md" \
+       && cp "$source_dir/.epic-status.json" "$dest/i$issue_n-$clone_name.status.json"; then
+        printf 'Preserved from %s, %s.%s\n' "$source_dir" "$(date -I)" "${reason:+ $reason}" > "$dest/README.md"
+        echo "$dest"
+        return 0
+    fi
+    return 2
+}
+
 # mark_spawn_intent_consumed <intent-file-path>
 # Moves a spawn-intent file into a "consumed/" subdirectory sibling to
 # it, so a launched intent is distinguishable on disk from one still

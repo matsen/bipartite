@@ -129,21 +129,18 @@ if PRIMARY=$(bip worktree primary 2>/dev/null); then
 fi
 if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ]; then
     if CLONE_ROOT=$(resolve_clone_root "$LAND_DIR/.epic-config.json"); then
-        ISSUE_N=$(jq -r '.issue // "unknown"' "$LAND_DIR/.epic-status.json" 2>/dev/null)
-        CLONE_NAME=$(basename "$LAND_DIR")
-        DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
-        mkdir -p "$DEST"
-        if cp "$LAND_DIR/.epic-worklog.md" "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" \
-           && cp "$LAND_DIR/.epic-status.json" "$DEST/i$ISSUE_N-$CLONE_NAME.status.json"; then
-            {
-                printf 'Preserved from %s at land of PR #%s ("%s"), %s.\n' \
-                    "$LAND_DIR" "<PR number from Step 2>" "<PR title from Step 2>" "$(date -I)"
-                echo "Named <issue>-<date>, not this repo's usual <issue>-<slug>: a date is trivially derivable and collision-free at this step, at the cost of a visibly different naming convention here."
-            } > "$DEST/README.md"
+        DEST=$(preserve_epic_state "$LAND_DIR" "$CLONE_ROOT" \
+            "at land of PR #<PR number from Step 2> (\"<PR title from Step 2>\"). Named <issue>-<date>, not this repo's usual <issue>-<slug>: a date is trivially derivable and collision-free at this step, at the cost of a visibly different naming convention here.")
+        rc=$?
+        if [ "$rc" -eq 0 ]; then
             echo "Preserved worklog+status to $DEST"
-            gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$DEST\` (issue #2216)."
-        else
-            echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
+            if gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$DEST\` (issue #2216)."; then
+                echo "Posted preservation pointer to PR #<PR number from Step 2>"
+            else
+                echo "WARNING: preservation succeeded ($DEST) but the gh pr comment pointer failed to post -- note the path in Step 10's report so it isn't lost" >&2
+            fi
+        elif [ "$rc" -eq 2 ]; then
+            echo "PRESERVATION FAILED: cp into .preserved did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
         fi
     else
         echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate, or copy $LAND_DIR/.epic-worklog.md somewhere durable by hand (e.g. _ignore/$(date -I)-landing/) before continuing" >&2
@@ -152,7 +149,7 @@ fi
 [ -n "$PRIMARY" ] && cd "$PRIMARY"
 ```
 
-Filenames inside `$DEST` are un-dotted and clone-namespaced (`i<issue>-<clone>.worklog.md`/`.status.json`), matching this repo's existing `.preserved/` convention (23 of 25 prior entries use this form) rather than the dotted originals, which a plain `ls` or `*` glob would otherwise show as an empty directory.
+`preserve_epic_state` (from `skills/lib/spawn-intent.sh`) is the shared preserve-then-report pipeline all four preserve sites in this repo now use — extracted per issue #2216 after unchecked `cp`, wrong-order `resolve_clone_root`, and guard-tripping wording each independently recurred across the sites that used to hand-roll it. It produces the un-dotted, clone-namespaced filenames (`i<issue>-<clone>.worklog.md`/`.status.json`) matching this repo's existing `.preserved/` convention (23 of 25 prior entries use this form) rather than the dotted originals, which a plain `ls` or `*` glob would otherwise show as an empty directory. Its return code distinguishes "nothing to preserve" (1, silent) from "preservation failed" (2, must not proceed to delete) — check `$rc` immediately after the assignment, in the same command, since a later command would not see it.
 
 The `gh pr comment` runs immediately, inside this same step, rather than being deferred to Step 9.5 — the PR was already merged in Step 6 above, so the PR number is available here, and posting now means the "committed pointer" `bip-conductor-poll`'s three-part rescue rule requires doesn't depend on a variable surviving through Steps 7/7.5/8/9 to reach Step 9.5 (it wouldn't: same cross-invocation problem as `$PRIMARY`, just further away).
 

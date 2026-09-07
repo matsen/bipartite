@@ -144,19 +144,13 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 cd "$CLONE_ROOT/<clone>"
 git checkout main && git pull --ff-only origin main
-if [ -f .epic-status.json ]; then
-    ISSUE_N=$(jq -r '.issue // "unknown"' .epic-status.json 2>/dev/null)
-    CLONE_NAME=$(basename "$(pwd -P)")
-    DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
-    mkdir -p "$DEST"
-    if cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" \
-       && cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json"; then
-        printf 'Preserved from %s before reassigning this clone to a new issue, %s. The prior assignment ended here without a PR (issue #2216 success criterion 3: a stand-down/needs-human slot has no upstream preservation step of its own, so this reassignment point is where it has to happen).\n' \
-            "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
-        echo "Preserved prior assignment's worklog+status to $DEST before reassigning"
-    else
-        echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate, do not let the rm below run until this is resolved by hand" >&2
-    fi
+DEST=$(preserve_epic_state "$(pwd -P)" "$CLONE_ROOT" \
+    "before reassigning this clone to a new issue. The prior assignment ended here without a PR (issue #2216 success criterion 3: a stand-down/needs-human slot has no upstream preservation step of its own, so this reassignment point is where it has to happen).")
+rc=$?
+if [ "$rc" -eq 0 ]; then
+    echo "Preserved prior assignment's worklog+status to $DEST before reassigning"
+elif [ "$rc" -eq 2 ]; then
+    echo "PRESERVATION FAILED: cp did not succeed -- stop and investigate, do not let the delete below run until this is resolved by hand" >&2
 fi
 ```
 
@@ -182,19 +176,13 @@ The `cd` above is what makes this correct — don't collapse it in a batch-spawn
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 cd "$SLOT"
-if [ -f .epic-status.json ]; then
-    ISSUE_N=$(jq -r '.issue // "unknown"' .epic-status.json 2>/dev/null)
-    CLONE_NAME=$(basename "$(pwd -P)")
-    DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
-    mkdir -p "$DEST"
-    if cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" \
-       && cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json"; then
-        printf 'Preserved from %s before a fresh restart on the same issue, %s (issue #2216 success criterion 3).\n' \
-            "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
-        echo "Preserved prior attempt's worklog+status to $DEST before restarting"
-    else
-        echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate, do not let the rm below run until this is resolved by hand" >&2
-    fi
+DEST=$(preserve_epic_state "$(pwd -P)" "$CLONE_ROOT" \
+    "before a fresh restart on the same issue (issue #2216 success criterion 3).")
+rc=$?
+if [ "$rc" -eq 0 ]; then
+    echo "Preserved prior attempt's worklog+status to $DEST before restarting"
+elif [ "$rc" -eq 2 ]; then
+    echo "PRESERVATION FAILED: cp did not succeed -- stop and investigate, do not let the delete below run until this is resolved by hand" >&2
 fi
 ```
 
@@ -233,8 +221,12 @@ So a clone parked at `needs-human` with `lead_guidance` reading "stand down, wai
 
 ```bash
 cd "$SLOT"
+```
+
+Then, as a separate command with no `$` in it at all (this block used to combine the two in one fence with only a comment noting they must be split — a comment doesn't stop the guard from seeing `$SLOT` and `rm` in the same submitted string if an agent pastes the whole fence as one command):
+
+```bash
 rm -f .epic-status.json                # ALWAYS -- stale instructions, not context.
-                                       # Separate command; no `$` on the rm line.
 # keep .epic-worklog.md when resuming: it is the history the worker needs
 ```
 
