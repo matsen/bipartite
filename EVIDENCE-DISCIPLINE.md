@@ -21,6 +21,18 @@ The two failures compose, and the composition is the one to watch for: a number 
 
 This is the evidence-side twin of the guard rule above: there, a check that cannot read its input reports a safety it never established; here, a citation that cannot be opened reports an observation nobody made.
 
+## Name the question your check answers, not the one you asked
+
+**A check that runs, succeeds, and answers an adjacent question is more dangerous than one that fails**, because it is reported as having settled the thing it did not settle. Three instances in a single day on `matsengrp/phyz` (2026-09-06), all of which read as clean results:
+
+- **A grep zero.** `grep -c` on a log returned 0 and looked like data loss; the source read `` `pcp-pipeline` `` with backticks and the pattern had none. **A zero from grep is a statement about your pattern before it is a statement about the data.**
+- **A filename match that was a comment.** `grep -rl converge_rung` hit a file that only *mentioned* the script in prose. Twice more the same day, on unrelated code. **The filename is not the signal; the call is.**
+- **The weaker test on the load-bearing example.** Two commit hashes were checked for existence — one against the local clone *and* the API, one against the local clone only. The second was the one carrying the argument, and it did exist. **Whichever example your conclusion rests on gets the strongest check, not the first one to hand.**
+
+The constructive form is a **discriminating filter**: filter on the property the claim needs, not on the name. Auditing which scripts inherited a defect, `grep -l -- '--model'` returned **123** files and was useless; requiring a script to *construct* a `.model` path **and** pass `--model` cut it to **15**, and reading those 15 cut it to **3**.
+
+**Before reporting a check as settled, state which question it answers.** If that sentence is narrower than the claim, the check has not been run yet.
+
 ## Before writing a correction or a unification
 
 Three checks, each answerable in about a minute by someone who does not yet understand the finding — which is what makes them usable, since motivated correction and over-unification both happen under time pressure.

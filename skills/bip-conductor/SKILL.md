@@ -404,6 +404,20 @@ This is counting, not topic reasoning — the conductor holds no topic boundary 
 
 **Negative list**: also surface decisions already taken *against* an action, with reasons — sequencing already applied, an issue already stood down for a reason that would otherwise look resolved, and similar.
 This is the one category of fleet fact the epic (or a fresh conductor) cannot re-derive from `git`/`tmux`/`gh`: it's the absence of work, which leaves no trace in any of those.
+
+### Not everything you know is a fleet fact — the embargo trap
+
+**A cross-arm pattern feels exactly like a fleet fact, and the fleet-facts block of a spawn prompt is precisely where you write "things only the conductor can see." That is how an epic-session embargo gets spilled by the one session positioned to spill it.**
+
+The epic decides what is embargoed; **you are the delivery path**, so the discriminating test has to live here. It is **not** *"do I know this?"* — you know both kinds. It is:
+
+> **Is this mechanical state, or a conclusion another arm is supposed to reach on its own?**
+
+Slot occupancy, host load, build state, file collisions, who landed what: the first. **A synthesis across arms, a prediction about what an arm will find, or a mechanism one arm inferred that another is independently testing: the second — and it does not go in a prompt, a fleet-facts block, or a nudge.**
+
+The reason is not tidiness. Arms reaching verdicts independently is the *only* thing that makes their agreement mean anything; a pattern arriving as a premise converts a test into a confirmation and destroys the evidence it was supposed to produce.
+
+**Worked instance (`matsengrp/phyz`, 2026-09-06), and it is the case that justifies the practice rather than the case where it looked clever:** an epic session withheld a prediction that four topologies would fail to survive a corrected protocol. The arm tested them independently and **falsified it** — all four survived. Had the prediction been relayed, it would have arrived in the one population where confirmation was cheapest, on a question carrying a rung at zero margin. **A withheld idea that turns out wrong is better evidence for withholding than one that turns out right.**
 Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
 Concrete shape from the run that motivated this: an issue whose stated prerequisites both merged the same day reads as unblocked, but the conductor had already stood a clone down for it for an unrelated reason — without the negative list, that reads as ready to the epic and gets proposed again.
 

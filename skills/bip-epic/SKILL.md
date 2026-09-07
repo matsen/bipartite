@@ -264,6 +264,14 @@ When *naming* a file in a brief or message to another session (Step 6, or any ep
 **Completion criterion**: every pair of currently-open, about-to-be-spawned issues naming an overlapping file/module has an explicit overlap verdict — "compatible" or "conflicts, because ___" — not merely "no dependency conflict found in 4a."
 **A pair cleared in 4a is not thereby cleared here** — this is the check that "No collisions" wrongly skipped when two issues sharing a dependency-independent EPIC both edited `experiments/2026-08-27-2051-heavy-v2-stated-estimator/scripts/rescore_cell.py`.
 
+**4b is a check on PATHS, and there is a collision it is structurally blind to: one where an issue changes what an artifact another issue CITES means.** Two issues can write entirely disjoint files and still collide, because the collision is on *meaning* rather than on location.
+
+Worked instance (`matsengrp/phyz`, 2026-09-06): a follow-up proposed fixing a harness script and re-running the sweep that script had produced. Its write targets intersected nothing. But the table it would regenerate was the **read-only baseline** three other issues were citing for a landed verdict, and re-running it would have moved 349 of 945 values under those citations. No path overlap; a real collision.
+
+**There is no cheap detector for this and you should not pretend otherwise.** A file list cannot see it — resolving it needs someone who knows what each artifact is *for*, which is a topic-level read at brief time. Treat that as one more reason briefs go through the epic session rather than being generated from diffs. Two questions worth asking of any issue that regenerates or replaces a committed artifact:
+- **Does anything cite this artifact as evidence?** If so, changing it re-baselines that evidence whether or not any path overlaps.
+- **Is the artifact's value that it is CURRENT, or that it is the HISTORICAL RECORD of what a landed result was computed from?** If the second, "fix and regenerate" is the wrong remedy even when the fix is correct.
+
 **Report a 4b finding in 4b's vocabulary.**
 A collision governs *sequencing*: "these two cannot be in flight at once, or the second silently re-baselines against something the first moved."
 A dependency governs *eligibility*: "this one cannot start."
