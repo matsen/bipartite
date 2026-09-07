@@ -161,11 +161,11 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
 # .epic-status.json/.epic-worklog.md should already be gone here -- /bip-pr-land's
-# own Step 7a preserves them (and Step 9.5 deletes them) at land time
+# own Step 6a preserves them (and Step 9.5 deletes them) at land time
 # (issue #2216). The block below is defense in depth for a land that
 # bypassed /bip-pr-land; if the files are still present, preserve before
 # deleting rather than assuming reclaim is a safe place to drop them
-# silently. Match Step 7a's preservation exactly (same README, same
+# silently. Match Step 6a's preservation exactly (same README, same
 # failure handling) rather than a thinner variant -- a backstop that
 # behaves differently from what it backstops is its own silent gap.
 if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
@@ -175,7 +175,7 @@ if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
     if cp "$CLONE_ROOT/<clone>/.epic-worklog.md" "$CLONE_ROOT/<clone>/.epic-status.json" "$DEST/"; then
         printf 'Preserved from %s at reclaim, %s. This clone landed a PR without /bip-pr-land preserving first -- investigate why.\n' \
             "$CLONE_ROOT/<clone>" "$(date -I)" > "$DEST/README.md"
-        echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 7a)"
+        echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 6a)"
         gh issue comment "$ISSUE_N" --body "🤖 EPIC worklog preserved to \`$DEST\` at reclaim (the land that closed this issue skipped /bip-pr-land's preservation step)." 2>&1
     else
         echo "PRESERVATION FAILED at reclaim for issue $ISSUE_N -- stop, do not let the rm below run until this is resolved by hand" >&2
@@ -198,7 +198,7 @@ rm -f .epic-status.json .epic-worklog.md
 **Before returning a clone to the pool, check what untracked output it is carrying.**
 Reclaiming is safe for tracked files and **silently destructive for untracked ones** — and untracked is where experiment output lives *by policy*. Nothing in the reclaim removes it, so it survives until the next spawn into that clone quietly destroys it. **A free clone is not an empty clone.**
 
-**The same trap used to catch `.epic-worklog.md` too, and it is gitignored rather than untracked — so a `git status` check does not show it.** The premise that used to excuse this ("a slot that lands a PR needs nothing, since the issue-lead posts every evaluation as a PR comment") is false (issue #2216, matsengrp/phyz#2314/PR#2316): `PROSE-DISCIPLINE.md` rewrites PR bodies to current state by design, so deliberation never lives there, and the issue-lead's PR comments are evaluation-stop summaries, not the worklog's full narrative — on a landed PR the worklog is one of only two places the reasoning survives. `/bip-pr-land`'s Step 7a is now the point that preserves it, at land time (before Step 8 can destroy a worktree, and before this reclaim step ever runs); the `if` block above is only a backstop for a land that skipped that skill. A slot that **stands down or escalates** (no PR at all) still needs the same care here, since nothing upstream of reclaim preserves it in that case: copy `.epic-worklog.md` to `$CLONE_ROOT/.preserved/<slug>/` before reclaiming. Measured 2026-09-03: eleven were rescued in one stand-down, the largest 269 lines from a slot that wrote no code at all.
+**The same trap used to catch `.epic-worklog.md` too, and it is gitignored rather than untracked — so a `git status` check does not show it.** The premise that used to excuse this ("a slot that lands a PR needs nothing, since the issue-lead posts every evaluation as a PR comment") is false (issue #2216, matsengrp/phyz#2314/PR#2316): `PROSE-DISCIPLINE.md` rewrites PR bodies to current state by design, so deliberation never lives there, and the issue-lead's PR comments are evaluation-stop summaries, not the worklog's full narrative — on a landed PR the worklog is one of only two places the reasoning survives. `/bip-pr-land`'s Step 6a is now the point that preserves it, at land time (before Step 8 can destroy a worktree, and before this reclaim step ever runs); the `if` block above is only a backstop for a land that skipped that skill. A slot that **stands down or escalates** (no PR at all) still needs the same care here, since nothing upstream of reclaim preserves it in that case: copy `.epic-worklog.md` to `$CLONE_ROOT/.preserved/<slug>/` before reclaiming. Measured 2026-09-03: eleven were rescued in one stand-down, the largest 269 lines from a slot that wrote no code at all.
 
 ```bash
 # gitignored OR untracked output under experiments/*/results
