@@ -172,7 +172,8 @@ if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
     ISSUE_N=$(jq -r '.issue // "unknown"' "$CLONE_ROOT/<clone>/.epic-status.json" 2>/dev/null)
     DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
     mkdir -p "$DEST"
-    if cp "$CLONE_ROOT/<clone>/.epic-worklog.md" "$CLONE_ROOT/<clone>/.epic-status.json" "$DEST/"; then
+    if cp "$CLONE_ROOT/<clone>/.epic-worklog.md" "$DEST/i$ISSUE_N-<clone>.worklog.md" \
+       && cp "$CLONE_ROOT/<clone>/.epic-status.json" "$DEST/i$ISSUE_N-<clone>.status.json"; then
         printf 'Preserved from %s at reclaim, %s. This clone landed a PR without /bip-pr-land preserving first -- investigate why.\n' \
             "$CLONE_ROOT/<clone>" "$(date -I)" > "$DEST/README.md"
         echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 6a)"
