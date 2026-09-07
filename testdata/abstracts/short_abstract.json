@@ -1,0 +1,7 @@
+{
+  "id": "short-abstract-001",
+  "title": "A Note on Short Abstracts",
+  "authors": [{"first": "Ada", "last": "Lovelace"}],
+  "abstract": "A brief note, too short to embed.",
+  "published": {"year": 2021}
+}
