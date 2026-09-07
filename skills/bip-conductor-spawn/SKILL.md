@@ -149,11 +149,14 @@ if [ -f .epic-status.json ]; then
     CLONE_NAME=$(basename "$(pwd -P)")
     DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
     mkdir -p "$DEST"
-    cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" 2>/dev/null
-    cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json" 2>/dev/null
-    printf 'Preserved from %s before reassigning this clone to a new issue, %s. The prior assignment ended here without a PR (issue #2216 success criterion 3: a stand-down/needs-human slot has no upstream preservation step of its own, so this reassignment point is where it has to happen).\n' \
-        "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
-    echo "Preserved prior assignment's worklog+status to $DEST before reassigning"
+    if cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" \
+       && cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json"; then
+        printf 'Preserved from %s before reassigning this clone to a new issue, %s. The prior assignment ended here without a PR (issue #2216 success criterion 3: a stand-down/needs-human slot has no upstream preservation step of its own, so this reassignment point is where it has to happen).\n' \
+            "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
+        echo "Preserved prior assignment's worklog+status to $DEST before reassigning"
+    else
+        echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate, do not let the rm below run until this is resolved by hand" >&2
+    fi
 fi
 ```
 
@@ -173,24 +176,25 @@ Each clone has its own `origin/main`, so a conductor-level fetch followed by `gi
 The `cd` above is what makes this correct — don't collapse it in a batch-spawn loop (bitten twice in 2026-08).
 `.epic-status.json` and `.epic-worklog.md` are gitignored, so `reset --hard` preserves them.
 
-**Worktree mode**: worktree was just created fresh from main — preserve then clear any stale status files from a previous run on this same issue:
-```bash
-cd "$SLOT"
-```
+**Worktree mode**: worktree was just created fresh from main — preserve then clear any stale status files from a previous run on this same issue. **Resolve `CLONE_ROOT` before `cd`ing to `$SLOT`, in the same command**: `.epic-config.json` lives at the repo root the skill started in, not inside a per-issue worktree slot (a linked worktree is a separate directory tree with its own untracked files — it does not inherit the primary checkout's `.epic-config.json`). Resolving it after the `cd` silently yields an empty `$CLONE_ROOT`, and since `resolve_clone_root` fails loudly only when the file it's given exists and is unparseable — not when the file is simply absent from the *wrong* directory — the failure here would be silent rather than loud, so get the ordering right rather than relying on the loud-failure property to catch it:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+cd "$SLOT"
 if [ -f .epic-status.json ]; then
     ISSUE_N=$(jq -r '.issue // "unknown"' .epic-status.json 2>/dev/null)
     CLONE_NAME=$(basename "$(pwd -P)")
     DEST="$CLONE_ROOT/.preserved/$ISSUE_N-$(date -I)"
     mkdir -p "$DEST"
-    cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" 2>/dev/null
-    cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json" 2>/dev/null
-    printf 'Preserved from %s before a fresh restart on the same issue, %s (issue #2216 success criterion 3).\n' \
-        "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
-    echo "Preserved prior attempt's worklog+status to $DEST before restarting"
+    if cp .epic-worklog.md "$DEST/i$ISSUE_N-$CLONE_NAME.worklog.md" \
+       && cp .epic-status.json "$DEST/i$ISSUE_N-$CLONE_NAME.status.json"; then
+        printf 'Preserved from %s before a fresh restart on the same issue, %s (issue #2216 success criterion 3).\n' \
+            "$(pwd -P)" "$(date -I)" > "$DEST/README.md"
+        echo "Preserved prior attempt's worklog+status to $DEST before restarting"
+    else
+        echo "PRESERVATION FAILED: cp into $DEST did not succeed -- stop and investigate, do not let the rm below run until this is resolved by hand" >&2
+    fi
 fi
 ```
 
