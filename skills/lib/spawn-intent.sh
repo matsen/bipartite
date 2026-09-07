@@ -52,8 +52,10 @@ find_spawn_intent() {
 # independently mis-written (unchecked cp, wrong-order
 # resolve_clone_root, guard-tripping wording, an &&-chained cp pair
 # that dropped the status file entirely whenever the worklog was
-# merely absent -- caught before this landed, not after) -- four times
-# across bip-pr-land, bip-conductor-spawn (x2), and bip-conductor-poll.
+# merely absent, and a same-day same-issue collision that silently
+# overwrote an earlier preserved copy -- all caught before this landed,
+# not after) -- four times across bip-pr-land, bip-conductor-spawn (x2),
+# and bip-conductor-poll.
 #
 # The two copies are attempted independently rather than &&-chained:
 # .epic-status.json is required (its presence is the whole precondition
@@ -88,9 +90,29 @@ preserve_epic_state() {
     dest="$clone_root/.preserved/$issue_n-$(date -I)"
     mkdir -p "$dest"
 
-    cp "$source_dir/.epic-status.json" "$dest/i$issue_n-$clone_name.status.json" && status_ok=1
+    # Never silently overwrite an existing preserved copy. Same issue,
+    # same clone, same day can legitimately happen twice -- e.g. this
+    # function's own issue #2216 landed as PR #224 then, the same day,
+    # PR #225 -- and Step 9.5 deletes the source worklog after every
+    # land, so a second call's source is a NEW file, not a superset of
+    # the first. A bare filename collision would cp right over the
+    # earlier one with no warning: measured, rc=0 both times, the first
+    # worklog unrecoverable after the second call. Pick the first unused
+    # numeric suffix instead of clobbering.
+    local status_name="i$issue_n-$clone_name.status.json"
+    local worklog_name="i$issue_n-$clone_name.worklog.md"
+    if [ -e "$dest/$status_name" ] || [ -e "$dest/$worklog_name" ]; then
+        local n=2
+        while [ -e "$dest/i$issue_n-$clone_name.$n.status.json" ] || [ -e "$dest/i$issue_n-$clone_name.$n.worklog.md" ]; do
+            n=$((n + 1))
+        done
+        status_name="i$issue_n-$clone_name.$n.status.json"
+        worklog_name="i$issue_n-$clone_name.$n.worklog.md"
+    fi
+
+    cp "$source_dir/.epic-status.json" "$dest/$status_name" && status_ok=1
     if [ -f "$source_dir/.epic-worklog.md" ]; then
-        cp "$source_dir/.epic-worklog.md" "$dest/i$issue_n-$clone_name.worklog.md" && worklog_ok=1
+        cp "$source_dir/.epic-worklog.md" "$dest/$worklog_name" && worklog_ok=1
     fi
 
     if [ "$status_ok" -eq 0 ]; then
