@@ -36,6 +36,9 @@ func (p *stubProvider) Embed(ctx context.Context, text string) (embedding.Embedd
 	if p.err != nil {
 		return embedding.Embedding{}, p.err
 	}
+	// The vector is the first p.dims bytes of the digest, so "distinct text
+	// gives distinct vectors" holds by SHA256 prefix collision resistance
+	// rather than by any property of a real embedding model.
 	sum := sha256.Sum256([]byte(text))
 	vec := make([]float32, p.dims)
 	for i := range vec {
@@ -321,6 +324,9 @@ func openTestDB(t *testing.T) *storage.DB {
 	return db
 }
 
+// equalVectors compares exactly, not within an epsilon: stubProvider's vectors
+// are recomputed from the same digest bytes every time, so there is no
+// floating-point drift to tolerate.
 func equalVectors(a, b []float32) bool {
 	if len(a) != len(b) {
 		return false
