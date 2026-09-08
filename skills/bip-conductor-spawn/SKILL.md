@@ -292,8 +292,8 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   lead_notes — list of lead evaluation entries (set by lead)
   completed_at — ISO 8601 timestamp set by the lead after the
     terminal completed ceremony (idempotency signal; do not set
-    yourself). Record deferred work in the PR body DEFERRED section;
-    the lead will file legitimate ones as follow-up issues.
+    yourself). If you resume work after landing, re-create this file —
+    see the landing step.
   awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours)
 
 .epic-worklog.md format (append-only, never edit previous entries):
@@ -511,6 +511,16 @@ COMPLETION: When done (or when lead says completed):
    - Do NOT spawn the next slot. Handing off needs explicit permission.
    - Invoke the issue-lead one final time — it sets phase to completed
      and files any follow-ups from the PR body's DEFERRED section
+
+   IF YOU RESUME WORK AFTER THIS POINT, RE-CREATE `.epic-status.json`
+   FIRST. Landing deletes it and the worklog, and both the conductor's
+   reclaim gate and `bip epic watch` key on the file EXISTING — a slot
+   without one emits no phase transition and reads as finished. So a
+   break you notice after standing down, including one your own merged
+   PR caused, is invisible to every fleet mechanism until you write a
+   status file naming the issue and a live phase. And commit+push
+   before verifying, not after: the clone is pooled, and the next
+   spawn's prep runs `git checkout main`.
 
    IF THIS ISSUE'S PROMPT REQUIRES A JOINT LANDING GATE (some do — a
    result that re-reads a parent EPIC's status line, or changes a live
