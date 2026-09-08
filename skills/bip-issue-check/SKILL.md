@@ -231,6 +231,29 @@ Spell out denominator, population, and weighting explicitly — these are the de
 `<placeholder>`, `[NEEDS CLARIFICATION]`, `XXX`, or similar markers that indicate unfinished thinking.
 Every placeholder must be resolved with concrete content before the issue is submitted.
 
+#### Staleness of a pre-existing draft
+
+10d.
+**If the issue file predates this session — a draft carried in a clone, a deferral written days ago, a body being re-filed — revalidate its MEASUREMENTS and its GATES, not only its line numbers.**
+Line pins are the cheap part and the part everyone checks.
+The expensive part is that a draft's load-bearing *number* was taken on a binary that has since moved, or its success criterion gates on an artifact that turns out not to exist.
+Both look fine to a reference-checking pass and both invalidate the issue.
+
+**How to check:**
+- For every quoted measurement, identify the commit or binary it was taken on (the draft usually names a PR or issue).
+  Then `git log --oneline <that-commit>..HEAD -- <the-source-files-it-depends-on>` and ask whether anything in that range could move the number.
+  If it could, **re-run the measurement** rather than re-pinning the citation.
+- For every success criterion or test-plan gate that names a file, confirm the file is git-tracked (`git ls-files --error-unmatch <path>`).
+  A gate on "byte-identity of committed results" is not a gate if the named results are gitignored.
+
+**Flag as HIGH** when a quoted measurement's source files changed in the interval, or when a gate names an untracked artifact.
+
+**Worked examples, both from 2026-09-08 and both from drafts whose line pins were current:**
+- A draft's decisive claim — that two CLI arms give identical `final_lnl` — was taken before a PR rewrote 173 lines of `stochastic_search.zig` underneath it.
+  Re-measured and it survived, but nothing about re-pinning the line numbers would have established that.
+- Another draft's test plan gated on byte-identity of five committed artifacts; **two of them were outside the experiment's `.gitignore` allowlist** and could never have been diffed.
+  The gate would have passed or failed for reasons unrelated to the change.
+
 #### Prose discipline
 
 10c.
