@@ -206,8 +206,18 @@ This reconciliation does not scan clone/tmux occupancy itself — that's `/bip-c
 
 **Before writing any gate, dependency, or scope claim into a brief or an EPIC
 body, read that claim in the issue's own text — its Dependencies block, its
-Scope section, and its Out-of-scope section. A scanner's summary of a gate is
-not the gate.**
+Scope section, its Out-of-scope section, and its Success criteria. A scanner's
+summary of a gate is not the gate.**
+
+**Those four are a FLOOR, not a ceiling: for an issue body under ~200 lines,
+read it whole.** A section list fails the same way at four entries as at three,
+just later — the underlying error is *a partial source read presented as a
+complete one*, which from outside is indistinguishable from a correct one.
+Measured 2026-09-08 on a 133-line issue: all three then-listed sections were
+read, and the requirement that mattered was in **Success criteria** — first
+producing an invented scope claim, then an over-correction denying the
+requirement existed. **Falsification and sunset: if reading whole issues never
+changes a briefing decision over a month, cut this back to the list.**
 
 Subagent scan reports are reliable about *whether* something is worth looking
 at and unreliable about *why*. Measured 2026-09-03, three

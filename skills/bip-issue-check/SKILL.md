@@ -78,6 +78,16 @@ Only if inlining would be unreasonable (many pages of content, binary artifacts,
 
 2. **Column names / API contracts**: If the issue references specific data formats (CSV columns, API fields, config keys), verify them against the actual source (read the relevant code or data files).
 
+2b. **Flag and `--param` liveness — existence is not liveness.** For every CLI flag or `--param` key an issue *arms*, check all four:
+   - **(a) it parses.** Run it. A key can be a struct field, a preset entry, or a YAML-only setting and still not be a CLI flag — `--per-accept-bl` is declared in `cli.zig` and has zero rows in the flag table, so `phyz ml --per-accept-bl` is `error: unknown flag`.
+   - **(b) it reaches the code path the issue targets.** Trace it to its *consumer*, not its declaration. `spec.stale_uppers` is real and documented and never reached on the default quartet + virtual-NNI path.
+   - **(c) it is not already the default.** `hc.accept_radius=1` parses, is honored, and requests exactly what the default branch hardcodes — so the arm changes nothing.
+   - **(d) for a DISABLE arm, no sibling path implements the same behaviour and survives the disable.** `bb.strike_box=0` is a complete off-switch only because `recordPitch`'s other stop condition (`bb_max_pitches`) is hardcoded unlimited. Had it been tunable, the disable would have been partial — **and a partial disable produces a refutation that looks exactly like a real one.** This clause bites hardest on the arms that retire other people's findings.
+
+   Flag as **HIGH** if any clause fails. **An arm that comes back byte-identical to baseline is a dead knob, not a null result** — the failure mode is that it gets written up as "no effect, channel closed."
+
+   *Measured 2026-09-08: five arms across two drafts failed (a), (b), or (c); all five passed an existence check and were caught only by a post-hoc source read.* **Falsification and sunset: if this step flags nothing across a month of unrelated issue reviews, delete it.**
+
 3. **Algorithm specification**: Is the core algorithm described with enough detail to implement?
    Check for:
    - Mathematical formulas written out explicitly
