@@ -33,13 +33,14 @@ var indexCmd = &cobra.Command{
 
 // IndexBuildResult is the response for index build command.
 type IndexBuildResult struct {
-	Status          string  `json:"status"`
-	PapersIndexed   int     `json:"papers_indexed"`
-	PapersSkipped   int     `json:"papers_skipped"`
-	SkippedReason   string  `json:"skipped_reason"`
-	DurationSeconds float64 `json:"duration_seconds"`
-	Model           string  `json:"model"`
-	IndexSizeBytes  int64   `json:"index_size_bytes"`
+	Status               string  `json:"status"`
+	PapersIndexed        int     `json:"papers_indexed"`
+	PapersSkipped        int     `json:"papers_skipped"`
+	SkippedNoAbstract    int     `json:"skipped_no_abstract"`
+	SkippedShortAbstract int     `json:"skipped_short_abstract"`
+	DurationSeconds      float64 `json:"duration_seconds"`
+	Model                string  `json:"model"`
+	IndexSizeBytes       int64   `json:"index_size_bytes"`
 }
 
 var indexBuildCmd = &cobra.Command{
@@ -57,19 +58,22 @@ func outputBuildResults(provider *embedding.OllamaProvider, stats *semantic.Buil
 	if humanOutput {
 		fmt.Printf("\nBuild complete:\n")
 		fmt.Printf("  Papers indexed: %d\n", stats.PapersIndexed)
-		fmt.Printf("  Papers skipped: %d (no abstract)\n", stats.PapersSkipped)
+		fmt.Printf("  Papers skipped: %d (%d no abstract, %d under %d chars)\n",
+			stats.PapersSkipped, stats.SkippedNoAbstract, stats.SkippedShortAbstract,
+			semantic.MinAbstractLength)
 		fmt.Printf("  Time elapsed: %s\n", formatDuration(stats.Duration))
 		fmt.Printf("  Index size: %s\n", formatBytes(stats.IndexSizeBytes))
 		fmt.Printf("  Model: %s\n", provider.ModelName())
 	} else {
 		outputJSON(IndexBuildResult{
-			Status:          "complete",
-			PapersIndexed:   stats.PapersIndexed,
-			PapersSkipped:   stats.PapersSkipped,
-			SkippedReason:   stats.SkippedReason,
-			DurationSeconds: stats.Duration.Seconds(),
-			Model:           provider.ModelName(),
-			IndexSizeBytes:  stats.IndexSizeBytes,
+			Status:               "complete",
+			PapersIndexed:        stats.PapersIndexed,
+			PapersSkipped:        stats.PapersSkipped,
+			SkippedNoAbstract:    stats.SkippedNoAbstract,
+			SkippedShortAbstract: stats.SkippedShortAbstract,
+			DurationSeconds:      stats.Duration.Seconds(),
+			Model:                provider.ModelName(),
+			IndexSizeBytes:       stats.IndexSizeBytes,
 		})
 	}
 }
