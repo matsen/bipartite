@@ -106,9 +106,15 @@ func TestBuild(t *testing.T) {
 	if stats.PapersIndexed != 2 {
 		t.Errorf("expected 2 papers indexed, got %d", stats.PapersIndexed)
 	}
-	// Both the empty and the short abstract are skipped.
+	// Both the empty and the short abstract are skipped, one for each reason.
 	if stats.PapersSkipped != 2 {
 		t.Errorf("expected 2 papers skipped, got %d", stats.PapersSkipped)
+	}
+	if stats.SkippedNoAbstract != 1 {
+		t.Errorf("expected 1 paper skipped for no abstract, got %d", stats.SkippedNoAbstract)
+	}
+	if stats.SkippedShortAbstract != 1 {
+		t.Errorf("expected 1 paper skipped for a short abstract, got %d", stats.SkippedShortAbstract)
 	}
 	if stats.Duration <= 0 {
 		t.Error("expected a positive build duration")
@@ -164,6 +170,102 @@ func TestBuildEmptyInput(t *testing.T) {
 	}
 	if len(idx.Embeddings) != 0 {
 		t.Errorf("expected an empty index, got %d embeddings", len(idx.Embeddings))
+	}
+}
+
+// TestBuildSkipBreakdownOnlyCountsActualSkips guards the defect the old
+// scalar SkippedReason field had: it was set on the BuildStats literal before
+// the loop, so it named a skip reason even on a run that skipped nothing.
+func TestBuildSkipBreakdownOnlyCountsActualSkips(t *testing.T) {
+	refs := []reference.Reference{
+		loadFixture(t, "ml_methods.json"),
+		loadFixture(t, "phylogenetics.json"),
+	}
+
+	_, stats, err := NewBuilder(newStubProvider(), nil).Build(context.Background(), refs)
+	if err != nil {
+		t.Fatalf("Build failed: %v", err)
+	}
+
+	if stats.PapersIndexed != 2 {
+		t.Fatalf("expected both papers indexed, got %d", stats.PapersIndexed)
+	}
+	if stats.PapersSkipped != 0 {
+		t.Errorf("expected 0 papers skipped, got %d", stats.PapersSkipped)
+	}
+	if stats.SkippedNoAbstract != 0 {
+		t.Errorf("expected no no-abstract skips, got %d", stats.SkippedNoAbstract)
+	}
+	if stats.SkippedShortAbstract != 0 {
+		t.Errorf("expected no short-abstract skips, got %d", stats.SkippedShortAbstract)
+	}
+}
+
+// TestBuildSkipBreakdownDistinguishesCauses pins the two causes apart: an
+// absent abstract and a present-but-too-short one are different counters, not
+// the single "no_abstract" label the old field reported for both.
+func TestBuildSkipBreakdownDistinguishesCauses(t *testing.T) {
+	tests := []struct {
+		name         string
+		abstract     string
+		wantNoAbs    int
+		wantShortAbs int
+	}{
+		{name: "absent", abstract: "", wantNoAbs: 1, wantShortAbs: 0},
+		{name: "one char", abstract: "x", wantNoAbs: 0, wantShortAbs: 1},
+		{
+			name:         "one char below the threshold",
+			abstract:     strings.Repeat("x", MinAbstractLength-1),
+			wantNoAbs:    0,
+			wantShortAbs: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refs := []reference.Reference{{ID: "skip-001", Abstract: tt.abstract}}
+
+			_, stats, err := NewBuilder(newStubProvider(), nil).Build(context.Background(), refs)
+			if err != nil {
+				t.Fatalf("Build failed: %v", err)
+			}
+
+			if stats.PapersSkipped != 1 {
+				t.Fatalf("expected the paper to be skipped, got PapersSkipped=%d", stats.PapersSkipped)
+			}
+			if stats.SkippedNoAbstract != tt.wantNoAbs {
+				t.Errorf("expected SkippedNoAbstract %d, got %d", tt.wantNoAbs, stats.SkippedNoAbstract)
+			}
+			if stats.SkippedShortAbstract != tt.wantShortAbs {
+				t.Errorf("expected SkippedShortAbstract %d, got %d", tt.wantShortAbs, stats.SkippedShortAbstract)
+			}
+			// The breakdown must always account for every skip.
+			if sum := stats.SkippedNoAbstract + stats.SkippedShortAbstract; sum != stats.PapersSkipped {
+				t.Errorf("breakdown sums to %d but PapersSkipped is %d", sum, stats.PapersSkipped)
+			}
+		})
+	}
+}
+
+// TestBuildIndexesAtExactlyMinAbstractLength pins the boundary: the skip is
+// strictly below MinAbstractLength, so an abstract of exactly that length is
+// indexed rather than skipped.
+func TestBuildIndexesAtExactlyMinAbstractLength(t *testing.T) {
+	refs := []reference.Reference{
+		{ID: "boundary-001", Abstract: strings.Repeat("x", MinAbstractLength)},
+	}
+
+	_, stats, err := NewBuilder(newStubProvider(), nil).Build(context.Background(), refs)
+	if err != nil {
+		t.Fatalf("Build failed: %v", err)
+	}
+
+	if stats.PapersIndexed != 1 {
+		t.Errorf("expected an abstract of exactly %d chars to be indexed, got PapersIndexed=%d",
+			MinAbstractLength, stats.PapersIndexed)
+	}
+	if stats.PapersSkipped != 0 {
+		t.Errorf("expected no skips, got %d", stats.PapersSkipped)
 	}
 }
 

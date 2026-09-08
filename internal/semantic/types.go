@@ -29,9 +29,17 @@ type SearchResult struct {
 
 // BuildStats contains statistics from index building.
 type BuildStats struct {
-	PapersIndexed  int           `json:"papers_indexed"`
-	PapersSkipped  int           `json:"papers_skipped"`
-	SkippedReason  string        `json:"skipped_reason"`
+	PapersIndexed int `json:"papers_indexed"`
+	PapersSkipped int `json:"papers_skipped"`
+
+	// SkippedNoAbstract and SkippedShortAbstract break PapersSkipped down by
+	// cause and sum to it. A paper with no abstract at all counts as
+	// no-abstract; one whose abstract is shorter than MinAbstractLength counts
+	// as short. The distinction is actionable: a missing abstract can often be
+	// fetched, whereas a short one is usually all the source provides.
+	SkippedNoAbstract    int `json:"skipped_no_abstract"`
+	SkippedShortAbstract int `json:"skipped_short_abstract"`
+
 	Duration       time.Duration `json:"duration"`
 	IndexSizeBytes int64         `json:"index_size_bytes"`
 }

@@ -59,9 +59,7 @@ func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*Seman
 	startTime := time.Now()
 
 	idx := NewSemanticIndex(b.provider.ModelName(), b.provider.Dimensions())
-	stats := &BuildStats{
-		SkippedReason: "no_abstract",
-	}
+	stats := &BuildStats{}
 
 	// Clear existing embedding metadata
 	if b.db != nil {
@@ -88,9 +86,16 @@ func (b *Builder) Build(ctx context.Context, refs []reference.Reference) (*Seman
 			b.progress.OnProgress(papersExamined, total)
 		}
 
-		// Skip papers without abstracts or with short abstracts
-		if ref.Abstract == "" || len(ref.Abstract) < MinAbstractLength {
+		// Skip papers without abstracts or with short abstracts, recording
+		// which of the two it was.
+		if ref.Abstract == "" {
 			stats.PapersSkipped++
+			stats.SkippedNoAbstract++
+			continue
+		}
+		if len(ref.Abstract) < MinAbstractLength {
+			stats.PapersSkipped++
+			stats.SkippedShortAbstract++
 			continue
 		}
 
