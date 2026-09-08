@@ -375,7 +375,12 @@ Use `<N>.md` for new intent; don't rename existing `spawn-<N>.txt` files you fin
 
 This directory lives outside every clone's git (deliberately — it must survive clone churn) and is the handoff point to `/bip-conductor-spawn`, which reads it, checks it against live fleet state, appends the fleet facts only it can see, and executes after user confirmation.
 
-**A brief states what is durable about *its own* issue. It must not restate another issue's gate, hold, or queue status.**
+**A brief must not restate its own issue's SCOPE — point at the issue's scope section and spend the words on what the issue does not say.**
+The worker has the issue in front of it; the brief is the only artifact that carries collisions, host class, framing that changed since filing, and traps. Everything *additive* is what a brief is for; everything that *restates* is a second copy that can drift from the first, and the reviewer — who often holds only the brief — is more exposed to that drift than the worker is.
+Measured 2026-09-07: a brief compressed an issue's scope to "four shipped instances across five sites", taken from a *peer session's summary of an audit* rather than the issue, which says "Nine lines, in six files". The brief's Out-of-scope then forbade expanding past those five, which would have **foreclosed work the issue explicitly scoped in** — including one change point the issue states is invisible to the grep the brief recommended. The conductor then enforced the brief's number against a worker that had read the issue; the worker refused, quoted three issue lines back, and was right. Cost: one review round. Cost avoided only because the worker worked from the source.
+Open the issue before writing a brief, every time, and prefer *"the change points #NNNN's 'Files to modify' lists"* over any count you have retyped.
+
+**A brief also states what is durable about *its own* issue. It must not restate another issue's gate, hold, or queue status.**
 That is the fastest-rotting content a brief can carry, and the conductor supplies it at spawn anyway — the sentence above already assigns it live fleet facts, so a brief that duplicates them is both redundant and the only copy that can go stale.
 The failure is quiet — a brief is read once, by a worker with no way to know which of its claims were true only at authoring time.
 Write instead the collision constraint in 4b's vocabulary ("cannot run concurrently with `iN`, because both edit X"), which is a property of the two issues and stays true, and leave "is `iN` running right now, and is it approved" to the session that can see the answer.
@@ -394,6 +399,17 @@ Writing intent and telling the user "the conductor will pick these up" is only t
 If it's urgent, `ListAgents`/`SendMessage` it directly rather than waiting for its next poll cycle — see `/bip-conductor`'s Conventions section for the mechanics and addressability caveats.
 - **No conductor addressable**: say so, and offer both real options — start one now (`/bip-conductor` in a separate tmux window, the normal setup for a multi-issue fleet), or, for a single small job where standing up a second session is overhead, run `/bip-conductor-spawn` yourself from this session for just this intent file.
   The second option is a deliberate, user-confirmed exception to "don't spawn yourself" above, not a silent default — say plainly that it mixes the two roles for this one spawn, and let the user pick.
+
+### Step 6b: The design question, and it must be asked of the NULL arm
+
+The epic half of a landing gate is not *"does the artifact say what it claims"* — that is mechanical and belongs to the conductor. It is **"could this experiment have said otherwise?"**
+Ask it of **every arm carrying a claim, including the one that returned the boring answer.** Nulls are where it gets skipped, because a null reads as the absence of a result rather than as a result requiring power.
+
+Two distinct ways an arm cannot speak, with different tests and different remedies — do not merge them:
+- **vacuous-positive** — the check *could not* have failed, because the arms were constructed to agree. Test: *could this check have failed, given how the arms were constructed?* Remedy: redesign the check.
+- **no-power** — the check could have failed and the intervention was genuinely live, but **the pathway it acts through never activated**, so the comparison had nothing to resolve. Test: ***did the mechanism under test actually engage?*** Remedy: measure engagement *before* interpreting the null.
+
+Measured 2026-09-07: an epic session ran the design question on a PR's *positive control*, cleared the PR, and published its *null arm* as a mechanism refutation. The null had no power — the perturbation phase never produced a strict improvement in either arm, so both received identical input. **The engagement counter was a column in the PR's own committed `cells.tsv`, and a durable finding in the EPIC body had already recorded that phase as inert at that cluster size.** Neither reviewer asked. The worker had labelled it correctly; two reviewers relabelled it, in opposite wrong directions, before it was restored.
 
 ### Step 7: Correcting a live worker — the judgment half
 
