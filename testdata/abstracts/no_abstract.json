@@ -3,5 +3,5 @@
   "title": "Conference Proceedings Without Abstract",
   "authors": [{"first": "John", "last": "Doe"}],
   "abstract": "",
-  "year": 2022
+  "published": {"year": 2022}
 }
