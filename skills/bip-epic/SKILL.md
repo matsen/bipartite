@@ -100,9 +100,13 @@ It owns the clone/worktree layout questions (clone mode vs. worktree mode, clone
 ### Step 1: Load config and memory
 
 ```bash
-git pull --ff-only origin main
+git pull --ff-only origin main || echo "PULL FAILED — you are on a stale tree; fix this before reading anything"
 cat .epic-config.json
 ```
+
+**Check that the pull succeeded, and never suppress its stderr.** In a pooled-clone fleet this aborts routinely rather than rarely: untracked artifacts left by earlier sessions collide with paths a later PR has since landed as *tracked*, and `git pull` refuses with *"untracked working tree files would be overwritten by merge"*. **Behind `2>/dev/null` that is silent, and every subsequent read is of a stale tree.** Move the blocker aside rather than deleting it — it may be unpreserved work — then pull again and confirm `git rev-list --count HEAD..origin/main` is `0`.
+
+Measured 2026-09-09: four commits behind for hours, blocked by an untracked `experiments/2026-09-08-enumerate-n100-neighborhood-2396/` that a merged PR had since landed as tracked. The stale tree produced a confident **"the cited passage does not exist"** — repeated across four independent greps, which felt like corroboration and was one error — and that claim was escalated to a peer session, used to block a live worker's brief, and contributed to halting the fleet. **The passage existed, and so did the artifact.** Note this instruction sat 384 lines above a bullet that already says *"check the command actually succeeded"* and *"prefer a shape where the failure mode is a loud abort rather than a quiet pass"*; the rule was present and the adjacent instruction did not follow it. *(Sunset: if no epic session hits a failed pull in a month, cut this to one line.)*
 
 **Re-run that pull at the top of every fresh scan cycle, not just at cold start.**
 An epic session only ever *reads* remote state — every `gh issue view` and `gh pr view` is correct regardless of how old the working tree is — so nothing in the normal loop ever forces a pull, and the tree rots silently while every answer stays right.
