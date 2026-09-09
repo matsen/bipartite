@@ -44,6 +44,22 @@ Only what survives both gates gets a destination:
 - Nothing else fits → the Step 3 report.
   This is where a user who has opted out of auto-memory files will actually see it — don't treat a MEMORY.md write as the only or required destination.
 
+### Step 2b: Write the continuation artifact — a long file plus a short prompt
+
+**Two artifacts, and the split is the point.** A continuation prompt longer than a page does not get pasted; a file nobody is pointed at does not get read.
+
+**The file** — `CONTINUATION-<N>.md` in the repo root (add to `.gitignore` if not already covered) — can be as long as it needs to be. Include:
+- **How the programme works**: the slicing discipline, what is out of scope by default, when to reach for a skeptic agent.
+- **The traps** that caused the most rework — naming collisions, artifacts everyone reads wrong, anything where each reasoning step was locally valid and the conclusion still came out wrong.
+- **Current state with its numbers**, and the pointer to the EPIC section that supersedes everything else.
+- **What has already been ruled out**, itemised. This is the highest-value section and the easiest to omit — without it a successor re-runs settled work.
+- **What is in flight**, per worker, and what each one's next decision point is.
+- **Housekeeping**: EPIC body headroom, known recurring conflicts, skill changes landed this session.
+
+**The prompt** is what you print for the user, and it stays under roughly fifteen lines: the `/bip-epic <N>` invocation, a one-line pointer to the file, **the two or three traps that would cost the most if rediscovered**, one sentence on the working method, and the fleet's current state.
+
+**Put the traps in the prompt itself, not only in the file.** They are precisely what a fresh session gets wrong *before* it has read anything.
+
 ### Step 3: Report
 
 Print a summary:
@@ -54,6 +70,7 @@ Print a summary:
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
 - Topic-level findings: <none survived the filter | routed to CLAUDE.md/skill/EPIC body as listed>
+- Continuation artifact: CONTINUATION-<N>.md written; short prompt printed below
 
 Safe to reset context. Fleet-side state (clones, slots) is unaffected
 by this — run /bip-conductor-tuckin if that session is resetting too.
