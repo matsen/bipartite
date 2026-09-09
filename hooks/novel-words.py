@@ -337,15 +337,7 @@ def main() -> None:
     shown = ", ".join(novel[:MAX_REPORTED])
     if len(novel) > MAX_REPORTED:
         shown += f", and {len(novel) - MAX_REPORTED} more"
-    print(
-        f"New words in that turn, not used by anyone earlier in this session:\n"
-        f"  {shown}\n"
-        f"For each one: does it name something that already has a different name "
-        f"here?\nIf so, say so and use the existing name. If they are all naming "
-        f"new things,\nor are ordinary English rather than names, stop -- nothing "
-        f"needs saying.",
-        file=sys.stderr,
-    )
+    print(f"novel words: {shown}", file=sys.stderr)
     sys.exit(2)
 
 

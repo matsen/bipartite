@@ -49,6 +49,9 @@ table` for the sharing table.
 
 `Stop`. Reports words in the turn just finished that nobody has used earlier
 in the session, and blocks the turn from ending until they are answered for.
+The report names the words and nothing else, so that what the user reads stays
+one line. The rule for judging them comes from `terminology.sh`, which is why
+both hooks are installed together.
 
 ```json
 "Stop": [
