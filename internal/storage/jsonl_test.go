@@ -256,34 +256,6 @@ func TestWriteAll_Overwrites(t *testing.T) {
 	}
 }
 
-func TestFindByDOI(t *testing.T) {
-	refs := []reference.Reference{
-		{ID: "A", DOI: "10.1234/a"},
-		{ID: "B", DOI: "10.1234/b"},
-		{ID: "C", DOI: ""},
-	}
-
-	tests := []struct {
-		doi     string
-		wantIdx int
-		wantOK  bool
-	}{
-		{"10.1234/a", 0, true},
-		{"10.1234/b", 1, true},
-		{"10.1234/c", -1, false},
-		{"", -1, false}, // Empty DOI always returns not found
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.doi, func(t *testing.T) {
-			idx, ok := FindByDOI(refs, tt.doi)
-			if idx != tt.wantIdx || ok != tt.wantOK {
-				t.Errorf("FindByDOI(%q) = (%d, %v), want (%d, %v)", tt.doi, idx, ok, tt.wantIdx, tt.wantOK)
-			}
-		})
-	}
-}
-
 func TestFindByID(t *testing.T) {
 	refs := []reference.Reference{
 		{ID: "Smith2026"},

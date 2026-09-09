@@ -109,19 +109,6 @@ func WriteAll(path string, refs []reference.Reference) error {
 	return nil
 }
 
-// FindByDOI searches for a reference by DOI.
-func FindByDOI(refs []reference.Reference, doi string) (int, bool) {
-	if doi == "" {
-		return -1, false
-	}
-	for i, ref := range refs {
-		if ref.DOI == doi {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
 // FindByID searches for a reference by ID.
 func FindByID(refs []reference.Reference, id string) (int, bool) {
 	for i, ref := range refs {
