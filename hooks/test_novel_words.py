@@ -28,6 +28,11 @@ def user(text: str) -> dict:
     return {"type": "user", "message": {"content": text}}
 
 
+def tool_use(name: str, tool_input: dict) -> dict:
+    return {"type": "assistant", "message": {"content": [
+        {"type": "tool_use", "name": name, "input": tool_input}]}}
+
+
 def tool_result(text: str) -> dict:
     return {"type": "user", "message": {"content": [{"type": "tool_result", "content": text}]}}
 
@@ -40,13 +45,15 @@ class NovelWords(unittest.TestCase):
     def tearDown(self) -> None:
         shutil.rmtree(self.directory)
 
-    def run_hook(self, entries: list[dict], session: str = "s1") -> tuple[int, str]:
+    def run_hook(self, entries: list[dict], session: str = "s1",
+                 answering: bool = False) -> tuple[int, str]:
         path = os.path.join(self.directory, f"{session}.jsonl")
         with open(path, "w") as handle:
             for entry in entries:
                 handle.write(json.dumps(entry) + "\n")
         payload = json.dumps({
-            "session_id": session, "transcript_path": path, "stop_hook_active": False,
+            "session_id": session, "transcript_path": path,
+            "stop_hook_active": answering,
         })
         finished = subprocess.run(
             [sys.executable, HOOK], input=payload, capture_output=True, text=True,
@@ -262,6 +269,120 @@ class NovelWords(unittest.TestCase):
             env=dict(os.environ, HOME=self.directory),
         )
         self.assertEqual(0, finished.returncode)
+
+    def test_a_document_written_this_turn_is_checked(self) -> None:
+        """Prose going into a file is prose. It used to enter the vocabulary as
+        tool text, so a name invented there looked established at once."""
+        code, message = self.run_hook([
+            user("write up the shared molecules"),
+            tool_use("Write", {"file_path": "/tmp/plan.md",
+                               "content": "The crossings are listed.\nEach crossings row has two donors."}),
+            assistant("Written."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_code_written_this_turn_is_not_checked(self) -> None:
+        code, message = self.run_hook([
+            user("write the script"),
+            tool_use("Write", {"file_path": "/tmp/run.py",
+                               "content": "crossings = 1\nprint(crossings)"}),
+            assistant("Written."),
+        ])
+        self.assertEqual(0, code, f"reported: {message}")
+
+    def test_an_edit_to_a_document_is_checked(self) -> None:
+        code, message = self.run_hook([
+            user("fix the paragraph"),
+            tool_use("Edit", {"file_path": "/tmp/plan.md", "old_string": "the old sentence",
+                              "new_string": "The crossings hold. The crossings are counted."}),
+            assistant("Edited."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_the_replaced_text_of_an_edit_is_not_checked(self) -> None:
+        """old_string is quoted from the file, not written now."""
+        code, message = self.run_hook([
+            user("fix the paragraph"),
+            tool_use("Edit", {"file_path": "/tmp/plan.md",
+                              "old_string": "The crossings hold. The crossings are counted.",
+                              "new_string": "The shared molecules hold."}),
+            assistant("Edited."),
+        ])
+        self.assertEqual(0, code, f"reported: {message}")
+
+    def test_a_body_posted_with_gh_is_checked(self) -> None:
+        code, message = self.run_hook([
+            user("post the comment"),
+            tool_use("Bash", {"command": "gh issue comment 42 --body 'The crossings are settled, "
+                                         "and the crossings table is attached.'"}),
+            assistant("Posted."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_a_heredoc_writing_a_document_is_checked(self) -> None:
+        code, message = self.run_hook([
+            user("write the note"),
+            tool_use("Bash", {"command": "cat > /tmp/note.md <<'EOF'\nThe crossings are here.\n"
+                                         "Every crossings entry is a pair.\nEOF"}),
+            assistant("Written."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_a_heredoc_writing_code_is_not_checked(self) -> None:
+        code, message = self.run_hook([
+            user("run it"),
+            tool_use("Bash", {"command": "python3 - <<'EOF'\ncrossings = 1\nprint(crossings)\nEOF"}),
+            assistant("Ran it."),
+        ])
+        self.assertEqual(0, code, f"reported: {message}")
+
+    def test_the_whole_turn_is_checked_not_only_its_last_message(self) -> None:
+        code, message = self.run_hook([
+            user("go"),
+            assistant("Starting on the crossings now."),
+            tool_result("done"),
+            assistant("The crossings are finished."),
+        ])
+        self.assertEqual(2, code)
+        self.assertIn("crossings", message)
+
+    def test_an_answering_turn_is_held_and_checked_with_the_next(self) -> None:
+        """It cannot be blocked twice -- that is what stop_hook_active prevents --
+        so it is checked one turn late instead of never."""
+        entries = [user("go"), assistant("The crossings and the crossings again.")]
+        first, _ = self.run_hook(entries, session="held")
+        self.assertEqual(2, first)
+        entries += [assistant("Yes, the residue and the residue are ordinary English.")]
+        second, _ = self.run_hook(entries, session="held", answering=True)
+        self.assertEqual(0, second, "an answering turn must not block again")
+        entries += [user("carry on"), assistant("Nothing new to say here at all.")]
+        third, message = self.run_hook(entries, session="held")
+        self.assertEqual(2, third, "the held turn was never checked")
+        self.assertIn("residue", message)
+
+    def test_a_half_written_line_is_left_for_the_next_run(self) -> None:
+        """The transcript is appended to while this runs; a truncated last line
+        must not be counted as read."""
+        path = os.path.join(self.directory, "partial.jsonl")
+        complete = json.dumps(user("go")) + "\n"
+        truncated = json.dumps(assistant("The crossings and the crossings again."))
+        with open(path, "w") as handle:
+            handle.write(complete + truncated[:40])
+        payload = json.dumps({
+            "session_id": "partial", "transcript_path": path, "stop_hook_active": False,
+        })
+        subprocess.run([sys.executable, HOOK], input=payload, capture_output=True,
+                       text=True, env=dict(os.environ, HOME=self.directory))
+        with open(path, "w") as handle:
+            handle.write(complete + truncated + "\n")
+        finished = subprocess.run([sys.executable, HOOK], input=payload, capture_output=True,
+                                  text=True, env=dict(os.environ, HOME=self.directory))
+        self.assertEqual(2, finished.returncode, "the completed line was skipped")
+        self.assertIn("crossings", finished.stderr)
 
 
 if __name__ == "__main__":
