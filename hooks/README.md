@@ -23,15 +23,27 @@ one thing. Stating the rule in `CLAUDE.md` does not hold it: the rule is read
 once, at the start of a session, and a session runs for hundreds of thousands
 of tokens after that.
 
-Prose leaves an agent roughly ten thousand times a session — chat, `Write`
-and `Edit`, and Bash. Bodies posted to GitHub are about 3% of that, and the
-least likely 3%: such a body is written in one sitting with the whole thing
-in view, while renaming is a drift across hours. So the check belongs on the
-chat, which is what `novel-words.py` watches. For documents, the renaming
-rule is part of [`/bip-remove-metaspeak`](../skills/bip-remove-metaspeak),
+Prose leaves an agent through chat, through `Write` and `Edit`, and through
+Bash — a body handed to `gh`, a heredoc into a document. `novel-words.py`
+checks all of it: the turn is everything the agent wrote since the last user
+prompt, wherever it was going. Code is exempt, since an identifier is not a
+sentence, so of the files only prose suffixes count (`.md`, `.markdown`,
+`.txt`, `.tex`, `.rst`).
+
+Checking the writes as well as the chat matters more than it sounds. Until it
+did, a document went into the vocabulary as tool text, so a name invented on
+its way into a file looked established the moment it was written, and the
+chat could then use it freely.
+
+The renaming rule is also part of
+[`/bip-remove-metaspeak`](../skills/bip-remove-metaspeak),
 [`/bip-issue-check`](../skills/bip-issue-check) and
-[`/bip-ms-sweep`](../skills/bip-ms-sweep), where a pass over the text is
-already happening.
+[`/bip-ms-sweep`](../skills/bip-ms-sweep). The hook sees each write as it
+happens and only in this session's terms; those passes read the finished
+document. In one week the passes caught five renamings and the hook none,
+because each replaced name was a word the session had already used —
+`survivors` for what the document elsewhere called kept donors, `exclusion
+table` for the sharing table.
 
 ## `novel-words.py`
 
@@ -56,14 +68,23 @@ verb forms of words already used are ignored: the first live firing was on
 `spawns`, with `spawn` already in the session, which is not a new name for
 anything.
 
-As configured it fires on **3.1%** of turns, measured over 3,622 turns in
-three real sessions, median one word. Reporting every word new to the session
+As configured it fires on **11.5%** of turns, measured over the 174 turns
+since it went live, median one word. Reporting every word new to the session
 instead, with no two-use rule, fires on about a third of turns — too often to
-be read, which is the failure this exists to avoid. It is a partial net: of
-two known renamings in those transcripts it catches one.
+be read, which is the failure this exists to avoid. It is a partial net, and
+so far an empty one: four firings in the log, all ordinary English, no
+renaming caught.
 
 Not counted as the agent's own prose, and so removed before the comparison:
-code blocks, inline code, quoted lines, URLs and paths.
+code blocks, inline code, quoted lines, URLs, paths, maths, and the
+`old_string` of an edit, which is quoted from the file rather than written
+now.
+
+A turn that is answering a report of its own cannot be blocked again —
+Claude Code sets `stop_hook_active` so that a hook cannot loop — but it is
+prose like any other, and it is where an agent defends the name it has just
+coined. That turn is held in `~/.claude/termcheck/turn-<session>.txt` and
+checked with the next one, a turn late rather than never.
 
 ## What counts as a word already in use
 
@@ -87,7 +108,9 @@ own name, not an invention.
 
 Vocabulary is cached per session under `~/.claude/termcheck/`, with the byte
 offset already read, so each run parses only what is new: **0.10s** a turn on
-a 62 MB transcript and a 774 KB cache, against 3.2s with no cache.
+a 62 MB transcript and a 774 KB cache, against 3.2s with no cache. The first
+run in a resumed session has the whole transcript to read; it goes a line at
+a time, which on a 307 MB one is 10s and 100 MB rather than 10s and 2.0 GB.
 
 Every firing is appended to `~/.claude/termcheck/firings.jsonl` — time,
 session, working directory, the words, and the vocabulary size — so the
