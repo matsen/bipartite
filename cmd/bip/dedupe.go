@@ -40,8 +40,15 @@ Examples:
 	RunE: runDedupe,
 }
 
+// Match bases for DuplicateGroup. Only MatchBasisSourceID is actionable by
+// --merge; MatchBasisTitle is report-only, since title identity is not paper
+// identity (preprint/published pairs, unrelated papers sharing a title).
+const (
+	MatchBasisSourceID = "source_id"
+	MatchBasisTitle    = "title"
+)
+
 // DuplicateGroup represents a set of duplicate or likely-duplicate references.
-// MatchBasis is "source_id" (actionable by --merge) or "title" (report only).
 type DuplicateGroup struct {
 	MatchBasis string   `json:"match_basis"`
 	SourceType string   `json:"source_type,omitempty"`
@@ -100,11 +107,11 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 			fmt.Printf("Found %d duplicate groups (%d total duplicates):\n\n", len(groups), totalDupes)
 			for _, g := range groups {
 				switch g.MatchBasis {
-				case "source_id":
+				case MatchBasisSourceID:
 					fmt.Printf("Source: %s/%s\n", g.SourceType, g.SourceID)
 					fmt.Printf("  Keep:   %s\n", g.Primary)
 					fmt.Printf("  Remove: %v\n\n", g.Duplicates)
-				case "title":
+				case MatchBasisTitle:
 					fmt.Printf("Title match: %q\n", g.Title)
 					fmt.Printf("  Members: %v\n\n", g.Members)
 				}
@@ -120,12 +127,9 @@ func runDedupe(cmd *cobra.Command, args []string) error {
 	}
 
 	// Merge mode only acts on source-id groups; title groups are report-only.
-	mergeGroups := make([]DuplicateGroup, 0, len(groups))
-	for _, g := range groups {
-		if g.MatchBasis == "source_id" {
-			mergeGroups = append(mergeGroups, g)
-		}
-	}
+	// performMerge re-applies this filter itself, since it is the function
+	// that actually drops references.
+	mergeGroups := sourceIDGroups(groups)
 
 	if err := performMerge(repoRoot, refs, mergeGroups); err != nil {
 		exitWithError(ExitDataError, "performing merge: %v", err)
@@ -198,7 +202,7 @@ func findSourceIDGroups(refs []reference.Reference) []DuplicateGroup {
 		}
 
 		groups = append(groups, DuplicateGroup{
-			MatchBasis: "source_id",
+			MatchBasis: MatchBasisSourceID,
 			SourceType: key.Type,
 			SourceID:   key.ID,
 			Primary:    ids[0],  // Keep first occurrence
@@ -248,7 +252,7 @@ func findTitleGroups(refs []reference.Reference) []DuplicateGroup {
 			ids[i] = refs[idx].ID
 		}
 		groups = append(groups, DuplicateGroup{
-			MatchBasis: "title",
+			MatchBasis: MatchBasisTitle,
 			Members:    ids,
 			Title:      title,
 		})
@@ -309,11 +313,26 @@ func allSupersedesConnected(refs []reference.Reference, idxs []int) bool {
 	return true
 }
 
-// performMerge removes duplicate references.
+// sourceIDGroups returns only the groups that --merge may act on. Title
+// groups are never mergeable: a shared title is a hint for a human, not
+// evidence that two references are the same paper.
+func sourceIDGroups(groups []DuplicateGroup) []DuplicateGroup {
+	mergeable := make([]DuplicateGroup, 0, len(groups))
+	for _, g := range groups {
+		if g.MatchBasis == MatchBasisSourceID {
+			mergeable = append(mergeable, g)
+		}
+	}
+	return mergeable
+}
+
+// performMerge removes duplicate references. It filters to source-ID groups
+// itself rather than trusting the caller, since this is the function that
+// drops references from the nexus.
 func performMerge(repoRoot string, refs []reference.Reference, groups []DuplicateGroup) error {
 	// Build the set of duplicate IDs to drop
 	dupeSet := make(map[string]bool)
-	for _, g := range groups {
+	for _, g := range sourceIDGroups(groups) {
 		for _, dupeID := range g.Duplicates {
 			dupeSet[dupeID] = true
 		}

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/s2"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -116,7 +117,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			Authors: searchAuthors,
 			Title:   searchTitle,
 			Venue:   searchVenue,
-			DOI:     searchDOI,
+			DOI:     s2.NormalizeDOI(searchDOI),
 			Tag:     searchTag,
 		}
 

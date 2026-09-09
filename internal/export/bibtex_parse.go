@@ -5,6 +5,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/matsen/bipartite/internal/s2"
 )
 
 // BibTeXIndex indexes existing BibTeX entries for deduplication.
@@ -28,7 +30,7 @@ func NewBibTeXIndex() *BibTeXIndex {
 func (idx *BibTeXIndex) HasEntry(key, doi string) bool {
 	// Primary: match by DOI if available
 	if doi != "" {
-		if _, exists := idx.DOIs[normalizeDOI(doi)]; exists {
+		if _, exists := idx.DOIs[s2.NormalizeDOI(doi)]; exists {
 			return true
 		}
 	}
@@ -71,7 +73,7 @@ func ParseBibTeXFile(path string) (*BibTeXIndex, error) {
 
 		// Check for DOI field
 		if matches := doiFieldRegex.FindStringSubmatch(line); len(matches) > 1 {
-			doi := normalizeDOI(matches[1])
+			doi := s2.NormalizeDOI(matches[1])
 			if doi != "" && currentKey != "" {
 				idx.DOIs[doi] = currentKey
 			}
@@ -79,18 +81,6 @@ func ParseBibTeXFile(path string) (*BibTeXIndex, error) {
 	}
 
 	return idx, scanner.Err()
-}
-
-// normalizeDOI normalizes a DOI for comparison.
-// Removes common prefixes like "https://doi.org/" and lowercases.
-func normalizeDOI(doi string) string {
-	doi = strings.TrimSpace(doi)
-	doi = strings.TrimPrefix(doi, "https://doi.org/")
-	doi = strings.TrimPrefix(doi, "http://doi.org/")
-	doi = strings.TrimPrefix(doi, "doi.org/")
-	doi = strings.TrimPrefix(doi, "DOI:")
-	doi = strings.TrimPrefix(doi, "doi:")
-	return strings.ToLower(doi)
 }
 
 // AppendToBibFile appends BibTeX content to a file.

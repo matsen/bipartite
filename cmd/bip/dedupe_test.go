@@ -1,9 +1,14 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
 
+	"github.com/matsen/bipartite/internal/config"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/storage"
 )
 
 func TestFindDuplicateGroups(t *testing.T) {
@@ -277,8 +282,9 @@ func TestFindTitleGroups_ThreeMemberGroupHasAllMembers(t *testing.T) {
 }
 
 func TestFindDuplicateGroups_SourceIDAndTitleDoNotDoubleCount(t *testing.T) {
-	// A pair that matches on both source ID and title should produce
-	// exactly one group (source_id), not two.
+	// A pair that matches on both source ID and title is reported once per
+	// basis — one source_id group and one title group — and contributes
+	// exactly one entry to the duplicate count, not two.
 	refs := []reference.Reference{
 		{ID: "A", Title: "Same Title", Source: reference.ImportSource{Type: "paperpile", ID: "uuid-1"}},
 		{ID: "B", Title: "same title", Source: reference.ImportSource{Type: "paperpile", ID: "uuid-1"}},
@@ -310,29 +316,91 @@ func TestFindDuplicateGroups_SourceIDAndTitleDoNotDoubleCount(t *testing.T) {
 	}
 }
 
-func TestFindDuplicateGroups_MixedFixtureMergeGuardsToSourceID(t *testing.T) {
-	// One source-ID pair plus one title-only pair: --merge's guard
-	// (mirrored here) must act only on the source-ID pair.
-	refs := []reference.Reference{
+// mixedGroupFixture is one source-ID pair (A / A-2) plus one title-only pair
+// (P / Q) — the shape that makes the report-only contract observable.
+func mixedGroupFixture() []reference.Reference {
+	return []reference.Reference{
 		{ID: "A", Title: "Source Dupe", Source: reference.ImportSource{Type: "paperpile", ID: "uuid-1"}},
 		{ID: "A-2", Title: "Source Dupe (copy)", Source: reference.ImportSource{Type: "paperpile", ID: "uuid-1"}},
 		{ID: "P", Title: "Title Only Match", DOI: "10.1/preprint"},
 		{ID: "Q", Title: "title only match", DOI: "10.2/published"},
 	}
+}
 
-	groups := findDuplicateGroups(refs)
+func TestSourceIDGroupsSelectsOnlyMergeableGroups(t *testing.T) {
+	groups := findDuplicateGroups(mixedGroupFixture())
 
-	var mergeGroups []DuplicateGroup
-	for _, g := range groups {
-		if g.MatchBasis == "source_id" {
-			mergeGroups = append(mergeGroups, g)
-		}
-	}
-
+	mergeGroups := sourceIDGroups(groups)
 	if len(mergeGroups) != 1 {
 		t.Fatalf("expected 1 mergeable group, got %d", len(mergeGroups))
 	}
 	if mergeGroups[0].Primary != "A" || len(mergeGroups[0].Duplicates) != 1 || mergeGroups[0].Duplicates[0] != "A-2" {
 		t.Errorf("unexpected merge group: %+v", mergeGroups[0])
+	}
+}
+
+// TestFindTitleGroupsLeavesDuplicatesEmpty pins the invariant that keeps
+// title groups harmless: they carry Members for review and never a
+// Duplicates list that a merge could act on.
+func TestFindTitleGroupsLeavesDuplicatesEmpty(t *testing.T) {
+	groups := findTitleGroups(mixedGroupFixture())
+	if len(groups) == 0 {
+		t.Fatal("fixture should produce a title group")
+	}
+	for _, g := range groups {
+		if len(g.Duplicates) != 0 || g.Primary != "" {
+			t.Errorf("title group %q has merge fields set: Primary=%q Duplicates=%v", g.Title, g.Primary, g.Duplicates)
+		}
+	}
+}
+
+// TestPerformMergeNeverDropsTitleGroupMembers exercises the destructive path
+// itself. The title group here is handed a populated Duplicates list — the
+// shape a future caller could construct by mistake — and performMerge must
+// still refuse to act on it, since a shared title is not paper identity.
+func TestPerformMergeNeverDropsTitleGroupMembers(t *testing.T) {
+	repoRoot := t.TempDir()
+	refsPath := config.RefsPath(repoRoot)
+	if err := os.MkdirAll(filepath.Dir(refsPath), 0o755); err != nil {
+		t.Fatalf("creating refs dir: %v", err)
+	}
+
+	refs := mixedGroupFixture()
+	if err := storage.WriteAll(refsPath, refs); err != nil {
+		t.Fatalf("writing refs: %v", err)
+	}
+
+	groups := []DuplicateGroup{
+		{
+			MatchBasis: MatchBasisSourceID,
+			SourceType: "paperpile",
+			SourceID:   "uuid-1",
+			Primary:    "A",
+			Duplicates: []string{"A-2"},
+		},
+		{
+			MatchBasis: MatchBasisTitle,
+			Title:      "titleonlymatch",
+			Members:    []string{"P", "Q"},
+			Primary:    "P",
+			Duplicates: []string{"Q"}, // must be ignored
+		},
+	}
+
+	if err := performMerge(repoRoot, refs, groups); err != nil {
+		t.Fatalf("performMerge: %v", err)
+	}
+
+	got, err := storage.ReadAll(refsPath)
+	if err != nil {
+		t.Fatalf("reading refs back: %v", err)
+	}
+	var gotIDs []string
+	for _, ref := range got {
+		gotIDs = append(gotIDs, ref.ID)
+	}
+	want := []string{"A", "P", "Q"} // only A-2, the source-ID duplicate, is dropped
+	if !slices.Equal(gotIDs, want) {
+		t.Errorf("refs after merge = %v, want %v", gotIDs, want)
 	}
 }
