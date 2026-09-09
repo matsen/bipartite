@@ -342,7 +342,7 @@ type SearchFilters struct {
 	YearTo   int      // Maximum publication year (0 = no maximum)
 	Title    string   // Search in title only (FTS)
 	Venue    string   // Filter by venue (SQL LIKE, case-insensitive)
-	DOI      string   // Exact DOI match (SQL)
+	DOI      string   // Exact DOI match, case-insensitive; pass s2.NormalizeDOI output
 	Tag      string   // Filter by tag (SQL LIKE on tags_json, partial match)
 }
 
@@ -445,7 +445,8 @@ func buildFiltersQuery(filters SearchFilters, authorQueries []author.Query) (str
 		args = append(args, "%"+filters.Venue+"%")
 	}
 	if filters.DOI != "" {
-		query += " AND doi = ?"
+		// Stored DOIs vary in case; callers pass a normalized DOI.
+		query += " AND LOWER(doi) = ?"
 		args = append(args, filters.DOI)
 	}
 	if filters.Tag != "" {

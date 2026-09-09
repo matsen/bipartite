@@ -64,12 +64,16 @@ func (p PaperIdentifier) IsExternalID() bool {
 }
 
 // NormalizeDOI normalizes a DOI to a consistent format for comparison.
-// It removes common URL prefixes (https://doi.org/, DOI:) and converts to lowercase.
+// It removes common URL prefixes (https://doi.org/, DOI:) and converts to
+// lowercase. This is the single DOI normalizer for the whole codebase — any
+// place that compares two DOIs must route through it, or case variants of the
+// same DOI read as distinct papers.
 func NormalizeDOI(doi string) string {
 	doi = strings.TrimSpace(doi)
 	doi = strings.TrimPrefix(doi, "https://doi.org/")
 	doi = strings.TrimPrefix(doi, "http://doi.org/")
 	doi = strings.TrimPrefix(doi, "doi.org/")
 	doi = strings.TrimPrefix(doi, "DOI:")
+	doi = strings.TrimPrefix(doi, "doi:")
 	return strings.ToLower(doi)
 }

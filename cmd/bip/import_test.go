@@ -104,6 +104,28 @@ func TestClassifyImport(t *testing.T) {
 	}
 }
 
+func TestClassifyImportNormalizesDOICase(t *testing.T) {
+	existing := []reference.Reference{
+		{ID: "ref1", DOI: "10.1093/molbev/msl010", Title: "Original casing"},
+	}
+
+	got := classifyImport(existing, reference.Reference{
+		ID:    "new-id",
+		DOI:   "10.1093/MOLBEV/MSL010",
+		Title: "Re-imported with different DOI casing",
+	})
+
+	if got.action != "update" {
+		t.Errorf("action = %q, want %q", got.action, "update")
+	}
+	if got.reason != "doi_match" {
+		t.Errorf("reason = %q, want %q", got.reason, "doi_match")
+	}
+	if got.existingIdx != 0 {
+		t.Errorf("existingIdx = %d, want 0", got.existingIdx)
+	}
+}
+
 func TestClassifyImportEmptyIDPanics(t *testing.T) {
 	existing := []reference.Reference{
 		{ID: "ref1", DOI: "10.1234/abc", Title: "Paper One"},
