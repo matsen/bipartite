@@ -62,6 +62,12 @@ Brief:
 >    For each new merge: note key results and whether it closes an issue.
 > 2. `gh pr list --json number,title,headRefName,state`.
 >    Note new PRs or CI status changes.
+>    **For each open PR, name who is acting on it.** An open PR is being worked or waiting on
+>    somebody, and waiting has no owner: approval is granted by writing to GitHub, and nothing
+>    tells the worker it happened. Measured 2026-09-08 — three slots idled on this in one day,
+>    one of them already fully approved and idle for twenty minutes. Approved-and-unmerged, or
+>    unreviewed with nobody asked, is one message. **If a month passes with no PR this catches,
+>    delete it.**
 > 3. `gh issue list --search "sort:created-desc" --limit 5 --json number,title,state,createdAt`.
 > 4. For each active slot (per the tmux list and any `.epic-status.json` in `<clone_root>`), check the latest issue-lead comment: `gh api repos/<owner>/<repo>/issues/<N>/comments --jq '.[-1].body'`.
 >    Look for the `🤖 **Issue Lead**` prefix.
