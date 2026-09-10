@@ -85,6 +85,15 @@ A third practice reads as tone and is actually cost: **keep corrections low-cere
 "That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
 A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
 
+## Write only what you're sure of
+
+**Never write down something you aren't sure about. A gap someone has to dig for is cheaper than a confident wrong claim** — the gap costs one command, the claim costs a wrong action plus the round to undo it. This is also why brevity matters: every line in a durable artifact is a claim someone will act on. Five costly failures on `matsengrp/phyz`, 2026-09-10, all confidently written, none arithmetic:
+
+- **Fleet state: omit it, or timestamp and attribute it.** *"spawned into `<clone>`"* was a peer's stated intent rather than a check — then corrected to "not spawned", then false again minutes later when the spawn happened. **A peer's intent is not a fact**: "I'm spawning X now" is not "X is spawned." The fix is no fact, not a fresher one — point at the conductor. And what makes the conductor's own fleet writes safe is **artifact type, not authority**: an append-only timestamped entry records an observation and cannot rot, while a state document read as *now* always can.
+- **A correct verdict resting on a false premise still fails.** *"safe to clear"* was the right call about a registered worktree — but it came from a `test -d .git` false negative (in a worktree `.git` is a *file*, not a directory) and was then defended with *"the commits are on the remote"*, which rested on a **stale remote-tracking ref** that `git ls-remote` did not support. The verdict held; the premise would have let someone later delete the two local branches actually holding those commits.
+- **A TODO or MUST-FIX carries its discharge condition, or is struck the moment it lands.** *"MUST FIX `<file:line>`"* — already fixed, six lines above that same body's warning that the risk had inverted toward fixing correct instances. It rots into a trap *because the work got done*: the one failure mode that worsens with good practice.
+- **State each item's disposition** — done / correct-by-design / outstanding. *"left for #2455"* named three already-correct citations; *"is filed separately; do not fold it back here"* described an issue that was never filed. A bare pointer defaults to "outstanding" in the reader's mind.
+
 ## Configuration
 
 Reads `.epic-config.json` from the repo root — the same file `/bip-conductor` uses, so the two roles never disagree about where things live.
