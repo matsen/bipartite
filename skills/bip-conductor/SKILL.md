@@ -101,14 +101,18 @@ The two roles hold different working sets, so what is invisible from inside one 
 Three practices make it work and all are cheap: send raw measurements rather than conclusions; re-derive a peer's number before acting on it; and **name which question a check answers, not which one you asked**.
 
 That third one is the whole of the most common failure here — a check that answers an *adjacent* question to the one it is reported as answering. `diff` for "same code" (same delta only). `comm -12` for "no interaction" (no *file* overlap). `grep | head` for "not present" (not in the first N lines of output). `pgrep -f` for "still running" (it matches its own argv). Matching dimensions for "identical content". Two corollaries worth stating outright: **a negative result needs evidence the test could have produced a positive one** — print the denominator, the row count, the confirmed variation in the input — and **naming a risk is not checking it**, since a warning written into a document reads to its own author as though the work is done.
-
-A third, which produced three separate misjudgements in one session: **a claim that something is harmless is scoped to the cases you enumerated.** *"No live consumer reads this field"* was true of the consumers listed and false of one that wasn't; *"it failed safe"* was true of the configuration observed and false when composed with a second defect; *"this value is harmless"* was true of that write and silent about the practice. Each check was sound and each was reported as answering something wider. **The discriminator is not more care — it is a different question: "is the practice wrong?" rather than "did this instance hurt?"**
 **Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the fleet/topic rule above forbids** ("consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it").
 Re-derive silently and report only the delta: a peer's five-item list that turns out to have nine is worth one line, not a second copy of their reasoning.
 
 A third practice reads as tone and is actually cost: **keep corrections low-ceremony.**
 "That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
 A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
+
+**A scoped finding reported unscoped is its own failure, distinct from the two corollaries above.** Those are about the *denominator* — did the instrument measure anything at all. This one is about the *universe*: the instrument had full power and answered correctly **within its domain**, and the domain was not the one the claim was made about. Three instances in one session, all of the form "this is harmless": *"no live consumer reads this field"* was true of the consumers enumerated and false of one that wasn't; *"it failed safe"* was true of the configuration observed and false composed with a second defect; *"this value is harmless"* was true of that write and silent about the practice. **A check can have a perfectly healthy denominator and the wrong universe, which is why "more care" does not reach it.** The fix is a different question — *is the practice wrong?* rather than *did this instance hurt?*
+
+**And the degenerate case, which none of the above reaches: asserting a conclusion you expect instead of running the check.** Measured 2026-09-11: a conductor reported retroactive pre-launch checks on a slot as measured without having run them, and both wrong values were exactly the expected ones — a slot it had prepped as clean, and a host load figure carried forward unread from 25 minutes earlier. There is no question to name when no check happened. **Run the command in the same turn as the claim, or do not make the claim** — and mark which is which: a bare `(measured HH:MM)` or `(recalled, not re-run)` per claim costs nothing and makes provenance checkable rather than trusted. A recipient cannot audit provenance they were not given.
+
+**A pre-flight criterion is not a post-flight observation.** The same field can mean opposite things either side of an event: a clone being **clean** is a *selection* predicate, meaningful only before a worker starts — afterwards dirty is the expected state and clean would be the alarm. That same conductor's "clean" was a pre-spawn checklist item reported as a post-spawn finding. **A retroactive check cannot reuse the pre-flight list unchanged; re-read what each item means on this side of the event.**
 
 ## Arbitration
 
@@ -229,6 +233,8 @@ Reproducing those is duplication, not fidelity: log an epic finding as a one-lin
 A finding often carries a citation — a file, a line range, a symbol — and forwarding it verbatim (above) does not excuse skipping resolution before acting on it locally. Never reconstruct a missing path component from surrounding context: a citation like `run_heavy_baselines.py:30-43` with no directory is unresolved, not incomplete-but-inferable. Resolve it against the repo (`find`/`grep -r`) or ask the sender which copy they meant.
 **A `find` run against a reconstructed path returns a real result for an invented question.** The result looking concrete does not make the resolution correct, and a "missing file" found this way is not evidence of an error in the citation — it is evidence of an error in the reconstruction.
 The same caution applies to a bare symbol name in a repo with duplicated modules: two files can define the same name for different things, and matching on the name alone is not resolution.
+**Inserting a paragraph can break a referent in text you did not touch, and `git diff` cannot show it.** A sentence opening "Neither of these…" binds to whatever precedes it; drop a paragraph in between and it silently rebinds, while the diff shows your addition as clean because the damaged line is unchanged. Markdown compounds it — without a blank line the two become one rendered block. **After inserting into prose, read the sentence immediately following your insertion, not just the insertion.**
+
 Verification shell calls should carry their own working directory — `cd` inside the same command, or an absolute path — rather than relying on a `cd` from an earlier call in the same session persisting into this one.
 This cuts both ways: when relaying a finding or citing a file in a message to another session — a worker report, a push to the epic — include the directory. A bare filename plus line number is not an address, and a sender who includes the directory removes the ambiguity at its cheapest point, before it costs the receiver a resolution or a round-trip question.
 
@@ -366,6 +372,8 @@ Just flag what you found (path, clone, first line) so the user can decide.
 ### Step 4: Fan out the clone/tmux scanner
 
 Dispatch one `general-purpose` subagent — single call, following the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
+
+**An agent's report is evidence about the question you asked it, and carries your own framing back unchanged on everything else.** So the place to catch a bad premise is the brief, not the report: separate a claim from its attribution before briefing, and verify the attribution yourself — it is the half that never gets tested. See `/bip-epic`'s briefing guidance for the worked instance.
 Brief:
 
 > Inventory clones/worktrees.
