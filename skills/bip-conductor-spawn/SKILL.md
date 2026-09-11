@@ -266,6 +266,12 @@ The detailed instructions are already in the conversation from the initial messa
 The `IMPORTANT CONTEXT` section at the bottom is where the two sources combine: start from the epic's intent file when one exists, correct it per Step 2b, then append fleet facts only the conductor can see — which host/clone is actually free right now, a concurrent worker editing a file this issue also touches, a build in progress on a target remote host.
 Without this annotation step those fleet warnings never make it into the prompt at all.
 
+**Spend the measurement at spawn rather than saving it for the corrections channel: annotation at spawn beats correction after it, because a correction races the worker.** A brief is composed once and read once, at a known moment; a nudge arrives mid-run, can land after the step it was about, and can be redundant with what the worker already had. Measured 2026-09-11: three issue-body fixes relayed an hour into a run — one of them a hard blocker, a tool absent from `PATH` so a cell could not have run as written — arrived to find the worker had already handled all three, because two were in the prompt's fleet facts at launch.
+
+So the annotation is not a courtesy or a restatement of the brief: **it is the only channel guaranteed to arrive before the work.** What pays at spawn — hash the inputs the issue names and report what is actually there; resolve every bare path against the real tree and say which were ambiguous; locate the tools the cells need and report their versions; and re-derive rather than reuse any check whose answer could have moved.
+
+**This is not an argument against sending corrections — send them.** A redundant correction costs a message; a needed one withheld costs a run. It is an argument against *relying* on them: spend the measurement at spawn so the correction channel is insurance rather than the plan.
+
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ````
 You are working on GitHub issue #N TITLE.
