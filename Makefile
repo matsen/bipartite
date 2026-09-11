@@ -1,11 +1,11 @@
 REPO_DIR := $(shell pwd)
 
-.PHONY: build install symlink-agents symlink-skills symlink-statusline clean format check test
+.PHONY: build install symlink-agents symlink-skills symlink-statusline symlink-output-styles clean format check test
 
 build:
 	go build -o bip ./cmd/bip
 
-install: symlink-agents symlink-skills symlink-statusline
+install: symlink-agents symlink-skills symlink-statusline symlink-output-styles
 	go install ./cmd/bip
 	@echo "Installed bip (to \$$GOBIN if set, otherwise \$$HOME/go/bin)"
 	@echo "Ensure the Go bin directory is in your PATH."
@@ -38,6 +38,12 @@ symlink-skills:
 		fi; \
 	done
 	@echo "Symlinked skills to ~/.claude/skills/"
+
+symlink-output-styles:
+	mkdir -p ~/.claude
+	rm -rf ~/.claude/output-styles
+	ln -s $(REPO_DIR)/output-styles ~/.claude/output-styles
+	@echo "Symlinked output styles to ~/.claude/output-styles/"
 
 symlink-statusline:
 	mkdir -p ~/.claude/statusline
