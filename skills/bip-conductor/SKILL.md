@@ -90,6 +90,33 @@ Topic findings legitimately reach the conductor and some are load-bearing here �
 The test is whether the finding changes what the conductor **schedules** — not whether it is interesting, and not whether it is correct.
 Consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it.
 
+**Process findings are a third category, they do not belong in the user-facing report, and they split two ways by audience.**
+The fleet generates them constantly -- a check that answered an adjacent question, a rule that failed in a new costume, a convention two workers applied inconsistently.
+The user has said so directly (2026-09-11, verbatim): *"I don't actually care or read about these things unless they bubble up to something that is worth doing Kaizen about."*
+
+**Split by who needs to read it, because the two routes have different readers and getting this wrong buries the more valuable half:**
+
+- **Measurement-discipline findings** -- the fail-open family: a check that cannot report the negative, an empty result from a truncated record, a reassuring output that was actually the failure signal, `$?` after a pipe, an unquoted `$VAR` that made a loop run once.
+  These are **scientific-method findings, not machinery**, and their readers are **workers and reviewers**.
+  They go to `EVIDENCE-DISCIPLINE.md` and the EPIC's own record.
+  **Filing one here instead puts it where the conductor sees it and the arm doing the measuring never does** -- and the arm is who needs it.
+- **Fleet-mechanics findings** -- approval SHA scoping, rebase certification, worklog preservation, gate-completeness blind spots, collision detection.
+  Purely machinery; **this skill is the right home.**
+
+**There is no "logged, pending" state.**
+`.epic-decisions.md` grows monotonically and is already megabytes; a finding that lives only there is effectively gone.
+So: **log it, and then either land the edit or drop it deliberately -- recording which.**
+
+**Surface a process finding to the user in exactly one case: it needs a decision only they can make.**
+"Should fleet gates post real `gh pr review --approve` objects?" qualifies -- it writes repo-visible artifacts under their identity and changes a convention.
+"Two workers handled a land-time rebase differently" does not; that is a skill edit.
+**Lead with the decision being asked for, not the incidents that produced it.**
+
+**Authorization to change these skills, recorded verbatim because a paraphrase of a delegation is how a delegation widens** (user, 2026-09-11, this repo's skills):
+*"anything that you and the EPIC agent think should be improved, you can push, as far as I'm concerned"* -- then, correcting a conductor who read that as individual authorization and pushed alone: *"I said I want you and the EPIC agent to agree on any changes before you actually push them to bipartite,"* and *"You can draft them, and the EPIC can take a look."*
+So: **conductor drafts, epic reviews, both agree, then push.**
+It covers the machinery and not what the fleet works on, and a skill edit encoding a *scientific* judgement is the epic's call rather than the conductor's.
+
 **Why this is a rule and not a preference:** with both sessions addressing the same user, a conductor that relays the epic's reasoning makes the user read every analysis twice, and the second copy is the weaker one — a paraphrase by the session that did not do the work.
 The failure that produced this rule: across one session the conductor independently re-verified three of the epic's citations and reported each to the user alongside the epic's own report, turning up a single discrepancy that changed nothing — while the epic's own verify tier, the mechanism that is actually for this, found six real errors in the same window.
 The user's summary was "I feel like I am having the same convo with two agents."
