@@ -292,7 +292,8 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   title — short title
   phase — one of: exploring, coding, testing, awaiting-results, quality-gate, needs-human, completed
   summary — human-readable one-liner
-  updated_at — ISO 8601 timestamp
+  updated_at — ISO 8601 UTC, from `date -u +%Y-%m-%dT%H:%M:%SZ`.
+    Never a placeholder, and never local time with a `Z` appended.
   blockers — list of blockers (empty list if none)
   scope — one-line restatement of issue goal (set by lead)
   stop_reason — category from lead decision framework (set by lead)
@@ -302,7 +303,9 @@ EPIC STATUS PROTOCOL — You MUST follow this:
     terminal completed ceremony (idempotency signal; do not set
     yourself). If you resume work after landing, re-create this file —
     see the landing step.
-  awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours)
+  awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours).
+    `started_at` must be real UTC: it is the one timestamp here that gets
+    ARITHMETIC done to it, against `timeout_hours`.
 
 .epic-worklog.md format (append-only, never edit previous entries):
 Timestamped markdown entries with phase header.
@@ -347,6 +350,41 @@ AWAITING RESULTS:
 If you launch a long-running experiment:
 1. Set phase to awaiting-results in .epic-status.json
 2. Set the awaiting field with check_cmd and check_files
+   **Both of the following were measured on 2026-09-11, and the
+   generalization matters more than either: a field can be inert in
+   every path you check and load-bearing in one you don't.** "Nothing
+   reads this field" and "no harm resulted" are both claims about the
+   cases you happened to enumerate.
+   **Stamp `started_at` with `date -u +%Y-%m-%dT%H:%M:%SZ`.** Two
+   independent workers wrote local time with a `Z` suffix (UTC-7, so ~7
+   hours in the past). Twice this was assessed as harmless — correctly,
+   for `updated_at`, which no live consumer reads: the conductor's
+   liveness sweep uses file mtimes and `bip epic watch` keys on phase
+   transitions. Then one worker wrote it into `started_at` against
+   `timeout_hours: 2`, where it becomes arithmetic: ~11 hours elapsed
+   against a 2-hour budget, so the run reads as timed out before it
+   began.
+   **If the work runs on a host that does not share this filesystem
+   (`shared_filesystem: false`), `check_files` cannot name a local
+   path** — the artifact exists only on the remote until something
+   pulls it back, so a local path never appears and any consumer of
+   that field never fires. Put the real check in `check_cmd` (remote),
+   and either omit `check_files` or mark it explicitly remote.
+   **That one looks harmless in isolation and is not, because it
+   composes.** The slot where it was observed came to no harm only
+   because its `check_cmd` was right — a property of that worker, not
+   of this template. This skill's own measured rate for the other half
+   is **four of eleven live-slot probes unable to report not-done**. A
+   worker with a fail-open `check_cmd` *and* a local `check_files`
+   under `shared_filesystem: false` has **no working readiness signal
+   at all**: neither field fires, the loop advances on nothing or
+   spins, and the status file reads as though something was checked.
+   **This paragraph is deliberately a longer restatement of the field
+   spec above, and the duplication is load-bearing — do not dedupe
+   it.** A format rule read once at session start, in reference mood,
+   has decayed by the time the block is written forty minutes later;
+   the same rule at the point of use has not. Different reading moods
+   need different forms.
 3. **Run check_cmd once while the work is definitely unfinished and confirm
    it says not-done.** A probe you have never seen fail is not a probe.
 4. Each ralph-loop iteration: run check_cmd, if not ready end the turn
@@ -783,6 +821,8 @@ Moving it aside is reversible and lets `/bip-conductor-tuckin` Step 2 report it 
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 mark_spawn_intent_consumed "$INTENT"
 ```
+
+**A prompt-template fix does not reach any worker already running.** The prompt file is frozen at launch, and `RECOVERING CONTEXT` sends a compacted worker back to that same frozen text — so a template correction is live in new spawns and absent from every in-flight one. That is the configuration where a fix a worker has already applied silently regresses after a compaction. When you land a template change, either message the live workers and ask them to record the correction in `.epic-worklog.md` (append-only, and it *is* in the recovery path, where the prompt is not editable), or accept that the fix starts at the next spawn — but decide which, rather than treating the edit as having closed the case fleet-wide.
 
 **Verify the worker actually started before reporting it live.** A prompt-ingested session and a working one are indistinguishable by context usage: **`context used N%` proves the prompt was read, not that work began.** Check for a created branch, or a tool call in the pane. Measured 2026-09-03: four spawns were reported as live for ~15 minutes while all four sat at a folder-trust dialog with their prompts queued, every one showing a plausible ~34% context.
 
