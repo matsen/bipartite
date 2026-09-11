@@ -60,6 +60,14 @@ Only what survives both gates gets a destination:
 
 **Put the traps in the prompt itself, not only in the file.** They are precisely what a fresh session gets wrong *before* it has read anything.
 
+**Every action item must carry its own falsifier inline.** Not "file X" with a general warning elsewhere in the file, but:
+
+> **FILE NEXT: X. FIRST RUN: `grep -rn '<the number>' experiments/*/README.md` — if it hits, X is dead and this line is the retraction.**
+
+**An imperative at the top gets executed before a warning in the middle gets applied.** Measured 2026-09-11: a continuation file's single highest-priority item — "the one thing to file next" — pointed at a question three landed PRs had already settled, and the file *contained* the check that would have killed it, as a trap roughly 200 lines below. A resuming session is the reader least able to notice that tension, because it is trusting the file to have already resolved it. Only a peer message arriving mid-read prevented the filing. **Anything that could invalidate an action item has to live inside that item, or it will not fire.**
+
+**Record approvals as `approved at <SHA>`, never as a state.** "Approved by both" is true when written and becomes misleading the moment anyone pushes. Same class of defect: a fact that expires silently.
+
 ### Step 3: Report
 
 Print a summary:

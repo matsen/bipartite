@@ -129,6 +129,12 @@ Only what survives both gates gets a destination:
 - Nothing else fits → the Step 5 report below.
   This is where a user who has opted out of auto-memory files will actually see it — don't treat a MEMORY.md write as the only or required destination.
 
+### Step 4b: Record approvals as `approved at <SHA>`, never as a state
+
+"Approved by both" is true when written and stops being true the moment anyone pushes. **An approval is scoped to the commit it was given for. Push after it and it no longer covers your branch — re-request, and wait.** Measured 2026-09-11: a worker landed a PR believing an earlier conductor approval still covered bytes rewritten minutes later; the content happened to be right, the form was not, and `gh pr view --json reviews` returned `[]` the whole time, so nothing on the record ever contradicted the belief.
+
+The falsifier rule this pairs with lives in `/bip-conductor-spawn`, not here — a tuckin report is read immediately by a human, so there is no reset gap for a stale imperative to survive. The spawn prompt is where that gap is real.
+
 ### Step 5: Report
 
 Print a summary:

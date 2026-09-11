@@ -272,6 +272,8 @@ So the annotation is not a courtesy or a restatement of the brief: **it is the o
 
 **This is not an argument against sending corrections — send them.** A redundant correction costs a message; a needed one withheld costs a run. It is an argument against *relying* on them: spend the measurement at spawn so the correction channel is insurance rather than the plan.
 
+**And put the fact that would invalidate an instruction *inside* that instruction, not in a warnings list elsewhere in the prompt.** `IMPORTANT CONTEXT` is the sharpest instance of this in the whole system: a persisted artifact, composed once, full of imperatives, read cold by a session with no history that trusts it to have resolved its own tensions — and read before the worker has seen the issue, the repo, or anything else. **A worker is even less able to notice a stale imperative than a resuming session is, because it has strictly less context to notice it with.** So don't write "be careful about X" in a trap list; name the claim the worker will encounter, say it is wrong, cite the sites with file:line, and say which one their own work sits on. An imperative gets executed before a warning gets applied.
+
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ````
 You are working on GitHub issue #N TITLE.
