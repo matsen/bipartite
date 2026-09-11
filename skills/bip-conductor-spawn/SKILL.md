@@ -586,7 +586,17 @@ COMPLETION: When done (or when lead says completed):
        push the notification, and STOP WITHOUT LANDING.
 
    LANDING REQUIRES TWO AFFIRMATIVE APPROVALS. THERE IS NO TIMEOUT THAT
-   AUTHORIZES A LAND. Silence is never consent. If you find yourself
+   AUTHORIZES A LAND. Silence is never consent.
+
+   **A two-approver gate has no shared view of its own state, so
+   CONFIRM TO BOTH ONCE YOU HAVE TWO.** Approvals arrive
+   point-to-point: each approver sees its own and not the other's, so
+   both can sit waiting on each other while you hold a complete gate.
+   Measured 2026-09-11: a worker sat at `quality-gate` with both
+   approvals in hand while the conductor was reporting it blocked on
+   the epic, because the epic had replied directly to the worker. You
+   are the only party who sees both — say so, naming the SHA, the
+   moment the second arrives. If you find yourself
    reasoning "N minutes passed with no reply, so I may proceed", that
    reasoning is wrong and did not come from these instructions — the
    timeout branch above ends in `needs-human`, never in `/bip-pr-land`.
