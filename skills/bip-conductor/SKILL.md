@@ -327,6 +327,10 @@ All subsequent steps use values from this config — never hardcode paths or clo
 
 **Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.conductor-session` — see the Conventions section's "Completion pushes" for why this file exists and how it's kept fresh.
 
+**Read every TRACKED subdirectory `CLAUDE.md` in the project repo — they are NOT auto-loaded.** Only the repo-root `CLAUDE.md` and the user's global one land in context automatically. A subdirectory one loads when a session *works in* that directory, and the conductor works from the repo root reading artifacts by path, so it never loads them. Enumerate with `git ls-files | grep 'CLAUDE\.md$'` — **not `find`**, which keys on filename rather than tracked-ness and returns vendored copies and stale nested clones indistinguishable from the live file.
+
+**The conductor looks less exposed than the epic and isn't.** This skill tells you to re-derive a peer's number before acting on it — so reading a project's experiment artifacts is in-role, not a stray into the epic's lane. Measured 2026-09-11: doing exactly that meant reading a results `PROVENANCE.md`, an experiment README, committed TSVs and a fixture directory, all under `experiments/`, with `experiments/CLAUDE.md` never loaded. That file documents the `results/`-is-gitignored-with-per-file-negations pattern whose resolution then cost a wrong "input absent" that was relayed to the epic as verified.
+
 ### Step 2: Pull main
 
 ```bash

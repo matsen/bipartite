@@ -122,6 +122,16 @@ An epic session only ever *reads* remote state — every `gh issue view` and `gh
 Measured 2026-09-01: both the epic and the conductor sat four merges behind on `main` for hours, each with a clean tree on the correct branch, and neither noticed until the other described it. `git fetch` does not help: it updates remote-tracking refs, not the working tree.
 This matters here specifically because reading a stale file and writing it back is how an EPIC body or a skill acquires a reverted diff — see `/bip-kaizen` Step 5 on the shared working tree.
 
+**Read every TRACKED subdirectory `CLAUDE.md` in the project repo — they are NOT auto-loaded.** Only the repo-root `CLAUDE.md` and the user's global one land in context automatically. A subdirectory `CLAUDE.md` loads when a session *works in* that directory, and the epic role works from the repo root reading artifacts by path — so it systematically never loads them while reading files underneath them all day. Enumerate at session start:
+
+```sh
+git ls-files | grep 'CLAUDE\.md$'
+```
+
+**Use `git ls-files`, not `find`. Tracked-ness is the predicate for "the repo's guidance"; a file merely NAMED `CLAUDE.md` is not.** Measured on `matsengrp/phyz` 2026-09-11: `find` returns four hits totalling 137 KB of which one is real — a vendored copy inside a pixi env, and a stale nested clone under `_ignore/` whose 56 KB root `CLAUDE.md` opens with the identical "guidance for the phyz repository" header and is indistinguishable from the live file on inspection. `git ls-files` returns exactly the two real ones, because the index already filters to what the repo considers its own and keeps doing so as new files appear.
+
+The rule's own evidence: an entire session read files under `experiments/` with `experiments/CLAUDE.md` never loaded, and two of the methodology traps it documents were rediscovered the expensive way — one after publishing a wrong number. **The root file's existing "see `experiments/CLAUDE.md`" pointer did not cause it to be read: a pointer is not a mechanism.**
+
 If this project uses the auto-memory directory, also read its MEMORY.md for topic-level context from previous sessions (decisions, findings, what's next) — some setups deliberately don't use it (e.g. because the directory is keyed by working directory and invisible to other clones), in which case skip this and rely on EPIC bodies and issue history instead.
 
 **Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.epic-session` — this is how the conductor finds the epic to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows.
