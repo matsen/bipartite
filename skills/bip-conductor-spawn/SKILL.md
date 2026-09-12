@@ -160,6 +160,10 @@ if [ "$rc" -ne 2 ]; then
     find "$CLONE_ROOT/<clone>" -maxdepth 1 \( -name '.epic-status.json' -o -name '.epic-worklog.md' \) -delete
     find "$CLONE_ROOT/<clone>/.claude" -maxdepth 1 -name 'ralph-loop.local.md' -delete 2>/dev/null
 fi
+# Stale build artifact, not preserved state -- deliberately OUTSIDE the `rc` gate,
+# since it has nothing to do with whether worklog preservation succeeded.
+# See "The stale-binary sweep" below. Scoped to the one binary on purpose.
+find "$CLONE_ROOT/<clone>/zig-out/bin" -maxdepth 1 -name 'phyz' -delete 2>/dev/null
 ```
 
 `find ... -delete` on an absolute path, not `cd` + a separate relative-path `rm`: no `rm`/`rmdir` token anywhere in the command, so it can't trip Claude Code's destructive-removal guard regardless of the `$`s already in scope, and it doesn't depend on cwd surviving into a later invocation — so this can run in the same script as the preservation above instead of needing to be split, and stays correct in an agent thread where cwd does not persist (see the `$`+`rm` note below for the guard's trigger condition; issue #2216's follow-up finding for the cwd point).
@@ -192,6 +196,8 @@ if [ "$rc" -ne 2 ]; then
     find "$SLOT" -maxdepth 1 \( -name '.epic-status.json' -o -name '.epic-worklog.md' \) -delete
     find "$SLOT/.claude" -maxdepth 1 -name 'ralph-loop.local.md' -delete 2>/dev/null
 fi
+# Stale build artifact, not preserved state -- see "The stale-binary sweep" below.
+find "$SLOT/zig-out/bin" -maxdepth 1 -name 'phyz' -delete 2>/dev/null
 ```
 
 Same `find`-on-an-absolute-path reasoning as the clone-mode block above: no `rm`/`rmdir` token, no dependence on cwd surviving into a later invocation, so preserve and delete run together instead of needing a split.
@@ -233,11 +239,57 @@ So a clone parked at `needs-human` with `lead_guidance` reading "stand down, wai
 ```bash
 find "$SLOT" -maxdepth 1 -name '.epic-status.json' -delete   # ALWAYS -- stale instructions, not context.
 # keep .epic-worklog.md when resuming: it is the history the worker needs
+#
+# DO NOT add a zig-out/bin/phyz delete here for symmetry with the two
+# fresh-assignment blocks above. On a parked slot that binary can BE the
+# provenance of an artifact the slot has ALREADY COMMITTED -- observed
+# 2026-09-12, a slot whose branch build was what its committed
+# 945-topology reference table had been measured against. Deleting it
+# destroys a baseline that cannot be rebuilt from HEAD.
+# See "The stale-binary sweep" below for the full account.
 ```
 
 `find` on an absolute path, not `cd "$SLOT"` + a separate relative-path `rm`: no `rm`/`rmdir` token in the command at all, so it can't trip the guard no matter what else shares the invocation, and it doesn't depend on cwd surviving from an earlier command — a real risk in an agent thread, where cwd does not persist across separate Bash calls (issue #2216's follow-up finding).
 
 The symptom is near-invisible: the window opens, the worker reads its guidance, reports the parked phase, and stops. It looks like a worker that considered the task and declined.
+
+### The stale-binary sweep: `zig-out/bin/phyz`
+
+**A pre-existing `zig-out/bin/phyz` is not evidence of anything about the checkout next to it, and it fails in the direction that does the most damage: it returns a confident wrong number rather than an error.**
+The version string is `git describe` at *build* time, so a clone that has since pulled, rebased, or switched branches carries a binary whose `--version` no longer matches its own `HEAD` — and nothing re-checks it.
+This is the fleet-scale form of the hazard `matsengrp/phyz`'s `CLAUDE.md` records as #2183 ("a stale local binary can silently outlive its own `commit_sha`").
+
+**Measured 2026-09-12 on the 17-clone `~/re/pz` pool, because a rule with no measurement behind it ages into one nobody can re-justify.**
+An epic session reported it on the 2 clones it happened to touch; a full census found **12 of the 14 clones that had a binary at all were stale**.
+Only the 2 rebuilt within the hour matched.
+Worst cases: `maple` at `HEAD` `91f3ab2b` carrying a `g4d9d6171` build; `pine` a `v0.1.1004-93` build against `HEAD` `0a4029db`; `teak` a three-day-old binary.
+**The 2-of-2 sample and the 12-of-14 census point to different remedies** — the first reads as two clones someone forgot to rebuild, the second as a property of the pool.
+
+**Apply that same sample-vs-census caution to the 12 itself: some of them are stale BY CONSTRUCTION, not by neglect.**
+A clone that has just landed a PR mismatches automatically, because squash-merge rewrites the SHA — the binary was built from the pre-squash branch commit, which no longer exists on `main`.
+Two of the 12 were exactly this (`cedar` built from `cda708d7`, `ash` from `edd1f787`), against cases like `maple`'s three-generation drift that are genuine neglect.
+**The hazard is identical either way** — the binary still is not the `HEAD` code, and still answers confidently — **but say so, or the first reader who lands a PR, sees a mismatch, and knows exactly why concludes the rule cries wolf.**
+
+**Two remedies, different blind spots — keep both.**
+A check in the spawn brief still depends on the worker remembering to run it, which is precisely the property that failed 12 times; a missing binary fails loudly at the first invocation.
+But deletion at prep only covers clones that go *through* prep — a directory populated by a manual `rsync`, or one that predates the pool, never does.
+So the brief-line check (Step 4's template) and the prep-step deletion are **not redundant**: each covers the other's blind spot.
+
+**Scoped to `zig-out/bin/phyz` deliberately.**
+Some clones also carry stale *bench* binaries (`bench_hky3_pade`, `nni_vs_spr_1735`, `validate_gpu_vs_zig`, …) — same hazard class, different blast radius, and sweeping them in silently is how a prep step earns a reputation.
+If you want those too, add a second `find` line with its own comment saying why, rather than widening the `-name` pattern.
+
+**THE EXCEPTION, and it has a real counterexample rather than a hypothetical one: never delete the binary on a RESUME.**
+The fresh-assignment blocks above run after `git checkout main` has discarded the prior branch, so nothing can still depend on that binary's identity — deletion is free.
+A slot **parked mid-issue** is the opposite case, and it is the one the resume block covers: there the binary can *be* the provenance of an artifact the slot has already committed.
+Observed 2026-09-12: a slot parked in `awaiting-results` under a sequencing hold held a branch build whose `--version` disagreed with its `HEAD` — and that binary was exactly what its committed 945-topology reference table had been measured against.
+An unconditional prep-step deletion would have destroyed that baseline, and the failure would have surfaced only when the re-verification produced numbers nobody could reconcile.
+**Write the exception down or the next conductor re-derives it the expensive way.**
+
+**The exception is not complete without its second half, so do not let a trim separate them.**
+Leaving the binary in place preserves the provenance and re-creates the original hazard: that slot now holds a binary that is stale for its *next* run, and it is the one clone your sweep deliberately did not fix.
+So the carve-out obliges you to message the parked slot — as a fleet fact, explicitly not a gate — telling it to **rebuild before re-verifying, and to run the check below *after* the rebuild, not before.**
+"Skip the build, reuse `zig-out`" is the exact mechanism by which a worker's stated intent to re-verify silently becomes an assumption, and a parked slot is where that intent has had the longest time to go stale.
 
 ### Step 2b: Pre-launch staleness check
 
@@ -779,7 +831,62 @@ Now read the issue and begin work:
 - Run zig build test before committing
 - Run make parity if touching shared alignment code
 - Check PRE-MERGE-CHECKLIST.md
+- NEVER trust a pre-existing zig-out/bin/phyz. Before you measure ANYTHING
+  with it, run this from the clone root; if it prints STALE or UNRESOLVABLE,
+  rebuild first. A stale binary does not error -- it returns a confident
+  wrong number under newer-looking provenance.
+      vs=$(zig-out/bin/phyz --version | awk '{print $NF}'); vs=${vs%-dirty}
+      case "$vs" in *-g*) ref="${vs##*-g}" ;; *) ref="$vs" ;; esac
+      bc=$(git rev-parse --verify --quiet "${ref}^{commit}") || bc=""
+      hc=$(git rev-parse --verify HEAD)
+      if [ -z "$bc" ]; then
+        echo "UNDETERMINED: cannot resolve '$vs' to a commit here (tag not fetched?) -- git fetch --tags; do NOT assume stale"
+      elif [ "$bc" != "$hc" ] && [ -n "$(git diff --name-only "$bc" "$hc" -- src build.zig build.zig.zon)" ]; then
+        echo "STALE: binary=$bc HEAD=$hc, and code differs -- rebuild before measuring"
+      fi
+      # A commit match does NOT establish content identity on a dirty tree:
+      [ -n "$(git status --porcelain)" ] && echo "NOTE: tree dirty -- commit matches, content identity not established"
 ```
+
+That last item is the brief-side half of the stale-binary remedy; the prep-side half is the `find`/`-delete` in Step 2 (see "The stale-binary sweep").
+**Keep both.**
+Prep-step deletion only protects clones that go through prep, and the check only fires if the worker runs it — each covers the other's blind spot, which is why neither is redundant.
+
+**RESOLVE BOTH SIDES TO A COMMIT. Never compare two `git describe` strings, and never compare the version string to `rev-parse HEAD` either.**
+Two earlier drafts of this check were wrong, in opposite directions, and the second was wrong in a way its own two-direction verification could not catch.
+
+*First draft:* compared `--version` to `rev-parse --short=8 HEAD` — `phyz v0.1.1128-1-gc0b066a9` against `c0b066a9`, **unequal on a perfectly in-sync clone**. A worker who scripts that gets "rebuild always" and learns the check is noise; one who inverts it to make it pass gets "pass always". Either way the check written to prevent a silent wrong number becomes one.
+
+*Second draft:* compared `--version` to `git describe --tags --always --dirty`. That is self-consistent within a clone and still **false-positives on a current binary**, because `git describe` is not stable over time — **this repo's Auto-tag workflow creates a tag per commit, so a commit's describe string CHANGES once its own tag lands.** Measured 2026-09-12: a clone whose binary was built from exactly `HEAD` (`c0b066a9`) reported `v0.1.1128-1-gc0b066a9`; the `v0.1.1129` tag was then created **pointing at that same commit**, and after a `git fetch --tags` the same clone's `git describe` returned `v0.1.1129`. The check flipped from match to **STALE with nothing rebuilt and nothing changed in the tree** — a pure false positive on the freshest possible binary, and the "cry wolf" outcome this section warns about two paragraphs up, arriving by a route nobody was watching.
+
+**Why the earlier verification missed it, which is the reusable part.** It was run in both directions — a passing in-sync clone and a genuinely stale one — and both answered correctly. It never asked *"could this clone's `describe` output change without the binary or the tree changing?"* **Full power over the question asked; wrong question.** Two-direction verification is necessary and is not sufficient: it establishes the check separates the two states you had, not that the states are stable.
+
+`git describe` is also **clone-relative**: `git pull --ff-only` does not fetch tags, so two clones at the identical commit can describe it differently (measured: `v0.1.1119-7-g9aac8693` in one clone at 1123 tags, `v0.1.1125-1-g9aac8693` in another at 1133, same commit). And when `HEAD` sits exactly on a tag, describe emits **no `-g<sha>` suffix at all** — so a regex that extracts the SHA works on most commits and silently returns nothing on tagged ones.
+
+The form above handles all three: it parses the SHA from the `-g` suffix when present, resolves the bare tag name to its commit when it is not, and compares commit to commit. Verified 2026-09-12 on three clones — a binary built from `HEAD` whose commit had since been tagged (correctly `ok`, where the previous draft said STALE), a genuinely stale parked slot (correctly `STALE`, `9aac8693` vs `fb257d04`), and a freshly rebuilt clone (correctly `ok`).
+
+**This still cannot establish that the binary matches the working *files*, only the commit** — hence the dirty-tree note in the snippet. The real fix is phyz emitting its own build commit into its artifacts, which is exactly `matsengrp/phyz` issue **#2250** ("Record the resolved tool version and build hash with every experiment artifact"). Until that lands, this check is the best available approximation and should be described as one.
+
+**Compare the CODE between the two commits, not the commits themselves — otherwise the normal measurement workflow trips it.**
+Build, measure, then commit the results is the correct ordering for an experiment, and it leaves `HEAD` one or more commits ahead of the binary *by construction*, with only outputs in between.
+Measured 2026-09-12: a slot's binary sat at its own branch commit while `HEAD` carried a later commit touching only an experiment README and three results TSVs — the binary's `src/`/`tests/` were byte-identical to `HEAD`'s, so it was a perfectly valid measurement binary that a commit-equality test calls STALE.
+Gating the mismatch on `git diff --name-only "$bc" "$hc" -- src build.zig build.zig.zon` being non-empty keeps every true positive (a genuinely older build) and drops that false one.
+**`tests` is deliberately NOT in that list, and a future editor will want to add it back for symmetry — don't.** `zig-out/bin/phyz` is built from `src` + `build.zig`; test files are separate build steps that never link into it (verified on `matsengrp/phyz`: the exe's roots are `src/main.zig` and `src/root.zig`, its only `addImport` is `build_options`, the `tests/*_helpers.zig` modules are wired into `addTest` blocks alone, and nothing under `src/` imports from `tests/`). Including `tests` would report STALE on a test-only commit whose binary is perfectly current — **the same false positive this gate exists to remove, in a narrower costume.**
+**`build.zig.zon` IS in the list** because a dependency change alters the produced binary while leaving `src`/`build.zig` untouched — omitting it reintroduces the false *negative* the whole check exists to prevent.
+**This was the fourth revision of this check, and the false positive was found by using it rather than by reviewing it** — worth knowing before trusting the next clever narrowing of it.
+
+**THREE STATES, NOT TWO: an unresolvable string must report UNDETERMINED, never STALE.**
+If the binary's string is tag-exact (`v0.1.1129`, no `-g` suffix) and the *checking* clone has not fetched that tag, `git rev-parse` fails — and collapsing that into the mismatch branch prints STALE for a binary that may be perfectly current.
+That is the same cry-wolf outcome as the two broken drafts above, arriving from the opposite direction, and **it fires on exactly the under-fetched clones the tag problem already affects.**
+Verified 2026-09-12 across all four states: a binary from `HEAD` whose commit had since been tagged → `ok`; a parked slot's branch build → `STALE` (`9aac8693` vs `fb257d04`); the string `v0.1.1129` evaluated in a clone holding 959 tags and not that one → `UNDETERMINED`; a `-dirty` suffix → stripped and resolved. **A check that cannot resolve its comparand has established nothing and must not render a verdict.**
+Warn on a dirty tree but do not block on it — a commit match genuinely cannot establish content identity, and blocking would make the check unusable in any clone mid-edit, which is most of them.
+
+**The one-line rule, since this cost two sessions two separate defects in one night: on this repo `git describe` names a commit's position in a tag graph that moves underneath it. Only a SHA names a commit.**
+The Auto-tag workflow tags *every* commit — the last six on `origin/main` each carry exactly one — so a commit's describe output changes from `vN-1-g<sha>` to `vN+1` the moment its own tag lands, with nothing rebuilt. **A binary built promptly after its commit is therefore the modal case for this false positive, not an edge case.**
+
+**And the generalizable check, which would have caught it before either direction was run: enumerate a check's inputs and ask which are free to vary independently of the property being tested.**
+`git describe` reads the tag graph; the tag graph moves independently of both the binary and the working tree, so a comparison built on it cannot be testing only staleness.
+Two-direction verification does not reach this — it establishes that a check separates the two states you happened to have, **not that those states are stable.**
 
 **For phased work:**
 ```
