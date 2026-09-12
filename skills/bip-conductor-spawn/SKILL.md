@@ -557,20 +557,45 @@ So, before you request landing:
   command AND the budget, so a 6-seed 110-taxon re-run at ~15 min/seed is not
   free.
 
-PUSH NOTIFICATION — When you set phase to needs-human or completed, read
-`$CLONE_ROOT/.conductor-session` (resolve `CLONE_ROOT` from
-`.epic-config.json` the usual way). If it exists, `SendMessage` that exact
-address a one-line notification (issue number, phase, one-line summary)
-so the conductor doesn't have to wait for its next poll cycle. Do NOT
-`ListAgents` and pick a plausible-looking row yourself — session names
-derive from working directory, so every other worker sharing your clone
-root shares your name prefix, and guessing risks messaging the wrong
-live session (see `/bip-conductor`'s Conventions section, "Completion
-pushes"). If the file is missing or the send fails (address went stale
-since the conductor's last refresh), skip silently — `.epic-status.json`
-is written regardless, so `/bip-conductor-poll` and `bip epic watch`
-remain the fallback. Do this EVERY time you write needs-human or
-completed to .epic-status.json.
+PUSH NOTIFICATION — **Trigger on the EVENT, not on a file write.** When
+you finish, stand down, hand off, or get blocked, `SendMessage` the
+conductor a one-line notification (issue number, what state you are in,
+one-line summary). Read the address from `$CLONE_ROOT/.conductor-session`
+(resolve `CLONE_ROOT` from `.epic-config.json` the usual way).
+
+**Send it whether or not `.epic-status.json` exists, and whether or not
+you wrote a phase to it.** This wording used to read "every time you
+write needs-human or completed to .epic-status.json", and that is a bug:
+`/bip-pr-land` DELETES the status file, so on the successful path the
+write never happens and a literal reading produces silence. Measured on
+`matsengrp/phyz` 2026-09-12 — across 8 slots that all finished, the
+watcher's last recorded phase was `quality-gate` for **7 of them**; the
+only completion pushes the conductor received were from workers acting
+beyond the instruction. **The one worker that followed it exactly was
+the one that went silent.**
+
+**The old fallback clause was false in the same way** — it claimed
+`.epic-status.json` "is written regardless, so `/bip-conductor-poll` and
+`bip epic watch` remain the fallback." After landing there is no file, so
+the primary and the fallback were gated on the same deleted artifact: one
+point of failure wearing two hats. If the send fails or the address file
+is missing, **say so in your final output** rather than relying on a
+fallback that is not there.
+
+Do NOT `ListAgents` and pick a plausible-looking row yourself — session
+names derive from working directory, so every other worker sharing your
+clone root shares your name prefix, and guessing risks messaging the
+wrong live session (see `/bip-conductor`'s Conventions section,
+"Completion pushes"). If `.conductor-session` is missing or the send
+fails (address went stale since the conductor's last refresh), do not
+retry and do not `ListAgents` for a substitute address — record the
+failure in your FINAL RECAP so the absence is visible.
+
+**Landing is the case this exists for.** `/bip-pr-land` is the moment the
+status file, the worklog, and your branch all disappear; a conductor with
+no push and no status file sees a clone on `main` and cannot distinguish
+"finished cleanly" from "abandoned". Send the push at the point you
+decide to land, and again after if anything changed.
 
 DO NOT EDIT THE EPIC ISSUE'S BODY. If you find it stale or contradicted
 by your work — and you may well, since it is written ahead of results —
