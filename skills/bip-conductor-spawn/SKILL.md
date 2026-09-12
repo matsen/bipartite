@@ -420,6 +420,23 @@ If you launch a long-running experiment:
    `timeout_hours: 2`, where it becomes arithmetic: ~11 hours elapsed
    against a 2-hour budget, so the run reads as timed out before it
    began.
+   **The other direction is worse, and a fourth worker produced it on
+   2026-09-12: timestamps ~61 and ~85 minutes in the FUTURE**, round to
+   the whole minute (`16:45:00Z` against a real clock of `15:20:26Z`) --
+   two `date -u` calls cannot both land on `:00`, which is the tell.
+   **A past-dated `started_at` INVENTS a timeout, which is loud and gets
+   investigated. A future-dated one HIDES a stall: the run keeps reading
+   as having budget left, so a hung job is never escalated.** The failure
+   that announces itself is the safe one; prefer neither, but know which
+   way you erred.
+   **And the general form, which is why this keeps recurring in new
+   costumes: a hand-written timestamp is a CLAIM, not a measurement, and
+   it is indistinguishable from a real one at the point of reading.**
+   Every downstream consumer -- worklog ordering, "which round came
+   first", any staleness reasoning -- inherits it silently. The check that
+   separates them asks a different question of the artifact rather than
+   re-reading the header: compare the value against the file's own
+   mtime.
    **If the work runs on a host that does not share this filesystem
    (`shared_filesystem: false`), `check_files` cannot name a local
    path** — the artifact exists only on the remote until something
