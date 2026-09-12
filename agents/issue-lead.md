@@ -235,6 +235,53 @@ the worker addresses feedback; filing only at `completed` means the
 final state is authoritative. `completed_at` ensures re-invocation is
 idempotent.
 
+## Never poll for a subagent you spawned
+
+**When you spawn a subagent, the harness notifies you when it finishes. Do
+not write a shell loop to wait for it.** Every instance below is a worker
+on `matsengrp/phyz` that did, and sat blocked after its real work had
+already completed:
+
+| slot | date | wait condition | blocked for | mechanism |
+|---|---|---|---|---|
+| `fir` | 2026-09-12 | `! pgrep -f <agent-id>` | **3h33m** | **verified** unsatisfiable — the polling shell matched its own `pgrep`, confirmed by PID |
+| `birch` | 2026-09-12 | `pgrep -f "zig build.*-j28 test$"` | **2h29m** | same family; self-match not verified, the process exited before it could be tested |
+| `ash` | 2026-09-07 | `grep -q '<marker>' <transcript>` | unknown | idiom found in the transcript under `bip-pr-review`; that it hung is **not** established |
+
+Only the first is proven. It is enough: the mechanism is structural, not a
+typo, and the other two are the same shape in different costumes.
+
+The idiom that hangs looks reasonable:
+
+```sh
+until [ -s <task-output> ] && ! pgrep -f <agent-id>; do sleep 10; done
+```
+
+**`pgrep -f <agent-id>` matches the polling shell's own argv**, because the
+agent id is sitting inside the `until` condition being matched. So `! pgrep`
+is permanently false and the loop can never exit, whatever the subagent
+does. A variant using `until grep -q '<marker>' <transcript>` hangs the same
+way when the marker never appears in the form expected.
+
+**This is invisible to the fleet's stall detection, which is why it costs
+hours rather than minutes.** `/bip-pr-land` deletes `.epic-status.json` and
+`.epic-worklog.md` before the terminal ceremony runs, so by the time the
+hang occurs there is no file mtime left to age — the liveness instrument is
+removed exactly in the window where the failure happens. Nothing will come
+and find you.
+
+**One-command diagnosis**, for anyone looking at a slot that has "been busy"
+implausibly long: find the `zsh` whose cwd is the clone and print its argv.
+
+```sh
+ps -o args= -p <pid>     # the full loop condition is right there
+```
+
+If you genuinely must wait on something external — a CI run, a file another
+process writes — poll on a condition that **cannot match itself**: test the
+artifact (`test -s`, `test -f`), or the tool's own exit status. Never a
+process-table search for a string that appears in your own command.
+
 ## Awaiting-results Protocol
 
 When you determine the worker is waiting for experiment results:
