@@ -448,6 +448,16 @@ Two distinct ways an arm cannot speak, with different tests and different remedi
 
 Measured 2026-09-07: an epic session ran the design question on a PR's *positive control*, cleared the PR, and published its *null arm* as a mechanism refutation. The null had no power — the perturbation phase never produced a strict improvement in either arm, so both received identical input. **The engagement counter was a column in the PR's own committed `cells.tsv`, and a durable finding in the EPIC body had already recorded that phase as inert at that cluster size.** Neither reviewer asked. The worker had labelled it correctly; two reviewers relabelled it, in opposite wrong directions, before it was restored.
 
+### Step 6c: A pre-registration and a prior are the same text on opposite sides of a wall
+
+Write your expectation down before the data exists; do not send it to the arm that will produce the data. **The words are identical and the function inverts.** On your side it is an auditable constraint on *you* — if you later reclassify a result to fit, the record catches it. Delivered to the arm, it is an anchor: the arm's classification stops being a measurement and becomes agreement with you, and the agreement proves nothing.
+
+Scored, `matsengrp/phyz` 2026-09-11: the epic pre-registered which of nine test failures would prove to be genuine defects, **reasoning from test names — after having written the correct discriminator two paragraphs earlier** (whether the failing assertion compares a pinned literal or an invariant) **and substituting the name as a proxy for it.** Not a missing rule; a rule it wrote and then did not run. The worker classified two of those the other way on direct evidence and was right; the epic had over-predicted defects twice, and the two that stayed unresolved fell in the buckets it had marked uncertain and invariant. **That was measurable only because the priors never crossed** — had they, the worker would have read the same assertions already knowing what was expected, and both errors would have been invisible.
+
+The corollary is what to send instead: **the scheme goes, the prior stays.** Categories, discriminators, decision rules and known-positive controls are instruments — they make the arm's answer better without deciding it.
+
+**A third thing defaults to the withheld side: adjacent confounded evidence** — a neighbouring arm's result that bears on the question but cannot settle it. Neither scheme nor prior, and its only effect on the receiver is to tilt a judgement it was asked to make independently. Hold it against a release condition written *before* the data, and say the condition out loud: **that is what makes "hold this" different from "bury this."**
+
 ### Step 7: Correcting a live worker — the judgment half
 
 When a live worker's scope needs correcting *before* its next natural stopping point, the epic — not the conductor — makes the call: is this change durable (it changes what the worker will produce: scope, target, artifact, gate criterion) or transient (host load, a peer's timing, a dependency that just landed)?

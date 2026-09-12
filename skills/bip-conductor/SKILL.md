@@ -77,6 +77,30 @@ The conductor session owns the clone pool, tmux, and host state:
 - Never does topic reasoning, and does not write code or create branches for numbered issues (light triage — reading files, checking CI output, running `gh` commands — is fine)
 - Holds **no topic boundary of its own** — the epic agent is scoped to one EPIC and owns that. What the conductor does own is *mechanical* sequencing: file collisions between slots, which is a question about paths rather than purpose
 
+### The decision-domain split: science vs. correctness
+
+Distinct from the fleet/topic line above, which is about *narration*. This is about *who rules*.
+
+**This records one EPIC's arrangement, not a general law** — another topic may divide differently, and a universal claim here would be exactly the rule-collision this file warns about. **Epic owns science; conductor owns correctness and hygiene.** Recorded verbatim (user, 2026-09-11, `matsengrp/phyz`): *"just kick the conductor to verify and land it. our domain is science, the condutor can handle bugfixes liek this"*, and later, delegating a whole hygiene backlog: *"happy for you and the conductor to handle this, I am focused on our primary line of work."*
+
+Four things make it work, and each was learned by getting it wrong:
+
+- **The conductor RULES on hygiene decisions; it does not forward them.** A correctness PR's convention question, a doc call, a provenance rule — resolve it from measured state and inform the epic with a named reason to object. Escalating to the user is not the safe default; it is a stalled slot.
+- **Tell the worker a conductor ruling is the TERMINUS.** A worker whose brief says "not yours to decide" will write *"not landing until a human picks one"* and wait indefinitely against a delegation it cannot see. State the authority basis in the message and record it in the worker's append-only worklog so it survives compaction — **never in `lead_guidance`**, which is the lead's field.
+- **Issues spanning both domains are done jointly, not split down the middle.** The user's words: the split *"doesn't have to be a wall."* One party writes the pre-registration and holds the publish gate; the other spawns and runs.
+- **The split is by DECISION TYPE, not by issue.** The conductor can own a science issue's entire mechanical pipeline — spawn, cost model, controls, collision sequencing — while the epic holds the gate on any published number the result touches. Relay the arm's findings as *facts*; leave the arithmetic that turns them into a revised number to the gate-holder.
+
+**What the conductor must still refuse:** attributing a defect to a mechanism, ruling whether a result holds, and interpreting an arm's output. Those are the epic's even when the conductor found the defect, filed the issue, and measured every number in it.
+
+### Mark what a message is — it carries conductor authority whether or not you meant it to
+
+A worker cannot tell from tone whether a line is an instruction, a fleet fact, or background. It will resolve the ambiguity somehow, and the expensive resolution is silent: a worker that reads general guidance as a gate sits waiting for an approval nobody is going to give. Four instances, all `matsengrp/phyz` 2026-09-11:
+
+- **Say when something is background rather than a gate.** Landing-gate mechanics sent to a slot whose spawn brief explicitly exempted it read as an override; that slot deferred to its brief and flagged the conflict, which is the only reason it did not stall. Write "this is background, not a gate for you."
+- **Announce the existence of a withhold, plus its release condition, and say it carries no directional information.** Withhold the content, never the fact that something is being withheld — silence is indistinguishable from having nothing, so the worker cannot even ask. "There is a hypothesis, you get it when your control reports, do not infer direction from this."
+- **Adjacent confounded evidence defaults to the withheld side.** A neighbouring slot's result that bears on a worker's judgement but cannot settle it is neither a scheme nor a prior; its only effect is to tilt a call the worker was asked to make independently. Hold it against a release condition — and tell the slot that produced it where its result went, so it can distinguish a real check from a formality.
+- **Timestamp fleet measurements.** Messages drain at the receiver's next tool call, so a reading is stale by an unknown interval on arrival and the receiver must re-run the check just to answer you. Two stale readings on one slot in one hour; "(measured 23:52Z)" costs nothing and lets a receiver discard one at a glance.
+
 ### The fleet/topic line
 
 The conductor's user-facing report contains nothing it did not derive from fleet state — `git`, `tmux`, `gh`, `ps`, `/bip-scout`, and the status/intent files.
