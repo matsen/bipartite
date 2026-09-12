@@ -82,8 +82,12 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
   [ "$(git -C "$dir" branch --show-current 2>/dev/null)" = "main" ] || continue
   # Capture, then test readability separately: `git status | wc -l` or a bare
   # `-z` on failed output reports "clean" and "could not read" identically.
-  status=$(git -C "$dir" status --porcelain 2>/dev/null) || continue
-  [ -z "$status" ] || continue
+  # NOT `status=`: zsh reserves `status` as a read-only alias for `$?`, so
+  # the assignment dies with `read-only variable: status` and takes the whole
+  # selection loop with it. Verified: `zsh -c 'status=$(echo hi)'` errors;
+  # the same line under bash succeeds. zsh is the default shell on pax.
+  st=$(git -C "$dir" status --porcelain 2>/dev/null) || continue
+  [ -z "$st" ] || continue
   echo "$OCCUPIED" | grep -qxF "$dir" && continue   # live tmux pane here → owned
   [ -f "$dir/.epic-status.json" ] && continue         # a worker claimed it, unfinished
   echo "$name"
