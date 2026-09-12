@@ -420,6 +420,19 @@ find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 An unfiled draft is authored state — the only copy of someone's unfinished thinking — and at least one sampled case turned out to be the most valuable item in the batch after sitting unfiled for a day.
 Just flag what you found (path, clone, first line) so the user can decide.
 
+**The conductor clone is outside `clone_root`, so this sweep cannot see the conductor's own drafts — and that is deliberate, not a gap to close.**
+`clone_root` is the worker pool; the conductor clone (and, on this layout, the epic session's cwd) sits beside it, so a draft authored there is invisible to the command above.
+The tempting fix is to add that directory to the sweep. **Don't** — measured on `matsengrp/phyz`, 2026-09-12: the conductor clone holds **35** loose `ISSUE-*.md` at depth 1, of which the epic session considered **two** live.
+Recency does not separate them (10 touched in the last 24 h, 23 in the last 7 days) because most are drafts edited in passing or superseded fragments from earlier in the same EPIC.
+Extending the sweep would trade an under-report of 3 for an over-report of 33, and the larger number looks more authoritative precisely because a command produced it.
+
+**The reason no sweep fixes this: a filename pattern is not a liveness signal.**
+`_ignore/` marks *filed* — that is what `/bip-issue-file` uses it for, and the `-not -path` above already excludes it.
+Nothing marks *abandoned*, and nothing can, because liveness is a fact about intent that lives only in the session that authored the draft.
+
+**So the reporting contract, not the sweep, carries it: the epic session owns its own draft list and tells the conductor; the conductor reports what it is told and does not go looking.**
+A conductor that discovers it under-reported the epic's drafts should route the fix there rather than widening `find`'s universe.
+
 ### Step 4: Fan out the clone/tmux scanner
 
 Dispatch one `general-purpose` subagent — single call, following the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).

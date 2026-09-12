@@ -835,12 +835,25 @@ Now read the issue and begin work:
   with it, run this from the clone root; if it prints STALE or UNRESOLVABLE,
   rebuild first. A stale binary does not error -- it returns a confident
   wrong number under newer-looking provenance.
-      vs=$(zig-out/bin/phyz --version | awk '{print $NF}'); vs=${vs%-dirty}
-      case "$vs" in *-g*) ref="${vs##*-g}" ;; *) ref="$vs" ;; esac
-      bc=$(git rev-parse --verify --quiet "${ref}^{commit}") || bc=""
-      hc=$(git rev-parse --verify HEAD)
+      # Issue #2250 landed 2026-09-12: `--version` now prints
+      # `phyz <version> (<commit>)`, where <commit> is `git rev-parse HEAD`
+      # at BUILD time -- tag-graph independent, so prefer it outright.
+      # Older binaries still in a pool print the describe string alone;
+      # keep the `-g` fallback until none remain.
+      vl=$(zig-out/bin/phyz --version)
+      bc=$(printf '%s' "$vl" | sed -n 's/.*(\([0-9a-f]\{7,40\}\))[[:space:]]*$/\1/p')
+      # MUST validate: a SHA this clone does not have parses fine, and an
+      # unvalidated one reaches `git diff` as a bad object -- empty stdout,
+      # exit status swallowed by $(), so the check falls through to "ok".
+      if [ -n "$bc" ]; then bc=$(git rev-parse --verify --quiet "${bc}^{commit}") || bc=""; fi
       if [ -z "$bc" ]; then
-        echo "UNDETERMINED: cannot resolve '$vs' to a commit here (tag not fetched?) -- git fetch --tags; do NOT assume stale"
+        vs=$(printf '%s' "$vl" | awk '{print $NF}'); vs=${vs%-dirty}
+        case "$vs" in *-g*) ref="${vs##*-g}" ;; *) ref="$vs" ;; esac
+        bc=$(git rev-parse --verify --quiet "${ref}^{commit}") || bc=""
+      fi
+      hc=$(git rev-parse --verify HEAD)
+      if [ -z "$bc" ] || [ "$bc" = "unknown" ]; then
+        echo "UNDETERMINED: no commit recoverable from '$vl' (tag not fetched, or built with no git) -- do NOT assume stale"
       elif [ "$bc" != "$hc" ] && [ -n "$(git diff --name-only "$bc" "$hc" -- src build.zig build.zig.zon)" ]; then
         echo "STALE: binary=$bc HEAD=$hc, and code differs -- rebuild before measuring"
       fi
@@ -865,7 +878,33 @@ Two earlier drafts of this check were wrong, in opposite directions, and the sec
 
 The form above handles all three: it parses the SHA from the `-g` suffix when present, resolves the bare tag name to its commit when it is not, and compares commit to commit. Verified 2026-09-12 on three clones — a binary built from `HEAD` whose commit had since been tagged (correctly `ok`, where the previous draft said STALE), a genuinely stale parked slot (correctly `STALE`, `9aac8693` vs `fb257d04`), and a freshly rebuilt clone (correctly `ok`).
 
-**This still cannot establish that the binary matches the working *files*, only the commit** — hence the dirty-tree note in the snippet. The real fix is phyz emitting its own build commit into its artifacts, which is exactly `matsengrp/phyz` issue **#2250** ("Record the resolved tool version and build hash with every experiment artifact"). Until that lands, this check is the best available approximation and should be described as one.
+**This still cannot establish that the binary matches the working *files*, only the commit** — hence the dirty-tree note in the snippet.
+
+**`matsengrp/phyz` issue #2250 has LANDED (PRs #2538/#2540, 2026-09-12), and it changed this check rather than merely retiring a caveat.** `--version` now prints `phyz <version> (<commit>)` with `<commit>` resolved by `git rev-parse HEAD` at build time, and every artifact's `metadata.json`/`--summary-tsv` carries the same value as `phyz_build`. The commit is now *stated* rather than *inferred from a tag graph*, so the `-g`-suffix parsing above is a compatibility fallback for binaries built before that date, not the primary path.
+
+**Landing it also silently BROKE the previous version of this snippet, which is the part worth remembering.** That version took `awk '{print $NF}'` — the last whitespace-separated field. Against the new format the last field is `(<commit>)`, parentheses included, which matches no `-g` case and resolves to nothing, so **the check returned UNDETERMINED on every current binary**. It failed safe (never a false STALE) and therefore announced nothing: a staleness check that had stopped detecting staleness, reporting the same reassuring silence as a clean pass. Verified 2026-09-12 by running the shipped logic against the new format string.
+
+**The general form, since this is the fifth revision of this check:** *a check that parses another tool's output has that tool's output format as an unpinned input.* Neither two-direction verification nor a careful reading reaches it — the check was correct, and something else moved. `src/main.zig` now carries a comment tying its format string to `versions.py`'s parsing regex; this snippet is a third consumer and is not pinned by anything, so **re-run it against a freshly built binary whenever phyz's `--version` line changes.**
+
+**The parens path MUST validate through `git rev-parse --verify`, and the sixth revision of this check shipped without it.** A SHA that parses cleanly but this clone does not have — `deadbeef...`, or a short `0123456` — reached `git diff` as a bad object, which prints to stderr, yields **empty stdout**, and has its exit status **swallowed by the command substitution**. `-n ""` is then false and the check falls through to **`ok`**: a fail-open on precisely the binaries it exists to catch. **This is not hypothetical on a pooled fleet** — after a squash merge the pre-squash branch commits are gone from `origin`, so a binary built in a worker clone reports a SHA no other clone can resolve, and `remote-sync`'d directories have the same shape. Those are the parked/stale binaries. The old `-g` path never had this bug because it validated *as a side effect* of how it resolved the ref.
+
+**So the sharper general form, which is NOT the format-drift lesson above: a validating parse and a non-validating parse are not interchangeable even when they extract the same field.** The rewrite extracted the field more directly and lost the validation silently. Format drift and validation loss are two different failure modes in one check, one revision apart.
+
+**Pin the shapes, because this check is now on its seventh revision and every revision has broken a different one.** Run each of these against the snippet from a clone and confirm the verdict; an unresolvable commit is `UNDETERMINED`, never `STALE`, and never `ok`:
+
+| # | `--version` line shape | expected |
+|---|---|---|
+| 1 | post-#2250, commit == `HEAD` | `ok` |
+| 2 | post-#2250, commit is an older commit touching `src` | `STALE` |
+| 3 | pre-#2250, describe-only with a `-g` suffix this clone can resolve | `STALE` |
+| 4 | commit is the literal `unknown` (built with no git) | `UNDETERMINED` |
+| 5 | post-#2250, good commit, `-dirty` in the version field | `ok` |
+| 6 | post-#2250, well-formed 40-char SHA this clone does not have | `UNDETERMINED` |
+| 7 | post-#2250, well-formed short SHA this clone does not have | `UNDETERMINED` |
+
+Shapes 6 and 7 are the fail-open regression guards; 3 is the compatibility guard and is load-bearing today, not defensive — pooled clones still carry pre-#2250 binaries (measured 2026-09-12: `alder` at `phyz v0.1.1129-3-gff1336c1`).
+
+The replacement is verified across all seven shapes a binary in a pool can have: post-#2250 built from `HEAD` (`ok`), post-#2250 built from genuinely older code (`STALE`), pre-#2250 describe-only (fallback resolves, `STALE` correctly), `git` unavailable at build time so the commit is the literal `unknown` (`UNDETERMINED`, never `STALE`), a `-dirty` version suffix alongside a good commit (`ok`), and the two unresolvable-SHA shapes (`UNDETERMINED`). Verify by extracting the snippet **from this file** and running it, not by re-running a copy you typed — those are different artifacts.
 
 **Compare the CODE between the two commits, not the commits themselves — otherwise the normal measurement workflow trips it.**
 Build, measure, then commit the results is the correct ordering for an experiment, and it leaves `HEAD` one or more commits ahead of the binary *by construction*, with only outputs in between.
