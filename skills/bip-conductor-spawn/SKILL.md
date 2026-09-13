@@ -330,6 +330,14 @@ So the annotation is not a courtesy or a restatement of the brief: **it is the o
 
 **And put the fact that would invalidate an instruction *inside* that instruction, not in a warnings list elsewhere in the prompt.** `IMPORTANT CONTEXT` is the sharpest instance of this in the whole system: a persisted artifact, composed once, full of imperatives, read cold by a session with no history that trusts it to have resolved its own tensions — and read before the worker has seen the issue, the repo, or anything else. **A worker is even less able to notice a stale imperative than a resuming session is, because it has strictly less context to notice it with.** So don't write "be careful about X" in a trap list; name the claim the worker will encounter, say it is wrong, cite the sites with file:line, and say which one their own work sits on. An imperative gets executed before a warning gets applied.
 
+**Answer the joint-landing-gate question explicitly in every prompt, YES or NO.** The template below carries a `JOINT LANDING GATE:` line, and the conductor fills it in. **The old design failed open**: the gate block was phrased "if this issue's prompt requires a joint landing gate", so a prompt that simply did not mention one read as NO — and a conductor that never considered the question produced exactly the same prompt as one that considered it and decided against. Those are different states and the worker cannot distinguish them.
+
+Measured on `matsengrp/phyz` 2026-09-13: a docs PR that edited an EPIC's own body — the template's *own example* of when two readers are warranted — shipped with no gate line, so the worker landed it correctly per its instructions, and the epic session's approval arrived **30 seconds after the merge** with zero reviews on the PR. Nobody did anything wrong at the worker or epic tier; the conductor never answered the question.
+
+**Say YES when landing would write, invalidate, or re-read something a second session owns** — an EPIC body, a live nightly or CI gate, a published number another arm cites, a default. Say NO otherwise, which is most issues. **Do not reach for YES on size or risk** — a large diff is not a reason for two signatures and a two-approver gate has real cost: it stalls a finished slot on a session that may be mid-compaction, and this skill's own guidance is that merge friction is not what to optimise against.
+
+**A related gap this does NOT close, and do not let YES paper over it:** a worker cannot tell `/bip-pr-review` completing from being *authorised* to land, because the review is what it runs and approvals are what other sessions post. It has no reason to expect a signature nobody told it about. That is why the gate must be stated rather than inferred, in both directions.
+
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ````
 You are working on GitHub issue #N TITLE.
@@ -665,6 +673,12 @@ COMPLETION: When done (or when lead says completed):
    status file naming the issue and a live phase. And commit+push
    before verifying, not after: the clone is pooled, and the next
    spawn's prep runs `git checkout main`.
+
+   JOINT LANDING GATE: <YES | NO>. **The conductor MUST write one of
+   those two words here at spawn time, every time.** If this line says
+   anything else, or is missing, treat that as a defect in your prompt
+   and ask the conductor before landing — do not resolve it yourself in
+   either direction.
 
    IF THIS ISSUE'S PROMPT REQUIRES A JOINT LANDING GATE (some do — a
    result that re-reads a parent EPIC's status line, or changes a live
