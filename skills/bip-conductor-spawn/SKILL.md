@@ -356,7 +356,14 @@ First, run this command to start the iteration loop:
 
 EPIC STATUS PROTOCOL — You MUST follow this:
 1. At session start, write .epic-status.json (see format below)
-2. Update it when you transition between phases
+2. Update it when you transition between phases — and refresh `summary` and
+   `updated_at` every time you append to `.epic-worklog.md`, whether or not
+   the phase changed. A long `awaiting-results` or `coding` phase transitions
+   nothing, so a transition-only rule leaves the fleet's only automated
+   instrument reading whatever you wrote on entry, while the worklog beside
+   it stays current. If you go more than ~30 minutes without a worklog entry,
+   refresh `summary` anyway. A one-line `summary` with current progress is
+   enough; no phase change needed.
 3. Update it when you finish or encounter a blocker
 4. Maintain .epic-worklog.md as a narrative log (see format below)
 
