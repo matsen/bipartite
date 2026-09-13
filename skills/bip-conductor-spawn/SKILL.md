@@ -483,7 +483,15 @@ If you launch a long-running experiment:
    the same rule at the point of use has not. Different reading moods
    need different forms.
 3. **Run check_cmd once while the work is definitely unfinished and confirm
-   it says not-done.** A probe you have never seen fail is not a probe.
+   it EXITS NON-ZERO** — check the status, not the text it prints. The exit
+   status is the entire interface; whatever the command writes to stdout,
+   the loop never reads. A probe that prints `NOT_READY` and exits 0 passes
+   a read-the-output check and fails the only check that matters. **For a
+   remote probe, check the status of the whole `ssh` invocation from outside
+   it** — `ssh host "..."` already returns the remote command's status, and
+   an `echo $?` written *inside* the double-quoted string is expanded by your
+   local shell before ssh ever sends it, so it reports your own last command.
+   A probe you have never seen exit non-zero is not a probe.
 4. Each ralph-loop iteration: run check_cmd, if not ready end the turn
 5. After 3 consecutive check failures, set stop_reason to
    mechanical-blocker and invoke the lead
