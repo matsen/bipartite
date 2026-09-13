@@ -123,7 +123,20 @@ Before pulling the base branch, check whether you are landing from a linked git 
 
 ```bash
 LAND_DIR=$(pwd -P)
-source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+# Resolve the helper WITHOUT a placeholder you have to fill in, and fail
+# loudly if it is missing -- a bare `source` of a nonexistent file does not
+# stop the script, it just leaves the functions undefined, and every guard
+# below then silently takes its failure branch. See "If you cannot source it".
+SPAWN_INTENT=""
+for cand in ~/.claude/skills/lib/spawn-intent.sh \
+            ~/re/bipartite/skills/lib/spawn-intent.sh; do
+    [ -r "$cand" ] && { SPAWN_INTENT="$cand"; break; }
+done
+if [ -n "$SPAWN_INTENT" ]; then
+    source "$SPAWN_INTENT"
+else
+    echo "PRESERVATION HELPER NOT FOUND -- read 'If you cannot source it' below before continuing. Do NOT search from / for it." >&2
+fi
 if PRIMARY=$(bip worktree primary 2>/dev/null); then
     echo "Landing from worktree $LAND_DIR (primary: $PRIMARY)"
 fi
@@ -143,11 +156,31 @@ if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ];
             echo "PRESERVATION FAILED: cp into .preserved did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
         fi
     else
-        echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate, or copy $LAND_DIR/.epic-worklog.md somewhere durable by hand (e.g. _ignore/$(date -I)-landing/) before continuing" >&2
+        echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate. If you hand-copy, the destination is the CLONE ROOT's .preserved/ (the parent of this clone), never a path inside this clone -- see 'If you cannot source it' below" >&2
     fi
 fi
 if [ -n "$PRIMARY" ]; then cd "$PRIMARY"; fi
 ```
+
+**If you cannot source it: the destination is `<clone_root>/.preserved/`, NOT anywhere inside this clone — and do not go looking for the helper with an unbounded `find`.**
+
+Both halves of that were measured on `matsengrp/phyz` 2026-09-12/13, on the same clone, twice. A worker could not resolve the old `"$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"` placeholder, ran **`find / -iname "spawn-intent.sh"`** — which on that host descends into a read-only sshfs mount with a documented 25-hour-hang incident behind it — then hand-rolled `mkdir -p` + `cp` and wrote to **`<clone_root>/<clone>/.preserved/`**. Three PRs landed that way. The files survived only because nothing had reused the clone yet; a `bip spawn` prep or a fresh clone would have taken them, and nothing looking in `.preserved/` would ever have found them. Two sibling clones had **43 and 10 files** sitting in the same wrong place from earlier instances of exactly this.
+
+The failure is silent by construction: `source` of a missing file does not abort the script, so `resolve_clone_root` and `preserve_epic_state` are simply undefined, every `if` below takes its failure branch, and the step reports a handled error rather than a missing helper.
+
+So if the loop above found nothing:
+
+```bash
+CLONE_ROOT=$(jq -r '.clone_root' "$LAND_DIR/.epic-config.json" | sed "s|^~|$HOME|")
+ISSUE=$(jq -r '.issue' "$LAND_DIR/.epic-status.json")
+CLONE=$(basename "$LAND_DIR")
+DEST="$CLONE_ROOT/.preserved/$ISSUE-$(date -I)"
+mkdir -p "$DEST"
+cp "$LAND_DIR/.epic-status.json" "$DEST/i$ISSUE-$CLONE.status.json"
+cp "$LAND_DIR/.epic-worklog.md"  "$DEST/i$ISSUE-$CLONE.worklog.md"
+```
+
+Note `$CLONE_ROOT/.preserved`, not `$LAND_DIR/.preserved`. If a sibling clone appears to have its own `.preserved/`, that is a previous instance of this same bug — do not copy it.
 
 `preserve_epic_state` (from `skills/lib/spawn-intent.sh`) is the shared preserve-then-report pipeline all four preserve sites in this repo now use — extracted per issue #2216 after unchecked `cp`, wrong-order `resolve_clone_root`, and guard-tripping wording each independently recurred across the sites that used to hand-roll it. It produces the un-dotted, clone-namespaced filenames (`i<issue>-<clone>.worklog.md`/`.status.json`) matching this repo's existing `.preserved/` convention (23 of 25 prior entries use this form) rather than the dotted originals, which a plain `ls` or `*` glob would otherwise show as an empty directory. Its return code distinguishes "nothing to preserve" (1, silent) from "preservation failed" (2, must not proceed to delete) — check `$rc` immediately after the assignment, in the same command, since a later command would not see it.
 
