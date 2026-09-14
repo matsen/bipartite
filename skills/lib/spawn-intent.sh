@@ -480,6 +480,140 @@ PY
     return $rc
 }
 
+# audit_durability <clone_root>
+# Reports slots holding work that NOTHING WOULD RECOVER. Silent when every
+# slot's work exists somewhere other than one pooled clone's working tree.
+#
+# WHY A SEPARATE SWEEP FROM `mirror_worklogs`. The mirror closed ONE loss
+# channel -- the worklog -- and having closed it, it is tempting to treat the
+# problem as solved. It is not: the mirror covers `.epic-worklog.md` and
+# `.epic-status.json` and NOTHING ELSE. Source, results, and a detached HEAD
+# have no mirror and should not get one (mirroring source duplicates git
+# badly). They have a git-native observable instead, and this checks it.
+#
+# ⭐ MEASURED 2026-09-14, and the numbers are the argument for the sweep
+# existing: a spot check of one slot led to sweeping all six, and FOUR were
+# holding unrecoverable work in THREE DIFFERENT SHAPES. No single probe finds
+# all three -- a sweep that checks only "is the tree clean" reports two of them
+# safe:
+#
+#   1. UNCOMMITTED WITH ZERO COMMITS -- dirty tree, `ahead=0`. Three slots.
+#      One held all four of its issue's pipeline-defect fixes, i.e. the entire
+#      deliverable. `@{u}..HEAD` returns 0 for this; only `status --porcelain`
+#      sees it.
+#   2. DETACHED HEAD WITH AN EMPTY BRANCH -- and this one's `git status` reads
+#      CLEAN, which is why it is the worst. A bisect had narrowed a 30-commit
+#      window and every probe result existed only in conversation context, at
+#      99.8% of the model's window. Nothing on disk, nothing in the branch,
+#      nothing to recover from.
+#   3. COMMITTED BUT UNPUSHED -- three commits across 13 files existing only in
+#      one clone. Lower risk than (1) since objects survive the prep's
+#      `git checkout main`, but a lost disk or a forced reset takes it.
+#
+# ⚠ A CLEAN `git status` HAS MEANT THREE DIFFERENT THINGS on this fleet in one
+# day: "already preserved", "preservation never ran", and "nothing was ever
+# saved". The discriminator is always something else -- `ahead`, an upstream,
+# a PR pointer comment -- never the status output.
+#
+# Slot-ness is gated on `.epic-status.json` existing, deliberately: a clone
+# root legitimately holds clones of OTHER repositories (a pinned comparator
+# checkout, say), and those have no status file. A landed slot whose status
+# file was deleted is also correctly skipped -- it is on `main` and clean, with
+# nothing at risk.
+#
+# `rev-parse`, never `test -d .git`: in a WORKTREE `.git` is a FILE, and that
+# exact false negative is recorded in `skills/bip-epic/SKILL.md`.
+audit_durability() {
+    local clone_root="$1" cfg="${2:-.epic-config.json}" rc=0 d c b ahead dirty up gd names
+    clone_root_has_clones "$clone_root" || return 0
+    # SLOT-NESS COMES FROM THE CONFIG'S CLONE LIST, NOT FROM A STATUS FILE.
+    #
+    # The obvious gate -- "has .epic-status.json" -- conflates two different
+    # things and skips a real loss channel. `/bip-pr-land`'s Step 9.5 does
+    # `rm -f .epic-status.json .epic-worklog.md` and DOES NOT clean the working
+    # tree, so a slot that lands with uncommitted scratch (an un-added test, an
+    # experiment output, a half-finished file) ends up with leftovers and NO
+    # status file. It then reads as idle to every mechanism, and the next
+    # spawn's prep deletes them -- precisely the shape this sweep exists to
+    # catch, sitting behind the gate.
+    #
+    # But the gate is doing real work and must not simply be dropped: a clone
+    # root legitimately holds clones of OTHER repositories (a pinned comparator
+    # checkout), which have no status file either. `clone_names` distinguishes
+    # "not a slot" from "a slot with no status file"; status-file presence
+    # cannot.
+    names=$(python3 -c '
+import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)
+print("\n".join((d.get("clone_names") or []) + (d.get("new_clone_names") or [])))
+' "$cfg" 2>/dev/null) || {
+        echo "DURABILITY UNCHECKABLE: cannot read clone_names from $cfg" \
+             "-- refusing to guess which directories are slots"
+        return 1
+    }
+    [ -n "$names" ] || {
+        echo "DURABILITY UNCHECKABLE: $cfg lists no clone_names"
+        return 1
+    }
+    for d in "$clone_root"/*/; do
+        c=$(basename "${d%/}")
+        printf '%s\n' "$names" | grep -qxF "$c" || continue
+        gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null) || continue
+        [ -n "$gd" ] || continue
+        b=$(git -C "$d" branch --show-current 2>/dev/null)
+        dirty=$(git -C "$d" status --porcelain 2>/dev/null | grep -c . || true)
+
+        if [ -z "$b" ]; then
+            echo "DURABILITY DETACHED $c: detached HEAD with a live status file" \
+                 "-- anything committed here is unreachable from any branch"
+            rc=1
+            continue
+        fi
+
+        ahead=$(git -C "$d" rev-list --count origin/main..HEAD 2>/dev/null) || ahead=""
+        if [ -z "$ahead" ]; then
+            echo "DURABILITY UNCHECKABLE $c: cannot count commits against origin/main"
+            rc=1; continue
+        fi
+
+        # DIRTY IS A FINDING REGARDLESS OF COMMIT COUNT. This originally
+        # required `ahead -eq 0` as well, which made uncommitted files
+        # INVISIBLE on a branch that has commits: dirty=2, ahead=3, up=0 fired
+        # nothing at all -- not UNCOMMITTED (ahead != 0), not UNPUSHED (up =
+        # 0), not NO-UPSTREAM. Silent, with two files at risk. Uncommitted work
+        # lives only in the working tree whether or not the branch has commits;
+        # the risk is identical and only the alarm differs. Narrowing a check
+        # to its most alarming instance and missing the general one is the same
+        # shape as the absent-vs-future `updated_at` defect in this same file.
+        if [ "$dirty" -gt 0 ]; then
+            if [ "$ahead" -eq 0 ]; then
+                echo "DURABILITY UNCOMMITTED $c: $dirty changed files and ZERO commits on '$b'" \
+                     "-- the work exists only in this pooled clone's working tree"
+            else
+                echo "DURABILITY UNCOMMITTED $c: $dirty changed files on '$b'" \
+                     "(branch has $ahead commit(s), so only the uncommitted files are at risk)"
+            fi
+            rc=1
+        fi
+
+        # `@{u}` fails loudly when there is no upstream -- which is itself the
+        # finding, not an error to swallow.
+        if up=$(git -C "$d" rev-list --count '@{u}..HEAD' 2>/dev/null); then
+            if [ "$up" -gt 0 ]; then
+                echo "DURABILITY UNPUSHED $c: $up commit(s) on '$b' not on its remote"
+                rc=1
+            fi
+        elif [ "$ahead" -gt 0 ]; then
+            echo "DURABILITY NO-UPSTREAM $c: $ahead commit(s) on '$b' and no remote branch at all"
+            rc=1
+        fi
+    done
+    return $rc
+}
+
 # mark_spawn_intent_consumed <intent-file-path>
 # Moves a spawn-intent file into a "consumed/" subdirectory sibling to
 # it, so a launched intent is distinguishable on disk from one still

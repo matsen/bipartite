@@ -212,6 +212,54 @@ indefinitely — that is deliberate, it is the floor under data loss. **Do not
 everything that has ever run. Use the slot table for current state and
 `.preserved/` for the archive.
 
+#### Sweep for work that nothing would recover
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+audit_durability "$CLONE_ROOT" .epic-config.json || echo "DURABILITY: see the lines above" >&2
+```
+
+Silent when every slot's work exists somewhere other than one pooled clone's
+working tree. **Relay each line to the slot; do not commit or push on a
+worker's behalf.**
+
+⭐ **Measured 2026-09-14, and the numbers are the argument**: a spot check of one
+slot led to sweeping all six, and **four were holding unrecoverable work in
+three different shapes**. **No single probe finds all three** — a sweep that
+checks only "is the tree clean" reports two of them safe.
+
+| line | shape |
+|---|---|
+| `DURABILITY UNCOMMITTED` | dirty tree, **zero commits**. One slot held all four of its issue's pipeline-defect fixes — the entire deliverable. `@{u}..HEAD` returns 0 for this; only `status --porcelain` sees it. |
+| `DURABILITY DETACHED` | detached HEAD with a live status file. ⚠ **`git status` reads CLEAN here, which is why it is the worst of the three.** A bisect had narrowed a 30-commit window with every probe result in conversation context at 99.8% of the model's window — nothing on disk, nothing in the branch. |
+| `DURABILITY UNCOMMITTED` (with commits) | dirty files on a branch that *does* have commits. ⚠ The first draft required zero commits as well, which made `dirty=2, ahead=3, up=0` fire **nothing at all** — silent, two files at risk. Uncommitted work lives only in the working tree whether or not the branch has commits; only the alarm differs. |
+| `DURABILITY UNPUSHED` / `NO-UPSTREAM` | commits existing only in one clone. Lower risk (objects survive the prep's `git checkout main`) but a lost disk or forced reset takes them. |
+
+⛔ **Slot-ness comes from `.epic-config.json`'s `clone_names`, not from
+`.epic-status.json` existing** — and the difference is a real loss channel.
+`/bip-pr-land`'s Step 9.5 removes the status file and **does not clean the
+working tree**, so a slot that lands with uncommitted scratch has leftovers and
+no status file, reads as idle to every mechanism, and loses them to the next
+spawn's prep. A status-file gate conflates *"not a slot"* with *"a slot with no
+status file"*; the clone list distinguishes them, and still keeps pinned
+comparator clones in the same root out of the report. **A missing or unreadable
+config is reported loudly rather than guessed around.**
+
+⚠ **A clean `git status` has meant three different things on this fleet in one
+day** — *"already preserved"*, *"preservation never ran"*, and *"nothing was
+ever saved"*. **The discriminator is always something else** — `ahead`, an
+upstream, a PR pointer comment — never the status output.
+
+⛔ **This does NOT subsume the mirror and the mirror does not subsume this.**
+`mirror_worklogs` covers `.epic-worklog.md` and `.epic-status.json` only.
+Source, results and a detached HEAD have **no** mirror and should not get one —
+mirroring source duplicates git badly. They have a git-native observable
+instead, which is what this checks. **Closing one loss channel is the moment to
+enumerate the others, not the moment to stop looking**: the mirror was built
+first, and it took an unrelated observation to surface four exposed slots an
+hour later.
+
 #### Audit every status file for claims that are false
 
 ```bash
