@@ -1,6 +1,6 @@
 ---
 name: bip-remove-metaspeak
-description: Cut what does not earn its place out of a document or PR body — internal dialogue, meta-commentary, and whole passages the document itself undercuts — while preserving every fact, number, citation, gate, and argument that justifies a decision the document is actually making. For issues, EPICs, brainstorms, design docs, and PR descriptions that read like a transcript of someone reasoning out loud.
+description: Cut what does not earn its place out of a document or PR body — internal dialogue, meta-commentary, and whole passages the document itself undercuts — and put back any name the document swapped for a second one, while preserving every fact, number, citation, gate, and argument that justifies a decision the document is actually making. For issues, EPICs, brainstorms, design docs, and PR descriptions that read like a transcript of someone reasoning out loud.
 allowed-tools: Agent, Bash, Read, Edit, Write
 ---
 
@@ -159,6 +159,25 @@ A named keep-list does not.
 - Markdown structure: heading hierarchy, numbering, tables, placeholders.
   Heading *hierarchy* is structure and must survive; heading *text* is prose and is in scope — a heading can narrate ("What I do not know about X, and how to find out") and should be squashed like any other sentence.
 
+### One name per thing
+
+The document may also have given one thing two names.
+This is not a cut — the fix is to put the original word back — but the pass is already reading every line, so it is the cheapest place to catch it.
+
+A thing is called X somewhere and Y somewhere else, both naming the same thing, with nothing gained: `crossings` for what the user has been calling shared molecules; `requeues` in one paragraph and `rescue` in the next; one quantity as `detection response` here and `depth response` there; `record` for what the code being described calls a `stamp`.
+Note the shape — Y is not longer, clearer or more technical than X.
+It is a different word for the same thing, and the reader has to work out that they are the same.
+
+X is fixed by whoever used it first: the user, then the code, the data or the tool output, then the document's own earlier use.
+Restore X everywhere, including in headings, table headers, column names, filenames, plot titles and axis labels.
+
+Do not guess.
+If X and Y might name genuinely different things, report it and say what would distinguish them rather than changing it — a confident wrong substitution damages text that was correct.
+Ordinary English in its ordinary sense is not a name: "the larger sample", "the second run", "the remaining donors" are descriptions, and varying them is not renaming.
+The defect is a *label* for a specific thing swapped for a different *label*.
+
+Coining a name for something that genuinely has no name is fine, as long as the document says what it means where it introduces it.
+
 ### Style target
 
 Declarative and dense.
@@ -176,9 +195,10 @@ If Step 0's signals were checked and none fired, say so in the report.
 ### Deliverable to request
 
 1. Every passage cut entirely, quoted by its first few words, with Step 0 removals listed separately from register cuts — those are the ones most worth a second look.
-2. Anything it was unsure about, for review.
+2. Every renaming put back, as a table: the thing, the name restored and where it comes from, the name replaced, and the lines it appeared on.
+3. Anything it was unsure about, for review.
 
-Item 2 is the point.
+Item 3 is the point.
 The uncertain calls are where substance gets lost, and they are cheap to review when listed.
 
 ## Step 5: Review before accepting

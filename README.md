@@ -38,7 +38,7 @@ Guide: [Reference Management](https://matsen.github.io/bipartite/guides/referenc
 
 ### Full Installation (recommended)
 
-This installs the `bip` CLI plus Claude Code agents and skills:
+This installs the `bip` CLI plus Claude Code agents, skills, and hooks:
 
 ```bash
 git clone https://github.com/matsen/bipartite
@@ -51,6 +51,10 @@ Prerequisites:
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
 Verify with `bip --help`.
+
+Hooks are symlinked but do not run until they are named in
+`~/.claude/settings.json`, which `make install` does not touch. See
+[`hooks/README.md`](hooks/README.md) for the entries to add.
 
 ### CLI Only
 
