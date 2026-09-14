@@ -588,15 +588,57 @@ print("\n".join((d.get("clone_names") or []) + (d.get("new_clone_names") or []))
         # the risk is identical and only the alarm differs. Narrowing a check
         # to its most alarming instance and missing the general one is the same
         # shape as the absent-vs-future `updated_at` defect in this same file.
+        # SEVERITY IS GATED ON SLOT STATE, NOT ON COMMIT COUNT.
+        #
+        # Detection stayed unconditional (see the comment above) -- but `dirty
+        # + commits` is a STATE, not a defect, and reporting a state through a
+        # channel meant for defects is what kills a guard. Measured 2026-09-14:
+        # with severity undifferentiated this fired on FOUR OF FIVE live slots
+        # every cycle, all of them simply working. A reader learns to skip that
+        # in a day.
+        #
+        # "Does the branch have commits" was never what determines risk. "Is
+        # this slot about to lose them" is -- and the poll already reads
+        # `phase` from the same file in the same cycle, so the split is free.
+        #
+        #   dirty + ZERO commits, any phase        -> LOUD  (exists nowhere else)
+        #   dirty + NO status file                 -> LOUD  (post-land leftovers;
+        #                                             the next spawn's prep deletes them)
+        #   dirty + completed|needs-human|quality-gate -> LOUD  (finished, stopped,
+        #                                             or about to land)
+        #   dirty + exploring|coding|testing|awaiting-results -> note only
+        #
+        # ⚠ `quality-gate` in the loud set is the non-obvious member and is
+        # there deliberately: a slot about to land with uncommitted files is
+        # the case where those files SILENTLY DO NOT MAKE THE PR. It reads
+        # exactly like the routine case unless phase distinguishes it.
+        #
+        # Only LOUD sets `rc`. The note line exists so a reader can see the
+        # state, not so anyone acts on it.
         if [ "$dirty" -gt 0 ]; then
-            if [ "$ahead" -eq 0 ]; then
-                echo "DURABILITY UNCOMMITTED $c: $dirty changed files and ZERO commits on '$b'" \
-                     "-- the work exists only in this pooled clone's working tree"
+            local ph="" loud=0 why=""
+            if [ -f "$d.epic-status.json" ]; then
+                ph=$(python3 -c 'import json,sys
+try: print(json.load(open(sys.argv[1])).get("phase") or "")
+except Exception: print("")' "$d.epic-status.json" 2>/dev/null)
             else
-                echo "DURABILITY UNCOMMITTED $c: $dirty changed files on '$b'" \
-                     "(branch has $ahead commit(s), so only the uncommitted files are at risk)"
+                loud=1; why="no status file -- post-land leftovers, the next spawn's prep deletes these"
             fi
-            rc=1
+            if [ "$ahead" -eq 0 ]; then
+                loud=1; why="ZERO commits on '$b' -- the work exists only in this pooled clone's working tree"
+            fi
+            case "$ph" in
+                completed|needs-human|quality-gate)
+                    loud=1
+                    why="${why:-phase=$ph -- slot is finished, stopped, or about to land, so these files will not make the PR}" ;;
+            esac
+            if [ "$loud" = 1 ]; then
+                echo "DURABILITY UNCOMMITTED $c: $dirty changed files -- $why"
+                rc=1
+            else
+                echo "DURABILITY note $c: $dirty changed files on '$b' (phase=${ph:-?}, $ahead commit(s))" \
+                     "-- informational, a working slot; not relayed"
+            fi
         fi
 
         # `@{u}` fails loudly when there is no upstream -- which is itself the

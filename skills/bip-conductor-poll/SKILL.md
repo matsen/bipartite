@@ -220,9 +220,34 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 audit_durability "$CLONE_ROOT" .epic-config.json || echo "DURABILITY: see the lines above" >&2
 ```
 
-Silent when every slot's work exists somewhere other than one pooled clone's
-working tree. **Relay each line to the slot; do not commit or push on a
-worker's behalf.**
+**Relay the LOUD lines (`DURABILITY UNCOMMITTED` / `UNPUSHED` / `NO-UPSTREAM` /
+`DETACHED` / `UNCHECKABLE`) to the slot; do not commit or push on a worker's
+behalf. Do NOT relay `DURABILITY note` lines** — those are state, not defects,
+and only the loud class sets a non-zero return.
+
+⛔ **Severity is gated on SLOT PHASE, not on commit count, and that distinction
+is load-bearing.** Detection is unconditional — uncommitted work lives only in
+the working tree whether or not the branch has commits — but **`dirty +
+commits` on a working slot is a state, and reporting a state through a channel
+meant for defects is what kills a guard.** Measured 2026-09-14: undifferentiated,
+this fired on **four of five live slots every cycle**, all of them simply
+working. The 4-of-5 rate is the argument for *classifying* the common case, not
+for narrowing detection back to where it was silent on all four.
+
+| condition | class |
+|---|---|
+| dirty + **zero commits**, any phase | **loud** — exists nowhere else |
+| dirty + **no status file** | **loud** — post-land leftovers; `/bip-pr-land` Step 9.5 removes the status file and does **not** clean the tree, so the next spawn's prep takes these |
+| dirty + phase `completed` / `needs-human` / **`quality-gate`** | **loud** — finished, stopped, or about to land |
+| dirty + phase `exploring` / `coding` / `testing` / `awaiting-results` | note only |
+
+⚠ **`quality-gate` is the non-obvious member of the loud set and belongs there:
+a slot about to land with uncommitted files is exactly the case where those
+files silently do not make the PR.** It reads identically to the routine case
+unless phase distinguishes it. **First real run caught one** — a slot in
+`quality-gate` holding an *untracked* new test alongside a `build.zig` change
+that wires it in, which would have produced a PR referencing a file not in the
+commit.
 
 ⭐ **Measured 2026-09-14, and the numbers are the argument**: a spot check of one
 slot led to sweeping all six, and **four were holding unrecoverable work in
