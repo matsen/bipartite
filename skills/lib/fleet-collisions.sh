@@ -9,6 +9,10 @@
 # Reports, and exits non-zero if ANY of the three fires:
 #   1. every live branch across the pool and the files it touches
 #   2. files touched by MORE THAN ONE live clone        <- permits a collision
+#   2b. a live branch touching a file that LANDED on main since that branch
+#      forked. Section 2's universe is live-vs-live; this is live-vs-landed,
+#      a different frame. Measured 2026-09-14: a PR went CONFLICTING against
+#      one that merged two hours earlier and section 2 reported clean.
 #   3. a .epic-status.json whose clone has no live pane <- suppresses a spawn
 #   4. a live pane with no status file  <- invisible to state-file sweeps
 #   5. a pane whose claude session is DEAD <- both artifacts present, healthy-
@@ -25,6 +29,12 @@
 # reads to rebuild the workspace. Without the guard this check declares the
 # whole pool stale and the documented action deletes the input to its own
 # recovery skill. Rarity makes it worse: nobody is watching for it.
+#
+# VERIFYING THIS SCRIPT'S OWN EXIT CODE: do not read `$?` after a pipeline.
+# Anyone checking these exit codes will reach for `... | sed -n '/foo/,/bar/p'`
+# to read the output, and `$?` then reports SED's status, not this script's.
+# Measured 2026-09-14: read as 0 when the real status was 1. Use
+# `"${PIPESTATUS[0]}"`, or redirect to a file and run it un-piped.
 #
 # Run it from a conductor's own pane. A non-interactive context (a systemd
 # timer, say) has no tmux socket, so PANES is empty every time and this
@@ -81,7 +91,22 @@ pane_has_claude() {
   return 1
 }
 have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
-rc=0
+# EXIT STATUS: two independent flags, resolved ONCE at the bottom.
+#
+# This used to be a single `rc` that every section assigned directly, and a
+# plain `found_any=1` in ANY LATER SECTION silently overwrote an earlier `uncheckable=1`.
+# "I could not check" became "I checked and found a problem": the caller saw
+# 1, concluded the script ran fine, and never learned a clone was never
+# examined. The script's own header says 2 means cannot-establish, so the
+# downgrade destroyed the more important of the two signals.
+#
+# Never write `rc=` in a new section. Set `uncheckable=1` for "a clone could
+# not be examined" and `found_any=1` for "a real problem was found". The
+# resolution below makes 2 dominate 1 structurally, so the next section
+# someone adds cannot get the precedence wrong -- the same argument as the
+# denominator comment further down.
+uncheckable=0
+found_any=0
 
 echo "=== live branches and their touched files ==="
 any_live=0
@@ -117,10 +142,121 @@ echo
 echo "=== files touched by MORE THAN ONE live clone (the 4b gap) ==="
 if awk -F'\t' '{c[$2]=c[$2]" "$1} END{f=0; for(k in c){n=split(c[k],a," ");
       if(n>1){print "  COLLISION "k" <-"c[k]; f=1}} exit !f}' "$TMP" | sort; then
-  rc=1
+  found_any=1
 else
   echo "  none"
 fi
+
+echo
+echo "=== live branch vs. what LANDED since it forked (the 4b gap's OTHER half) ==="
+# Section 2 compares live clones against EACH OTHER. It is silent about a
+# branch that conflicts with a commit ALREADY ON main -- which is a different
+# universe, not a weaker version of the same one.
+#
+# Measured 2026-09-14 (matsengrp/phyz): PR #2653 went CONFLICTING against
+# PR #2648, which had merged two hours earlier and edited the same
+# `docs/ml/knob-correspondence.md` row the live branch was marking. Section 2
+# reported clean and was CORRECT about what it measures. Recently-landed
+# commits were outside its frame, so it was SILENT rather than wrong -- and
+# silence reads as safety.
+#
+# The generalizable question a future editor should ask before adding a
+# section here is not "is my check correct?" but "what is this check's
+# DENOMINATOR, and does it contain the thing that actually fires?"
+#
+# TWO THINGS THIS SECTION DOES THAT THE OBVIOUS VERSION DOES NOT:
+#
+# 1. It handles a clone that is MID-REBASE. Section 1 skips any clone whose
+#    `git branch --show-current` is empty -- which is exactly the state a
+#    conflicted clone is in, i.e. the one you most want checked. The branch
+#    name is recovered from `.git/rebase-merge/head-name` and the comparison
+#    runs against the REMOTE ref, which is stable while a local rebase churns.
+#    A local HEAD is not a stable referent while another session is rebasing.
+#
+# 2. It PRINTS THE DENOMINATORS on a clear result. `clear (mine=8 landed=0)`
+#    says nothing has landed since that branch forked; `clear (mine=36
+#    landed=44)` says the check had real data on both sides and found no
+#    overlap. Without them, a trivially-clear result, a genuinely-clear
+#    result, and a BROKEN check all print the same word. The first draft of
+#    this section derived branch names from `branch --show-current`, returned
+#    empty for the mid-rebase clone, produced two empty diffs, and reported
+#    `clear` for the one slot whose PR was CONFLICTING at that moment -- a
+#    command error laundered into a reassuring result.
+found_landed=0
+any_checked=0
+for d in "$ROOT"/*/; do
+  n=$(basename "${d%/}")
+  b=$(git -C "$d" branch --show-current 2>/dev/null)
+  # ASK GIT FOR THE GIT DIR; DO NOT ASSUME THE LAYOUT. In a clone `.git` is a
+  # directory, but in a WORKTREE it is a FILE containing `gitdir: ...`, so
+  # `$d/.git/<rebase-dir>` does not resolve and `[ -d "$d/.git" ]` is FALSE.
+  # Both of the weird-state paths below would then silently skip a worktree --
+  # reinstating, in a supported mode, the exact gap they exist to close.
+  # `skills/bip-epic/SKILL.md` already records this trap ("in a worktree
+  # `.git` is a file, not a directory"), where it produced a correct verdict
+  # on a false premise and nearly authorised deleting two branches.
+  # `--absolute-git-dir` is the one form that works in both layouts.
+  gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null)
+  if [ -z "$b" ] && [ -n "$gd" ]; then
+    # Git has TWO rebase backends and they store head-name in different
+    # directories: rebase-merge/ (the merge backend) and rebase-apply/
+    # (--apply / am-based). Covering only one leaves the other as a silent
+    # skip, which is the exact failure this section exists to stop.
+    for rd in rebase-merge rebase-apply; do
+      if [ -r "$gd/$rd/head-name" ]; then
+        b=$(sed 's#^refs/heads/##' "$gd/$rd/head-name" 2>/dev/null)
+        [ -n "$b" ] && echo "  NOTE $n is mid-rebase; using branch '$b' from $rd/head-name"
+        break
+      fi
+    done
+  fi
+  if [ -z "$b" ]; then
+    # Detached and NOT rebasing -- e.g. a bisect, or a hand checkout of a
+    # candidate commit. Silently skipping it would repeat this section's own
+    # mistake one notch along: the clone in the weird state is the one you
+    # most want checked.
+    if [ -n "$gd" ]; then
+      echo "  UNCHECKABLE $n: detached HEAD, no rebase in progress -- cannot determine its branch" >&2
+      uncheckable=1
+    fi
+    continue
+  fi
+  [ "$b" = main ] && continue
+  # Compare the REMOTE ref: a local rebase rewrites HEAD under us.
+  if ! git -C "$d" rev-parse --verify --quiet "origin/$b" >/dev/null 2>&1; then
+    echo "  UNCHECKABLE $n: no origin/$b (branch never pushed) -- cannot compare against landed work" >&2
+    uncheckable=1; continue
+  fi
+  base=$(git -C "$d" merge-base "origin/$b" origin/main 2>/dev/null)
+  if [ -z "$base" ]; then
+    echo "  UNCHECKABLE $n: no merge-base for origin/$b and origin/main" >&2
+    uncheckable=1; continue
+  fi
+  any_checked=1
+  mine=$(git -C "$d" diff --name-only "$base" "origin/$b" 2>/dev/null | sort -u)
+  landed=$(git -C "$d" diff --name-only "$base" origin/main 2>/dev/null | sort -u)
+  ov=$(comm -12 <(printf '%s\n' "$mine") <(printf '%s\n' "$landed") | grep -v '^$')
+  nm=$(printf '%s\n' "$mine" | grep -c .)
+  nl=$(printf '%s\n' "$landed" | grep -c .)
+  if [ -n "$ov" ]; then
+    echo "  OVERLAPS-LANDED $n: $(echo $ov)"
+    echo "    -> rebase and take main's content for those files; your copy predates the merge."
+    echo "       Verify with: git -C $d diff origin/main -- <file>   (should show ONLY your additions)"
+    found_landed=1
+  elif [ "$nm" = 0 ]; then
+    # A live branch that has changed NOTHING relative to its fork point is
+    # either not started or not measurable, and both mean a clear result here
+    # is worthless. The denominators alone made this visible to a human who
+    # reads and thinks; they did not make the SCRIPT say so, which is the
+    # fail-open one level in.
+    echo "  NO-COMMITS $n (mine=0, landed=$nl) -- nothing to compare; do NOT read this as clear" >&2
+    uncheckable=1
+  else
+    echo "  $n clear (mine=$nm landed=$nl)"
+  fi
+done
+[ "$any_checked" = 0 ] && echo "  (no pushed live branches to check)"
+[ "$found_landed" = 1 ] && found_any=1
 
 echo
 echo "=== stale .epic-status.json (status file, no live pane in that clone) ==="
@@ -145,7 +281,7 @@ for d in "$ROOT"/*/; do
   echo "  STALE $(basename "$p")  issue=$(jq -r '.issue//"?"' "$d/.epic-status.json" 2>/dev/null) updated=$(jq -r '.updated_at//"?"' "$d/.epic-status.json" 2>/dev/null)"
   found=1
 done
-[ "$found" = 1 ] && rc=1 || echo "  none"
+[ "$found" = 1 ] && found_any=1 || echo "  none"
 
 echo
 echo "=== live pane, NO .epic-status.json (invisible to state-file sweeps) ==="
@@ -159,7 +295,7 @@ for pane in "${PANES[@]}"; do
   [ -f "$ROOT/$clone/.epic-status.json" ] && continue
   echo "  NO-STATUS $clone"; found2=1
 done
-[ "$found2" = 1 ] && rc=1 || echo "  none"
+[ "$found2" = 1 ] && found_any=1 || echo "  none"
 
 echo
 echo "=== pane alive but its claude session is DEAD (work may be uncommitted) ==="
@@ -173,7 +309,7 @@ if [ "$have_panes" -eq 1 ]; then
     if [ "$phc" -eq 2 ]; then
       rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"
       echo "  CANNOT DETERMINE ${rest%%/*}  pane_pid=$ppid (subtree unreadable) -- NOT reporting dead" >&2
-      rc=2; continue
+      uncheckable=1; continue
     fi
     rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"; clone="${rest%%/*}"
     dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
@@ -183,6 +319,11 @@ if [ "$have_panes" -eq 1 ]; then
     found3=1
   done
 fi
-[ "$found3" = 1 ] && rc=1 || echo "  none"
+[ "$found3" = 1 ] && found_any=1 || echo "  none"
 
-exit "$rc"
+# 2 (could not establish) DOMINATES 1 (found something), because a caller
+# acting on 1 believes the pool was fully examined.
+if [ "$uncheckable" = 1 ]; then exit 2
+elif [ "$found_any" = 1 ]; then exit 1
+else exit 0
+fi
