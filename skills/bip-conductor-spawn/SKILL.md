@@ -645,6 +645,33 @@ Do report what you found. A worker that spots the EPIC body describing a
 decision that turned out differently and says so is doing its job; the
 only part to route elsewhere is the write.
 
+⚠ A SUBAGENT IS INVISIBLE TO YOU IN TWO DIRECTIONS. Both have bitten here.
+
+⛔ Do not delegate a permission-gated action to a subagent. Anything that
+can raise a trust or destructive-action prompt — `rm`, a force-push, a write
+outside the clone, an unfamiliar binary — run YOURSELF, where the prompt
+appears in a turn you control and you recognise the command. A subagent's
+modal surfaces in YOUR pane, carrying a command you did not write, and it
+stops your session while you believe you are legitimately waiting on it.
+Measured 2026-09-13: two slots lost 35 and 64 minutes this way, and the
+second had an unread conductor message queued behind the modal, so it could
+not receive a correction either. A blocked session cannot send, read, or
+act — which is why this rule is preventive and there is no "notice it and
+ask for help" version of it. Delegate reading and analysis freely; keep
+actions.
+
+⚠ A subagent report is a snapshot at an unknown instant, presented in the
+present tense. It read the repo, the issue, and the artifacts at a time you
+cannot reconstruct. Measured the same night: an issue-lead fetched an EPIC
+body during a 2m41s window in which that body was truncated by 114 KB, and
+nothing in its report would have said so. Re-derive any load-bearing claim
+from a subagent report yourself, in the same turn you act on it. That is
+what caught two wrong conclusions that night; it is not optional diligence.
+
+None of this is an argument for using subagents less — they caught a
+confounded measurement and a real headroom finding the same night. The
+failure is in the reporting contract, not the tool.
+
 STOPPING POINTS — When you reach a natural stopping point:
 1. Append a worklog entry describing what you did and why you stopped
 2. Update .epic-status.json with phase, summary, stop_reason
