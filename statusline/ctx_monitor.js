@@ -22,37 +22,51 @@ const cwd = input.workspace?.current_dir || input.cwd || process.cwd();
 // to be updated whenever a model ships or a default changes, and it fails
 // silently when it isn't. Read the thing rather than a correlate of it.
 //
-// VERIFIED 2026-09-14, on this machine, by editing this function and
-// observing live panes: the payload DOES supply the field, and for Sonnet 5
-// sessions here it reports 200000. A fallback of 1_000_000 for Sonnet was
-// tried and is wrong for this configuration -- `code.claude.com`'s
-// model-config page says Sonnet 5 runs the 1M window by default on the
-// Anthropic API, and that does not describe these sessions. So the map stays
-// conservative and the payload decides.
+// MEASURED 2026-09-14 across four live sessions: the payload DOES supply the
+// field, and it reports 1_000_000 for BOTH Sonnet 5 and Opus 5 here --
+// matching code.claude.com/docs/en/model-config.md ("Fable 5.1, Fable 5,
+// Sonnet 5, and Opus 4.7 and later run with the 1M window by default").
+//
+// The old hard-coded 200_000 for Sonnet was the whole bug, and it was a bad
+// one: every Sonnet session read 5x its true usage. Three workers rendered
+// 460%, 306% and 236%; against the real window those are 92%, 64% and 50%.
+// A conductor read the >100% figures as "four or five compactions" and
+// reported that to a user. Nothing supported it -- and note that the
+// numerator was never at fault. `usedTotal` of the last assistant message's
+// `usage` is current window occupancy and was correct throughout; only the
+// denominator was wrong.
+//
+// TRAP THAT COST AN HOUR, worth knowing before you test a change here: a
+// live statusline pane does NOT re-render on demand. Editing this file and
+// then reading a pane can show you the PRE-EDIT render, with fresh-looking
+// numbers, because the token counts move on their own schedule. That is how
+// the 200_000 reading survived one round of "verification" and got written
+// into this comment as a measured fact. Test by feeding a payload to the
+// script on stdin, or by extracting getContextWindow and calling it -- not
+// by looking at a pane.
 //
 // Fallback direction is deliberate: unknown models get the SMALLER guess.
 // Too small over-reports usage (alarming, safe); too large under-reports and
 // hides an imminent compaction.
 //
-// UNRESOLVED, and do not paper over it: the numerator (`usedTotal` of the
-// last assistant message's `usage`) routinely EXCEEDS this denominator on
-// long sessions -- three live Sonnet workers read 306%, 236% and 158% the
-// same day. A single API call's prompt cannot exceed the window, so the two
-// figures are not the same quantity: either that `usage` object is
-// cumulative across the session rather than per-call, or the window is
-// larger than reported. Until that is settled, TREAT A FIGURE OVER 100% AS
-// UNINTERPRETABLE -- in particular it is NOT evidence that the session has
-// auto-compacted, and there is no documented way to detect compaction count
-// from the payload or the transcript at all. A conductor read 460%/304%/158%
-// as "four or five compactions" and reported that to a user; nothing
-// supported it.
+// NOT AVAILABLE AT ALL, so do not try to infer it: there is no documented
+// way to detect whether -- or how many times -- a session has auto-compacted,
+// from this payload or from the transcript jsonl. The payload has no
+// compaction field, and the jsonl format is explicitly documented as internal
+// and version-fragile. Auto-compact fires near ~967K for a 1M window (see
+// model-config.md; `/autocompact`, `--autocompact`, and
+// CLAUDE_CODE_AUTO_COMPACT_WINDOW adjust it), so a session below that has
+// not compacted for capacity reasons -- but that is a bound, not a count.
 function getContextWindow(model, payload) {
   const reported = Number(payload?.context_window?.context_window_size);
   if (Number.isFinite(reported) && reported > 0) return reported;
   const id = String(model?.model_id || model?.display_name || "").toLowerCase();
   if (id.includes("1m") || id.includes("1000k")) return 1_000_000;
-  if (id.includes("opus")) return 1_000_000;
-  return 200_000; // sonnet/haiku/unknown: guess small, see note above
+  if (id.includes("haiku")) return 200_000;
+  if (id.includes("opus") || id.includes("sonnet") || id.includes("fable")) {
+    return 1_000_000;
+  }
+  return 200_000; // unknown: guess small, see note above
 }
 const CONTEXT_WINDOW = getContextWindow(model, input);
 
