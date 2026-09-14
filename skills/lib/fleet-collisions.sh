@@ -58,6 +58,29 @@
 set -uo pipefail
 ROOT="${1:-$HOME/re/pz}"
 [ -d "$ROOT" ] || { echo "no clone root at $ROOT" >&2; exit 2; }
+# A clone root that EXISTS but is EMPTY has to be handled before the three
+# `for d in "$ROOT"/*/` loops below, because that idiom behaves differently and
+# badly in both shells when nothing matches. Measured 2026-09-14 on an empty
+# directory:
+#   zsh  -> `no matches found: <root>/*/`; the statement ERRORS and the loop
+#           body never runs
+#   bash -> passes the literal unexpanded `<root>/*/` in as `$d`; ONE SILENT
+#           ITERATION on a path that does not exist
+# Reachable exactly when someone runs the conductor for the first time. Each
+# loop below happens to degrade safely in bash today (a failing `git`/`rev-parse`
+# sends it to `continue`), but that is ACCIDENTAL, it is absent in zsh, and an
+# empty pool is a legitimate state rather than an error -- so say so once and
+# exit clean instead of letting three loops discover it three different ways.
+# `find`, not a glob, for the same reason the loops are the problem. Tested
+# against `bfs 4.1.1`, this fleet's `find`, not GNU findutils.
+# `! -name '.*'` matters: `*/` does not match dot-directories but `find -type d`
+# does, and a real pool root holds `.spawn-prompts/`, `.preserved/`, `.mirror/`.
+# Without it the guard passes on a pool with no clones but some machinery dirs,
+# and the loops error anyway. The guard and the glob must share a universe.
+if [ -z "$(find "$ROOT" -maxdepth 1 -mindepth 1 -type d ! -name '.*' -print -quit 2>/dev/null)" ]; then
+  echo "no clones under $ROOT yet -- nothing to check"
+  exit 0
+fi
 TMP=$(mktemp) || exit 2; trap 'rm -f "$TMP"' EXIT
 mapfile -t PANES < <(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
 mapfile -t PANE_PP < <(tmux list-panes -a -F '#{pane_current_path} #{pane_pid}' 2>/dev/null)

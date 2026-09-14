@@ -42,6 +42,35 @@ find_spawn_intent() {
        "$clone_root/.spawn-prompts/spawn-$issue_number.txt" 2>/dev/null | head -1
 }
 
+# clone_root_has_clones <clone_root>
+# True when <clone_root> contains at least one subdirectory.
+#
+# WHY THIS EXISTS: `for d in "$ROOT"/*/` is the idiom every sweep here uses,
+# and it behaves DIFFERENTLY AND BADLY IN BOTH SHELLS when the root is empty.
+# Measured 2026-09-14 on an empty directory:
+#   zsh   -> `no matches found: <root>/*/`, the statement ERRORS and the loop
+#            body never runs
+#   bash  -> passes the literal unexpanded `<root>/*/` in as `$d`, ONE SILENT
+#            ITERATION on a path that does not exist
+# Reachable exactly when someone runs the conductor for the first time: the
+# clone root exists (every caller guards for that) and has no clones in it yet.
+# Today every such loop happens to degrade safely in bash -- `[ -e "$src" ]`
+# or a failing `rev-parse` sends it to `continue` -- but that safety is
+# ACCIDENTAL, it is absent in zsh, and neither behaviour was written down.
+#
+# `find`, not a glob, for the same reason as `mirror_worklogs`'s newest-copy
+# lookup: this file is sourced into whatever shell the caller runs. Tested
+# against `bfs 4.1.1` (this fleet's `find`), not GNU findutils.
+clone_root_has_clones() {
+    # `! -name '.*'` is load-bearing and was added after this guard FAILED its
+    # own test: `*/` does not match dot-directories, but `find -type d` does --
+    # and `mirror_worklogs` calls `mkdir -p "$clone_root/.mirror"` immediately
+    # BEFORE this check, so on an empty pool the guard saw the directory the
+    # function had just created, passed, and let the glob error anyway. The
+    # guard and the glob it protects must enumerate the SAME universe.
+    [ -n "$(find "$1" -maxdepth 1 -mindepth 1 -type d ! -name '.*' -print -quit 2>/dev/null)" ]
+}
+
 # preserve_epic_state <source_dir> <clone_root> [reason]
 # Copies <source_dir>/.epic-status.json and .epic-worklog.md, if
 # present, to <clone_root>/.preserved/<issue>-<date>/ with un-dotted,
@@ -215,6 +244,7 @@ mirror_worklogs() {
     local m="$clone_root/.mirror"
     mkdir -p "$m" || { echo "MIRROR FATAL: cannot create $m"; return 1; }
     local rc=0 d c src dst iss s_new s_old ts
+    clone_root_has_clones "$clone_root" || return 0
     for d in "$clone_root"/*/; do
         c=$(basename "${d%/}")
         case "$c" in .mirror|.preserved|.spawn-prompts) continue ;; esac
