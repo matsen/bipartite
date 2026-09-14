@@ -11,6 +11,19 @@
 #   2. files touched by MORE THAN ONE live clone        <- permits a collision
 #   3. a .epic-status.json whose clone has no live pane <- suppresses a spawn
 #
+# THE REBOOT CASE IS WHY (3) HAS A GUARD, AND IT IS NOT A DEFENSIVE EDGE.
+# After a reboot tmux is gone and every .epic-status.json persists on disk.
+# That is the one state with a purpose-built recovery path -- see
+# `bip-conductor-recover`, scoped to "a box running a bip-conductor fleet
+# rebooted and the tmux sessions are gone" -- and those files are what it
+# reads to rebuild the workspace. Without the guard this check declares the
+# whole pool stale and the documented action deletes the input to its own
+# recovery skill. Rarity makes it worse: nobody is watching for it.
+#
+# Run it from a conductor's own pane. A non-interactive context (a systemd
+# timer, say) has no tmux socket, so PANES is empty every time and this
+# exits 2 on every run -- correct, but a timer would swallow it.
+#
 # On (3) the usual action is DELETING a state file, so it uses prefix
 # containment on pane cwd, not equality: a worker that `cd`s into a
 # subdirectory is still in its clone and must not be reported stale.
@@ -57,8 +70,9 @@ for d in "$ROOT"/*/; do
           # collide, so emit both rather than stripping the second.
           case "$e" in R*|C*) IFS= read -r -d '' old && printf '%s\n' "$old";; esac
         done
-  } | sort -u | grep -v '^$' | sed "s|^|$n\t|" >> "$TMP"
-  cnt=$(grep -c "^$n	" "$TMP" 2>/dev/null); cnt=${cnt:-0}
+  } | sort -u | while IFS= read -r f; do [ -n "$f" ] && printf '%s\t%s\n' "$n" "$f"; done >> "$TMP"
+  cnt=0; pfx="$n$(printf '\t')"
+  while IFS= read -r l; do case "$l" in "$pfx"*) cnt=$((cnt+1));; esac; done < "$TMP"
   printf "  %-10s %-34s %s files\n" "$n" "$b" "$cnt"
 done
 [ "$any_live" = 0 ] && echo "  none"
