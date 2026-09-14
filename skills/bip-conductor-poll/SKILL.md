@@ -143,6 +143,58 @@ This is the ongoing cleanup that keeps slots current between cold starts.
 Do it every poll cycle — don't wait for `/bip-conductor`.
 EPIC body content is not this skill's concern; `/bip-epic` keeps bodies current on its own cadence.
 
+#### Mirror every live worklog (do this FIRST, before any cleanup)
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+mirror_worklogs "$CLONE_ROOT" || echo "MIRROR: at least one worklog could not be copied -- read the lines above" >&2
+```
+
+Silent on success. It prints only `MIRROR UNREADABLE`, `MIRROR FAILED`, or
+`MIRROR SHRANK`, and returns non-zero for the first two — there is no count in
+it anywhere, so it cannot report a reassuring zero for a clone it could not read.
+
+**Why this runs every cycle rather than at land time.** A worklog lives only in
+a pooled clone until its PR merges. `/bip-pr-land`'s Step 6a preserves it —
+**but only for landings that go through `/bip-pr-land`.** A direct `gh pr merge`
+bypasses Step 6a, Step 9.5, and the `🤖 EPIC worklog preserved` PR comment in one
+move, and nothing anywhere notices. Measured 2026-09-14 on `matsengrp/phyz`: a
+PR landed that way and left a **35,432-byte** worklog live in a pooled clone,
+where the next spawn's prep would have deleted it.
+
+⛔ **Do not replace this with detect-merge-then-preserve.** That races the next
+spawn's prep, and when it loses, "files already gone" is indistinguishable from
+"this landing was never bypassed" — a detector whose failure mode is its success
+case. Mirroring has no such state: the copy exists before any merge, by any
+path, and never needs to know *how* the PR merged, which is the one fact that is
+unobservable from outside the slot.
+
+⚠ **The mirror is NOT `.preserved/`.** Live, overwritten, best-effort — a floor
+under data loss, not an archive. `.preserved/` is the final authoritative record
+with provenance READMEs. **If they disagree, `.preserved/` wins.** A mirror
+*larger* than a matching `.preserved/` entry means preservation ran **early** —
+that is a `/bip-pr-land` timing question, so **report it rather than
+reconciling it**. Never delete a `.preserved/` entry because a mirror exists.
+
+`MIRROR SHRANK` is not an error and needs no action beyond noticing: the helper
+keeps the longer copy alongside rather than overwriting it, and returns 0. It
+fires on **same issue, same clone, smaller file** — truncation, a worker
+compacting its own worklog mid-issue, a re-spawn onto the same issue, or a
+worker resuming after landing and re-creating its state (which the spawn prompt
+itself instructs). ⚠ **The ordinary reclaim path does not trip it**: the next
+spawn carries a different issue number, so it writes to a different mirror path
+and the old entry is simply left alone. Most of what does trip it is
+legitimate, which is why it is not an error — a signal that fires on a normal
+day stops being read.
+
+⚠ **`.mirror/` is neither an archive nor a view of current slots.** Entries are
+issue-scoped and are never cleaned, so landed issues accumulate there
+indefinitely — that is deliberate, it is the floor under data loss. **Do not
+`ls .mirror/` to see what the fleet is working on**; it returns a superset of
+everything that has ever run. Use the slot table for current state and
+`.preserved/` for the archive.
+
 #### Slot cleanup for merged PRs
 
 For each slot whose PR has merged (cross-reference merged PRs from check 1 with slot branches):

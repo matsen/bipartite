@@ -130,6 +130,110 @@ preserve_epic_state() {
     return 0
 }
 
+# mirror_worklogs <clone_root>
+# Copies every live slot's .epic-worklog.md to <clone_root>/.mirror/ as
+# i<issue>-<clone>.worklog.md. Idempotent; run it on every poll cycle.
+#
+# WHY THIS EXISTS, AND WHY IT IS NOT preserve_epic_state's JOB.
+# A worklog lives ONLY in a pooled clone until its PR lands. /bip-pr-land's
+# Step 6a preserves it at land time -- but only for landings that GO THROUGH
+# /bip-pr-land. A direct `gh pr merge` bypasses Step 6a, Step 9.5, and the
+# `EPIC worklog preserved` PR comment in one move, and nothing notices.
+# Measured 2026-09-14 (matsengrp/phyz): PR #2648 landed that way and left a
+# 35,432-byte worklog live in a pooled clone, where the next spawn's prep
+# would have deleted it. The decisive tell was a contrast -- the PR that used
+# the skill had 1 preservation-pointer comment, the one that did not had 0.
+#
+# WHY MIRRORING RATHER THAN DETECT-MERGE-THEN-PRESERVE. The reactive design
+# races the next spawn's prep, and when it loses, "files already gone" is
+# indistinguishable from "this landing was never bypassed". A detector whose
+# failure mode is its success case is not a detector. Mirroring has no such
+# state: the copy exists before any merge, by any path, and never needs to
+# know how the PR merged -- which is the fact that is unobservable from
+# outside the slot.
+#
+# THIS IS NOT .preserved/. The mirror is live, overwritten and best-effort --
+# a floor under data loss. .preserved/ is the final, authoritative record with
+# provenance READMEs. Never cite a mirror entry as the archived version, and
+# never delete a .preserved/ entry because a mirror exists. If the two
+# disagree, .preserved/ wins; a mirror LARGER than a matching .preserved/
+# entry means preservation ran EARLY, which is a /bip-pr-land timing question
+# and not a mirror fault -- report it rather than reconciling it.
+#
+# NEVER SHRINKS. If a live worklog is smaller than its mirror, the old copy is
+# kept as i<issue>-<clone>.worklog.SHRANK-<ts>.md and the event reported.
+# Mirroring is MORE exposed to truncation than .preserved/ is, precisely
+# because it overwrites every cycle rather than once. Both directions occurred
+# on 2026-09-14: one slot live-smaller (2135 B vs 15950 preserved), another
+# live-larger (4472 -> 5859 after its terminal ceremony). A rule keyed on
+# either direction alone would have been wrong once that day, so this keys on
+# SHRINKAGE specifically rather than on "changed".
+#
+# SHRANK RETURNS 0, NOT 1, AND HERE IS THE ACTUAL SET IT FIRES ON -- read this
+# before flipping it. `dst` is scoped by ISSUE and CLONE, and the comparison
+# only runs `if [ -f "$dst" ]`, so the ordinary reclaim path CANNOT trip it:
+# after a land, Step 9.5 deletes both state files, the clone is reclaimed, and
+# the next spawn carries a DIFFERENT `.issue`, hence a different `dst`, hence
+# a fresh copy with the old entry untouched. What trips it is same issue,
+# same clone, smaller file:
+#   1. genuine truncation                                     <- want to know
+#   2. a worker rewriting or compacting its own worklog mid-issue  <- routine
+#   3. a re-spawn onto the SAME issue after a reset                <- routine
+#   4. a worker resuming after landing and re-creating its state for the same
+#      issue -- which `bip-conductor-spawn`'s own prompt INSTRUCTS ("IF YOU
+#      RESUME WORK AFTER THIS POINT, RE-CREATE `.epic-status.json` FIRST").
+#      Observed 2026-09-14: a slot's re-created worklog was 2135 B against a
+#      15950 B predecessor.
+# Cases 2-4 are legitimate and at least one of them is protocol-mandated, so a
+# non-zero return would make the poll step report failure on a normal day, and
+# a signal that fires on the normal case stops being read. The data is never
+# lost either way -- the longer copy is kept alongside. That, not "a post-land
+# re-creation is shorter" (which only reaches here via case 4, not via the
+# reclaim path), is the reason for 0.
+#
+# SEAM, worth knowing before an incident rather than during one: if a clone's
+# status file is deleted while its worklog lives, `iss` falls back to
+# `unknown` and the mirror writes to a DIFFERENT path, so the shrink guard
+# does not apply across that transition. The outcome is still safe -- the old
+# copy is retained under the old name -- but the guard is silently inactive
+# there.
+#
+# Prints nothing on success. Returns 0 if every readable worklog was mirrored,
+# 1 if any could not be -- there is no count anywhere in it, so it cannot
+# report a reassuring zero for an unreadable clone.
+mirror_worklogs() {
+    local clone_root="$1"
+    local m="$clone_root/.mirror"
+    mkdir -p "$m" || { echo "MIRROR FATAL: cannot create $m"; return 1; }
+    local rc=0 d c src dst iss s_new s_old ts
+    for d in "$clone_root"/*/; do
+        c=$(basename "${d%/}")
+        case "$c" in .mirror|.preserved|.spawn-prompts) continue ;; esac
+        src="$d.epic-worklog.md"
+        [ -e "$src" ] || continue
+        if [ ! -r "$src" ]; then
+            echo "MIRROR UNREADABLE $c: $src exists but cannot be read"
+            rc=1; continue
+        fi
+        iss=unknown
+        if [ -r "$d.epic-status.json" ]; then
+            iss=$(jq -r '.issue // "unknown"' "$d.epic-status.json" 2>/dev/null) || iss=unknown
+            [ -n "$iss" ] || iss=unknown
+        fi
+        dst="$m/i$iss-$c.worklog.md"
+        if [ -f "$dst" ]; then
+            s_new=$(wc -c < "$src"); s_old=$(wc -c < "$dst")
+            if [ "$s_new" -lt "$s_old" ]; then
+                ts=$(date -u +%Y%m%dT%H%M%SZ)
+                cp "$dst" "$m/i$iss-$c.worklog.SHRANK-$ts.md" || rc=1
+                echo "MIRROR SHRANK $c issue=$iss live=${s_new}B was=${s_old}B -- kept old copy as i$iss-$c.worklog.SHRANK-$ts.md"
+            fi
+        fi
+        cp "$src" "$dst" || { echo "MIRROR FAILED $c: cp $src -> $dst"; rc=1; }
+    done
+    return $rc
+}
+
 # mark_spawn_intent_consumed <intent-file-path>
 # Moves a spawn-intent file into a "consumed/" subdirectory sibling to
 # it, so a launched intent is distinguishable on disk from one still
