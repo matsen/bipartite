@@ -479,6 +479,57 @@ When a live worker's scope needs correcting *before* its next natural stopping p
 A worker correction is often *more* time-sensitive than spawn intent — the worker is actively doing the wrong thing while it sits in a queue.
 If the conductor session is addressable right now, `SendMessage` it directly to request immediate delivery, rather than leaving the correction for its next poll cycle — same mechanics and addressability caveats as Step 6's escape hatch.
 
+### Step 8: Approving a merge or discharging a gate — post it to the PR
+
+**When you approve a worker's merge, or discharge a gate you set, post a
+`🤖`-prefixed comment on the PR as well as messaging the worker.** User
+decision, 2026-09-14, `matsengrp/phyz`: PR comments only, `🤖`-prefixed.
+**Not `gh pr review --approve`.**
+
+⛔ **Why the message alone is not enough: an epic approval is point-to-point
+and leaves no artifact.** Measured twice in one evening — a conductor could
+not tell whether a PR carrying an explicit epic re-check gate had landed with
+approval or on its own, and had to ask; and separately could not confirm a
+ruling had reached the worker at all. **Both answers were benign because it
+asked. The failure mode is the one where nobody asks**, and `reviews=0`
+surviving as the only artifact is a bad record even when the approval was
+real.
+
+**Three conditions, and the first is what makes the practice worth anything:**
+
+1. ⛔ **Post at approval time, not after the merge.** A comment timestamped
+   after the merge cannot establish that the approval preceded it, which is
+   the whole function. A retroactive one is a *record*, not *evidence* —
+   label it as such if you post one.
+2. **Say what was approved and on what grounds**, specifically enough that a
+   conductor's question is answered without a round trip: the commit, what
+   changed, and what you checked.
+3. ⛔ **Say explicitly that it is not a code review.** You review *claims*;
+   an approve-review asserts the other thing.
+
+⭐ **Why `🤖` rather than an approve object, and it is not decoration.** It
+matches `/bip-pr-land`'s existing `🤖 EPIC worklog preserved to …`
+convention, and it retires the strongest objection to `--approve` at zero
+cost: **a `🤖`-prefixed comment cannot be misread later as the maintainer
+having reviewed code they never read.** ⚠ Be clear-eyed that this does **not**
+make approvals machine-readable — `gh pr view --json reviews` still returns
+`0`. What it fixes is the human-readable record, which is the more valuable
+half wherever nothing machine-reads review state (CI disabled, squash-merge,
+single maintainer): there, an approve object would gate nothing and function
+as a label anyway. **The question is legibility, not enforcement.**
+
+⭐ **The general rule this rests on, which generalizes past approvals: the
+durable artifact is the one in the repo, not the one in a pooled clone.**
+`/bip-pr-land` deletes `.epic-status.json` and `.epic-worklog.md` from the
+clone at its Step 9.5, so **anything recorded only in a slot's own files is
+durable exactly until that slot lands.** ➡ **For any ruling a future reader
+would need, prefer the PR — body or comment — once a slot is near landing.**
+The same reasoning fixed the `issue-lead` terminal ceremony's idempotency
+guard the same day: it keyed on a field in a file the landing step removes,
+so it could never fire. **A guard, and a record, should reference the thing
+it is actually about — not a private flag that is supposed to correlate
+with it.**
+
 ## EPIC body update pattern
 
 EPIC issue bodies are the source of truth for project status.
