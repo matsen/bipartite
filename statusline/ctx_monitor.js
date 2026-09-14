@@ -16,14 +16,45 @@ const name = `\x1b[95m${String(model.display_name ?? "")}\x1b[0m`.trim();
 const agentName = input.agent?.name || input.session_name || "";
 const agentLabel = agentName ? ` \x1b[96m(${agentName})\x1b[0m` : "";
 const cwd = input.workspace?.current_dir || input.cwd || process.cwd();
-// Map model identifiers to context window sizes
-function getContextWindow(model) {
+// Context window size. PREFER THE PAYLOAD'S OWN FIGURE -- the CLI reports
+// `context_window.context_window_size`, the window actually in force for
+// this session. An id-based map is structurally the wrong instrument: it has
+// to be updated whenever a model ships or a default changes, and it fails
+// silently when it isn't. Read the thing rather than a correlate of it.
+//
+// VERIFIED 2026-09-14, on this machine, by editing this function and
+// observing live panes: the payload DOES supply the field, and for Sonnet 5
+// sessions here it reports 200000. A fallback of 1_000_000 for Sonnet was
+// tried and is wrong for this configuration -- `code.claude.com`'s
+// model-config page says Sonnet 5 runs the 1M window by default on the
+// Anthropic API, and that does not describe these sessions. So the map stays
+// conservative and the payload decides.
+//
+// Fallback direction is deliberate: unknown models get the SMALLER guess.
+// Too small over-reports usage (alarming, safe); too large under-reports and
+// hides an imminent compaction.
+//
+// UNRESOLVED, and do not paper over it: the numerator (`usedTotal` of the
+// last assistant message's `usage`) routinely EXCEEDS this denominator on
+// long sessions -- three live Sonnet workers read 306%, 236% and 158% the
+// same day. A single API call's prompt cannot exceed the window, so the two
+// figures are not the same quantity: either that `usage` object is
+// cumulative across the session rather than per-call, or the window is
+// larger than reported. Until that is settled, TREAT A FIGURE OVER 100% AS
+// UNINTERPRETABLE -- in particular it is NOT evidence that the session has
+// auto-compacted, and there is no documented way to detect compaction count
+// from the payload or the transcript at all. A conductor read 460%/304%/158%
+// as "four or five compactions" and reported that to a user; nothing
+// supported it.
+function getContextWindow(model, payload) {
+  const reported = Number(payload?.context_window?.context_window_size);
+  if (Number.isFinite(reported) && reported > 0) return reported;
   const id = String(model?.model_id || model?.display_name || "").toLowerCase();
   if (id.includes("1m") || id.includes("1000k")) return 1_000_000;
   if (id.includes("opus")) return 1_000_000;
-  return 200_000; // default for sonnet/haiku/unknown
+  return 200_000; // sonnet/haiku/unknown: guess small, see note above
 }
-const CONTEXT_WINDOW = getContextWindow(model);
+const CONTEXT_WINDOW = getContextWindow(model, input);
 
 // --- helpers ---
 function readJSON(fd) {
