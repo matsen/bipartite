@@ -228,8 +228,12 @@ preserve_epic_state() {
 #      post-land work, re-created its worklog, and the mirror caught
 #      32922 B -> 3948 B, keeping the long copy. 29 KB that a plain `cp` loop
 #      would have destroyed. The guard was argued into existence from reasoning
-#      with no instance in hand; it has an instance now. Do not delete it on
-#      the grounds that the case looks theoretical.
+#      with no instance in hand; it has TWO instances now, both 2026-09-14.
+#      Second: cedar/#2649 post-land, where `.preserved/` held a 32,922 B
+#      worklog from 13:14 and the post-land re-creation was 13,468 B at 14:57
+#      -- both kept, so a naive overwrite would have lost 19 KB. Do not delete
+#      it on the grounds that the case looks theoretical; it fires on the
+#      ordinary landing path, not on an edge case.
 # Cases 2-4 are legitimate and at least one of them is protocol-mandated, so a
 # non-zero return would make the poll step report failure on a normal day, and
 # a signal that fires on the normal case stops being read. The data is never
