@@ -10,6 +10,8 @@ const sessionId = `\x1b[90m${String(input.session_id ?? "")}\x1b[0m`;
 const transcript = input.transcript_path;
 const model = input.model || {};
 const name = `\x1b[95m${String(model.display_name ?? "")}\x1b[0m`.trim();
+const agentName = input.agent?.name || input.session_name || "";
+const agentLabel = agentName ? ` \x1b[96m(${agentName})\x1b[0m` : "";
 const cwd = input.workspace?.current_dir || input.cwd || process.cwd();
 // Map model identifiers to context window sizes
 function getContextWindow(model) {
@@ -186,7 +188,7 @@ if (!usage) {
   const msg = compactTs > -Infinity
     ? "post-compact: usage refreshes on next turn."
     : "context window usage starts after your first question.";
-  console.log(`${name} | ${dirInfo} | \x1b[36m${msg}\x1b[0m`);
+  console.log(`${name}${agentLabel} | ${dirInfo} | \x1b[36m${msg}\x1b[0m`);
   process.exit(0);
 }
 
@@ -199,5 +201,5 @@ const usageCountLabel = `\x1b[33m(${comma(used)}/${comma(
 )})\x1b[0m`;
 
 console.log(
-  `${name} | ${dirInfo} | ${usagePercentLabel} - ${usageCountLabel}`
+  `${name}${agentLabel} | ${dirInfo} | ${usagePercentLabel} - ${usageCountLabel}`
 );
