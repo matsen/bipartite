@@ -668,7 +668,29 @@ The watcher runs forever, exits cleanly on SIGTERM, and emits one event per real
 
 **That rule has been in this file since 2026-09-04 and the miss happened again on 2026-09-13, because the rule names a prohibition and hands the reader no instrument.** Here is the structural cause, and the instrument that makes the prohibition actionable. **A slot that LANDS emits no terminal event, ever.** `/bip-pr-land` deletes `.epic-status.json`, so the `quality-gate -> completed` transition is unobservable *by construction*: the watcher's last word on any slot that lands is structurally "PR opened", forever, and nothing in the log distinguishes that from a slot still grinding. **This fires on the success path, so it is the modal outcome rather than an edge case** — every slot that finishes cleanly produces it. Measured 2026-09-13 on `matsengrp/phyz`: a slot's last logged transition was `testing -> quality-gate` at 11:21:48Z ("PR #2583 opened. Running quality gate loop."); the PR merged seven minutes later at 11:28:36Z, and the conductor reported that slot as running for **65 minutes** afterwards across three user-facing reports. The completion push did not backstop it — that slot sent none, and why is not established; three sibling slots sent theirs from identical prompt text, so a push is not a guarantee. This is `EVIDENCE-DISCIPLINE.md`'s *"a detector's negative result is not evidence until the detector is shown to fire"* with a different detector. **The remedy is a different instrument, not a wider filter**: a landing is observable as a *PR state change* even though it is invisible as a status-file transition, so run a second Monitor polling `gh pr list --state merged` alongside the notifications tail. Neither alone is sufficient, and the two fail independently.
 
-**Checking whether the watcher is running:** use `ps -eo pid,args | grep -E '^\s*[0-9]+ bip epic watch'`, **not** `pgrep -af 'bip epic watch'` — the spawn prompt in `/bip-conductor-spawn` contains the literal string `bip epic watch` (in its PUSH NOTIFICATION block), so `pgrep -af` matches every live worker and returns tens of KB of prompt text.
+**Checking whether the watcher is running:** use `ps -eo pid,args | grep -E '^\s*[0-9]+ bip epic watch'` — anchored on the start of the command line — **not** `pgrep -af 'bip epic watch'`. The spawn prompt in `/bip-conductor-spawn` contains the literal string `bip epic watch` (in its PUSH NOTIFICATION block), so `pgrep -af` matches every live worker and returns tens of KB of prompt text.
+
+**That is one instance of a class, and stating it as one command plus one string is why avoiding both does not help.** A `bip spawn`-launched worker's **entire spawn prompt IS its argv**, so *any* argv-matching search — `pgrep -af`, `ps | grep`, `ps aux | grep` — matches every live worker on almost any keyword a conductor would plausibly type: a clone name, the repo name, `zig`, an issue number. Measured 2026-09-14 on a 28-`claude`-process box: a conductor avoided `pgrep -af` exactly as the paragraph above says, then ran `ps -eo pid,etimes,args | grep -E 'zig|phyz' | grep -i cedar` to ask whether a build was running in one clone, and got **64.5 KB of an unrelated slot's spawn prompt** — matched on the word `cedar` appearing in that prompt's *prose*, nowhere near a process.
+
+**The reliable form does not read argv at all.** Enumerate by exact process name, then attribute by working directory:
+
+```bash
+# Which clone is each live Claude session in? (no prompt text, one line)
+for pid in $(pgrep -x claude); do
+  printf '%s\t%s\n' "$pid" "$(readlink /proc/$pid/cwd)"
+done
+```
+
+⚠ **`pgrep -x` is NOT fleet-scoped — the `cwd` filter is what does the scoping, so filter on it rather than merely printing it.** Measured the same day: of **28** live `claude` processes, only **6** had a cwd under this project's `$CLONE_ROOT`; the rest were other projects' pools (`~/re/sfpcp/*`, `~/re/d2/*`) and unrelated interactive sessions. A conductor that enumerates with `pgrep -x` and assumes fleet-only will reason about another project's slot as if it were its own. The same applies to `pgrep -x zig` when asking whether a build is live *in a particular clone*: resolve `/proc/<pid>/cwd` and match it against the clone path.
+
+⭐ **The argv SIZE is a clean structural discriminator between a spawned worker and a hand-started session, and it reads no prompt content.** `wc -c < /proc/<pid>/cmdline`, same 28-process measurement:
+
+| | argv bytes |
+|---|---|
+| interactive sessions (conductor, epic, ad-hoc) | **7 – 51 B** |
+| `bip spawn`-launched workers | **15,029 – 36,078 B** |
+
+Nothing fell between 51 B and 15 KB — a ~295x gap. **Test against the gap, not against the band's low end**: a threshold pinned near the top of the worker range would have misclassified the smallest worker observed (15 KB). Anything over ~1 KB is a spawned worker; anything under ~100 B is not. This answers *"is this pid a worker or a human's session?"* structurally rather than by name-matching, which matters because display names drift and three naming schemes are live at once.
 To also receive events as Claude Code notifications when that pipeline is reliable, additionally start a Monitor with `command: tail -F .epic-notifications.log` and `persistent: true`.
 The notifications log is the contract **for transitions a worker emits**, and Monitor is a latency optimization for those; **a landing is not one of them** — `/bip-pr-land` removes the file that would carry it — so for landings the `gh pr list --state merged` Monitor above is a correctness requirement, not an optimization.
 
