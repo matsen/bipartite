@@ -188,6 +188,23 @@ and the old entry is simply left alone. Most of what does trip it is
 legitimate, which is why it is not an error — a signal that fires on a normal
 day stops being read.
 
+**`.epic-status.json` is mirrored differently and deliberately: every distinct
+version is kept, timestamped, never overwritten.** Size-keyed shrink protection
+is the **wrong instrument** for it — a status file can shrink while *gaining*
+the field you care about (a lead replacing a long `stop_reason` with a short one
+while adding `completed_at`). Content matters and size does not track it, and
+the files are 1–6 KB, so keeping everything costs nothing and removes the need
+to guess which version mattered. A new copy is written only when the content
+actually differs from the newest kept one, so an idle slot does not accumulate
+an entry every cycle.
+
+⚠ **Why status files are mirrored at all, which is not symmetry with the
+worklog.** Measured 2026-09-14: an issue-lead's terminal assessment carried two
+real findings — a wrong number in a landed doc, and a straddle result that
+discharged an open hedge for 3 of 5 cells at zero compute — and **both lived in
+the lead's output, not in the worklog.** A worklog-only mirror would have lost
+them. The worklog carries narrative; lead output carries verdicts.
+
 ⚠ **`.mirror/` is neither an archive nor a view of current slots.** Entries are
 issue-scoped and are never cleaned, so landed issues accumulate there
 indefinitely — that is deliberate, it is the floor under data loss. **Do not

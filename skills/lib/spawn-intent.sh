@@ -131,8 +131,17 @@ preserve_epic_state() {
 }
 
 # mirror_worklogs <clone_root>
-# Copies every live slot's .epic-worklog.md to <clone_root>/.mirror/ as
-# i<issue>-<clone>.worklog.md. Idempotent; run it on every poll cycle.
+# Copies every live slot's .epic-worklog.md AND .epic-status.json to
+# <clone_root>/.mirror/. Idempotent; run it on every poll cycle.
+#
+# WHY .epic-status.json IS MIRRORED TOO, AND IT IS NOT SYMMETRY.
+# Measured 2026-09-14: an issue-lead's terminal assessment carried two real
+# findings -- a wrong number in a landed doc, and a straddle result that
+# discharged an open hedge for 3 of 5 cells at zero compute -- and BOTH lived
+# in the lead's assessment, not in the worklog. A worklog-only mirror would
+# have lost them; they survived because /bip-pr-land happened to preserve the
+# assessment alongside. The worklog carries narrative; lead output carries
+# verdicts, and they are different files.
 #
 # WHY THIS EXISTS, AND WHY IT IS NOT preserve_epic_state's JOB.
 # A worklog lives ONLY in a pooled clone until its PR lands. /bip-pr-land's
@@ -221,6 +230,9 @@ mirror_worklogs() {
             [ -n "$iss" ] || iss=unknown
         fi
         dst="$m/i$iss-$c.worklog.md"
+        # SHRANK applies PER FILE, not per slot: a lead assessment is rewritten
+        # on every lead invocation and so shrinks routinely, and letting that
+        # drag a slot's whole return code would make the signal unreadable.
         if [ -f "$dst" ]; then
             s_new=$(wc -c < "$src"); s_old=$(wc -c < "$dst")
             if [ "$s_new" -lt "$s_old" ]; then
@@ -230,6 +242,44 @@ mirror_worklogs() {
             fi
         fi
         cp "$src" "$dst" || { echo "MIRROR FAILED $c: cp $src -> $dst"; rc=1; }
+
+        # .epic-status.json: KEEP EVERY VERSION, timestamped, never overwrite.
+        # Size-keyed shrink protection is the WRONG instrument here -- a status
+        # file can shrink while GAINING the field you care about (a lead can
+        # replace a long stop_reason with a short one while adding
+        # completed_at, or rewrite lead_notes wholesale). Content matters and
+        # size does not track it. The files are ~1-6 KB, so keeping every
+        # distinct version costs nothing and removes the need to guess which
+        # one mattered. Only writes when the content actually differs from the
+        # newest kept copy, so an unchanged slot does not accumulate entries
+        # every poll cycle.
+        sstat="$d.epic-status.json"
+        if [ -e "$sstat" ]; then
+            if [ ! -r "$sstat" ]; then
+                echo "MIRROR UNREADABLE $c: $sstat exists but cannot be read"
+                rc=1
+            else
+                # `find`, not a glob: this file is sourced into whatever
+                # shell the caller runs, and under zsh an unmatched glob in
+                # command position is a SHELL error that `2>/dev/null` on the
+                # command does not suppress -- zsh fails the expansion before
+                # `ls` is ever invoked. Measured: every first run of a fresh
+                # slot printed `no matches found: .../i<N>-<clone>.status.*.json`
+                # while otherwise working correctly. `find -newer`-free and
+                # glob-free, so it behaves identically in bash and zsh.
+                # `-printf` is a GNU extension and `find` on this fleet is
+                # `bfs 4.1.1`, not GNU findutils -- tested there: `-printf`
+                # works and returns exit 0 with no output on no match. A
+                # reader will assume GNU; it is not.
+                local newest
+                newest=$(find "$m" -maxdepth 1 -name "i$iss-$c.status.*.json" \
+                         -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+                if [ -z "$newest" ] || ! cmp -s "$sstat" "$newest"; then
+                    cp "$sstat" "$m/i$iss-$c.status.$(date -u +%Y%m%dT%H%M%SZ).json" \
+                        || { echo "MIRROR FAILED $c: cp $sstat"; rc=1; }
+                fi
+            fi
+        fi
     done
     return $rc
 }
