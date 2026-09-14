@@ -10,6 +10,12 @@
 #   1. every live branch across the pool and the files it touches
 #   2. files touched by MORE THAN ONE live clone        <- permits a collision
 #   3. a .epic-status.json whose clone has no live pane <- suppresses a spawn
+#   4. a live pane with no status file  <- invisible to state-file sweeps
+#   5. a pane whose claude session is DEAD <- both artifacts present, healthy-
+#      looking, and the work inside may be uncommitted. Measured 2026-09-14:
+#      a slot exited cleanly mid-issue with 36 KB uncommitted across 4 files;
+#      sections 3 and 4 both reported clean because the pane AND the status
+#      file were present. A tmux pane outlives the session inside it.
 #
 # THE REBOOT CASE IS WHY (3) HAS A GUARD, AND IT IS NOT A DEFENSIVE EDGE.
 # After a reboot tmux is gone and every .epic-status.json persists on disk.
@@ -44,6 +50,24 @@ ROOT="${1:-$HOME/re/pz}"
 [ -d "$ROOT" ] || { echo "no clone root at $ROOT" >&2; exit 2; }
 TMP=$(mktemp) || exit 2; trap 'rm -f "$TMP"' EXIT
 mapfile -t PANES < <(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
+mapfile -t PANE_PP < <(tmux list-panes -a -F '#{pane_current_path} #{pane_pid}' 2>/dev/null)
+
+# Is there a live `claude` anywhere in this pane's process subtree?
+# `#{pane_current_command}` is NOT usable for this: a busy session shows the
+# shell it is running a command through (measured: a session reporting BUSY
+# showed `bash`), and an exited session leaves the pane at `zsh` -- the two
+# are indistinguishable. A tmux pane outlives the Claude session inside it,
+# so pane-exists is not session-alive.
+pane_has_claude() {
+  local root="$1" queue=("$1") pid kids
+  while [ "${#queue[@]}" -gt 0 ]; do
+    pid="${queue[0]}"; queue=("${queue[@]:1}")
+    case "$(ps -o comm= -p "$pid" 2>/dev/null)" in *claude*) return 0;; esac
+    mapfile -t kids < <(pgrep -P "$pid" 2>/dev/null)
+    [ "${#kids[@]}" -gt 0 ] && queue+=("${kids[@]}")
+  done
+  return 1
+}
 have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
 rc=0
 
@@ -124,5 +148,23 @@ for pane in "${PANES[@]}"; do
   echo "  NO-STATUS $clone"; found2=1
 done
 [ "$found2" = 1 ] && rc=1 || echo "  none"
+
+echo
+echo "=== pane alive but its claude session is DEAD (work may be uncommitted) ==="
+found3=0
+if [ "$have_panes" -eq 1 ]; then
+  for row in "${PANE_PP[@]}"; do
+    ppath="${row% *}"; ppid="${row##* }"
+    case "$(realpath "$ppath" 2>/dev/null)" in "$RROOT"/*) ;; *) continue;; esac
+    pane_has_claude "$ppid" && continue
+    rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"; clone="${rest%%/*}"
+    dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
+    echo "  DEAD-SESSION $clone  pane_pid=$ppid  uncommitted=$dirty"
+    echo "    -> preserve worklog/status/diff BEFORE anything else; the pane's"
+    echo "       last line usually carries 'claude --resume <id>'."
+    found3=1
+  done
+fi
+[ "$found3" = 1 ] && rc=1 || echo "  none"
 
 exit "$rc"
