@@ -128,6 +128,33 @@ have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
 # resolution below makes 2 dominate 1 structurally, so the next section
 # someone adds cannot get the precedence wrong -- the same argument as the
 # denominator comment further down.
+# THE POOL'S OWN REMOTE. A clone root can legitimately hold clones of OTHER
+# repositories -- matsengrp/phyz's pool holds `ash-iqtree-a00094e0`, a pinned
+# checkout of matsen/iqtree2 that experiments reference by absolute path. Those
+# are not slots and must not be reported as anything.
+#
+# Invisible until the detached-HEAD path started reporting weird states loudly:
+# that IQ-TREE clone sits at a detached tag commit permanently, so it emitted
+# `UNCHECKABLE ... detached HEAD` on every run, setting uncheckable=1 and making
+# EVERY run exit 2 -- destroying the signal the stickiness fix had been added to
+# protect, one commit after adding it.
+#
+# Modal origin across the pool rather than the conductor's own: this script
+# takes the root as an argument and may be run from anywhere.
+POOL_ORIGIN=$(for _d in "$ROOT"/*/; do git -C "$_d" remote get-url origin 2>/dev/null; done \
+              | sort | uniq -c | sort -rn | head -1 | sed 's/^ *[0-9]* //')
+
+# is_pool_clone <dir> -- true when <dir>'s origin matches the pool's modal one.
+# Returns TRUE when POOL_ORIGIN could not be determined: an unknown pool must
+# not silently exclude every clone. That is not hypothetical -- an earlier draft
+# of this call site ran with the function undefined, `|| continue` fired on the
+# "command not found" status, and the whole section skipped every slot while
+# printing nothing but errors. Fail toward checking, never toward skipping.
+is_pool_clone() {
+  [ -n "$POOL_ORIGIN" ] || return 0
+  [ "$(git -C "$1" remote get-url origin 2>/dev/null)" = "$POOL_ORIGIN" ]
+}
+
 uncheckable=0
 found_any=0
 
@@ -209,6 +236,12 @@ found_landed=0
 any_checked=0
 for d in "$ROOT"/*/; do
   n=$(basename "${d%/}")
+  # Skip clones of OTHER repositories living in the same root -- see
+  # POOL_ORIGIN above. Without this, the pool's pinned IQ-TREE checkout sits on
+  # a permanent detached HEAD, trips the detached-HEAD report below, and sets
+  # uncheckable=1 on EVERY run -- destroying the "could not check" signal one
+  # commit after the stickiness fix was added to protect it.
+  is_pool_clone "$d" || continue
   b=$(git -C "$d" branch --show-current 2>/dev/null)
   # ASK GIT FOR THE GIT DIR; DO NOT ASSUME THE LAYOUT. In a clone `.git` is a
   # directory, but in a WORKTREE it is a FILE containing `gitdir: ...`, so
