@@ -43,7 +43,12 @@ for d in "$ROOT"/*/; do
   any_live=1
   git -C "$d" fetch -q origin main 2>/dev/null \
     || echo "  WARN $n: fetch failed; origin/main may be stale -> false collisions" >&2
-  { git -C "$d" diff --name-only origin/main 2>/dev/null
+  # Diff against the MERGE BASE, not origin/main: a branch even one commit
+  # behind otherwise reports every file main changed since the branch point
+  # as its own. Measured 2026-09-14: a slot 1 commit behind reported 15 files
+  # when it had touched 6, and the 9 phantoms produced a false collision.
+  base=$(git -C "$d" merge-base HEAD origin/main 2>/dev/null) || base=origin/main
+  { git -C "$d" diff --name-only "$base" 2>/dev/null
     git -C "$d" status --porcelain -z 2>/dev/null \
       | while IFS= read -r -d '' e; do
           printf '%s\n' "${e:3}"
