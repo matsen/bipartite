@@ -233,6 +233,22 @@ reality:
   ruled out (`System clock synchronized: yes`; a TZ error here is 7 hours, not
   62 minutes), so the fit is a worker writing an **ETA** into a field that means
   *last touched*.
+- **`STATUS SUSPICIOUS-TIME`** — a timestamp ending in `:00` seconds. ⚠ **A
+  heuristic, not a violation**: `date -u` distributes seconds uniformly, so
+  ~1 in 60 legitimate values trip it. Treat it as *verify*, not *wrong*.
+  ⭐ **It exists because the diagnosis moved.** Future-dating was first read as a
+  worker writing an **ETA** into a last-touched field — until one of the bad
+  values turned out to be written by an **issue-lead subagent**, which has no
+  schedule to project. The surviving fit is that an agent **constructed** a
+  plausible timestamp from its own sense of the time, rounded to the minute:
+  that explains the `:00` seconds, the round offset and the forward direction
+  together. Measured against 15 correctly-written files in the live pool, **zero**
+  ended in `:00` (seconds seen: 05 06 08 10 13 15 16 19 24 34 42 44 58); both
+  bad ones did.
+  ⛔ **And it catches what `FUTURE-TIME` structurally cannot: a constructed
+  timestamp landing in the PAST.** That one is the *loud* failure rather than
+  the fatal one — it invents a timeout instead of hiding a stall — but it is
+  equally fabricated.
 - **`STATUS NO-AWAITING-BLOCK`** — `phase: awaiting-results` with no `awaiting`
   block, so the loop has nothing to check while the file reads as monitored.
   **Two of two slots that reached that phase on 2026-09-14 got it wrong, in

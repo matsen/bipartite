@@ -439,6 +439,34 @@ for p in sorted(glob.glob(os.path.join(root, "*", ".epic-status.json"))):
                 t = t.replace(tzinfo=datetime.timezone.utc)
         except Exception:
             print(f"STATUS UNPARSEABLE-TIME {clone}: {field}={val!r}"); bad = True; continue
+        # CONSTRUCTED-RATHER-THAN-MEASURED, reported as a HEURISTIC not a
+        # violation. Both bad values found on 2026-09-14 ended in `:00`
+        # seconds. `date -u +%H:%M:%SZ` distributes seconds uniformly, so a
+        # legitimate reading lands on `:00` about once in sixty; measured
+        # against 15 correctly-written files in the live pool, ZERO did
+        # (seconds seen: 05 06 08 10 13 15 16 19 24 34 42 44 58).
+        #
+        # ⭐ WHY THIS EXISTS SEPARATELY FROM FUTURE-TIME: the diagnosis moved.
+        # It was first read as a worker writing an ETA into a last-touched
+        # field -- then one of the bad values turned out to be written by an
+        # issue-LEAD subagent, which has no schedule to project. The fit that
+        # survives is that an agent CONSTRUCTED a plausible timestamp from its
+        # own sense of the current time, rounded to the minute. That explains
+        # the `:00` seconds, the round offset, and the forward direction at
+        # once.
+        # ⛔ And it catches a case FUTURE-TIME cannot see: a constructed
+        # timestamp landing in the PAST. By the direction analysis above that
+        # one is the loud failure rather than the fatal one -- it invents a
+        # timeout instead of hiding a stall -- but it is equally fabricated.
+        #
+        # ⚠ Heuristic wording is deliberate. One in sixty legitimate values
+        # will trip this, so it must read "verify" and must NOT carry the same
+        # severity as a future timestamp.
+        if str(val).endswith(":00Z") or str(val).endswith(":00+00:00"):
+            print(f"STATUS SUSPICIOUS-TIME {clone}: {field}={val} ends in :00 seconds "
+                  f"-- looks CONSTRUCTED rather than measured; verify it came from "
+                  f"`date -u`. (~1 in 60 legitimate values trip this)")
+            bad = True
         if t > now + datetime.timedelta(seconds=90):
             print(f"STATUS FUTURE-TIME {clone}: {field}={val} is "
                   f"{int((t-now).total_seconds()//60)} min AHEAD of the clock "
