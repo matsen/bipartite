@@ -525,6 +525,21 @@ The reason is not tidiness. Arms reaching verdicts independently is the *only* t
 Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
 Concrete shape from the run that motivated this: an issue whose stated prerequisites both merged the same day reads as unblocked, but the conductor had already stood a clone down for it for an unrelated reason — without the negative list, that reads as ready to the epic and gets proposed again.
 
+### Preflight, indexed by ACTION rather than by topic
+
+⛔ **Check this table by what you are about to DO, not by what the work is about.** Measured 2026-09-14: every rule that would have prevented that night's worst conductor error was loaded, correct, and indexed under *measurement* — none fired when the action was "file an issue."
+
+| about to… | check | cost of skipping it, measured 2026-09-14 |
+|---|---|---|
+| **spawn** | run `lib/fleet-collisions.sh`; confirm the issue body has not changed since its brief was written | a duplicate slot spawned onto work already in progress; a three-way file collision missed |
+| **file an issue** | does a success criterion name a denominator, a population, or "a default run" without naming the dispatch path? | #2627 shipped a stderr regression AND a wrong fraction — the worker followed the criterion correctly |
+| **deliver a correction to a worker** | append it to that slot's `.epic-worklog.md` in the same step | a correction delivered only by message does not survive the worker's next compaction |
+| **reclaim a slot** | all three state files, including `.claude/ralph-loop.local.md` | a preserved `.epic-status.json` survived a window closure and made an idle clone read as occupied — silently |
+| **report a number you did not compute** | re-derive it, or relay the basis — *"it reports X"*, not *"X"* | a relayed "its suite passed" needed retracting when the session's background tasks died with it |
+| **close or reopen an issue** | verify the criterion against `main`, not against the PR that claims it | #2636 sat open for two hours asserting a build was broken after it had been fixed |
+
+⭐ **The cost column is load-bearing, not decoration.** A tired conductor skips a rule; it does not skip a rule with last night's scar attached. When a row's incident is superseded by a worse one, replace it — an entry whose cost has gone stale is the first one to be ignored.
+
 ### Run `lib/fleet-collisions.sh` before every spawn
 
 ```bash
