@@ -188,6 +188,25 @@ escalate, not to invent a value** — an unrecognised phase means
 every fleet mechanism that keys on phase silently stops seeing this
 slot.
 
+⛔ **The specific confusion to guard against, because it accounts for
+THREE of the four off-spec values seen in one day: `phase` and
+`stop_reason` are different vocabularies and you write both in the
+same step.** `premature-deferral`, `needs-instrumentation` and the
+legacy pair were all `stop_reason` values copied into `phase`.
+
+- **`phase` answers "where is this slot in its lifecycle"** — one of
+  the seven, and the fleet keys on it.
+- **`stop_reason` answers "why did the worker stop this time"** — your
+  classification, free-form, read by humans and by your own next
+  invocation.
+
+➡ **A rich `stop_reason` and a boring `phase` is the correct shape.**
+When your classification feels too specific for any of the seven, that
+specificity belongs in `stop_reason` and `lead_guidance`; the `phase`
+stays boring. **The pull toward collapsing them is strongest exactly
+when the situation is unusual — which is when the fleet most needs to
+still be able to see the slot.**
+
 1. **Update `.epic-status.json`**:
    - Set `phase` (if changing) — one of the seven above, no others
    - Set `stop_reason` to your classification
