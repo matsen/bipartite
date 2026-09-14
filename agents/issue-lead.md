@@ -278,9 +278,36 @@ one asserting.)
 ➡ **If the work is done and the PR is open, the phase is
 `quality-gate`, not `completed`.**
 
-**Idempotency guard.** If `.epic-status.json#completed_at` is already
-set, the terminal ceremony already ran — return "PHASE: completed"
-immediately without posting or filing.
+**Idempotency guard.** ⛔ **Check the PR, not the status file.** If the PR
+already carries this ceremony's own Step 7 comment, the ceremony already
+ran — return "PHASE: completed" immediately without posting or filing.
+
+```bash
+gh pr view <N> --json comments -q '.comments[].body'   # look for your Step 7 comment
+```
+
+⛔ **Why not `.epic-status.json#completed_at`, which this guard used to
+key on: `/bip-pr-land` DELETES that file.** Its Step 6 merges the PR,
+Step 6a preserves the orchestration files, and **Step 9.5 removes
+`.epic-status.json` and `.epic-worklog.md` from the clone.** Since the
+rule above forbids setting `completed` until the PR is merged, and this
+ceremony therefore runs *after* the land, **the guard was keying on a
+field in a file the landing step had already removed** — so it could
+never fire, and a re-invocation would post and file a second time.
+Measured 2026-09-14: a terminal ceremony ran post-land in a clone whose
+status file was already gone.
+
+⭐ **The general rule, and it is why the PR is the right referent: the
+durable artifact is the one in the repo, not the one in a pooled clone.**
+A clone-local file can be deleted by a later step, by a reclaim, or by
+the next spawn's prep; a PR comment cannot. **A guard should check the
+artifact it is trying to avoid duplicating** — here, the comment itself —
+rather than a private flag that is supposed to correlate with it.
+
+⚠ **Still write `completed_at` if the file exists** (see step 3 below),
+for the conductor's dashboard and for `bip epic watch`. **Just do not
+depend on it for idempotency, and do not recreate the file solely to
+hold it.**
 
 Otherwise:
 
@@ -310,7 +337,10 @@ Otherwise:
 3. Set `.epic-status.json#completed_at` to the current ISO 8601
    timestamp — **from `date -u +%Y-%m-%dT%H:%M:%SZ`, per Step 7's
    rule (a); never a constructed value** — then return
-   "PHASE: completed".
+   "PHASE: completed". ⚠ **If `/bip-pr-land` has already removed the
+   file, skip this write and say so in your return line.** It is a
+   dashboard convenience, not the idempotency record; the guard above
+   keys on the PR comment precisely so this write is allowed to fail.
 
 **Do not file on non-terminal evaluations.** Signals may change as
 the worker addresses feedback; filing only at `completed` means the
