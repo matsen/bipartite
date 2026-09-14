@@ -152,8 +152,44 @@ Read `lead_notes` in `.epic-status.json`:
 
 ### Step 7: Write your assessment
 
+⛔ **Two rules about writing this file, both from defects a lead
+actually shipped on 2026-09-14. Neither is reachable from the
+worker-facing spawn prompt, which is why they live here.**
+
+**(a) NEVER construct a timestamp. Shell out and use what it prints.**
+
+```bash
+date -u +%Y-%m-%dT%H:%M:%SZ
+```
+
+Every timestamp you write — `updated_at`, `completed_at`,
+`awaiting.started_at` — comes from that command's output, verbatim.
+**Do not write a time from your own sense of what time it is, even
+one that looks right.** Two leads wrote future-dated `updated_at`
+values that day (up to ~1 h ahead of the clock), and a future
+timestamp is the direction that **hides a stall** rather than
+inventing one — nothing in the fleet will notice the slot has died.
+⭐ **The tell, if you ever audit these: both fabricated values ended
+in `:00` seconds, while all 15 correctly-written values in the pool
+did not.** `date -u` distributes seconds uniformly, so a round-minute
+timestamp is evidence of a constructed one. The existing spec line
+said "never a placeholder" and was not read as forbidding this —
+a plausible-looking constructed value does not feel like a
+placeholder, which is exactly why it needs naming separately.
+
+**(b) `phase` must be one of the documented seven**, and nothing
+else: `exploring`, `coding`, `testing`, `awaiting-results`,
+`quality-gate`, `needs-human`, `completed`. ⚠ **A `stop_reason`
+value is not a phase** — one lead wrote `phase: "premature-deferral"`,
+and a worker wrote `phase: "implementing"` (a synonym for `coding`).
+Three distinct off-spec values surfaced in one day. ⛔ **If your
+classification has no home in those seven, that is a signal to
+escalate, not to invent a value** — an unrecognised phase means
+every fleet mechanism that keys on phase silently stops seeing this
+slot.
+
 1. **Update `.epic-status.json`**:
-   - Set `phase` (if changing)
+   - Set `phase` (if changing) — one of the seven above, no others
    - Set `stop_reason` to your classification
    - Set `lead_guidance` — clear, actionable instruction for the worker
    - Set `scope` — one-line restatement of the issue's goal
@@ -198,6 +234,31 @@ Read `lead_notes` in `.epic-status.json`:
 Runs **only** when you are setting `phase: "completed"`. Skip for all
 other classifications.
 
+⛔ **PRECONDITION: DO NOT SET `completed` OR `completed_at` UNTIL THE
+PR IS ACTUALLY MERGED. Verify it, do not infer it:**
+
+```bash
+gh pr view <N> --json state,mergedAt   # state must be MERGED
+```
+
+A clean quality gate, a green suite, and an open-and-MERGEABLE PR are
+**not** landing. Measured 2026-09-14: a lead set `completed` +
+`completed_at` while its PR was still `OPEN`/`MERGEABLE`.
+
+**Two things make this worse than a mislabel.** First, the idempotency
+guard below keys on `completed_at` — **setting it early tells the NEXT
+lead invocation that the terminal ceremony already ran**, so the
+follow-up filing and the Step 7 comment are silently skipped forever.
+Second, a `completed` phase reads to the fleet as an invitation to
+reclaim the slot, so the file spends that window asserting a slot is
+free while an unlanded PR sits in it. (A conductor that gates reclaim
+on `gh` rather than on `phase` is protected — but that protection is at
+the point of *action*, not at the point of *assertion*, and you are the
+one asserting.)
+
+➡ **If the work is done and the PR is open, the phase is
+`quality-gate`, not `completed`.**
+
 **Idempotency guard.** If `.epic-status.json#completed_at` is already
 set, the terminal ceremony already ran — return "PHASE: completed"
 immediately without posting or filing.
@@ -228,7 +289,9 @@ Otherwise:
    omit both. Post the comment.
 
 3. Set `.epic-status.json#completed_at` to the current ISO 8601
-   timestamp, then return "PHASE: completed".
+   timestamp — **from `date -u +%Y-%m-%dT%H:%M:%SZ`, per Step 7's
+   rule (a); never a constructed value** — then return
+   "PHASE: completed".
 
 **Do not file on non-terminal evaluations.** Signals may change as
 the worker addresses feedback; filing only at `completed` means the
