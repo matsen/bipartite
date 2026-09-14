@@ -222,6 +222,14 @@ preserve_epic_state() {
 #      RESUME WORK AFTER THIS POINT, RE-CREATE `.epic-status.json` FIRST").
 #      Observed 2026-09-14: a slot's re-created worklog was 2135 B against a
 #      15950 B predecessor.
+#      *** AND THIS GUARD HAS NOW FIRED ON IT IN PRODUCTION. *** Same day,
+#      within an hour of this comment being written and while the case was
+#      still hypothetical here: a slot landed its PR, was asked to resume for
+#      post-land work, re-created its worklog, and the mirror caught
+#      32922 B -> 3948 B, keeping the long copy. 29 KB that a plain `cp` loop
+#      would have destroyed. The guard was argued into existence from reasoning
+#      with no instance in hand; it has an instance now. Do not delete it on
+#      the grounds that the case looks theoretical.
 # Cases 2-4 are legitimate and at least one of them is protocol-mandated, so a
 # non-zero return would make the poll step report failure on a normal day, and
 # a signal that fires on the normal case stops being read. The data is never
