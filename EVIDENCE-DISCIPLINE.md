@@ -100,6 +100,20 @@ Two rules, both mechanical:
 
 **The limit worth stating, because it is tempting to automate this away:** a criterion cannot be validated against the artifact it precedes. Both criteria above were internally consistent, cited real code, and read as plausible. No citation checker, coverage diff, or verdict ratchet reaches them — those all compare a claim against an existing artifact, and a criterion's artifact does not exist yet. The only available check is a second reader asking, before the work starts, *what population does this criterion's number range over, and which code paths can contribute to it.*
 
+## Before explaining a discrepancy, establish that there is one
+
+**Two numbers that disagree may not be measuring the same thing, and a plausible explanation for the gap is exactly what stops you checking.** The failure is not sloppiness — it is having a ready account. Reach for "drift", "rounding", "noise", "a different run" and the question *are these the same quantity?* never gets asked, because it has already been answered.
+
+Two instances on `matsengrp/phyz` 2026-09-14, both in the same hours, both resolved only when someone re-derived instead of reconciling:
+
+- **A bracket published as `2.9% - 15.4%`.** The floor was `19/652`, the ceiling `117/761` — the floor had kept the old batch-only population while the ceiling adopted the corrected total. On one denominator the bracket is `2.50% - 15.37%`. **`2.9` against `2.5` reads as rounding**, which is why it survived the very correction written to remove it.
+- **A branch count reported as `847`, later measured at `819`, and explained as drift over three hours.** It was two commands: `git branch -r` counts a *clone's* remote-tracking refs, `git ls-remote --heads` counts *live* heads. Neither had moved; the gap was 23 stale refs to deleted branches. **The drift story was plausible on a repo landing work continuously**, and it was wrong.
+
+⭐ **The positive control is the case handled correctly the same day, and it is instructive because nothing about it was harder.** Two definitions of a round's "position" in a search — index among applying rounds, versus round number over the run's maximum — gave means of `0.487` and `0.562`. Both were reported side by side, with the interior figures, and the conclusion was drawn only from what held under both. **The reason that went right is that neither party had a story for the gap**, so there was nothing to paper it over with. **Difficulty was not the variable; availability of an explanation was.**
+
+- **When two figures for "the same thing" disagree, name the command or formula behind each before accounting for the difference.** If they turn out to measure different quantities, the gap is not an error to explain — it is two results, and often both belong in the write-up.
+- ⛔ **Do not soften a number you suspect is unreliable until you know it is.** The `847` edit under consideration was *"treat the magnitude, not the figure, as the claim"* — which would have deleted the actual finding, that the clone-side view is **worse** than the remote because it retains refs to branches that are not merely dead but gone. A hedge applied to a sound number removes the argument the number was carrying.
+
 ## A prohibition is the one claim nobody checks
 
 **Every claim in a document eventually meets the code except a prohibition, which is obeyed.** So a stale "do not re-run X, it is settled" is strictly more durable than a stale fact, and it is worse than durable: **it suppresses precisely the measurement that would expose it.** A wrong number invites someone to recompute it; a wrong ⛔ removes the recomputation from the space of things anyone will do.
