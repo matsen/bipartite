@@ -525,6 +525,22 @@ The reason is not tidiness. Arms reaching verdicts independently is the *only* t
 Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
 Concrete shape from the run that motivated this: an issue whose stated prerequisites both merged the same day reads as unblocked, but the conductor had already stood a clone down for it for an unrelated reason — without the negative list, that reads as ready to the epic and gets proposed again.
 
+### Run `lib/fleet-collisions.sh` before every spawn
+
+```bash
+"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh"   # exit 0 = clear, 1 = found, 2 = could not check
+```
+
+**This check cannot be done from the epic side and is not a courtesy hand-off.** Clone branches are local (`shared_filesystem: false`), and remote refs are not a substitute: under squash-merge every historical branch stays permanently ahead of `main` — measured on `matsengrp/phyz`, **847 remote branches, the first 400 all ahead** — so "ahead of main" does not discriminate live from long-dead. The decisive case is **uncommitted** work, which exists only in the clone. A three-way collision on one test file was visible on 2026-09-14 solely in `git status` output on the conductor's machine.
+
+It reports four things: live branches and their touched files; **files touched by more than one live clone**; **a `.epic-status.json` whose clone has no live pane**; and **a live pane with no status file**.
+
+⭐ **Those last two are one asymmetric check and the second direction is the worse one.** A stale file makes an idle clone read busy and costs a spawn. A *missing* file makes a busy clone invisible to every state-file sweep **including the phase monitor** — so a stall there produces silence rather than a stale timestamp, and a conductor can spawn a second worker into an occupied clone. Both were live on 2026-09-14, hours apart.
+
+⚠ **And the general lesson, which is why both directions are in one script: fixing one direction of an asymmetric check is the moment you are least likely to examine the other.** The missing-file section exists only because the epic asked about the direction the conductor had just stopped looking at, and it fired on its first run.
+
+⛔ **Exit 2 means "could not check" and must not be read as clear.** If `tmux` returns nothing while status files exist, the script refuses to report the pool stale and exits 2 — because the action on a STALE report is deleting a worker's state file.
+
 ### Unattended scheduled load is invisible to a worker and it will blame itself
 
 Before spawning, and before telling any slot to run a full suite, check what the machine is already committed to that no slot owns:
