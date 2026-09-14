@@ -58,11 +58,23 @@ mapfile -t PANE_PP < <(tmux list-panes -a -F '#{pane_current_path} #{pane_pid}' 
 # showed `bash`), and an exited session leaves the pane at `zsh` -- the two
 # are indistinguishable. A tmux pane outlives the Claude session inside it,
 # so pane-exists is not session-alive.
+# 0 = a live claude is in the subtree, 1 = none found, 2 = COULD NOT DETERMINE.
+# The 2 case matters: the action on a DEAD-SESSION report is resuming or
+# reclaiming a clone, so an unreadable subtree (a pane owned by another user,
+# a /proc race as a process exits) must not be reported as dead. Same
+# asymmetry as the tmux guard's exit 2.
 pane_has_claude() {
-  local root="$1" queue=("$1") pid kids
+  local queue=("$1") pid kids seen=0
   while [ "${#queue[@]}" -gt 0 ]; do
     pid="${queue[0]}"; queue=("${queue[@]:1}")
-    case "$(ps -o comm= -p "$pid" 2>/dev/null)" in *claude*) return 0;; esac
+    local comm; comm=$(ps -o comm= -p "$pid" 2>/dev/null)
+    if [ -z "$comm" ]; then
+      # the root pane pid itself unreadable -> cannot determine
+      [ "$seen" -eq 0 ] && return 2
+      continue
+    fi
+    seen=1
+    case "$comm" in *claude*) return 0;; esac
     mapfile -t kids < <(pgrep -P "$pid" 2>/dev/null)
     [ "${#kids[@]}" -gt 0 ] && queue+=("${kids[@]}")
   done
@@ -156,7 +168,13 @@ if [ "$have_panes" -eq 1 ]; then
   for row in "${PANE_PP[@]}"; do
     ppath="${row% *}"; ppid="${row##* }"
     case "$(realpath "$ppath" 2>/dev/null)" in "$RROOT"/*) ;; *) continue;; esac
-    pane_has_claude "$ppid" && continue
+    pane_has_claude "$ppid"; phc=$?
+    [ "$phc" -eq 0 ] && continue
+    if [ "$phc" -eq 2 ]; then
+      rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"
+      echo "  CANNOT DETERMINE ${rest%%/*}  pane_pid=$ppid (subtree unreadable) -- NOT reporting dead" >&2
+      rc=2; continue
+    fi
     rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"; clone="${rest%%/*}"
     dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
     echo "  DEAD-SESSION $clone  pane_pid=$ppid  uncommitted=$dirty"
