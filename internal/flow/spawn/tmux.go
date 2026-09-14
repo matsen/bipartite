@@ -78,7 +78,9 @@ func canonicalizePath(path string) (string, error) {
 }
 
 // CreateWindow creates a tmux window and runs Claude Code with the given prompt.
-// model, if non-empty, is passed through as claude's --model flag.
+// model, if non-empty, is passed through as claude's --model flag. windowName
+// also becomes the claude session's --name, so it doubles as the address
+// other sessions use to reach this one via ListAgents/SendMessage.
 func CreateWindow(windowName, repoPath, prompt, url, model string) error {
 	// Write prompt to temp file
 	promptFile, err := os.CreateTemp("", fmt.Sprintf("review-%s-*.txt", windowName))
@@ -155,15 +157,15 @@ rm -f '%s' '%s'
 }
 
 // buildClaudeInvocation returns the shell command that launches claude, with
-// --model injected only when model is non-empty. sessionName is always
-// passed via --name so the session is addressable by ListAgents/SendMessage
+// --model injected only when model is non-empty. windowName is always passed
+// via --name so the claude session is addressable by ListAgents/SendMessage
 // under the same name as its tmux window, instead of a default that gives
 // every worker sharing a clone root the same unhelpful prefix.
-func buildClaudeInvocation(model, sessionName string) string {
+func buildClaudeInvocation(model, windowName string) string {
 	if model == "" {
-		return fmt.Sprintf(`claude --dangerously-skip-permissions --name '%s' "$prompt"`, sessionName)
+		return fmt.Sprintf(`claude --dangerously-skip-permissions --name '%s' "$prompt"`, windowName)
 	}
-	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' --name '%s' "$prompt"`, model, sessionName)
+	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' --name '%s' "$prompt"`, model, windowName)
 }
 
 // BuildWindowName creates a window name from repo and number.

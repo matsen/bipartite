@@ -10,6 +10,9 @@ const sessionId = `\x1b[90m${String(input.session_id ?? "")}\x1b[0m`;
 const transcript = input.transcript_path;
 const model = input.model || {};
 const name = `\x1b[95m${String(model.display_name ?? "")}\x1b[0m`.trim();
+// input.agent.name: set when claude is launched with --agent <name>.
+// input.session_name: set via --name at launch, or /rename mid-session.
+// Both are documented in the CLI's own statusline hook payload schema.
 const agentName = input.agent?.name || input.session_name || "";
 const agentLabel = agentName ? ` \x1b[96m(${agentName})\x1b[0m` : "";
 const cwd = input.workspace?.current_dir || input.cwd || process.cwd();
