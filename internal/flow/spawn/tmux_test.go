@@ -124,27 +124,30 @@ func TestIsInTmux(t *testing.T) {
 
 func TestBuildClaudeInvocation(t *testing.T) {
 	tests := []struct {
-		name  string
-		model string
-		want  string
+		name       string
+		model      string
+		windowName string
+		want       string
 	}{
 		{
-			name:  "empty model is unchanged from pre-existing behavior",
-			model: "",
-			want:  `claude --dangerously-skip-permissions "$prompt"`,
+			name:       "empty model passes --name only",
+			model:      "",
+			windowName: "bipartite#281",
+			want:       `claude --dangerously-skip-permissions --name 'bipartite#281' "$prompt"`,
 		},
 		{
-			name:  "model is passed through as --model",
-			model: "opus",
-			want:  `claude --dangerously-skip-permissions --model 'opus' "$prompt"`,
+			name:       "model is passed through as --model, alongside --name",
+			model:      "opus",
+			windowName: "bipartite#281",
+			want:       `claude --dangerously-skip-permissions --model 'opus' --name 'bipartite#281' "$prompt"`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := buildClaudeInvocation(tt.model)
+			got := buildClaudeInvocation(tt.model, tt.windowName)
 			if got != tt.want {
-				t.Errorf("buildClaudeInvocation(%q) = %q, want %q", tt.model, got, tt.want)
+				t.Errorf("buildClaudeInvocation(%q, %q) = %q, want %q", tt.model, tt.windowName, got, tt.want)
 			}
 		})
 	}
