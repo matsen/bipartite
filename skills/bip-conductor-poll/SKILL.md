@@ -212,6 +212,51 @@ indefinitely — that is deliberate, it is the floor under data loss. **Do not
 everything that has ever run. Use the slot table for current state and
 `.preserved/` for the archive.
 
+#### Audit every status file for claims that are false
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+audit_status_files "$CLONE_ROOT" || echo "AUDIT: see the STATUS lines above" >&2
+```
+
+Silent on a clean pool. Every line it prints is a status file **asserting
+something false**, which is invisible unless something compares the file against
+reality:
+
+- **`STATUS FUTURE-TIME`** — a timestamp ahead of the clock. ⚠ **Direction
+  matters**: a *past*-dated `started_at` invents a timeout, which is loud and
+  gets investigated; a *future*-dated one **hides a stall**, because the run
+  keeps reading as having budget left and a hung job is never escalated.
+  Measured 2026-09-14: `updated_at` 62 minutes ahead, round to the whole minute
+  — which two `date -u` calls cannot both be. Clock skew and timezone were both
+  ruled out (`System clock synchronized: yes`; a TZ error here is 7 hours, not
+  62 minutes), so the fit is a worker writing an **ETA** into a field that means
+  *last touched*.
+- **`STATUS NO-AWAITING-BLOCK`** — `phase: awaiting-results` with no `awaiting`
+  block, so the loop has nothing to check while the file reads as monitored.
+  **Two of two slots that reached that phase on 2026-09-14 got it wrong, in
+  different ways.** Two of two is a spec ambiguity, not two slips: the phase
+  *name* reads as "I am waiting" while its *contract* is "I have a live
+  readiness probe."
+- **`STATUS OFF-SPEC-PHASE`** — a `phase` outside
+  `exploring|coding|testing|awaiting-results|quality-gate|needs-human|completed`.
+  ⛔ **Do not fix this by widening a filter.** The known instance
+  (`phase: "premature-deferral"`, a `stop_reason` value in the `phase` field)
+  surfaced *only* because `bip epic watch`'s `--phases` list had previously been
+  widened to absorb that exact string. **That was the wrong direction**:
+  widening a filter to accommodate an off-spec value converts a schema violation
+  into a silent success, and the filter then does exactly what it was told
+  against a value set that no longer means anything. **An off-spec phase must
+  shout.** (This check found a *second* off-spec value, `implementing`, on its
+  first run against a live pool.)
+- **`STATUS UNREADABLE` / `STATUS UNPARSEABLE-TIME`** — the file or the field
+  could not be parsed. Both are findings, not skips.
+
+**The fix is always the worker's**, not yours: relay the line. These are claims
+only the slot can correct, and a conductor editing `lead_guidance` or a phase is
+how two writers end up indistinguishable in one file.
+
 #### Slot cleanup for merged PRs
 
 For each slot whose PR has merged (cross-reference merged PRs from check 1 with slot branches):

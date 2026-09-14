@@ -322,6 +322,136 @@ mirror_worklogs() {
     return $rc
 }
 
+# audit_status_files <clone_root>
+# Reports .epic-status.json fields that ASSERT SOMETHING FALSE. Silent on a
+# clean pool; one line per problem; returns non-zero if any fired.
+#
+# All three checks exist because the same failure keeps recurring in different
+# fields: the status file reads as monitored while monitoring nothing, and the
+# discrepancy is invisible unless something compares the file against reality.
+#
+# ⭐ WHY THESE ARE CHECKS AND NOT BETTER DOCUMENTATION. Both fields audited
+# here ALREADY HAVE an explicit stated rule in the worker-facing spawn prompt,
+# and both rules were broken anyway on 2026-09-14:
+#   - `bip-conductor-spawn/SKILL.md` lists the seven phases in the
+#     second-person `.epic-status.json fields:` block, and THREE distinct
+#     off-spec values still appeared in one day.
+#   - Two lines below it, `updated_at` says "Never a placeholder, and never
+#     local time with a `Z` appended" -- and a future-dated value appeared.
+# ⚠ Incidentally that same line rules out the obvious diagnosis: pax is UTC-7,
+# so local-time-with-Z reads 7 hours BEHIND, not 62 minutes ahead. The
+# documented failure mode has the wrong sign for what was observed.
+#
+# 1. FUTURE-DATED TIMESTAMPS. Measured 2026-09-14: a slot wrote
+#    `updated_at: 2026-09-14T20:35:00Z` against a real clock of 19:33:32Z --
+#    62 minutes ahead, and round to the whole minute, which two `date -u` calls
+#    cannot both be. The epic ruled out clock skew (`System clock
+#    synchronized: yes`) and timezone (a TZ error here is 7 hours, not 62
+#    minutes); the fit is a worker writing an ETA into a field that means LAST
+#    TOUCHED.
+#    ⚠ Direction matters: a PAST-dated `started_at` invents a timeout, which is
+#    loud and gets investigated. A FUTURE-dated one HIDES A STALL -- the run
+#    keeps reading as having budget, so a hung job is never escalated. The
+#    quiet failure is the one to catch.
+#
+# 2. `awaiting-results` WITH NO `awaiting` BLOCK. Two of two slots that reached
+#    that phase on 2026-09-14 got it wrong, in different ways -- one had no
+#    block at all while a 16-search remote run was in flight, the other was at
+#    a stopping point and not waiting on anything. Two of two is a spec
+#    ambiguity, not two slips: the phase NAME reads as "I am waiting" while its
+#    CONTRACT is "I have a live readiness probe".
+#
+# 3. A `phase` OUTSIDE THE DOCUMENTED SET. A lead wrote
+#    `phase: "premature-deferral"` -- a `stop_reason` value in the `phase`
+#    field.
+#    ⛔ It surfaced ONLY because `bip epic watch`'s `--phases` filter had
+#    previously been WIDENED to absorb that exact string. That was the wrong
+#    remedy and this comment exists so nobody repeats it: widening a filter to
+#    accommodate an off-spec value converts a schema violation into a silent
+#    success. The filter then does exactly what it was told, against a value
+#    set that no longer means anything. An off-spec phase must SHOUT.
+#
+# Uses python3 rather than jq: this parses timestamps and compares them to the
+# clock, and it must distinguish "field absent" from "field unparseable" --
+# both are findings, and a jq default would collapse them into each other.
+audit_status_files() {
+    local clone_root="$1" rc=0 out
+    clone_root_has_clones "$clone_root" || return 0
+    out=$(python3 - "$clone_root" <<'PY'
+import json, os, sys, datetime, glob
+root = sys.argv[1]
+OK = {"exploring","coding","testing","awaiting-results",
+      "quality-gate","needs-human","completed"}
+now = datetime.datetime.now(datetime.timezone.utc)
+bad = False
+for p in sorted(glob.glob(os.path.join(root, "*", ".epic-status.json"))):
+    clone = os.path.basename(os.path.dirname(p))
+    try:
+        d = json.load(open(p))
+    except Exception as e:
+        print(f"STATUS UNREADABLE {clone}: {e}"); bad = True; continue
+    mtime = datetime.datetime.fromtimestamp(os.path.getmtime(p), datetime.timezone.utc)
+
+    ph = d.get("phase")
+    if ph not in OK:
+        print(f"STATUS OFF-SPEC-PHASE {clone}: phase={ph!r} is not one of {sorted(OK)}")
+        bad = True
+
+    if ph == "awaiting-results" and not d.get("awaiting"):
+        print(f"STATUS NO-AWAITING-BLOCK {clone}: phase=awaiting-results with no awaiting block "
+              f"-- nothing to check, and the file reads as monitored")
+        bad = True
+
+    # ABSENT is handled DIFFERENTLY per field, and getting this wrong was the
+    # audit's own first defect: both branches originally `continue`d on a
+    # missing value, which silently accepted a status file with NO
+    # `updated_at` at all -- the WORSE failure, since a future timestamp hides
+    # a stall in one direction while a missing one leaves staleness
+    # unassessable in any direction. `python3` was chosen over `jq` precisely
+    # so absent and unparseable would not collapse into each other; routing
+    # absent to `continue` collapsed them anyway.
+    #   updated_at          -> required; absent must SHOUT
+    #   awaiting.started_at -> required ONLY WHEN AN `awaiting` BLOCK EXISTS.
+    #
+    # ⚠ That last clause is a correction to this code's own first fix. The
+    # reasoning offered for skipping an absent `started_at` was that
+    # NO-AWAITING-BLOCK already reports it -- true when the WHOLE BLOCK is
+    # missing, and false when the block exists WITHOUT that field. In that
+    # second case NO-AWAITING-BLOCK does not fire (a block is present) and the
+    # skip swallows it, so a slot with a `check_cmd` and no `started_at` passes
+    # clean while `started_at + timeout_hours` -- the only thing that catches a
+    # dead remote run -- cannot be evaluated at all. A justification that holds
+    # for one case, applied to a broader condition: the same shape this whole
+    # audit exists to catch, twice now, inside the audit.
+    _aw = d.get("awaiting") or {}
+    for field, val, required in (("updated_at", d.get("updated_at"), True),
+                                 ("awaiting.started_at", _aw.get("started_at"),
+                                  bool(_aw))):
+        if not val:
+            if required:
+                print(f"STATUS MISSING-TIME {clone}: {field} is absent -- staleness "
+                      f"cannot be assessed in either direction")
+                bad = True
+            continue
+        try:
+            t = datetime.datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=datetime.timezone.utc)
+        except Exception:
+            print(f"STATUS UNPARSEABLE-TIME {clone}: {field}={val!r}"); bad = True; continue
+        if t > now + datetime.timedelta(seconds=90):
+            print(f"STATUS FUTURE-TIME {clone}: {field}={val} is "
+                  f"{int((t-now).total_seconds()//60)} min AHEAD of the clock "
+                  f"(file mtime {mtime.strftime('%Y-%m-%dT%H:%M:%SZ')}) "
+                  f"-- a future timestamp HIDES a stall")
+            bad = True
+sys.exit(1 if bad else 0)
+PY
+    ) || rc=1
+    [ -n "$out" ] && printf '%s\n' "$out"
+    return $rc
+}
+
 # mark_spawn_intent_consumed <intent-file-path>
 # Moves a spawn-intent file into a "consumed/" subdirectory sibling to
 # it, so a launched intent is distinguishable on disk from one still
