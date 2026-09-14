@@ -300,6 +300,22 @@ Resolve a citation when the conductor is about to *do* something with it: schedu
 Recording a forwarded finding in `.epic-decisions.md`, or relaying it onward, is neither — forward it attributed and unresolved, and let the tier that owns verification do the verifying.
 A conductor that resolves every citation crossing its desk has become a second reviewer of the epic's work, which is exactly the duplication "The fleet/topic line" exists to prevent.
 
+### A DO-NOT-RE-RUN citation must carry the archive line it rests on
+
+⛔ **Never write a ⛔ "do not re-run X, it is settled" into a brief without quoting the archive line that settles it and naming the file.**
+
+A prohibition is the one thing in a brief a worker will not test. Every other claim gets checked against the code sooner or later; a ⛔ is obeyed. So a stale prohibition is strictly more durable than a stale fact, and it suppresses exactly the measurement that would expose it.
+
+Measured 2026-09-14 (`matsengrp/phyz`): EPIC #369 carried a RULED OUT entry asserting an n=180/351 spread of `0.0` as a real result "verified 5 ways."
+
+⭐ **Three of its five legs verify, and that is the point — the entry was OVER-CLAIMED, not invented.** The `entry_floor_n180.tsv` leg is real (`final_lnl = -12737.734812`, no `--seed` in its `argv`), the distinct-seeds leg verifies 88/88 on phyz rows, wall times do differ ~24%, and **the `0.0` is genuinely what the harness recorded** — that was never in question. What failed is that two legs were disqualified by tracked docs, and that the headline answered *"is this a harness bug?"* while the entry's **function** was to forbid the exploration question. **Land this rule on over-claiming rather than on invention: nobody thinks they are inventing.**
+
+The two failing legs were disqualified by `docs/ml/369-findings.md:595` (that curve rests on zero checkable cells; distinct-count is censored at k=8 and "must not be the readout") and `experiments/2026-09-08-ladder-taxon-count-2377/README.md:417-421` (that arm's `spread = 0.0` is a "vacuous positive" that cannot discriminate deterministic convergence from never exploring). **Issue #2608's own run would have been forbidden by that entry, and it measured 79.964137 nat spread at n=180, 8/8 distinct.** The entry was struck.
+
+With the citation present, a worker can check it in one `sed` and report the contradiction. Without it, the brief transmits the prohibition and loses the evidence.
+
+**Corollary: when an epic strikes a RULED OUT entry, sweep every brief in flight and everything in `.spawn-prompts/` for citations to it.** Cheap (`grep -ril`), and a *consumed* brief is still driving a live worker.
+
 ### Message economy: the log is the artifact, the message is the nudge
 
 Lead with the decision, the ask, or the correction; give the reasoning the receiver cannot reconstruct; cite `.epic-decisions.md`, the issue, the PR, or the worklog entry for the rest instead of reproducing it. Succinct, not terse — there is no word limit, and a message that omits the one fact making it actionable has saved nothing. This applies to user-facing reports too.
@@ -508,6 +524,30 @@ The reason is not tidiness. Arms reaching verdicts independently is the *only* t
 **Worked instance (`matsengrp/phyz`, 2026-09-06), and it is the case that justifies the practice rather than the case where it looked clever:** an epic session withheld a prediction that four topologies would fail to survive a corrected protocol. The arm tested them independently and **falsified it** — all four survived. Had the prediction been relayed, it would have arrived in the one population where confirmation was cheapest, on a question carrying a rung at zero margin. **A withheld idea that turns out wrong is better evidence for withholding than one that turns out right.**
 Read `.epic-decisions.md` in the conductor cwd (see Conventions, "Decision relays" and ".epic-decisions.md: the durable fleet-decision log") for prior entries and append any new one here, timestamped and attributed, in the same step you surface it — don't let it live only in this dashboard render.
 Concrete shape from the run that motivated this: an issue whose stated prerequisites both merged the same day reads as unblocked, but the conductor had already stood a clone down for it for an unrelated reason — without the negative list, that reads as ready to the epic and gets proposed again.
+
+### Unattended scheduled load is invisible to a worker and it will blame itself
+
+Before spawning, and before telling any slot to run a full suite, check what the machine is already committed to that no slot owns:
+
+```bash
+systemctl --user list-timers phyz-nightly-test.timer --all
+uptime
+```
+
+⛔ **Use the timer, not `is-active` on the service.** The service returns `inactive` the moment it finishes, so a worker whose build died at 02:50 and who checks at 03:15 reads `inactive`, concludes contention was not the cause, and goes back to blaming its own branch — the exact self-blame this rule exists to prevent, displaced by half an hour. `list-timers` answers both questions in one line:
+
+```
+NEXT                        LEFT  LAST                              PASSED
+Tue 2026-09-15 02:31:05 PDT 22h   Mon 2026-09-14 02:36:20 PDT  1h 23min ago
+```
+
+⚠ **Scheduled 02:30, observed start 02:36:20** (`OnCalendar=*-*-* 02:30:00`, `Persistent=true`). Cite both. A worker who reads "fires at 02:30" and checks at 02:34 concludes it already finished or has not begun — the skew is what turns a correct rule into a wrong reading.
+
+On `matsengrp/phyz` the nightly is `phyz-nightly-test.timer`, the ReleaseSafe suite, running ~90 minutes on `pax` — the same workstation the fleet runs on. Measured 2026-09-14 at 09:43Z: **33 processes under `/tmp/phyz-nightly-ci`** plus one slot's full `zig build test` at 20, load average **48.77** on 32 cores, and three of another slot's `zig build` invocations killed.
+
+**The failure is not the contention, it is the attribution.** A worker cannot see scheduled load it does not own, so it explains the symptom with whatever mechanism is to hand. The slot above reported its kills as "a low-memory watchdog" — with **106 Gi available**, `earlyoom` **inactive** (not even a unit), and no OOM line in 30 minutes of kernel log. It then lowered `-j`, which does nothing against a box oversubscribed by someone else.
+
+This belongs to the conductor specifically: it is the only party positioned to look, the same reason the modal sweep and the host-load checks live here. Tell the affected slots the cause, and tell them **a build killed in that window is contention rather than a defect in their branch** — otherwise they re-diagnose their own changes over it.
 
 ### Step 6: Propose next action
 
