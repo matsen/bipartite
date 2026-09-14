@@ -278,4 +278,31 @@ Branch `<branch>` deleted."
 If any files were moved to `_ignore/`, list them.
 If the primary clone was synced in Step 7.5, say so: "Primary clone `<path>` pulled."
 If Step 8 removed a linked worktree, say so: "Worktree `<path>` removed."
+⛔ **A LANDING THAT BYPASSES THIS SKILL SILENTLY SKIPS PRESERVATION, AND THE
+OBSERVABLE IS THE PR COMMENT.** `gh pr merge` run outside `/bip-pr-land` skips
+Step 6a (preserve), Step 9.5 (delete), and the `🤖 EPIC worklog preserved`
+comment in one move — **no error, no warning, no trace.** Measured 2026-09-14 on
+`matsengrp/phyz`: a PR landed that way and left a **35,432-byte** worklog live
+in a pooled clone, where the next spawn's prep would have deleted it with
+nothing to show it had existed.
+
+➡ **The check is the pointer comment, not the files.** After any merge:
+`gh pr view <N> --json comments --jq '.comments[].body' | grep -c 'worklog preserved'`
+— **1 means this skill ran, 0 means it did not.** That contrast is what
+diagnosed the instance: the PR that used the skill had 1, the one that did not
+had 0, and the second's state files were still sitting in the clone (which
+Step 9.5 would have removed). ⚠ **Do not diagnose it from the presence or
+absence of `.preserved/<issue>-*`** — absent is also what a preservation that
+ran *to the wrong directory* looks like, and that failure mode is real
+(`<clone_root>/<clone>/.preserved/` instead of `<clone_root>/.preserved/`; see
+"If you cannot source it" above). The comment distinguishes *did not run* from
+*ran and failed*; the directory does not.
+
+⚠ A conductor-side worklog mirror (`/bip-conductor-poll`'s
+`mirror_worklogs`) now runs every poll cycle as a floor under this, so a
+bypassed landing no longer loses the worklog outright. **That is a backstop, not
+a licence** — it covers `.epic-worklog.md` and `.epic-status.json` only, is
+overwritten rather than archived, and does not post the pointer a reader six
+weeks out needs.
+
 If Step 6a preserved EPIC state, say so: "Worklog preserved to `<DEST>`, noted on the PR." (recall the exact path from what Step 6a printed earlier in this same session — it was not carried forward as a shell variable)
