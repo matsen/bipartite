@@ -148,6 +148,14 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ⚠ **Verified, because the first draft of this very gate had that bug.** Run against `3af8d743`, the actual offending merge commit, a `grep -inE '…[[:space:]]*#?[0-9]+'` with no `tr` exits **1 with no output** — a clean bill of health on the commit the rule exists to catch. **A gate written from a correct diagnosis, by someone who had just finished writing up that diagnosis, still shipped unable to detect the instance.** Test a gate against the artifact that motivated it; a plausible pattern is not evidence.
 
+⛔ **And when you re-test it, extract the pattern from THIS FILE — then verify the extraction round-trips, because a mangled pattern can still return every expected answer.** Three separate manglings were hit while verifying this one gate, and **all three reported PASS**:
+
+- A shell `grep`+`sed` extraction silently dropped the leading `\b`. The run still showed `discloses #999` as clean, so the result looked right while the pattern under test did not exist.
+- `echo "$PAT"` renders `\b` as a **backspace**, eating the preceding character — so the *display* of a correct pattern looks truncated, inviting a "fix" to a non-problem. Use `printf '%s'`, or `od -c` for the leading bytes.
+- A `${PAT#\\b}` strip intended as the control arm silently did not strip, so the "without-`\b`" arm was actually the *with*-`\b` pattern and both arms agreed — which reads as "the boundary does nothing."
+
+➡ **Assert the extraction, don't eyeball it** (`assert pat.startswith('\\b')`), and where a character's *effect* is the claim, prove it behaviourally with a real control arm rather than by reading the string. Doing that is what showed the boundary is load-bearing; every display-level check had been consistent with it being inert.
+
 ⚠ **Three details in that pattern are each load-bearing, and all three were added only after a narrower version was tested and found to fail OPEN — silently clean, which is the exact failure mode this gate exists to remove:**
 
 - **`:?`** — GitHub honours `Closes: #N`. Without it, one colon defeats the gate.
@@ -176,6 +184,10 @@ git log --format='%B' "origin/$BASE"..HEAD \
 | `see #123 for context` | *nothing* | negative — no keyword |
 | `this was closed in 2024 by someone` | *nothing* | negative — prose past tense |
 | `Closes 2620` (no `#`) | *nothing* | negative — GitHub does not honour it either |
+| `discloses #999` | *nothing* | ⭐ **word-boundary guard** |
+| `foreclosed #55` | *nothing* | ⭐ **word-boundary guard** |
+
+⭐ **Those last two rows exist to protect the leading `\b`, and they are the cheapest row in the table.** Dropping the boundary — the obvious "simplification" for anyone tidying this pattern — **fails open on every English word ending in `-close`/`-closed`/`-fix`**: verified, without the `\b`, `discloses #999` matches as `closes #999` and `foreclosed #55` matches as `closed #55`. The boundary is load-bearing rather than decorative, and these rows are what say so to the next editor.
 
 Every number in the output that you do **not** intend to close is a defect. Fix it by rewording the commit body — break the keyword token, or move the number away from it — **not** by narrowing the gate. There is no escaping syntax and quotation marks do nothing.
 
