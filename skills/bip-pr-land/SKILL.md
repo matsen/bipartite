@@ -156,6 +156,10 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ➡ **Assert the extraction, don't eyeball it** (`assert pat.startswith('\\b')`), and where a character's *effect* is the claim, prove it behaviourally with a real control arm rather than by reading the string. Doing that is what showed the boundary is load-bearing; every display-level check had been consistent with it being inert.
 
+⛔ **AND ASSERT THAT THE CONTROL ARM ACTUALLY DIFFERS FROM THE TEST ARM — `assert arm_a != arm_b` BEFORE INTERPRETING EITHER.** The third mangling above is this exact failure: a `${PAT#\\b}` strip silently stripped nothing, so the "without-`\b`" arm *was* the with-`\b` pattern, both arms agreed, and the honest reading of that output was **"the boundary does nothing"** — the precise opposite of the truth. An A/B whose two arms are secretly identical does not report an error; it reports a null.
+
+⭐ **The property that unites all four manglings: a verification harness fails toward AGREEMENT.** A mangled pattern, a stripped-nothing control arm, and a display that eats a character all produce output shaped like confirmation. **A broken gate is loud eventually, because something slips past it. A broken instrument is silent forever, because nobody checks the checker.** That asymmetry is why these asserts are worth their keystrokes and a fifth careful read is not.
+
 ⚠ **Three details in that pattern are each load-bearing, and all three were added only after a narrower version was tested and found to fail OPEN — silently clean, which is the exact failure mode this gate exists to remove:**
 
 - **`:?`** — GitHub honours `Closes: #N`. Without it, one colon defeats the gate.
