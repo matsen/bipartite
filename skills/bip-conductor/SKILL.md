@@ -605,11 +605,23 @@ First, do housekeeping automatically (no need to ask):
 
   ➡ **So the state you need is "nothing live in the clone", and neither the file conditions nor the session state reports it.** The check is the same `/proc` idiom this file already prescribes for fleet-scoping, pointed at reclaim:
 
+  ⛔ **BUT THE CHECK HAS TO RUN AFTER THE KILL, NOT BEFORE — AND THIS IS WHERE AN EARLIER DRAFT OF THIS VERY CONDITION WAS WRONG.** Before the kill, the slot's **own** `claude` session and its shell have a cwd in the clone by construction, so a naive "is anything live here" check fails for **every open window** and the condition is unusable. Measured 2026-09-15: a finished, `idle`, fully-preserved slot reported **2 live processes** — its own session and its own `zsh`. Nothing was wrong.
+
+  ➡ **So the order is: confirm the other conditions, kill the window, THEN verify quiescence before marking the clone free.** That is also the order that catches the real case — a detached build **survives** the kill, so only a post-kill check distinguishes it from the session you just ended.
+
   ```bash
-  # any process — build, shell, claude — working inside this clone?
-  for pid in $(pgrep -x zig; pgrep -x claude; pgrep -x zsh); do
-    [ "$(readlink /proc/$pid/cwd 2>/dev/null)" = "$CLONE" ] && echo "LIVE: $pid"
+  # AFTER tmux kill-window. Anything still here survived the kill.
+  live=0
+  for pid in $(pgrep -x zig; pgrep -x claude; pgrep -x zsh; pgrep -x rsync; pgrep -x python3); do
+    [ "$(readlink /proc/$pid/cwd 2>/dev/null)" = "$CLONE" ] && { live=$((live+1)); echo "SURVIVED: $pid $(ps -o comm= -p $pid)"; }
   done
+  [ "$live" -eq 0 ] && echo "free" || echo "NOT free: $live"
+  ```
+
+  ⚠ **And sample twice, because a `claude` process does not exit the instant its window closes.** Measured immediately after the kill above: the session's own pid was **still present**, which reads exactly like the orphaned-build case and is not — it was mid-teardown and gone shortly after. This file already records the general form (*"a state observed DURING a transition is not a state"*); **a window you just closed is mid-operation by construction.** Poll until it clears rather than concluding from the first sample:
+
+  ```bash
+  until ! [ -d /proc/$PID ] || [ "$(readlink /proc/$PID/cwd 2>/dev/null)" != "$CLONE" ]; do sleep 3; done
   ```
 
   ⚠ **What it costs to skip: the next spawn builds on the same `--cache-dir` concurrently**, which is the documented stale-futex hazard whose symptom is a build hanging at 0% CPU. And a "which cache is live" guess does not save you — the clone in that instance carried **three** cache directories.
