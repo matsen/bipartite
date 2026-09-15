@@ -578,7 +578,13 @@ NEXT                        LEFT  LAST                              PASSED
 Tue 2026-09-15 02:31:05 PDT 22h   Mon 2026-09-14 02:36:20 PDT  1h 23min ago
 ```
 
-⚠ **Scheduled 02:30, observed start 02:36:20** (`OnCalendar=*-*-* 02:30:00`, `Persistent=true`). Cite both. A worker who reads "fires at 02:30" and checks at 02:34 concludes it already finished or has not begun — the skew is what turns a correct rule into a wrong reading.
+⛔ **THE NEXT-FIRE TIMESTAMP IS NOT A QUOTABLE FIGURE — `RandomizedDelaySec=15min`, AND SYSTEMD RE-RANDOMIZES THE PENDING VALUE.** Measured 2026-09-15 on the same unit with **no run in between**: `NEXT Wed 02:34:06` at 16:26Z, `NEXT Wed 02:41:15` at 18:40Z, both against `LAST Tue 02:31:05`. `systemd-analyze calendar '*-*-* 02:30:00'` resolves flat to `02:30:00`, so the entire offset is the randomization.
+
+➡ **Tell a worker the WINDOW, never the timestamp: fires 02:30–02:45, and a build killed anywhere in 02:30–04:00 is the nightly's ~90-minute ReleaseSafe suite rather than a defect in its branch.** A worker handed `02:34:06` who sees nothing at `02:35` concludes the timer is broken; a worker handed the window does not.
+
+⛔ **The previous version of this line is worth keeping as a worked failure, because it is a class we had no name for: A DOC THAT GETS THE FACT RIGHT AND THE MECHANISM WRONG, THEN DERIVES A REMEDY FROM THE MECHANISM.** It read *"Scheduled 02:30, observed start 02:36:20 (`OnCalendar`, `Persistent=true`). Cite both."* ⭐ **The observation was true and checked out on inspection. `Persistent=true` was the wrong cause, and "cite both" is the instruction that follows only if that cause is right** — so it told a conductor to quote a value that will have moved by the time the worker reads it.
+
+⚠ **This failure mode is invisible to the obvious audit, which is why it survived: anyone re-deriving the MEASUREMENT confirms it.** Only re-deriving the *mechanism* exposes the remedy. **When a doc pairs a number with a cause, check the cause separately — the number passing tells you nothing about it.**
 
 On `matsengrp/phyz` the nightly is `phyz-nightly-test.timer`, the ReleaseSafe suite, running ~90 minutes on `pax` — the same workstation the fleet runs on. Measured 2026-09-14 at 09:43Z: **33 processes under `/tmp/phyz-nightly-ci`** plus one slot's full `zig build test` at 20, load average **48.77** on 32 cores, and three of another slot's `zig build` invocations killed.
 
