@@ -750,7 +750,26 @@ done
 
 ⚠ **Neither the `[m]ake` bracket trick nor `>/dev/null 2>&1` helps.** The bracket only stops `grep` matching its *own* argv; it says nothing about other processes' argv and nothing about the waiter's own cmdline.
 
-➡ **WHAT TO DO INSTEAD, which is the most useful line here: poll on a PID captured at launch (`$!`), never on a pattern — a pid cannot appear in your own cmdline.** Better still, **don't poll**: a backgrounded `Bash` re-invokes the session on exit, so the wait is the harness's job. Where you must identify a process you did not launch, enumerate by exact name and attribute by working directory (`pgrep -x zig` + `/proc/<pid>/cwd`), per the idiom above. **Without a correct loop to copy, a reader who accepts this entire diagnosis writes a fourth variant.**
+⛔ **AND IT IS NOT CONFINED TO LOOPS. A ONE-SHOT `pgrep -f` ASKING "IS X STILL RUNNING" RETURNS AN OFF-BY-ONE THAT INFLATES THE COUNT, AND THERE IS NO SYMPTOM AT ALL.** The deadlock above is the LOUD version of this bug; **the silent count is the one a human reads and believes.** ⚠ **`pgrep -c` makes it strictly worse, because it discards the pids that would have shown you the problem.**
+
+⭐ **Measured 2026-09-15 under control, with a pattern that existed nowhere else on the box:** `pgrep -c -f zzuniqpattern9173` returned **`1`**, and `pgrep -f` on the same pattern returned exactly one pid — **the asking shell's own `$$`**. Zero real matches, count of one, exit status 0. The `$$`-excluding form returned `0`.
+
+⚠ **The instance that justifies writing this down came from the REVIEWER OF THIS VERY RULE, about two minutes after signing off on it**, running `pgrep -c -f check_knob` against its own gate: it returned `4`, one of which was the grep. It was caught only because that operator had pre-emptively written "may include this grep" into the command's own echo. **A rule freshly read did not prevent it.** That is the argument for the next paragraph being the default form rather than a remedy.
+
+➡ **WHAT TO DO INSTEAD, which is the most useful line here: poll on a PID captured at launch (`$!`), never on a pattern — a pid cannot appear in your own cmdline.** Better still, **don't poll**: a backgrounded `Bash` re-invokes the session on exit, so the wait is the harness's job. **Without a correct loop to copy, a reader who accepts this entire diagnosis writes a fourth variant.**
+
+**Where you must identify a process you did not launch, this is the default form — exact name, attribute by cwd, and exclude self unconditionally:**
+
+```bash
+n=0
+for p in $(pgrep -x zig); do
+  [ "$p" = "$$" ] && continue                                  # NOT optional, NOT a remedy
+  [ "$(readlink /proc/$p/cwd 2>/dev/null)" = "$PWD" ] && n=$((n+1))
+done
+echo "$n"
+```
+
+⚠ **`pgrep -x` cannot match your shell on its own** — the shell is not named `zig` — **so the `$$` guard looks redundant here and is kept anyway**, because the line that gets edited later is the pattern, and the moment anyone switches `-x` to `-f` the guard is the only thing standing between them and the off-by-one above.
 
 ⛔ **LEAD WITH THE CONSEQUENCE, BECAUSE IT IS WORSE THAN THE WASTED TIME: A DEADLOCKED SLOT IS SIMULTANEOUSLY UNRECLAIMABLE AND UNREACHABLE.** The session reports `shell`, never `idle`, so the `idle`-only reclaim gate never fires — **and a session blocked on a foreground shell makes no tool call, so it cannot drain a `SendMessage`, including the correction telling it to stop.** ⭐ **Every push-based mechanism in this design assumes the receiver drains its inbox; this is a state where it provably does not.** Same shape as the permission-modal case below. Only the conductor can clear it, from outside, and nothing reports it: pine held that state for 70 minutes with its work already landed and its clone clean.
 
@@ -761,12 +780,13 @@ for pid in $(pgrep -x zsh; pgrep -x bash; pgrep -x sh); do
   cwd=$(readlink /proc/$pid/cwd 2>/dev/null); case "$cwd" in $CLONE_ROOT/*) ;; *) continue;; esac
   ppid=$(ps -o ppid= -p $pid | tr -d ' '); et=$(ps -o etimes= -p $pid | tr -d ' ')
   [ "$(ps -o comm= -p $ppid | tr -d ' ')" = "claude" ] || continue
+  [ "$pid" = "$$" ] && continue          # exclude self: this sweep matches its own cmdline
   [ "$et" -gt 600 ] || continue          # SEE THE WARNING BELOW BEFORE LOWERING THIS
   echo "$et|$pid|${cwd##*/}"; tr '\0' '\n' < /proc/$pid/cmdline | tail -1 | grep -o "eval '.*' < /dev/null"
 done | sort -rn
 ```
 
-⛔ **THIS SWEEP IS ITSELF AN INSTANCE OF THE CLASS IT DETECTS, and what excludes it is incidental rather than designed.** It greps for `eval '.*' < /dev/null` from a shell whose own cmdline contains that string, and it satisfies the ppid-is-`claude` filter. **Two things keep it out of its own results, and neither is a safeguard**: the `600`-second threshold, and — on a layout where the conductor clone sits *outside* `$CLONE_ROOT` — the cwd filter. ⚠ **Verified 2026-09-15: the sweep shell's own cmdline contained the pattern twice, and only the cwd filter excluded it on that layout.** So **a conductor that runs this from inside a pooled clone loses one of the two exclusions, and a future reader who lowers the threshold to catch faster deadlocks loses the other.** If you lower it, match on the pid and exclude `$$`.
+⛔ **THIS SWEEP IS ITSELF AN INSTANCE OF THE CLASS IT DETECTS, and what excludes it is incidental rather than designed.** It greps for `eval '.*' < /dev/null` from a shell whose own cmdline contains that string, and it satisfies the ppid-is-`claude` filter. **Two things keep it out of its own results, and neither is a safeguard**: the `600`-second threshold, and — on a layout where the conductor clone sits *outside* `$CLONE_ROOT` — the cwd filter. ⚠ **Verified 2026-09-15: the sweep shell's own cmdline contained the pattern twice, and only the cwd filter excluded it on that layout.** So **a conductor that runs this from inside a pooled clone loses one of the two exclusions, and a future reader who lowers the threshold to catch faster deadlocks loses the other.** ⭐ **So exclude `$$` in the sweep as written, not conditionally on someone lowering the threshold** — per the default form above, the guard belongs in the line before it is needed, not after.
 
 ⚠ **Clear it before killing.** Confirm no real process of that clone's own is being waited on — `pgrep -x make`/`-x zig` plus a `/proc/<pid>/cwd` match. Measured the same day: teak had genuinely live `zig` pids from a later, separate build, and balsa's 105-minute shell was a real `run_speed_diag.sh` run. **A blind age-threshold kill would have taken both.**
 

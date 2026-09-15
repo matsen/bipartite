@@ -733,6 +733,36 @@ COMPLETION: When done (or when lead says completed):
    c. If either flagged issues that you fixed, go back to (a)
    Track quality gate iterations in .epic-status.json
 
+   ⛔ **A NON-ZERO `make` EXIT IS ONLY A GATE VERDICT IF THE TARGET'S OWN
+   OUTPUT REACHED A PASS/FAIL SUMMARY LINE.** Two exit codes mean *"I broke
+   the instrument"*, not *"the gate is red"*, and both were produced on
+   `matsengrp/phyz` on 2026-09-15 by three separate sessions inside one
+   hour:
+
+   - **124** — `timeout N make <target>` killed it mid-run. The output
+     simply stops partway down the test list.
+   - **144** — a backgrounded `make` lost job control of its own children:
+     `make: *** wait: No child processes.  Stop.` /
+     `Waiting for unfinished jobs....`
+
+   ⚠ **144 is the dangerous one, because it prints `make: ***` in the same
+   shape a real target failure does** — a reader scanning for `make: ***`
+   cannot tell them apart, and nothing about the gate was ever decided.
+
+   ➡ **On 124 or 144, re-run the check DIRECTLY — not through a
+   timeout-capped or backgrounded `make` wrapper.** That is what turned an
+   inconclusive `check-knob-citations` into a real verdict: `exit 0,
+   checked=155 pinned=2 skipped=0 violations=0`. **Credit for finding the
+   right form goes to the worker on #2692, which did it before either
+   reviewing session did.**
+
+   ⭐ **Why this rule is worth its space: #2700 existed because THREE slots
+   each spent a quality-gate round establishing that a red `make` target
+   was not theirs.** A wrapper-induced 124 or 144 manufactures that same
+   misattribution out of nothing — and the fleet has every incentive to
+   wrap long `make` runs in exactly the way that produces it. **Report an
+   unreached gate as UNMEASURED. Never as passing, and never as red.**
+
    A PR that survives several review rounds accumulates one body section
    per round ("Reviewer follow-up: ...", a growing "History"). /bip-pr-check
    flags this and offers a rewrite — take it, unprompted. The body should
