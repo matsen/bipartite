@@ -94,6 +94,38 @@ A correction that costs a diplomatic round trip does not get made at the margin,
 - **A TODO or MUST-FIX carries its discharge condition, or is struck the moment it lands.** *"MUST FIX `<file:line>`"* — already fixed, six lines above that same body's warning that the risk had inverted toward fixing correct instances. It rots into a trap *because the work got done*: the one failure mode that worsens with good practice.
 - **State each item's disposition** — done / correct-by-design / outstanding. *"left for #2455"* named three already-correct citations; *"is filed separately; do not fold it back here"* described an issue that was never filed. A bare pointer defaults to "outstanding" in the reader's mind.
 
+## ⛔ The epic's own claims are the ones that never get checked — and its most expensive error is answering a proxy
+
+Three rules, all from one day on `matsengrp/phyz` (2026-09-15), all committed by the epic session itself.
+
+### Never report a sub-question's answer as the programme's answer
+
+**An EPIC's core question and the issue you just closed are different objects, and the second is far more available.** Measured: the epic told its user *"the core question is answered and closed"* on the strength of two landed issues that had, between them, identified a real defect and a real mechanism. **A skeptic refuted it in one pass.** The arithmetic: the two results closed **67.6%** of a *stage* gap at **one cluster**, and `0%` of the programme's headline gap — which was **78.5 nat**, not the **34.7** the epic had computed, because it compared against the other engine's *descent-only* figure rather than its search endpoint.
+
+⚠ **The EPIC body itself had already scoped the result out**, calling it *"a user-facing quality defect independent of any [cross-engine] comparison."* **The epic read its own text and substituted anyway.**
+
+➡ **Before writing that anything is answered: quote the EPIC's own question, then state which measured quantity closes it and by how much.** If the answer is a fraction of one stage at one fixture, say that instead. ⛔ **And check what the number you are comparing against actually IS** — a descent value and an endpoint value differ by the whole of the other engine's outer loop.
+
+### Run a skeptic on your OWN artifacts, not only on workers'
+
+**The "skeptic before filing" rule reads as being about other people's claims, and the epic exempted itself from it twice in one day.** It filed an issue with no skeptic pass — the pass, run afterwards, found the issue's central arithmetic rested on non-matched baselines and that the quantity **inverted** under a defensible change of one of them. And it claimed closure with no pass at all.
+
+➡ **Two additions, and they are where the epic's own errors actually came from: before any claim that a question is ANSWERED, and before filing an issue the epic wrote itself.** ⭐ **Two fresh skeptics on overlapping material found disjoint defects two hours apart**, which is also the argument against a standing skeptic: the value is in having no stake and no inherited framing, and a persistent one accumulates the epic's priors until its agreement stops being evidence.
+
+### ⛔ Attribution is the half of a claim nobody tests — and if every error favours you, that is a signal
+
+**Five attribution inversions in one day, every one in the flattering direction.** The epic credited a worker with catching the epic's generalisation (the worker had written it, and caught its own); then claimed the same sentence as its own (it had not written it, only propagated it); then accepted credit for a conductor's correct prediction that the epic had in fact argued against and killed.
+
+⚠ **The mechanism is that an attribution rides inside a message whose SUBSTANCE has already been verified, so it inherits a credibility nothing ever tested.** It is never the part anyone checks, because it is never the part in dispute.
+
+➡ **The log answers it in one command** — pair each occurrence with its nearest preceding attribution header and read which session's entry it sits under. **Do that before repeating who found something.** ⭐ **And treat the DIRECTION as diagnostic: five for five favouring the same party is not chance.** Volunteering the correction that reflects badly on you is the only half of this problem the other party cannot fix.
+
+### Before escalating: does the answer change what anyone DOES?
+
+**A correctly-identified open question is not automatically an escalation.** The epic marked a taxonomy question *"the user's to rule"* and routed it up. The user declined and corrected the framing: *"the formalism may be getting away from the science here … I don't think this question is load-bearing?"* **They were right — nothing operational read the disputed count, and the relevant doc already published both values with reasons.**
+
+➡ **Apply the test before spending the user's attention, and apply it to your own routing even when a peer has already accepted it.** ⚠ The failure is not asking a bad question; it is failing to notice that **both answers lead to the same action**, which makes the question decoration.
+
 ## Configuration
 
 Reads `.epic-config.json` from the repo root — the same file `/bip-conductor` uses, so the two roles never disagree about where things live.
