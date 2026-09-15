@@ -792,6 +792,14 @@ COMPLETION: When done (or when lead says completed):
    envelope, and it is your human. **Read which envelope, not whether one is
    present.**
 
+   ⭐ **Two independent instances the same day, neither contrived.** The
+   worker whose episode produced this rule read the draft and caught the
+   envelope-absence heuristic; then a second session, in the very turn it
+   was reviewing the correction, received a genuine user message inside that
+   same `The user sent a new message while you were working:` wrapper. **So
+   the first draft's test would have misread a real user turn twice over, in
+   two sessions, on the day it was written.**
+
    ⚠ **The failure to avoid is the third row's disclaimer bleeding onto the
    first row's message.** Measured 2026-09-15 on `matsengrp/phyz`: a worker
    received a genuine typed authorization from its user, in the same payload
