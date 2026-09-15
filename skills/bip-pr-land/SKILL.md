@@ -195,6 +195,12 @@ Every number in the output that you do **not** intend to close is a defect. Fix 
 
 ⛔ **And do not hand-roll the merge to skip this.** A bare `gh pr merge` run outside this skill also skips Step 6a (EPIC worklog preservation), Step 9.5 (state cleanup), and the `🤖 EPIC worklog preserved` PR comment that `bip-conductor-poll`'s rescue rule reads. The 2026-09-15 instance lost nothing only because that slot's worklog had been preserved the previous night for an unrelated reason.
 
+⛔ **THIS TABLE IS ITSELF A LOADED GUN, AND IT WENT OFF ONCE. When you edit these rows, DO NOT quote them verbatim in your commit message — break the tokens.**
+
+The commit that *added* the two word-boundary rows described them in its own body as "`discloses #999`, `foreclosed #55`". Run the gate on that commit and it reports **`999` and `55`**: `discloses` contains `closes`, `foreclosed` contains `closed`, and this pattern's own `\b` — present in the *file* — is not present in a commit body. It was pushed straight to the default branch, where GitHub honours closing keywords. `matsen/bipartite#999` does not exist and `#55` had already been closed eight months earlier, so the timeline shows only a `referenced` event and **nothing was harmed by luck of two numbers**. Had `#55` been open, the commit adding the gate would have closed an unrelated issue.
+
+⭐ **That is the second time in one session that the documentation of this defect re-committed the defect** — the first was the phyz branch commit whose purpose was removing a `Closes` line and which quoted the line it removed. **It is not a coincidence and it will happen to you: writing about a trigger is the activity most likely to put the trigger in your commit message.** Run the gate on your own commit before pushing, including a direct push with no PR.
+
 ⭐ **The generalisation, which transfers well past `gh`: a defect's own documentation is executable context, so quoting a trigger re-arms it — prose is not inert.** Same class as the ⛔-citation rule in `bip-conductor` (a stale prohibition is more durable than a stale fact, because it suppresses the measurement that would expose it). Whenever a commit message, issue body, or skill file needs to *discuss* a syntax that something downstream acts on, break the token rather than quoting it.
 
 ### Step 6a: Detect worktree mode, and preserve EPIC state before anything can destroy it
