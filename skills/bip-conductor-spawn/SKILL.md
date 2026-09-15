@@ -407,9 +407,31 @@ EPIC STATUS PROTOCOL — You MUST follow this:
    the phase changed. A long `awaiting-results` or `coding` phase transitions
    nothing, so a transition-only rule leaves the fleet's only automated
    instrument reading whatever you wrote on entry, while the worklog beside
-   it stays current. If you go more than ~30 minutes without a worklog entry,
-   refresh `summary` anyway. A one-line `summary` with current progress is
-   enough; no phase change needed.
+   it stays current.
+
+   ⛔ **Write the status file at events you PERFORM, never after time you
+   must notice passing.** This rule used to say "if you go more than ~30
+   minutes without a worklog entry, refresh anyway," and that has nothing to
+   fire on: **there is no clock interrupt inside a turn**, so a worker in a
+   build -> test -> wait -> fix chain never reaches a moment where "thirty
+   minutes have elapsed" arrives as a fact it can act on. ⚠ **This is an
+   architectural argument, not a measured one** — a fleet-wide staleness
+   measurement that appeared to demonstrate it turned out to have a
+   confounded cause, and the rule is stated here on its reasoning alone.
+   One worker's first-person account of the mechanism, kept as that and not
+   as a sample: *"heads-down through several rounds of build/test/wait
+   cycles... didn't come back up for air on the status file."*
+
+   ➡ **So refresh `summary` and `updated_at` immediately BEFORE and AFTER
+   each of these:**
+   - starting or finishing a build or test run you expect to exceed a few minutes
+   - launching or reaping a remote job
+   - spawning a subagent, and reading its result
+   - any append to `.epic-worklog.md`
+
+   ⭐ **Each is a moment you are already stopping to decide something, which
+   is why they fire where a timer does not.** A one-line `summary` with
+   current progress is enough; no phase change needed.
 3. Update it when you finish or encounter a blocker
 4. Maintain .epic-worklog.md as a narrative log (see format below)
 
