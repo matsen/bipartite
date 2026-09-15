@@ -551,6 +551,12 @@ status (`set -o pipefail` -- a trailing `| tail`/`| head` otherwise
 steals it; a bare `print()`/`echo` sets none). **Never wrap
 the whole probe in `|| echo`.**
 
+⛔ **AND THE MIRROR, WHICH EVERYTHING ABOVE MISSES: A PROBE THAT CAN NEVER REPORT *DONE*.** Everything in this section is about failing OPEN — a probe that cannot report not-done. The opposite defect comes from the same place and is not covered. Measured 2026-09-15 on `matsengrp/phyz`: three slots wrote a wait loop that matched **its own command line**, so it could never exit — `ps aux | grep "[m]ake check"` (which also matches every `claude` session's 28-39 KB spawn prompt) and `pgrep -f '<pattern>'` (where the pattern is a substring of the waiting shell's own `eval` cmdline). They span 33, 60 and 70 minutes.
+
+⚠ **The two fail in opposite directions and only one of them is loud.** Fail-open advances the loop on nothing. **Fail-closed spins forever AND takes the slot's reachability with it**: the session reports `shell` rather than `idle`, so the conductor's `idle`-only reclaim gate never fires, and a session blocked on a foreground shell makes no tool call — so it cannot drain a `SendMessage`, including the one telling it to stop. Only the conductor can clear it, from outside.
+
+➡ **So: poll on a PID you captured at launch (`$!`), never on a pattern — a pid cannot appear in your own cmdline.** Better still, don't poll: a backgrounded `Bash` re-invokes your session on exit, so the wait is the harness's job. The `[m]ake` bracket trick does not help; it only stops `grep` matching its own argv.
+
 `rm` AND `$` -- KEEP THEM OUT OF THE SAME COMMAND. Claude Code carries a
 built-in destructive-removal guard that **bypass-permissions mode does not
 suppress** (`dangerousRemoval:{bypassImmune:!0}` in the binary). When it
@@ -1191,6 +1197,27 @@ Moving it aside is reversible and lets `/bip-conductor-tuckin` Step 2 report it 
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 mark_spawn_intent_consumed "$INTENT"
 ```
+
+⛔ **BECAUSE THIS STEP MOVES RATHER THAN COPIES, AN EPIC-SIDE APPEND AFTER CONSUMPTION RECREATES A FILE IN THE LIVE QUEUE THAT LOOKS EXACTLY LIKE A FRESH BRIEF.** Measured 2026-09-15 on `matsengrp/phyz`: an epic appended a new experimental arm to `.spawn-prompts/2704.md` after the conductor had consumed it, recreating a **1,252-byte fragment** beside an intact **5,168-byte** `consumed/2704.md`. Every poll would have read the fragment as a complete, queued brief.
+
+⛔ **DO NOT "FIX" THIS BY COPYING INSTEAD OF MOVING.** That trades this failure for the worse one this same step already warns about two paragraphs up — a consumed brief sitting in the pending queue forever, where *the absence of a clearing event is indistinguishable from work still outstanding*.
+
+➡ **The guard goes on the READER, and it MUST be content-based, not existence-based.** Both files existing is *also* exactly what a legitimate **re-brief** looks like: same issue, second slot, a fresh full brief written after the first was reclaimed. ⚠ **An existence test cannot separate a delta from a re-brief, and it fails in the bad direction — it would read a real re-brief as a fragment and drop it.**
+
+**Discriminator: a brief opens with an `EPIC:` header and a delta does not.** Match it tolerantly, per this skill's own rule above:
+
+```bash
+if [ -f "$CLONE_ROOT/.spawn-prompts/consumed/$N.md" ] \
+   && ! grep -qiE '^\**EPIC\**:? *#?[0-9]+' "$CLONE_ROOT/.spawn-prompts/$N.md"; then
+  echo "DELTA, not a brief"     # deliver it; do NOT spawn from it
+else
+  echo "BRIEF"                  # treat normally, whatever else is on disk
+fi
+```
+
+⭐ This makes the existing `EPIC:` requirement do a second job at no cost. Verified 2026-09-15 against four inputs: `EPIC: 369` matches, `**EPIC**: #369` matches, `EPIC 369` (no colon) matches, and a realistic delta fragment (`---` then `## ADDED later — Arm U`) correctly does not.
+
+➡ **Where a delta goes depends on whether a slot is still live on that issue, and the second case is the one that will actually happen.** If a worker is live, append it to that slot's `.epic-worklog.md` **before** messaging (the append survives compaction and address drift; the message survives neither). ⛔ **If no slot is live — reclaimed, or landed — that file has been DELETED by `/bip-pr-land`'s own cleanup, so the append writes to nothing, or worse, into a pooled clone someone else gets next. Put the delta on the ISSUE as a comment instead.** Same rule as the approval-comment one: the durable artifact is the one in the repo, not the one in a pooled clone.
 
 **A prompt-template fix does not reach any worker already running.** The prompt file is frozen at launch, and `RECOVERING CONTEXT` sends a compacted worker back to that same frozen text — so a template correction is live in new spawns and absent from every in-flight one. That is the configuration where a fix a worker has already applied silently regresses after a compaction. When you land a template change, either message the live workers and ask them to record the correction in `.epic-worklog.md` (append-only, and it *is* in the recovery path, where the prompt is not editable), or accept that the fix starts at the next spawn — but decide which, rather than treating the edit as having closed the case fleet-wide.
 
