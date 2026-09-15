@@ -85,6 +85,19 @@ A third practice reads as tone and is actually cost: **keep corrections low-cere
 "That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
 A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
 
+## Find the load-bearing conditional — it is usually the claim
+
+**Before shipping a claim, locate the conditional clause its correctness depends on, and ask whether that conditional is actually the claim.** If the sentence is only true *while* / *unless* / *if nothing has* something, the something is the finding and the rest is framing.
+
+⭐ **Why this needs its own check rather than more care: it is the one failure mode where nothing is false, so no check fires.** Its sibling — an instrument confidently answering about a universe that isn't the one asked about — gets caught the first time anyone re-derives from the source. A hedged understatement survives re-derivation, because re-derivation confirms it.
+
+Measured on `matsengrp/superfamily-pcp`, 2026-09-15, both within an hour, both by sessions that had spent the afternoon cataloguing the sibling failure:
+
+- **"`git -C <clone>/vendor/phyz rev-parse HEAD` recovers the run's phyz SHA."** True only until the next run in that clone. `bin/build-phyz.sh` fetches and `checkout --detach origin/<ref>` on **every** run with `cache false`, so the vendor HEAD advances *by construction*. The route was proposed as the better one; it was the more convenient one **answering a different question** — "what did the most recent build use", not "what did this run use".
+- **The correction to it: "it reports the current HEAD, which is the run's binary only if nothing has rebuilt since."** Directionally right, materially too weak: it wrote as a *condition* what is the *default behaviour*. The hedge was carrying the entire finding.
+
+➡ **The mechanical form: for each hedge in a claim you are about to ship, ask how often the hedged case actually obtains. If the answer is "always" or "on every run", rewrite the claim as the hedge.** ⚠ Note both examples were produced *inside a correction to the same class of error*. **Naming a failure class does not confer immunity to it**, so this check has to run on the sentence in front of you, not on your general level of caution.
+
 ## Write only what you're sure of
 
 **Never write down something you aren't sure about. A gap someone has to dig for is cheaper than a confident wrong claim** — the gap costs one command, the claim costs a wrong action plus the round to undo it. This is also why brevity matters: every line in a durable artifact is a claim someone will act on. Five costly failures on `matsengrp/phyz`, 2026-09-10, all confidently written, none arithmetic:
