@@ -140,26 +140,46 @@ The issue-lead's evaluation found two defects: the PR body said "Closes
 BASE=$(gh pr view --json baseRefName -q .baseRefName)
 git log --format='%B' "origin/$BASE"..HEAD \
   | tr '\n' ' ' \
-  | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b[[:space:]]*#[0-9]+' \
-  | grep -oE '[0-9]+' | sort -u
+  | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b:?[[:space:]]*((([[:alnum:]._-]+/[[:alnum:]._-]+)?#|GH-)[0-9]+|https?://[^[:space:]]*/issues/[0-9]+)' \
+  | grep -oE '[0-9]+$' | sort -u
 ```
 
 ⛔ **THE `tr '\n' ' '` IS THE ENTIRE POINT AND IT IS NOT DECORATION. `grep` IS LINE-BASED, SO NO PATTERN — INCLUDING `[[:space:]]`, `\s`, OR `[[:space:]]*` — CAN MATCH ACROSS A NEWLINE IN ORDINARY `grep`.** The wrap is the mechanism, so a grep without the `tr` (or without `-Pz`) reads the two halves as unrelated lines and **reports clean on the real defect.**
 
 ⚠ **Verified, because the first draft of this very gate had that bug.** Run against `3af8d743`, the actual offending merge commit, a `grep -inE '…[[:space:]]*#?[0-9]+'` with no `tr` exits **1 with no output** — a clean bill of health on the commit the rule exists to catch. **A gate written from a correct diagnosis, by someone who had just finished writing up that diagnosis, still shipped unable to detect the instance.** Test a gate against the artifact that motivated it; a plausible pattern is not evidence.
 
-**Pinned behaviour — re-verify these if you touch the command:**
+⚠ **Three details in that pattern are each load-bearing, and all three were added only after a narrower version was tested and found to fail OPEN — silently clean, which is the exact failure mode this gate exists to remove:**
 
-| input | gate reports | intended | verdict |
-|---|---|---|---|
-| `3af8d743` (the defect) | `2620` | *nothing* | ⛔ fires correctly |
-| `5dd7e2e5` (clean land) | `2671` | `2671` | ok |
-| `99e09aa5` (clean land) | `2650` | `2650` | ok |
-| `Closes #99` on one line | `99` | — | positive control |
-| `"Closes` / `#77"` wrapped | `77` | — | positive control, the real shape |
-| `see #123 for context` | *nothing* | — | negative control, no keyword |
+- **`:?`** — GitHub honours `Closes: #N`. Without it, one colon defeats the gate.
+- **`([[:alnum:]._-]+/[[:alnum:]._-]+)?#` and the `issues/` URL branch** — GitHub closes on cross-repo `org/repo#N` and on a full issue URL. A pasted issue link is ordinary, and a fleet spanning two repos writes `org/repo#N` routinely.
+- **`GH-`** — GitHub honours `GH-123` as an issue reference.
+- **`[0-9]+$`, anchored, not bare `[0-9]+`** — once a URL or `org/repo` is inside the match, an unanchored digit class harvests numbers out of the repo path or the hostname.
+
+**Pinned behaviour — 17 rows, all verified. Re-run the whole table if you touch the command; a row with no artifact behind it is not a pin.**
+
+| input | gate reports | verdict |
+|---|---|---|
+| `3af8d743` — the real defect commit | `2620` | ⛔ fires; intended *nothing* |
+| `5dd7e2e5` — clean land | `2671` | ok, matches intent |
+| `99e09aa5` — clean land | `2650` | ok, matches intent |
+| `81bfa870` — a bare merge whose body happened to be clean | *nothing* | ok |
+| `Closes #99`, same line | `99` | positive control |
+| `"Closes` ⏎ `#77"` wrapped | `77` | positive control — **the real shape** |
+| `Closes matsengrp/phyz#2620` | `2620` | cross-repo |
+| `Closes https://github.com/…/issues/2620` | `2620` | full URL |
+| same URL with a trailing `/` | `2620` | ok |
+| `Fixes https://…/issues/2620#issuecomment-99` | `2620` | anchor does not leak |
+| `Closes GH-123` | `123` | `GH-` form |
+| `Closes: #2620` | `2620` | colon |
+| `Resolves:` ⏎ `#2620` | `2620` | colon **and** wrap together |
+| `Closes #11` ⏎ `Fixed #22` | `11 22` | multiple, each keyworded |
+| `see #123 for context` | *nothing* | negative — no keyword |
+| `this was closed in 2024 by someone` | *nothing* | negative — prose past tense |
+| `Closes 2620` (no `#`) | *nothing* | negative — GitHub does not honour it either |
 
 Every number in the output that you do **not** intend to close is a defect. Fix it by rewording the commit body — break the keyword token, or move the number away from it — **not** by narrowing the gate. There is no escaping syntax and quotation marks do nothing.
+
+⚠ **The gate reports bare numbers, not `(repo, number)` pairs.** On a cross-repo `org/repo#N` it tells you `N` and not which repo, so in a multi-repo fleet read the raw `grep -oiE` output (drop the second stage) when a number looks unfamiliar.
 
 ⛔ **And do not hand-roll the merge to skip this.** A bare `gh pr merge` run outside this skill also skips Step 6a (EPIC worklog preservation), Step 9.5 (state cleanup), and the `🤖 EPIC worklog preserved` PR comment that `bip-conductor-poll`'s rescue rule reads. The 2026-09-15 instance lost nothing only because that slot's worklog had been preserved the previous night for an unrelated reason.
 
