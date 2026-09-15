@@ -586,13 +586,17 @@ This belongs to the conductor specifically: it is the only party positioned to l
 First, do housekeeping automatically (no need to ask):
 
 **Closing a finished worker's window is hygiene, not a decision to escalate.** The gate is not whether a window is open — it is whether anything in it is still wanted:
-- **Reclaim** when the issue is closed (check `gh`, not `phase`), the clone is on `main` and clean, work is preserved (below), the prompt line holds nothing authored, **and the session itself reports `idle` rather than `busy`.**
+- **Reclaim** when the issue is closed (check `gh`, not `phase`), the clone is on `main` and clean, work is preserved (below), the prompt line holds nothing authored, **and the session itself reports exactly `idle` in `ListAgents`.**
 
   ⛔ **THAT LAST CONDITION IS NOT REDUNDANT, AND THE OTHER FOUR CAN ALL HOLD WHILE THE WORKER IS STILL WORKING.** Measured 2026-09-15 on `matsengrp/phyz`: a conductor was one command from killing a finished-looking window when **every** file-and-prompt condition was satisfied — issue CLOSED per `gh`, clone on `main` and clean, work preserved, `cursor_x = 2` with only a dim autosuggest wrapper, no modal, **and both `.epic-status.json` and `.epic-worklog.md` already deleted.** The worker was `busy`: it had just spawned its final issue-lead check.
 
   ➡ **The trap is that "the state files are gone" reads as "finished" and is not.** `/bip-pr-land` removes them at its cleanup step, while the worker's own prompt tells it to invoke the lead **one final time after landing** — so there is a real window where the files are gone, the issue is closed, the clone is clean, and a subagent is mid-run. **The file conditions are necessary and not sufficient.**
 
   ⚠ **What you lose by killing into that window is the lead's terminal ceremony and any follow-ups it was about to file — and the symptom is silence**, indistinguishable from a lead that legitimately filed nothing, which is a real and common outcome. Nothing reports it. Same class as *"a landing emits no terminal event by construction"* elsewhere in this file: an absence of state read as completion, one step later in the lifecycle.
+
+  ⛔ **`idle` IS AN ALLOWLIST. NOT-`busy` IS NOT THE TEST.** `ListAgents` has at least four states and all four were live on one box on 2026-09-15: `idle`, `busy`, `waiting`, `shell`. **`waiting` is the dangerous one** — a session blocked on a permission prompt or an approval is not busy and is emphatically not finished; killing into it destroys whatever it was about to ask for, with the same silent symptom described above. `shell` is likewise not "done". **Reclaim on `idle` and on nothing else.**
+
+  ⚠ **It is a point-in-time read and the kill is a later command — re-check immediately before the kill, not once at the top of the sweep.** A worker can be re-invoked in between by a queued message or a loop, and the instance above is the proof the window is narrow: that slot went `busy` *because it spawned something*, which can happen at any moment.
 
   ⭐ **`ListAgents` is the check, and the pane is not.** The pane showed no `FINAL RECAP`, which reads identically to "already scrolled off." One `ListAgents` row said `busy`.
 - **Hold** when there is genuinely typed, unsubmitted input at the prompt — but **text being present at the prompt is not evidence that anyone typed it.** Claude Code's autosuggest pre-fills the composer with a dim suggestion on an idle window, and it fires on *essentially every* idle window. `tmux capture-pane -p` **strips ANSI escapes**, so autosuggest and real input are byte-identical in its output: a check that only greps for text answers "yes" always, and every finished window becomes permanently unreclaimable.

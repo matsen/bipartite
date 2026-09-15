@@ -188,10 +188,13 @@ git log --format='%B' "origin/$BASE"..HEAD \
 | `see #123 for context` | *nothing* | negative — no keyword |
 | `this was closed in 2024 by someone` | *nothing* | negative — prose past tense |
 | `Closes 2620` (no `#`) | *nothing* | negative — GitHub does not honour it either |
+| **`2672`'s own merge: body cites `#1728`, closes `#2672`** | **`2672`** | ⭐ **the only row sourced from production, not construction** |
 | `discloses #999` | *nothing* | ⭐ **word-boundary guard** |
 | `foreclosed #55` | *nothing* | ⭐ **word-boundary guard** |
 
-⭐ **Those last two rows exist to protect the leading `\b`, and they are the cheapest row in the table.** Dropping the boundary — the obvious "simplification" for anyone tidying this pattern — **fails open on every English word ending in `-close`/`-closed`/`-fix`**: verified, without the `\b`, `discloses #999` matches as `closes #999` and `foreclosed #55` matches as `closed #55`. The boundary is load-bearing rather than decorative, and these rows are what say so to the next editor.
+⭐ **The `2672` row is the one to keep if the table is ever trimmed: it is a real merge that landed hours after this gate went in, on precisely the shape that had cost an issue that same morning** — a PR body naming an adjacent issue number while closing only its own. Merge body 3 lines (so `--body` was passed), gate returned `2672` alone, `#1728` still open. **A synthetic row proves the pattern matches; that row proves the safe path was actually taken under pressure.**
+
+⭐ **The two word-boundary rows exist to protect the leading `\b`, and they are the cheapest row in the table.** Dropping the boundary — the obvious "simplification" for anyone tidying this pattern — **fails open on every English word ending in `-close`/`-closed`/`-fix`**: verified, without the `\b`, `discloses #999` matches as `closes #999` and `foreclosed #55` matches as `closed #55`. The boundary is load-bearing rather than decorative, and these rows are what say so to the next editor.
 
 Every number in the output that you do **not** intend to close is a defect. Fix it by rewording the commit body — break the keyword token, or move the number away from it — **not** by narrowing the gate. There is no escaping syntax and quotation marks do nothing.
 
