@@ -479,6 +479,41 @@ When a live worker's scope needs correcting *before* its next natural stopping p
 A worker correction is often *more* time-sensitive than spawn intent — the worker is actively doing the wrong thing while it sits in a queue.
 If the conductor session is addressable right now, `SendMessage` it directly to request immediate delivery, rather than leaving the correction for its next poll cycle — same mechanics and addressability caveats as Step 6's escape hatch.
 
+### Step 7b: An issue body edited mid-flight reaches NOBODY — relay the delta
+
+⛔ **The spawn prompt is frozen at launch. The issue body is not. A worker
+holds a copy of the issue read once, at spawn, and never re-reads it.** So an
+edit you make to an issue with a live slot on it is **invisible to the only
+session that needs it**, and the two artifacts drift silently.
+
+➡ **When you edit an issue that a live worker holds, the delta goes to the
+worker as a Step 7 correction. The body edit is the record; the message is the
+delivery.** Doing only the first is the same as not doing it.
+
+⚠ **The failure is silent in BOTH directions, which is what makes it hard to
+notice:**
+- **Requirements added late never run.** Measured 2026-09-14: a
+  `/bip-issue-check` pass added a "Required validations" section to an issue
+  *after* the conductor had spawned it — **4 of 5 validations never ran**, and
+  the gap surfaced only at the worker's own final gate.
+- **Corrections landed late read as redundancy.** Same day, same EPIC: a wrong
+  scope bullet was fixed in the body, and **two separate workers then flagged
+  it as outstanding** — because neither had re-read the issue. ⚠ **A worker
+  reporting something already done reads as duplicated effort, not as
+  staleness**, so the drift is invisible until someone happens to check.
+
+⭐ **Same class as a frozen spawn prompt carrying a command that has since been
+corrected** — three instances in one evening on `matsengrp/phyz`. **The
+general shape: any artifact frozen at handoff, whose source keeps moving, needs
+its delta pushed rather than pulled.**
+
+**Two cheap habits that close it:**
+1. **Before editing an issue, ask whether a slot is live on it** (the conductor
+   knows; you do not). If one is, the edit and the relay are one action.
+2. ⚠ **If a worker reports something you have already fixed, that is not
+   redundancy — it is evidence the drift happened.** Tell it the fix is
+   landed, and check whether anything *else* you edited also failed to reach it.
+
 ### Step 8: Approving a merge or discharging a gate — post it to the PR
 
 **When you approve a worker's merge, or discharge a gate you set, post a
