@@ -115,6 +115,56 @@ gh pr merge --squash --body ""
 
 Follow the squash merge conventions from global CLAUDE.md — PR title becomes the commit message, body is minimal.
 
+⛔ **`--body` IS NOT OPTIONAL AND IS NOT COSMETIC. Omitting it silently changes which issues the merge closes.** Without `--body`, `gh` defaults the squash commit message to **every branch commit body concatenated**, and GitHub parses that text for closing keywords. Measured on `matsengrp/phyz` 2026-09-15, three merge commits:
+
+| commit | how merged | body lines |
+|---|---|---|
+| `5dd7e2e5` | this skill (`--body "closes #2671"`) | **3** |
+| `99e09aa5` | this skill (`--body "closes #2650"`) | **3** |
+| `3af8d743` | a bare `gh pr merge --squash`, no `--body` | **103** |
+
+Inside those 103 lines sat a branch commit whose entire purpose was *"stop closing the issue"* — and which therefore **quoted the line it had removed**, wrapped across a newline:
+
+```
+The issue-lead's evaluation found two defects: the PR body said "Closes
+#2620" although criteria 1, 3, 4, 5, 7, and 9 remain unmet
+```
+
+`Closes` + newline + `#2620` parses. Quotation marks do nothing; there is no escaping syntax. **#2620 closed on merge against the explicit intent of the PR body, the author, and two reviewers.**
+
+⭐ **THE CHECK EVERYONE RAN WAS THE PR BODY, AND IT PASSED.** Two independent readers ran `gh pr view --json body | grep -i closes` and both correctly got nothing, because the PR body genuinely had no `Closes` line — it had been deliberately removed. **The right question is not "does the PR body close an issue" but "what text will GitHub parse at merge time," and under a default squash those are different artifacts.**
+
+➡ **So: always pass `--body` explicitly, and additionally enumerate every issue number the merge would close.** `--body` alone does not cover a wrong or extra number inside the body you wrote, nor anyone landing outside this skill. Run this **before** Step 6 and compare its output against the issues you intend to close:
+
+```bash
+BASE=$(gh pr view --json baseRefName -q .baseRefName)
+git log --format='%B' "origin/$BASE"..HEAD \
+  | tr '\n' ' ' \
+  | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b[[:space:]]*#[0-9]+' \
+  | grep -oE '[0-9]+' | sort -u
+```
+
+⛔ **THE `tr '\n' ' '` IS THE ENTIRE POINT AND IT IS NOT DECORATION. `grep` IS LINE-BASED, SO NO PATTERN — INCLUDING `[[:space:]]`, `\s`, OR `[[:space:]]*` — CAN MATCH ACROSS A NEWLINE IN ORDINARY `grep`.** The wrap is the mechanism, so a grep without the `tr` (or without `-Pz`) reads the two halves as unrelated lines and **reports clean on the real defect.**
+
+⚠ **Verified, because the first draft of this very gate had that bug.** Run against `3af8d743`, the actual offending merge commit, a `grep -inE '…[[:space:]]*#?[0-9]+'` with no `tr` exits **1 with no output** — a clean bill of health on the commit the rule exists to catch. **A gate written from a correct diagnosis, by someone who had just finished writing up that diagnosis, still shipped unable to detect the instance.** Test a gate against the artifact that motivated it; a plausible pattern is not evidence.
+
+**Pinned behaviour — re-verify these if you touch the command:**
+
+| input | gate reports | intended | verdict |
+|---|---|---|---|
+| `3af8d743` (the defect) | `2620` | *nothing* | ⛔ fires correctly |
+| `5dd7e2e5` (clean land) | `2671` | `2671` | ok |
+| `99e09aa5` (clean land) | `2650` | `2650` | ok |
+| `Closes #99` on one line | `99` | — | positive control |
+| `"Closes` / `#77"` wrapped | `77` | — | positive control, the real shape |
+| `see #123 for context` | *nothing* | — | negative control, no keyword |
+
+Every number in the output that you do **not** intend to close is a defect. Fix it by rewording the commit body — break the keyword token, or move the number away from it — **not** by narrowing the gate. There is no escaping syntax and quotation marks do nothing.
+
+⛔ **And do not hand-roll the merge to skip this.** A bare `gh pr merge` run outside this skill also skips Step 6a (EPIC worklog preservation), Step 9.5 (state cleanup), and the `🤖 EPIC worklog preserved` PR comment that `bip-conductor-poll`'s rescue rule reads. The 2026-09-15 instance lost nothing only because that slot's worklog had been preserved the previous night for an unrelated reason.
+
+⭐ **The generalisation, which transfers well past `gh`: a defect's own documentation is executable context, so quoting a trigger re-arms it — prose is not inert.** Same class as the ⛔-citation rule in `bip-conductor` (a stale prohibition is more durable than a stale fact, because it suppresses the measurement that would expose it). Whenever a commit message, issue body, or skill file needs to *discuss* a syntax that something downstream acts on, break the token rather than quoting it.
+
 ### Step 6a: Detect worktree mode, and preserve EPIC state before anything can destroy it
 
 **Run this whole step as a single Bash invocation, start to finish — do not split it across separate tool calls.** Cross-invocation persistence is **thread-type dependent**, not a fixed rule: in an agent/subagent thread, both shell variables *and* the working directory reset between separate Bash calls (measured directly this session); in a main interactive session, cwd persists but shell variables still do not. Either way, `$PRIMARY`, `$LAND_DIR`, and `$DEST` below must be set and consumed within this one script to be safe across both thread types. An earlier version of this step split the `cd "$PRIMARY"` out into its own later command, which silently broke worktree-mode landing (`git checkout` in Step 7 would run inside the about-to-be-removed worktree instead of the primary clone) — see issue #2216's follow-up finding.

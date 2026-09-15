@@ -537,6 +537,7 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 | **reclaim a slot** | all three state files, including `.claude/ralph-loop.local.md` | a preserved `.epic-status.json` survived a window closure and made an idle clone read as occupied — silently |
 | **report a number you did not compute** | re-derive it, or relay the basis — *"it reports X"*, not *"X"* | a relayed "its suite passed" needed retracting when the session's background tasks died with it |
 | **close or reopen an issue** | verify the criterion against `main`, not against the PR that claims it | #2636 sat open for two hours asserting a build was broken after it had been fixed |
+| **land a PR** | run `/bip-pr-land`. Never a hand-rolled `gh pr merge` | a bare `gh pr merge --squash` omits `--body`, so `gh` concatenates every branch commit body into the merge message and GitHub parses it — #2620 auto-closed against the PR body, the author, and two reviewers, and the bypass also skips worklog preservation |
 
 ⭐ **The cost column is load-bearing, not decoration.** A tired conductor skips a rule; it does not skip a rule with last night's scar attached. When a row's incident is superseded by a worse one, replace it — an entry whose cost has gone stale is the first one to be ignored.
 
