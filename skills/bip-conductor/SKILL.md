@@ -587,7 +587,7 @@ This belongs to the conductor specifically: it is the only party positioned to l
 First, do housekeeping automatically (no need to ask):
 
 **Closing a finished worker's window is hygiene, not a decision to escalate.** The gate is not whether a window is open — it is whether anything in it is still wanted:
-- **Reclaim** when the issue is closed (check `gh`, not `phase`), the clone is on `main` and clean, work is preserved (below), the prompt line holds nothing authored, **and the session itself reports exactly `idle` in `ListAgents`.**
+- **Reclaim** when the issue is closed (check `gh`, not `phase`), the clone is on `main` and clean, work is preserved (below), the prompt line holds nothing authored, the session itself reports exactly `idle` in `ListAgents`, **and no process has a working directory inside that clone.**
 
   ⛔ **THAT LAST CONDITION IS NOT REDUNDANT, AND THE OTHER FOUR CAN ALL HOLD WHILE THE WORKER IS STILL WORKING.** Measured 2026-09-15 on `matsengrp/phyz`: a conductor was one command from killing a finished-looking window when **every** file-and-prompt condition was satisfied — issue CLOSED per `gh`, clone on `main` and clean, work preserved, `cursor_x = 2` with only a dim autosuggest wrapper, no modal, **and both `.epic-status.json` and `.epic-worklog.md` already deleted.** The worker was `busy`: it had just spawned its final issue-lead check.
 
@@ -600,6 +600,21 @@ First, do housekeeping automatically (no need to ask):
   ⚠ **It is a point-in-time read and the kill is a later command — re-check immediately before the kill, not once at the top of the sweep.** A worker can be re-invoked in between by a queued message or a loop, and the instance above is the proof the window is narrow: that slot went `busy` *because it spawned something*, which can happen at any moment.
 
   ⭐ **`ListAgents` is the check, and the pane is not.** The pane showed no `FINAL RECAP`, which reads identically to "already scrolled off." One `ListAgents` row said `busy`.
+
+  ⛔ **AND `idle` IS STILL NOT ENOUGH, BECAUSE IT DESCRIBES THE CLAUDE SESSION AND NOT WHAT THAT SESSION LAUNCHED.** A `run_in_background` build is detached by construction and **outlives the window**. Measured 2026-09-15, eleven minutes after the `idle` clause above was pushed: a slot reclaimed at ~14:57Z — `idle` before the kill, on `main`, clean, no state files, nothing authored at the prompt — had a live `zig build --cache-dir .zig-cache-<clone> -j8` in it at 15:08Z, **elapsed 221 s, so started roughly eight minutes AFTER the window was killed**, still parented to a surviving shell-snapshot `zsh` with no `claude` process anywhere in the clone.
+
+  ➡ **So the state you need is "nothing live in the clone", and neither the file conditions nor the session state reports it.** The check is the same `/proc` idiom this file already prescribes for fleet-scoping, pointed at reclaim:
+
+  ```bash
+  # any process — build, shell, claude — working inside this clone?
+  for pid in $(pgrep -x zig; pgrep -x claude; pgrep -x zsh); do
+    [ "$(readlink /proc/$pid/cwd 2>/dev/null)" = "$CLONE" ] && echo "LIVE: $pid"
+  done
+  ```
+
+  ⚠ **What it costs to skip: the next spawn builds on the same `--cache-dir` concurrently**, which is the documented stale-futex hazard whose symptom is a build hanging at 0% CPU. And a "which cache is live" guess does not save you — the clone in that instance carried **three** cache directories.
+
+  ⭐ **This is the THIRD refinement of this one gate in a day — files, then `+idle`, then `+no live process` — and all three were found by USING it rather than reading it.** Expect a fourth. **The invariant behind all three: every condition here describes an artifact or a session, and what you actually need is that nothing is still acting on the clone.** When you add a fourth, ask whether it is another proxy for that or the thing itself.
 - **Hold** when there is genuinely typed, unsubmitted input at the prompt — but **text being present at the prompt is not evidence that anyone typed it.** Claude Code's autosuggest pre-fills the composer with a dim suggestion on an idle window, and it fires on *essentially every* idle window. `tmux capture-pane -p` **strips ANSI escapes**, so autosuggest and real input are byte-identical in its output: a check that only greps for text answers "yes" always, and every finished window becomes permanently unreclaimable.
 
   Two independent signals separate them. Verified in both directions, 2026-09-04:
