@@ -502,7 +502,10 @@ If you launch a long-running experiment:
    spins, and the status file reads as though something was checked.
    **This paragraph is deliberately a longer restatement of the field
    spec above, and the duplication is load-bearing — do not dedupe
-   it.** A format rule read once at session start, in reference mood,
+   it.** ⭐ **It is consistent with `PROSE-DISCIPLINE.md`'s
+   mutable-value-once rule rather than an exception to it: what is
+   restated here is a durable RULE, not a value that can silently go
+   stale. Restate rules at the point of use; never restate a number.** A format rule read once at session start, in reference mood,
    has decayed by the time the block is written forty minutes later;
    the same rule at the point of use has not. Different reading moods
    need different forms.
