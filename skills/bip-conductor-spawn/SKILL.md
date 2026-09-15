@@ -304,6 +304,28 @@ gh issue view <N> --json state          # closed already?
 An issue that declares itself blocked on an already-merged PR is the single most common staleness bug measured in practice (multiple instances in three days).
 If a named blocker turns out to be resolved, correct the composed prompt's `IMPORTANT CONTEXT` — don't pass the stale claim through to the worker.
 
+⛔ **THE CHECK ABOVE ANSWERS "IS ITS BLOCKER RESOLVED?" AND NOT "IS THE WORK ALREADY DONE?" — THOSE ARE DIFFERENT QUANTITIES, AND ONLY THE SECOND ONE COSTS A SLOT.** Issue state and work state diverge silently, because **nothing updates an issue body when a PR lands part of it.**
+
+⚠ **Measured 2026-09-15 on `matsengrp/superfamily-pcp`: a slot was spawned onto a partial whose entire scope had merged five days earlier.** Every blocker check passed and was correct — the issue OPEN, its named predecessor MERGED, its named dependency OPEN. The work was on `main` the whole time. The epic's brief, written that day, quoted the issue body's own "remaining scope" section as its centerpiece; that body was last edited **2026-09-09T17:06:13Z** and the PR merged **2026-09-10T21:38:44Z**.
+
+⭐ **The mechanism is a closing-keyword gap with an inverted symptom, and it is why no existing rule caught it: `gh pr view 318 --json closingIssuesReferences` returned `[]`.** That PR settled a phase, used no keyword, and referenced no issue — so nothing linked the merge to the issue and nothing prompted anyone to revisit the body. **It was RIGHT not to close the issue** (a later phase remained); the missing piece was a "leaves #N open" line plus a body edit. **So the failure here is not a wrongly-closed issue — it is an issue nothing linked to at all**, which no closing-keyword check looks for.
+
+**Add these three, and run them against the issue you are spawning, not only its named blockers:**
+
+```bash
+gh pr list --state merged --search "<N>" --json number,title,mergedAt   # READ THE TITLES, not the count
+gh issue view <N> --json body -q .body | sed -n '/[Ff]iles to modify/,/^#/p'   # then check those paths on main
+git show origin/main:<path>   # does the described content already exist?
+```
+
+- **Read the titles.** A merged PR titled *"i198 Phase 2: wire phyz aln as the codon-track aligner"* answers the question outright; a count does not.
+- **Check the Files-to-modify paths against `origin/main`.** If the files exist with the described content, the work landed whatever the body says.
+- **Treat an issue's `Depends-on` / related-PR list as a THREAD TO WALK, not a list to state-check.** In the measured instance the conductor ran `gh issue view` on the predecessor and read back a title containing the literal words *"partial #198 Phase 2 infra"* — the thread was in its own output and it state-checked instead of following it.
+
+⚠ **Do not read a brief's own scope disclaimer as covering this.** That brief said it checked "filed issues only" and could not see live branches — a true statement about a *different* gap. **A self-scoping note tells you what the author did not check; it does not enumerate what nobody checked.**
+
+⭐ **The epic side should run the merged-PR search too, at brief-writing time.** It is strictly cheaper there — a brief is authored before a spawn check, and the two together mean the check exists twice. Neither side should rely on the other for something that has already cost a slot.
+
 ### Step 3: Read the issue
 
 ```bash
