@@ -96,7 +96,7 @@ A correction that costs a diplomatic round trip does not get made at the margin,
 
 ## ⛔ The epic's own claims are the ones that never get checked — and its most expensive error is answering a proxy
 
-Three rules, all from one day on `matsengrp/phyz` (2026-09-15), all committed by the epic session itself.
+⭐ **Every rule below is an error THIS ROLE committed, not one it caught in a worker.** That is the only reason to trust them over the general advice elsewhere in this file — **a reader who does not know it cannot tell which rules are hard-won.** Four, all from one day on `matsengrp/phyz` (2026-09-15).
 
 ### Never report a sub-question's answer as the programme's answer
 
@@ -117,6 +117,8 @@ Three rules, all from one day on `matsengrp/phyz` (2026-09-15), all committed by
 **Five attribution inversions in one day, every one in the flattering direction.** The epic credited a worker with catching the epic's generalisation (the worker had written it, and caught its own); then claimed the same sentence as its own (it had not written it, only propagated it); then accepted credit for a conductor's correct prediction that the epic had in fact argued against and killed.
 
 ⚠ **The mechanism is that an attribution rides inside a message whose SUBSTANCE has already been verified, so it inherits a credibility nothing ever tested.** It is never the part anyone checks, because it is never the part in dispute.
+
+⛔ **The set is asymmetric in a way that tells you where to look: of the five, the FOUR that INFLATED someone were each challenged by someone else. The ONE that ABSOLVED someone survived until its beneficiary objected to it.** ⚠ **That is structural, not luck.** An inflation is visible to the party who did the work and did not get the credit, so it has a natural challenger. **An absolution is visible to nobody but the person it lets off** — and they are the party least motivated to raise it. ➡ **So the correction that reflects badly on you is the only half of this problem the other party cannot fix, and it does not surface unless you volunteer it.**
 
 ➡ **The log answers it in one command** — pair each occurrence with its nearest preceding attribution header and read which session's entry it sits under. **Do that before repeating who found something.** ⭐ **And treat the DIRECTION as diagnostic: five for five favouring the same party is not chance.** Volunteering the correction that reflects badly on you is the only half of this problem the other party cannot fix.
 
