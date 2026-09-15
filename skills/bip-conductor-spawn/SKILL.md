@@ -557,6 +557,8 @@ the whole probe in `|| echo`.**
 
 ➡ **So: poll on a PID you captured at launch (`$!`), never on a pattern — a pid cannot appear in your own cmdline.** Better still, don't poll: a backgrounded `Bash` re-invokes your session on exit, so the wait is the harness's job. The `[m]ake` bracket trick does not help; it only stops `grep` matching its own argv.
 
+⛔ **AFTER ANY `git commit`, CHECK THE MESSAGE, NOT JUST THE DIFF — AND VERIFY THE PUSH LANDED, NOT THAT THE COMMAND RAN.** A nested `"` inside a `-m "..."` string **terminates the shell string**: the message is silently truncated mid-sentence, the remainder runs as a command, and the `&&` chain breaks so the push never happens. ⚠ **`git show --stat` passes this**, because the diff is correct throughout. Measured 2026-09-15: `git ls-remote origin main` still read the old SHA while local `HEAD` had moved. **Write any multi-line message to a file and use `-F`.**
+
 `rm` AND `$` -- KEEP THEM OUT OF THE SAME COMMAND. Claude Code carries a
 built-in destructive-removal guard that **bypass-permissions mode does not
 suppress** (`dangerousRemoval:{bypassImmune:!0}` in the binary). When it
