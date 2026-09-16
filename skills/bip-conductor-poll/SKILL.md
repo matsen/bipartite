@@ -470,6 +470,41 @@ See `/bip-conductor`'s `.epic-status.json` spec for the `phase`-is-not-evidence 
 
 If a merge closes an issue tracked in an EPIC, that's signal `/bip-epic` needs, not something to act on here — surface it under `changes_since_baseline` and move on.
 
+#### Check the watcher itself — it can be ALIVE and not observing
+
+⛔ **The sweep above assumes `bip epic watch` is working. It can be running, correct in `ps`, and silently emitting nothing.** Measured 2026-09-16 on `matsengrp/phyz`: the watcher had **19 hours of uptime**, a correct command line, and had written **nothing for 13 hours** while two live slots wrote status files and one transitioned `coding -> awaiting-results`. Restarting it fixed it instantly.
+
+⚠ **Nothing surfaces this on its own, because a silent instrument is indistinguishable from the thing it reports.** A quiet `.epic-notifications.log` reads exactly like a quiet fleet, and a `tail -F` Monitor on it stays faithfully silent forever. It was caught only because a Monitor *expiry* notice — which fires on a timer, not on evidence — prompted someone to open the file.
+
+⛔ **DO NOT compare the log's mtime to the newest status-file mtime. That check cries wolf and this skill's own instructions are why.** Workers are told to refresh `summary`/`updated_at` before and after every build *without changing phase*, so a healthy watcher shows an arbitrarily large gap whenever a slot sits in one phase. Measured the same day: a **34-minute** "stale" reading with the watcher perfectly healthy. That is the adjacent-question trap — status mtime answers *"is the worker alive"*, not *"did the watcher observe a phase change"*, and the two come apart exactly when a slot holds one phase for a long time, which is the normal state.
+
+➡ **Compare PHASES, not mtimes:** each slot's on-disk `phase` against the watcher's last recorded `new_phase` for that slot.
+
+```bash
+python3 - <<'PY'
+import json, os
+cfg = json.load(open('.epic-config.json'))
+last = {}
+for line in open('.epic-notifications.log'):
+    try:
+        d = json.loads(line); last[d['slot']] = (d['ts'], d['new_phase'])
+    except Exception: pass
+for c in cfg['clone_names']:
+    f = f"{os.path.expanduser(cfg['clone_root'])}/{c}/.epic-status.json"
+    if not os.path.exists(f): continue
+    cur = json.load(open(f)).get('phase')
+    ts, wp = last.get(c, (None, None))
+    flag = 'ok' if cur == wp else 'MISSED TRANSITION'
+    print(f"{c:10} on-disk={cur:16} watcher={str(wp):16} {flag}  (watcher ts {ts})")
+PY
+```
+
+Disagreement = a missed transition, so restart the watcher. **Agreement = nothing to see, however old the log is.**
+
+⚠ **What it cannot see, stated so nobody reads it as complete: an `A -> B -> A` that resolved while the watcher was wedged reads as agreement.** It catches a wedge that is *still in effect*, which is the case you can act on.
+
+**A restart silently re-baselines the whole fleet** (`/bip-conductor`'s Step 7), so reconcile every slot by hand **before** restarting, not after — the restart is itself a monitoring gap. The baseline survives a restart and survives a status file being deleted and rewritten with a different `issue`, so neither is a candidate explanation for silence; a wedged process is.
+
 #### Filter and route fleet-level findings
 
 Before recording anything anywhere, run each candidate fleet-level finding through this filter (same as `/bip-conductor-tuckin` Step 3):
