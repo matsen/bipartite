@@ -505,6 +505,24 @@ Disagreement = a missed transition, so restart the watcher. **Agreement = nothin
 
 **A restart silently re-baselines the whole fleet** (`/bip-conductor`'s Step 7), so reconcile every slot by hand **before** restarting, not after — the restart is itself a monitoring gap. The baseline survives a restart and survives a status file being deleted and rewritten with a different `issue`, so neither is a candidate explanation for silence; a wedged process is.
 
+#### Processing something once registers as knowing it
+
+⭐ **The generalization of the note above, and the one that fires far more often: you trust a stale internal state over a cheap external read — and the state you trust most is the one you personally put there.**
+
+⛔ **A fact you relayed, acknowledged, or acted on is the one you are LEAST likely to re-check**, because handling it registers as knowing it. Three instances on `matsengrp/phyz` on 2026-09-16, in three different sessions, none of them careless:
+
+| | what was trusted | what was true |
+|---|---|---|
+| **conductor** | reasoned from an issue body's pre-strike state — **having relayed the strike itself**, hours earlier | the criterion it cited had been struck |
+| **conductor** | relayed a peer's proposal for a "free single-axis contrast", and **re-derived its motivating table**, which confirmed | the arm was disqualified by a line the conductor had forwarded an hour before: *byte-identical treefiles* |
+| **epic** | reported a PR as "acked pending its one cut" | the cut had been made and the PR had merged 15 minutes earlier |
+
+⚠ **The second is the instructive one: re-deriving a NUMBER is not testing the PREMISE that makes it relevant.** The table was right. The inference it invited was already dead. A confirmation on the wrong axis is what makes you stop looking.
+
+➡ **The remedy is one line and it is cheap: re-read the artifact, not your memory of acting on it.** Before citing an issue criterion by number, `gh issue view` it. Before reporting a PR's state, `gh pr view` it. Before relaying a proposal, grep your own outbound log for the artifact it depends on.
+
+⭐ **An acknowledgement is the highest-risk act of all**, because it feels terminal to the actor while the work continues elsewhere. **Nothing you acked is in a state you know.**
+
 #### Filter and route fleet-level findings
 
 Before recording anything anywhere, run each candidate fleet-level finding through this filter (same as `/bip-conductor-tuckin` Step 3):
