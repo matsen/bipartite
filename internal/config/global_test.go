@@ -294,6 +294,7 @@ func clearTokenEnv(t *testing.T) {
 	names := append([]string{}, GitHubTokenEnvVars...)
 	names = append(names, SlackBotTokenEnvVars...)
 	names = append(names, ASTAAPIKeyEnvVars...)
+	names = append(names, SpawnAgentEnvVars...)
 	for _, name := range names {
 		t.Setenv(name, "")
 	}
@@ -326,6 +327,7 @@ func TestGetters_MalformedConfig(t *testing.T) {
 		"GetASTAAPIKey":    GetASTAAPIKey,
 		"GetGitHubToken":   GetGitHubToken,
 		"GetSlackBotToken": GetSlackBotToken,
+		"GetSpawnAgent":    GetSpawnAgent,
 	}
 	for name, get := range getters {
 		t.Run(name, func(t *testing.T) {
@@ -540,6 +542,56 @@ func TestGetSlackBotToken_EnvPrecedence(t *testing.T) {
 			}
 			if got := GetSlackBotToken(); got != tc.want {
 				t.Errorf("GetSlackBotToken() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestGetSpawnAgent_EnvPrecedence(t *testing.T) {
+	cases := []struct {
+		name        string
+		envs        map[string]string
+		configAgent string
+		want        string
+	}{
+		{
+			name: "BIP_SPAWN_AGENT wins over config",
+			envs: map[string]string{
+				"BIP_SPAWN_AGENT": "agy",
+			},
+			configAgent: "claude",
+			want:        "agy",
+		},
+		{
+			name:        "config used when no env vars set",
+			envs:        nil,
+			configAgent: "agy",
+			want:        "agy",
+		},
+		{
+			name: "empty env vars treated as unset",
+			envs: map[string]string{
+				"BIP_SPAWN_AGENT": "",
+			},
+			configAgent: "claude",
+			want:        "claude",
+		},
+		{
+			name:        "empty config and no env returns empty",
+			envs:        nil,
+			configAgent: "",
+			want:        "",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearTokenEnv(t)
+			writeGlobalConfig(t, GlobalConfig{SpawnAgent: tc.configAgent})
+			for k, v := range tc.envs {
+				t.Setenv(k, v)
+			}
+			if got := GetSpawnAgent(); got != tc.want {
+				t.Errorf("GetSpawnAgent() = %q, want %q", got, tc.want)
 			}
 		})
 	}

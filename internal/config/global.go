@@ -17,6 +17,7 @@ type GlobalConfig struct {
 	SlackBotToken string            `yaml:"slack_bot_token,omitempty"`
 	GitHubToken   string            `yaml:"github_token,omitempty"`
 	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
+	SpawnAgent    string            `yaml:"spawn_agent,omitempty"`
 
 	// Layout, when set, is the per-machine default for repo working-directory
 	// resolution. Read by flow.ResolveRepoPath. Optional; an absent block
@@ -170,6 +171,26 @@ func GetGitHubToken() string {
 		configValue = cfg.GitHubToken
 	}
 	return firstEnvOrConfig(GitHubTokenEnvVars, configValue)
+}
+
+// SpawnAgentEnvVars lists the environment variables consulted by
+// GetSpawnAgent, in precedence order.
+var SpawnAgentEnvVars = []string{"BIP_SPAWN_AGENT"}
+
+// GetSpawnAgent returns the configured agent runner for spawned sessions.
+//
+// Precedence:
+//  1. $BIP_SPAWN_AGENT
+//  2. spawn_agent in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
+func GetSpawnAgent() string {
+	cfg, _ := LoadGlobalConfig()
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.SpawnAgent
+	}
+	return firstEnvOrConfig(SpawnAgentEnvVars, configValue)
 }
 
 // GetSlackWebhook returns the Slack webhook URL for a channel from global config.

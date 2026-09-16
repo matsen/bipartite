@@ -337,9 +337,10 @@ If a `.spawn-prompts/` intent file exists (see "Where the prompt comes from" abo
 
 ### Step 4: Compose the prompt
 
-The prompt has two parts: (1) the work instructions passed as the initial message to `claude` via `--prompt-file`, and (2) a ralph-loop invocation that the worker runs as its first action.
+The prompt has two parts: (1) the work instructions passed as the initial message via `--prompt-file`, and (2) for `claude`, a ralph-loop invocation that the worker runs as its first action.
 The ralph-loop prompt is kept SHORT (no special characters) — just a reminder to continue.
 The detailed instructions are already in the conversation from the initial message.
+When `agent == "agy"`, omit the Claude-specific `/ralph-loop:ralph-loop` iteration loop preamble and instruct the agent to run `/bip-issue-work <N>` directly.
 
 The `IMPORTANT CONTEXT` section at the bottom is where the two sources combine: start from the epic's intent file when one exists, correct it per Step 2b, then append fleet facts only the conductor can see — which host/clone is actually free right now, a concurrent worker editing a file this issue also touches, a build in progress on a target remote host.
 Without this annotation step those fleet warnings never make it into the prompt at all.
@@ -404,9 +405,14 @@ By that test the instance above warranted **notification, not a gate**: a docs P
 **Prompt file** (written by conductor to /tmp/spawn-N.txt):
 ````
 You are working on GitHub issue #N TITLE.
-
+ 
+<!-- When agent == "claude" (default): -->
 First, run this command to start the iteration loop:
 /ralph-loop:ralph-loop --completion-promise 'ISSUE WORK COMPLETE' --max-iterations 20 Continue working on the task. Read .epic-status.json and .epic-worklog.md for context. Output ISSUE WORK COMPLETE in promise tags when done.
+
+<!-- When agent == "agy": omit ralph-loop and instruct directly: -->
+First, run this command to begin work:
+/bip-issue-work N
 
 EPIC STATUS PROTOCOL — You MUST follow this:
 1. At session start, write .epic-status.json (see format below)
@@ -1348,6 +1354,7 @@ second session in the same directory.
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+AGENT=$(jq -r '.agent // "claude"' .epic-config.json)
 
 # Write prompt to temp file (conductor does this, NOT via shell expansion)
 # Use the Write tool to create /tmp/spawn-<N>.txt with the full prompt
@@ -1355,12 +1362,14 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 # Clone mode: --name is NNN-clone (e.g. "281-cedar")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/<clone-name>" \
-  --name "<N>-<clone-name>"
+  --name "<N>-<clone-name>" \
+  --agent "$AGENT"
 
 # Worktree mode: --name is NNN-issue-NNN (e.g. "281-issue-281")
 bip spawn --prompt-file /tmp/spawn-<N>.txt \
   --dir "$CLONE_ROOT/issue-<N>" \
-  --name "<N>-issue-<N>"
+  --name "<N>-issue-<N>" \
+  --agent "$AGENT"
 ```
 
 **IMPORTANT**: Always use `--prompt-file`, never `--prompt "$(cat file)"`.

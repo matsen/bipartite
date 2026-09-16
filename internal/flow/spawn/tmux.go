@@ -77,11 +77,29 @@ func canonicalizePath(path string) (string, error) {
 	return resolved, nil
 }
 
-// CreateWindow creates a tmux window and runs Claude Code with the given prompt.
-// model, if non-empty, is passed through as claude's --model flag. windowName
-// also becomes the claude session's --name, so it doubles as the address
-// other sessions use to reach this one via ListAgents/SendMessage.
-func CreateWindow(windowName, repoPath, prompt, url, model string) error {
+// CreateWindow creates a tmux window and runs the configured agent runner
+// (claude or agy) with the given prompt. model, if non-empty, is passed through
+// to the runner. For claude, windowName also becomes the session's --name, so
+// it doubles as the address other sessions use to reach this one via
+// ListAgents/SendMessage.
+func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error {
+	var executable string
+	var invocation string
+	switch agent {
+	case "", "claude":
+		executable = "claude"
+		invocation = buildClaudeInvocation(model, windowName)
+	case "agy":
+		executable = "agy"
+		invocation = buildAgyInvocation(model)
+	default:
+		return fmt.Errorf("unsupported agent %q: must be 'claude' or 'agy'", agent)
+	}
+
+	if _, err := exec.LookPath(executable); err != nil {
+		return fmt.Errorf("agent runner %q not found in PATH: %w", executable, err)
+	}
+
 	// Write prompt to temp file
 	promptFile, err := os.CreateTemp("", fmt.Sprintf("review-%s-*.txt", windowName))
 	if err != nil {
@@ -96,7 +114,7 @@ func CreateWindow(windowName, repoPath, prompt, url, model string) error {
 	promptPath := promptFile.Name()
 
 	// Write a launcher script that reads the prompt into a bash variable
-	// and passes it to claude. This avoids zsh shell expansion issues —
+	// and passes it to the agent runner. This avoids zsh shell expansion issues —
 	// the prompt content never gets interpreted by the shell.
 	launcherFile, err := os.CreateTemp("", fmt.Sprintf("launcher-%s-*.sh", windowName))
 	if err != nil {
@@ -109,14 +127,13 @@ func CreateWindow(windowName, repoPath, prompt, url, model string) error {
 	if url != "" {
 		urlLine = fmt.Sprintf("echo '%s'\necho ''\n", url)
 	}
-	claudeInvocation := buildClaudeInvocation(model, windowName)
 	launcherContent := fmt.Sprintf(`#!/bin/bash
 %scat '%s'
 echo '---'
 prompt=$(<'%s')
 rm -f '%s' '%s'
 %s
-`, urlLine, promptPath, promptPath, promptPath, launcherPath, claudeInvocation)
+`, urlLine, promptPath, promptPath, promptPath, launcherPath, invocation)
 
 	if _, err := launcherFile.WriteString(launcherContent); err != nil {
 		os.Remove(promptPath)
@@ -166,6 +183,15 @@ func buildClaudeInvocation(model, windowName string) string {
 		return fmt.Sprintf(`claude --dangerously-skip-permissions --name '%s' "$prompt"`, windowName)
 	}
 	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' --name '%s' "$prompt"`, model, windowName)
+}
+
+// buildAgyInvocation returns the shell command that launches agy in interactive
+// mode (-i), with --model injected only when model is non-empty.
+func buildAgyInvocation(model string) string {
+	if model == "" {
+		return `agy --dangerously-skip-permissions -i "$prompt"`
+	}
+	return fmt.Sprintf(`agy --dangerously-skip-permissions --model '%s' -i "$prompt"`, model)
 }
 
 // BuildWindowName creates a window name from repo and number.

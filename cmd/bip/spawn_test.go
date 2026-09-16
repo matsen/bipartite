@@ -119,3 +119,74 @@ func mustRun(t *testing.T, dir, name string, args ...string) {
 		t.Fatalf("%s %s: %v\n%s", name, strings.Join(args, " "), err, out)
 	}
 }
+
+func TestResolveAgent(t *testing.T) {
+	tests := []struct {
+		name      string
+		flagVal   string
+		configVal string
+		envVal    string
+		want      string
+		wantErr   string
+	}{
+		{
+			name:      "CLI flag --agent agy overrides config and defaults to agy",
+			flagVal:   "agy",
+			configVal: "claude",
+			want:      "agy",
+		},
+		{
+			name:      "Empty CLI flag falls back to global config spawn_agent: agy",
+			flagVal:   "",
+			configVal: "agy",
+			want:      "agy",
+		},
+		{
+			name:      "$BIP_SPAWN_AGENT=agy env var overrides config when CLI flag is empty",
+			flagVal:   "",
+			configVal: "claude",
+			envVal:    "agy",
+			want:      "agy",
+		},
+		{
+			name:      "Empty CLI flag and empty config defaults to claude",
+			flagVal:   "",
+			configVal: "",
+			want:      "claude",
+		},
+		{
+			name:      "Invalid agent returns an error without invoking external commands",
+			flagVal:   "unsupported",
+			configVal: "",
+			wantErr:   `unsupported agent "unsupported": must be 'claude' or 'agy'`,
+		},
+		{
+			name:      "Invalid config agent returns an error when flag is empty",
+			flagVal:   "",
+			configVal: "invalid",
+			wantErr:   `unsupported agent "invalid": must be 'claude' or 'agy'`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("BIP_SPAWN_AGENT", tt.envVal)
+			got, err := resolveAgent(tt.flagVal, tt.configVal)
+			if tt.wantErr != "" {
+				if err == nil {
+					t.Fatalf("resolveAgent(%q, %q) expected error, got nil", tt.flagVal, tt.configVal)
+				}
+				if !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("resolveAgent(%q, %q) error = %q, want containing %q", tt.flagVal, tt.configVal, err.Error(), tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("resolveAgent(%q, %q) unexpected error: %v", tt.flagVal, tt.configVal, err)
+			}
+			if got != tt.want {
+				t.Errorf("resolveAgent(%q, %q) = %q, want %q", tt.flagVal, tt.configVal, got, tt.want)
+			}
+		})
+	}
+}

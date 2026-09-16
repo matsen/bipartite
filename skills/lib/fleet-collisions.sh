@@ -107,7 +107,7 @@ pane_has_claude() {
       continue
     fi
     seen=1
-    case "$comm" in *claude*) return 0;; esac
+    case "$comm" in *claude*|*agy*) return 0;; esac
     mapfile -t kids < <(pgrep -P "$pid" 2>/dev/null)
     [ "${#kids[@]}" -gt 0 ] && queue+=("${kids[@]}")
   done
@@ -354,7 +354,7 @@ done
 [ "$found2" = 1 ] && found_any=1 || echo "  none"
 
 echo
-echo "=== pane alive but its claude session is DEAD (work may be uncommitted) ==="
+echo "=== pane alive but agent session is DEAD (work may be uncommitted) ==="
 found3=0
 if [ "$have_panes" -eq 1 ]; then
   for row in "${PANE_PP[@]}"; do
@@ -371,7 +371,7 @@ if [ "$have_panes" -eq 1 ]; then
     dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
     echo "  DEAD-SESSION $clone  pane_pid=$ppid  uncommitted=$dirty"
     echo "    -> preserve worklog/status/diff BEFORE anything else; the pane's"
-    echo "       last line usually carries 'claude --resume <id>'."
+    echo "       last line usually carries resume command ('claude --resume <id>' or 'agy -c <id>')."
     found3=1
   done
 fi
