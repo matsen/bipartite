@@ -227,9 +227,8 @@ Whether a correction needs this channel at all, and whether it's durable or tran
   If the status file is written at all, use a field the lead does not own (`conductor_guidance`, or a `lead_notes` entry tagged `source: conductor`) — never merge into `lead_guidance`.
 - Delivery is not instant: the message drains at the worker's *next tool call*, not mid-tool-call.
   It is not a substitute for `tmux capture-pane` when the conductor needs to see current state right now.
-- `SendMessage` only reaches addressable Claude sessions (tmux Claude windows on this machine, or connected cloud/Remote Control sessions) — never a plain shell, a remote SSH job, an `agy` worker, or a non-Claude compute node.
-  `agy` workers communicate via file-based status (`.epic-status.json`, `.epic-worklog.md`). For `agy` slots or non-addressable sessions, conductor nudges use file-based fallback: append to `.epic-worklog.md` and write a `conductor_guidance` field (or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`) in `.epic-status.json`, then wait for the worker's own loop.
-  Run `ListAgents` first to confirm the target session is actually addressable; fall back to the file-only correction when it isn't.
+- `SendMessage` only reaches addressable Claude sessions (tmux Claude windows on this machine, or connected cloud/Remote Control sessions) — never a plain shell, a remote SSH job, or a non-Claude compute node.
+  Run `ListAgents` first to confirm the target session is actually addressable; fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`) and wait for the worker's own loop when it isn't.
   **The address is whatever `ListAgents` reports for that session — read it off its row, or off the message you are replying to, and never compose it.** Workers sign their own completion pushes with their own address, so that signature is the address to reply to. The bare clone name is never an address.
   **Two naming schemes coexist permanently, which is why the rule is to read the address rather than derive it.** `bip spawn` passes `--name '<windowName>'` (bipartite #241), so a worker it launched answers to its tmux window name; a session started any other way — including this conductor and the epic — gets an auto-derived `<cwd>-<suffix>`. You cannot tell which applies from the spawn date, and you do not need to.
   **A send you addressed by hand and got wrong is an address error, not a capability limit — and these two failures have opposite remedies.** An address taken from a self-registration file that stops working has *drifted*: skip silently, don't hunt for a substitute (see "Completion pushes" below). An address you *composed yourself* was never valid — a failed send to a hand-composed name is a typo, not a channel limit: re-run `ListAgents` and use the exact name it prints. **Never generalise a single failed send into a claim about the channel**; the channel is the last thing to suspect and the cheapest to re-test.
@@ -366,7 +365,6 @@ This file is gitignored and must exist before either skill can operate; the cond
   "new_clone_names": ["delta", "epsilon", "zeta"],
   "github_repo": "org/repo",
   "conductor": "alpha",
-  "agent": "claude",
   "max_lead_iterations": 8
 }
 ```
@@ -377,7 +375,6 @@ This file is gitignored and must exist before either skill can operate; the cond
   "clone_root": "~/re/myproject-workers",
   "local_worktrees": true,
   "github_repo": "org/repo",
-  "agent": "claude",
   "max_lead_iterations": 8
 }
 ```
@@ -393,7 +390,6 @@ Fields:
 - **local_worktrees**: (worktree mode) If `true`, use `git worktree` for local slots named `issue-N`
 - **github_repo**: `org/repo` for `gh` commands
 - **conductor**: (clone mode only) Which clone is the orchestrator (stays on main)
-- **agent**: (optional, default `"claude"`) Agent runner for worker slots: `"claude"` or `"agy"`
 - **max_lead_iterations**: Max issue-lead evaluations before escalating to `needs-human` (default: 8)
 - **shared_filesystem**: (optional, default `false`) Set to `true` when the conductor and all compute nodes share an NFS filesystem; the conductor composes direct SSH execution commands instead of `make remote-sync` calls, and experiment results are immediately visible on local NFS paths.
   Each machine sets this flag for itself — no central list of NFS nodes is needed.
@@ -413,9 +409,7 @@ cat .epic-config.json
 3. (Clone mode only) What are the clone directory names?
    Which is the conductor?
 4. What is the GitHub repo (`org/repo`)?
-5. Which agent runner should be used for worker slots?
-   (`claude` or `agy`, default: `claude`)
-6. Are compute nodes on a shared NFS filesystem?
+5. Are compute nodes on a shared NFS filesystem?
    (sets `shared_filesystem`)
 
 **Note (worktree mode)**: The skill is run from the main repo itself, which acts as the conductor.

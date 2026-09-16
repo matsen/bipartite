@@ -125,7 +125,6 @@ func TestResolveAgent(t *testing.T) {
 		name      string
 		flagVal   string
 		configVal string
-		envVal    string
 		want      string
 		wantErr   string
 	}{
@@ -139,13 +138,6 @@ func TestResolveAgent(t *testing.T) {
 			name:      "Empty CLI flag falls back to global config spawn_agent: agy",
 			flagVal:   "",
 			configVal: "agy",
-			want:      "agy",
-		},
-		{
-			name:      "$BIP_SPAWN_AGENT=agy env var overrides config when CLI flag is empty",
-			flagVal:   "",
-			configVal: "claude",
-			envVal:    "agy",
 			want:      "agy",
 		},
 		{
@@ -170,7 +162,6 @@ func TestResolveAgent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("BIP_SPAWN_AGENT", tt.envVal)
 			got, err := resolveAgent(tt.flagVal, tt.configVal)
 			if tt.wantErr != "" {
 				if err == nil {
@@ -188,5 +179,19 @@ func TestResolveAgent(t *testing.T) {
 				t.Errorf("resolveAgent(%q, %q) = %q, want %q", tt.flagVal, tt.configVal, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestResolveAgent_EnvVarIntegration(t *testing.T) {
+	t.Setenv("BIP_SPAWN_AGENT", "agy")
+	config.ResetGlobalConfigCache()
+	defer config.ResetGlobalConfigCache()
+
+	got, err := resolveAgent("", config.GetSpawnAgent())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "agy" {
+		t.Errorf("got %q, want agy", got)
 	}
 }

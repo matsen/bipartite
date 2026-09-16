@@ -70,14 +70,12 @@ func resolvePrompt() string {
 }
 
 // resolveAgent determines the agent runner to use for spawned sessions.
-// Precedence: CLI flag > $BIP_SPAWN_AGENT / configVal > default ("claude").
+// Precedence: CLI flag > configVal > default ("claude").
 // Allowed values are "claude" and "agy".
 func resolveAgent(flagVal, configVal string) (string, error) {
 	agent := flagVal
 	if agent == "" {
-		if env := os.Getenv("BIP_SPAWN_AGENT"); env != "" {
-			agent = env
-		} else if configVal != "" {
+		if configVal != "" {
 			agent = configVal
 		} else {
 			agent = "claude"
@@ -107,7 +105,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error: Either provide a GitHub reference, --prompt, or --prompt-file for adhoc sessions\n")
 			os.Exit(1)
 		}
-		runAdhocSpawn()
+		runAdhocSpawn(agent)
 		return
 	}
 
@@ -258,13 +256,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 	fmt.Println(url)
 }
 
-func runAdhocSpawn() {
-	agent, err := resolveAgent(spawnAgent, config.GetSpawnAgent())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
+func runAdhocSpawn(agent string) {
 	windowName := spawnName
 	if windowName == "" {
 		windowName = fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))

@@ -371,7 +371,7 @@ if [ "$have_panes" -eq 1 ]; then
     dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
     echo "  DEAD-SESSION $clone  pane_pid=$ppid  uncommitted=$dirty"
     echo "    -> preserve worklog/status/diff BEFORE anything else; the pane's"
-    echo "       last line usually carries resume command ('claude --resume <id>' or 'agy -c <id>')."
+    echo "       last line usually carries resume command ('claude --resume <id>' or 'agy --conversation <id>')."
     found3=1
   done
 fi
