@@ -15,7 +15,7 @@
 #      one that merged two hours earlier and section 2 reported clean.
 #   3. a .epic-status.json whose clone has no live pane <- suppresses a spawn
 #   4. a live pane with no status file  <- invisible to state-file sweeps
-#   5. a pane whose claude session is DEAD <- both artifacts present, healthy-
+#   5. a pane whose agent session is DEAD <- both artifacts present, healthy-
 #      looking, and the work inside may be uncommitted. Measured 2026-09-14:
 #      a slot exited cleanly mid-issue with 36 KB uncommitted across 4 files;
 #      sections 3 and 4 both reported clean because the pane AND the status
@@ -85,18 +85,18 @@ TMP=$(mktemp) || exit 2; trap 'rm -f "$TMP"' EXIT
 mapfile -t PANES < <(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
 mapfile -t PANE_PP < <(tmux list-panes -a -F '#{pane_current_path} #{pane_pid}' 2>/dev/null)
 
-# Is there a live `claude` anywhere in this pane's process subtree?
+# Is there a live agent runner (claude or agy) anywhere in this pane's process subtree?
 # `#{pane_current_command}` is NOT usable for this: a busy session shows the
 # shell it is running a command through (measured: a session reporting BUSY
 # showed `bash`), and an exited session leaves the pane at `zsh` -- the two
-# are indistinguishable. A tmux pane outlives the Claude session inside it,
+# are indistinguishable. A tmux pane outlives the agent session inside it,
 # so pane-exists is not session-alive.
-# 0 = a live claude is in the subtree, 1 = none found, 2 = COULD NOT DETERMINE.
+# 0 = a live agent is in the subtree, 1 = none found, 2 = COULD NOT DETERMINE.
 # The 2 case matters: the action on a DEAD-SESSION report is resuming or
 # reclaiming a clone, so an unreadable subtree (a pane owned by another user,
 # a /proc race as a process exits) must not be reported as dead. Same
 # asymmetry as the tmux guard's exit 2.
-pane_has_claude() {
+pane_has_agent() {
   local queue=("$1") pid kids seen=0
   while [ "${#queue[@]}" -gt 0 ]; do
     pid="${queue[0]}"; queue=("${queue[@]:1}")
@@ -113,6 +113,8 @@ pane_has_claude() {
   done
   return 1
 }
+# Keep pane_has_claude as an alias for backwards compatibility
+pane_has_claude() { pane_has_agent "$@"; }
 have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
 # EXIT STATUS: two independent flags, resolved ONCE at the bottom.
 #

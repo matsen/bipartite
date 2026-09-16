@@ -78,7 +78,7 @@ func canonicalizePath(path string) (string, error) {
 }
 
 // ValidateAgent validates that agent is an allowed agent runner ("claude" or "agy").
-// An empty string is allowed and defaults to "claude".
+// An empty string is accepted and treated as "claude" by callers.
 func ValidateAgent(agent string) error {
 	switch agent {
 	case "", "claude", "agy":

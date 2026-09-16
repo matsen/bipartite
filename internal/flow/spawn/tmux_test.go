@@ -142,6 +142,12 @@ func TestBuildClaudeInvocation(t *testing.T) {
 			windowName: "bipartite#281",
 			want:       `claude --dangerously-skip-permissions --model 'opus' --name 'bipartite#281' "$prompt"`,
 		},
+		{
+			name:       "single quotes in windowName and model are escaped",
+			model:      "test'model",
+			windowName: "repo#'test'",
+			want:       `claude --dangerously-skip-permissions --model 'test'\''model' --name 'repo#'\''test'\''' "$prompt"`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -170,6 +176,11 @@ func TestBuildAgyInvocation(t *testing.T) {
 			model: "gemini-1.5-pro",
 			want:  `agy --dangerously-skip-permissions --model 'gemini-1.5-pro' -i "$prompt"`,
 		},
+		{
+			name:  "single quotes in model are escaped",
+			model: "gemini'pro",
+			want:  `agy --dangerously-skip-permissions --model 'gemini'\''pro' -i "$prompt"`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -177,6 +188,29 @@ func TestBuildAgyInvocation(t *testing.T) {
 			got := buildAgyInvocation(tt.model)
 			if got != tt.want {
 				t.Errorf("buildAgyInvocation(%q) = %q, want %q", tt.model, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateAgent(t *testing.T) {
+	tests := []struct {
+		agent   string
+		wantErr bool
+	}{
+		{"", false},
+		{"claude", false},
+		{"agy", false},
+		{"unsupported", true},
+		{"CLAUDE", true},
+		{"AGY", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.agent, func(t *testing.T) {
+			err := ValidateAgent(tt.agent)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAgent(%q) err = %v, wantErr = %v", tt.agent, err, tt.wantErr)
 			}
 		})
 	}
