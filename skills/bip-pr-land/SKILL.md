@@ -235,20 +235,44 @@ fi
 if PRIMARY=$(bip worktree primary 2>/dev/null); then
     echo "Landing from worktree $LAND_DIR (primary: $PRIMARY)"
 fi
-if [ -f "$LAND_DIR/.epic-status.json" ] && [ -f "$LAND_DIR/.epic-config.json" ]; then
-    if CLONE_ROOT=$(resolve_clone_root "$LAND_DIR/.epic-config.json"); then
+# THREE-way branch, not two. Neither file -> silent no-op (a plain non-EPIC
+# repo; see the paragraph below on why that must stay silent). Status file
+# present but NO config -> the gap that lost two worklogs on 2026-09-16;
+# warn loudly and preserve into the parent directory, which for a pooled
+# clone IS the clone root. Both -> preserve as before.
+if [ -f "$LAND_DIR/.epic-status.json" ] && [ ! -f "$LAND_DIR/.epic-config.json" ]; then
+    CLONE_ROOT=$(dirname "$LAND_DIR")
+    echo "WARNING: $LAND_DIR/.epic-status.json exists but .epic-config.json does not." >&2
+    echo "         Falling back to CLONE_ROOT=$CLONE_ROOT (this clone's parent)." >&2
+    echo "         Preserving there; the originals are NOT deleted unless that copy verifies." >&2
+fi
+if [ -f "$LAND_DIR/.epic-status.json" ]; then
+    if [ -n "$CLONE_ROOT" ] || CLONE_ROOT=$(resolve_clone_root "$LAND_DIR/.epic-config.json"); then
         DEST=$(preserve_epic_state "$LAND_DIR" "$CLONE_ROOT" \
             "at land of PR #<PR number from Step 2> (\"<PR title from Step 2>\").")
         rc=$?
-        if [ "$rc" -eq 0 ]; then
+        # ONE condition, deliberately dull: preserve_epic_state returned 0 AND
+        # the destination actually holds a non-empty file. An earlier draft of
+        # this line mixed && and || in one test -- a precedence trap, in a fix
+        # about correctness. Do not make it clever again.
+        if [ "$rc" -eq 0 ] && [ -n "$(find "$DEST" -maxdepth 1 -type f -size +0c 2>/dev/null)" ]; then
             echo "Preserved worklog+status to $DEST"
+            # VERIFIED: a non-empty file exists at the destination. Only now is
+            # it safe to remove the originals, and this is where it happens --
+            # NOT at Step 9.5. `find ... -delete` has no `rm`/`rmdir` token, so
+            # the `$`+`rm` destructive-removal guard cannot fire despite the
+            # `$`s in scope here.
+            find "$LAND_DIR" -maxdepth 1 \( -name '.epic-status.json' -o -name '.epic-worklog.md' \) -delete
+            echo "Removed the now-redundant originals from $LAND_DIR"
             if gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$DEST\` (issue #2216)."; then
                 echo "Posted preservation pointer to PR #<PR number from Step 2>"
             else
                 echo "WARNING: preservation succeeded ($DEST) but the gh pr comment pointer failed to post -- note the path in Step 10's report so it isn't lost" >&2
             fi
         elif [ "$rc" -eq 2 ]; then
-            echo "PRESERVATION FAILED: cp into .preserved did not succeed -- stop and investigate before continuing, do not let Step 8/9.5 delete the originals" >&2
+            echo "PRESERVATION FAILED: cp into .preserved did not succeed -- originals left in place ON PURPOSE. Investigate before continuing." >&2
+        else
+            echo "PRESERVATION DID NOT VERIFY (rc=$rc) -- originals left in place ON PURPOSE." >&2
         fi
     else
         echo "PRESERVATION FAILED: $LAND_DIR/.epic-config.json exists but its clone_root could not be resolved -- stop and investigate. If you hand-copy, the destination is the CLONE ROOT's .preserved/ (the parent of this clone), never a path inside this clone -- see 'If you cannot source it' below" >&2
@@ -353,17 +377,28 @@ reported a `PRESERVATION FAILED` line, **stop and resolve it before
 deleting anything** — do not let this step destroy the only copy of a
 file Step 6a couldn't back up.
 
-If `$LAND_DIR/.epic-status.json` is present, remove the now-redundant
-originals as a command with no `$` in it at all (avoids Claude Code's
-`$`+`rm` destructive-removal guard — see `bip-conductor-spawn`'s Step 2 for
-the verified trigger condition). In clone mode you're still standing in
-`$LAND_DIR`, so this is a plain relative-path `rm`; in worktree mode
-`$LAND_DIR` no longer exists (Step 8 already removed it), so there is
-nothing left here to remove and this is a no-op:
+⛔ **NOTHING TO DO HERE ANY MORE, AND THAT IS THE POINT — DO NOT REINSTATE A DELETE AT THIS STEP.**
 
-```bash
-rm -f .epic-status.json .epic-worklog.md
-```
+This step used to run an unconditional `rm -f .epic-status.json .epic-worklog.md`
+whenever the status file was present. **That was one half of a defect that lost
+two worklogs on 2026-09-16** (`matsengrp/superfamily-pcp`, clones `iron` and
+`argon`): Step 6a's preserve was gated on **two** files existing and this delete
+was gated on **none**, so a clone with a status file but no `.epic-config.json`
+was silently skipped by the preserve and then emptied by this `rm`. Four of nine
+clones in that pool were in exactly that state.
+
+**The originals are now removed inside Step 6a, immediately after the preserved
+copy is verified non-empty, where `$DEST` is still in scope.** That is not a
+stylistic move: a delete in a *later* Bash invocation cannot see whether the
+earlier one succeeded (shell variables do not persist across invocations — the
+same constraint Step 6a's own opening paragraph is about), so a delete here is
+*structurally incapable* of being conditional on the preservation. **The two
+operations have to live in one invocation or the weaker condition always wins.**
+
+⭐ **The general rule, worth more than this instance: the condition to DELETE
+must never be weaker than the condition to PRESERVE, and a preservation step
+must never have a silent no-op branch.** Both halves were violated here, and
+neither was visible in the output — the skip printed nothing at all.
 
 ### Step 10: Confirm
 
