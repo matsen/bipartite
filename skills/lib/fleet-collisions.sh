@@ -113,8 +113,6 @@ pane_has_agent() {
   done
   return 1
 }
-# Keep pane_has_claude as an alias for backwards compatibility
-pane_has_claude() { pane_has_agent "$@"; }
 have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
 # EXIT STATUS: two independent flags, resolved ONCE at the bottom.
 #
@@ -362,9 +360,9 @@ if [ "$have_panes" -eq 1 ]; then
   for row in "${PANE_PP[@]}"; do
     ppath="${row% *}"; ppid="${row##* }"
     case "$(realpath "$ppath" 2>/dev/null)" in "$RROOT"/*) ;; *) continue;; esac
-    pane_has_claude "$ppid"; phc=$?
-    [ "$phc" -eq 0 ] && continue
-    if [ "$phc" -eq 2 ]; then
+    pane_has_agent "$ppid"; pha=$?
+    [ "$pha" -eq 0 ] && continue
+    if [ "$pha" -eq 2 ]; then
       rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"
       echo "  CANNOT DETERMINE ${rest%%/*}  pane_pid=$ppid (subtree unreadable) -- NOT reporting dead" >&2
       uncheckable=1; continue

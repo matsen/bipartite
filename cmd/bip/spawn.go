@@ -97,11 +97,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	if _, err := exec.LookPath(agent); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: agent runner %q not found in PATH: %v\n", agent, err)
-		os.Exit(1)
-	}
-
 	// Handle adhoc mode (--prompt without ref) - doesn't need nexus directory
 	if len(args) == 0 {
 		if spawnPrompt == "" {
