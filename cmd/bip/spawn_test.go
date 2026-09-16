@@ -135,6 +135,12 @@ func TestResolveAgent(t *testing.T) {
 			want:      "agy",
 		},
 		{
+			name:      "CLI flag --agent claude overrides config agy",
+			flagVal:   "claude",
+			configVal: "agy",
+			want:      "claude",
+		},
+		{
 			name:      "Empty CLI flag falls back to global config spawn_agent: agy",
 			flagVal:   "",
 			configVal: "agy",
@@ -183,6 +189,7 @@ func TestResolveAgent(t *testing.T) {
 }
 
 func TestResolveAgent_EnvVarIntegration(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	t.Setenv("BIP_SPAWN_AGENT", "agy")
 	config.ResetGlobalConfigCache()
 	defer config.ResetGlobalConfigCache()

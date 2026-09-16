@@ -81,12 +81,10 @@ func resolveAgent(flagVal, configVal string) (string, error) {
 			agent = "claude"
 		}
 	}
-	switch agent {
-	case "claude", "agy":
-		return agent, nil
-	default:
-		return "", fmt.Errorf("unsupported agent %q: must be 'claude' or 'agy'", agent)
+	if err := spawn.ValidateAgent(agent); err != nil {
+		return "", err
 	}
+	return agent, nil
 }
 
 func runSpawn(cmd *cobra.Command, args []string) {

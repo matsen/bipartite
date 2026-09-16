@@ -107,7 +107,7 @@ pane_has_claude() {
       continue
     fi
     seen=1
-    case "$comm" in *claude*|*agy*) return 0;; esac
+    case "${comm##*/}" in *claude*|agy) return 0;; esac
     mapfile -t kids < <(pgrep -P "$pid" 2>/dev/null)
     [ "${#kids[@]}" -gt 0 ] && queue+=("${kids[@]}")
   done

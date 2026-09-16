@@ -77,23 +77,35 @@ func canonicalizePath(path string) (string, error) {
 	return resolved, nil
 }
 
+// ValidateAgent validates that agent is an allowed agent runner ("claude" or "agy").
+// An empty string is allowed and defaults to "claude".
+func ValidateAgent(agent string) error {
+	switch agent {
+	case "", "claude", "agy":
+		return nil
+	default:
+		return fmt.Errorf("unsupported agent %q: must be 'claude' or 'agy'", agent)
+	}
+}
+
 // CreateWindow creates a tmux window and runs the configured agent runner
 // (claude or agy) with the given prompt. model, if non-empty, is passed through
 // to the runner. For claude, windowName also becomes the session's --name, so
 // it doubles as the address other sessions use to reach this one via
 // ListAgents/SendMessage.
 func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error {
-	var executable string
+	if err := ValidateAgent(agent); err != nil {
+		return err
+	}
+
+	executable := "claude"
 	var invocation string
 	switch agent {
 	case "", "claude":
-		executable = "claude"
 		invocation = buildClaudeInvocation(model, windowName)
 	case "agy":
 		executable = "agy"
 		invocation = buildAgyInvocation(model)
-	default:
-		return fmt.Errorf("unsupported agent %q: must be 'claude' or 'agy'", agent)
 	}
 
 	if _, err := exec.LookPath(executable); err != nil {
@@ -179,10 +191,12 @@ rm -f '%s' '%s'
 // under the same name as its tmux window, instead of a default that gives
 // every worker sharing a clone root the same unhelpful prefix.
 func buildClaudeInvocation(model, windowName string) string {
+	escapedName := strings.ReplaceAll(windowName, "'", `'\''`)
 	if model == "" {
-		return fmt.Sprintf(`claude --dangerously-skip-permissions --name '%s' "$prompt"`, windowName)
+		return fmt.Sprintf(`claude --dangerously-skip-permissions --name '%s' "$prompt"`, escapedName)
 	}
-	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' --name '%s' "$prompt"`, model, windowName)
+	escapedModel := strings.ReplaceAll(model, "'", `'\''`)
+	return fmt.Sprintf(`claude --dangerously-skip-permissions --model '%s' --name '%s' "$prompt"`, escapedModel, escapedName)
 }
 
 // buildAgyInvocation returns the shell command that launches agy in interactive
@@ -191,7 +205,8 @@ func buildAgyInvocation(model string) string {
 	if model == "" {
 		return `agy --dangerously-skip-permissions -i "$prompt"`
 	}
-	return fmt.Sprintf(`agy --dangerously-skip-permissions --model '%s' -i "$prompt"`, model)
+	escapedModel := strings.ReplaceAll(model, "'", `'\''`)
+	return fmt.Sprintf(`agy --dangerously-skip-permissions --model '%s' -i "$prompt"`, escapedModel)
 }
 
 // BuildWindowName creates a window name from repo and number.

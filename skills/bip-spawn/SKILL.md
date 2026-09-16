@@ -51,7 +51,7 @@ If you're spawning from inside a `/bip-pr-land` or similar handoff context, the 
 ## Options
 
 - `--prompt "..."` — Custom prompt instead of default review prompt
-- `--agent "..."` — Agent runner for spawned session: `claude` (default) or `agy`
+- `--agent "..."` — Agent runner for spawned session: `claude` (default) or `agy` (can also be configured globally via `spawn_agent: agy` in `~/.config/bip/config.yml` or `$BIP_SPAWN_AGENT`)
 - `--model "..."` — Model to pass to the agent launcher (default: unspecified)
 
 ## Worktree mode (opt-in)
