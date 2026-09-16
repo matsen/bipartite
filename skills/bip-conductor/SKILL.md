@@ -485,12 +485,30 @@ Brief:
 > Classify each slot:
 > - `occupied`: has tmux window (regardless of agent status — user may be doing follow-up work)
 > - `stale`: no tmux window, but has `.epic-status.json` or is on non-main branch
-> - `available`: (clone mode) no tmux window, on `main`, clean
+> - `available`: (clone mode) no tmux window, on `main`, clean, **and current with `origin/main`** -- see "Clean is not current" below
 >
 > Return under 400 words:
 > - `active_items`: per slot: name, phase, summary, scope, stop_reason, lead_guidance (from `.epic-status.json`), classification
 > - `action_candidates`: stale slots ready for cleanup (clean up ONLY if no tmux window — never kill tmux windows); pending spawn-intent files (either naming pattern) with an idle clone to run them
 > - `surprises`: phase migrations (`blocked`/`pr-review`), missing status files, contradictions
+
+### Clean is not current, and that failure goes the other way
+
+⛔ **"On `main`, clean" is not a readiness predicate. A clone can satisfy it while being arbitrarily far behind, and nothing reports it.** Measured 2026-09-15 on `matsengrp/phyz`: **14 of 17 slots** were on `main` with zero dirty files and **behind by 2 to 189 commits** -- aspen and beech at 189 (head six days old). The conductor's own cold-start dashboard reported all 17 as spawn-ready.
+
+⭐ **This is a DIFFERENT SHAPE from the probe failures catalogued elsewhere in this file, and worse. Those all fail toward "nothing to do"; this one fails toward "go ahead."** A wasted check costs a command. A worker spawned 189 commits stale costs a result.
+
+Run `lib/clone-currency.sh` (sibling of `fleet-collisions.sh`) before every spawn. Three things it gets right that a hand-rolled loop does not:
+
+- **It resolves the tip ONCE, in the conductor, after an explicit `git fetch`** -- never from each clone's own `origin/main`. A clone that has not fetched has a stale remote-tracking ref and reports **0 behind while being arbitrarily far behind**, which is the reassuring answer.
+- **It counts in the CONDUCTOR's object DB**, because the clone may not have the objects; a per-clone `rev-list` returns empty and reads as "?" or as zero depending on how you wrote the loop.
+- **It guards ancestry before counting.** `A..B` returns a meaningless number when `A` is not an ancestor of `B` -- the same range-vs-tree trap this repo keeps re-finding. It reports `DIVERGED` rather than a number.
+
+⚠ **Its universe is `clone_names` from `.epic-config.json`, NOT every directory under `clone_root`, and that is deliberate.** The pool also holds CI clones -- on `matsengrp/phyz`, `nightly-ci` (30 behind) and `beagle-weekly-ci` (97 behind), both named directly in their systemd units' `ExecStart`. **Both are fine**: each script `git fetch && git reset --hard origin/main`s and re-execs itself at run time, so a stale HEAD at rest is the expected state there. A sweep over every directory flags them as NOT-READY every time -- a check at full power over the wrong population. They are listed as `(unmanaged)`, informational, never gated on.
+
+⛔ **And the part that is NOT this check's job: a behind-count cannot report DIRECTION.** *"N behind"* after your own PR merges is the ordinary post-land state. *"N behind"* while a result is still in flight is `CLAUDE.md`'s repo-moved-under-a-finished-result trap. **Same number, opposite meanings**, and the count alone cannot tell you which. Measured the same night: three slots each read "2 behind", and all three were fine because both commits landed *after* their PRs merged -- establishing that took merge timestamps, not counts.
+
+➡ **So for an idle slot, use the count and fast-forward. For a FINISHED RESULT, the question is different and so is the instrument: take the build commit from the artifact's own `phyz_build` field (`--summary-tsv`/`metadata.json`), and run the TREE form `git diff <build-commit> <tip> -- src/ build.zig build.zig.zon`.** ⭐ **The reference behaviour is a worker's, not this skill's**: `matsengrp/phyz` PR #2724 did exactly that unprompted, and replaced its hand-written build-currency prose with an automated `results/provenance_ok.txt` gate.
 
 If work will run on remote hosts, also check `/bip-scout` for host occupancy (live builds, warm caches, other sessions' remote jobs) — this is exactly the kind of fleet fact `/bip-epic` cannot see and the annotation step in `/bip-conductor-spawn` depends on.
 
