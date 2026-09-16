@@ -698,7 +698,21 @@ First, do housekeeping automatically (no need to ask):
 
 **One clause an unconditional refresh needs, or it creates a third variant: never overwrite a larger preserved artifact with a smaller live one — write alongside it.** The same night, `maple`'s live worklog was a 41-line post-land summary while `.preserved/` held the 467-line original; a blind live-over-preserved copy would have destroyed it. The two clones diverged in opposite directions — cedar short at the preserved end, maple short at the live end. Give the smaller one its own filename and keep both.
 
-Then propose executing pending spawn intent:
+#### A preserved-artifact README is not write-once
+
+⛔ **The README you write when you preserve something is a claim about what the data MEANS, and the world keeps moving after you write it. Revisit it whenever something lands that changes what its contents mean.**
+
+⚠ **Measured 2026-09-16 on `matsengrp/phyz`, and the shape is worth more than the instance: the file was WRONG TWICE while every sentence in it stayed ACCURATE.** A directory of superseded measurement outputs was preserved at 18:37Z with *"superseded by a scope narrowing, **not by a defect**"* — true and complete when written. Three hours later a worker in a *different slot* found a defect that had been live when those outputs were produced, and the label had become too favourable **without a word of it changing**. A later ruling then withdrew the one remaining use it had allowed. **Three rulings, two tightenings, and not one fact retracted.**
+
+⭐ **That is a distinct failure mode from a stale number, and worse in one specific way: a stale number can be re-derived and caught, this cannot, because there is nothing to check it against.** The facts all verify. What went stale was the document's *stance* — and nothing in the file, and no sweep over it, can detect that. It is `PROSE-DISCIPLINE.md`'s *"the authoritative-looking copy is the one that goes stale"* one level up: not a value going stale inside a document, but a whole document's posture going stale while its values hold.
+
+➡ **Two practices, both cheap:**
+- **When a defect lands, `grep -rl` the preserved directories for artifacts produced before it.** A fix in one slot routinely invalidates a label written in another; nothing connects them automatically, and the slot that wrote the label is usually gone.
+- **Put a dated "age of this label" line in every preservation README** — *this rule has been tightened N times since <date>; check whether anything has landed since.* It costs one line and it tells a reader in 2027 not to trust the label's age.
+
+⚠ **This is NOT a licence to append revision narrative generally.** `PROSE-DISCIPLINE.md` bans it in issue and PR bodies and that ban holds. A preservation README is a **warning label on data**, not an argument, so its own credibility history is operational for the reader — which is the whole of the exception. And when a label is rewritten, **lead with the current rule rather than appending a third section**: the point is that a reader stops having to reconstruct the verdict from a stack of deferrals. Spot-check that the load-bearing strings survived the rewrite.
+
+**After reclaiming**, propose executing pending spawn intent:
 
 > "Pending intent: `i302` (retry logic) and `i315` (scoring refactor), 2 clones available.
 > Shall I run `/bip-conductor-spawn`?"
