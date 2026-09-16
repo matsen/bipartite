@@ -1116,6 +1116,23 @@ Now read the issue and begin work:
 - Wrap the experiment in a Snakemake workflow
 ```
 
+**Whenever you put a build or run command in the prompt, put the argv-linkage line NEXT TO IT.** Not in a warnings section — next to the command. The prompt template above already warns about self-matching wait loops, and that was not enough:
+
+⛔ **Measured 2026-09-16 on `matsengrp/phyz`: a slot deadlocked for 108 minutes on `until ! pgrep -f "cache-dir .zig-cache-cedar -j8 test-likelihood"`. That pattern matched the slot's OWN `claude` session and the waiting shell itself; no build was running. Its prompt carried the abstract self-matching warning — and the conductor had handed it the exact string, in a `zig build --cache-dir .zig-cache-<clone> -j8 <targets>` line elsewhere in the same prompt.**
+
+⭐ **The finding is not "the worker should have read harder." The warning and the triggering string were both present, in one document, unlinked — and a hazard note that does not point at the specific text that triggers it is a note the reader applies to someone else's command. Proximity is not linkage.** Same class as a rule that must be *remembered* rather than encountered at the point of use.
+
+So append this to the command itself, substituting whatever command you actually gave:
+
+```
+- This exact command string is in YOUR OWN argv (a bip spawn worker's prompt IS
+  its command line), so `pgrep -f` or `ps | grep` on ANY fragment of it matches
+  your own session and a wait loop built from it can never exit. Poll a PID you
+  captured at launch (`$!`), or just let a backgrounded Bash re-invoke you.
+```
+
+⚠ **The cost of omitting it is asymmetric**: a slot that wedges this way is simultaneously unreclaimable (`shell`, never `idle`) and unreachable (blocked on a foreground shell, so it drains no `SendMessage`). Only the conductor can clear it, from outside, and only if it notices.
+
 **For code changes:**
 ```
 - Run zig build test before committing
