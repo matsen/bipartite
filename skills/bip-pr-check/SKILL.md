@@ -6,6 +6,10 @@ description: Quick PR readiness check — clean worktree, good description, squa
 # /bip-pr-check
 
 Quick sanity check before running the heavier `/bip-pr-review`.
+
+For writing the body in the first place, see `/bip-pr-file`. The checks here are
+mechanical ones on a PR that already exists; they cannot tell a reader-friendly
+body from a well-formatted one that never says what the PR does.
 Catches common issues that waste review cycles.
 
 ## Usage
