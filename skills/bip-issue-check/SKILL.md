@@ -273,14 +273,24 @@ Both look fine to a reference-checking pass and both invalidate the issue.
 
 ⛔ **`gh pr list --search "<path>"` DOES NOT DO THIS, and it fails in the reassuring direction — it returns a non-empty, plausible list.** `--search` queries PR *text*, not changed files. Measured on `matsengrp/phyz` 2026-09-17: `gh pr list --search "docs/ml/knob-correspondence.md"` returned `2571 2581 2667 2653 2559`, while the eight most recent PRs that actually modified that file were `2749 2640 2746 2744 2739 2738 2727 2731` — **zero overlap.** (Some returned PRs do touch the file, found by text coincidence, which is what makes the output look like it worked.)
 
-➡ **Enumerate open PRs and read each one's file list — that is exact, and cheap when few are open:**
+➡ **Ask for the changed-file list directly. `gh pr list` accepts `--json files`, so this is one call:**
 
 ```bash
-for n in $(gh pr list --state open --json number -q '.[].number'); do
-  gh pr view "$n" --json files -q '.files[].path' \
-    | grep -qxF "<path>" && echo "PR #$n touches <path>"
-done
+gh pr list --state open --limit 200 --json number,files \
+  -q '.[] | select(any(.files[]; .path == "<path>")) | "PR #\(.number) touches <path>"'
 ```
+
+⚠ **`--limit 200` is not decoration: `gh pr list` defaults to a 30-PR page** (measured — bare returns 30 rows, `--limit 200` returns 200). Past 30 open PRs the query **silently truncates and reports clean** for everything older.
+
+⛔ **And you cannot verify this command against `--state open` on a repo with no open PRs — it returns empty whether it works or not, which is the reassuring-empty trap in a different costume.** Prove it against `--state all`, where ground truth exists, then run it with `--state open`. Measured on `matsengrp/phyz` 2026-09-17:
+
+```
+gh pr list --state all --limit 12 --json number,files \
+  -q '.[] | select(any(.files[]; .path == "docs/ml/knob-correspondence.md")) | "\(.number)"'
+-> 2749 2746 2744 2739 2738 2731 2728
+```
+
+Every one genuinely modifies that file, and **#2749 — the instance this rule is built on — is the first hit**, against `--search`'s zero.
 
 **Flag as MEDIUM** when a draft quotes content from a file that any open PR modifies — whether or not the draft's References list mentions it.
 
