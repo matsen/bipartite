@@ -1039,8 +1039,26 @@ Human-judgment items:
    that aren't simple follow-ups. Omit if none.>
 
 Quality gate: passed
+
+Doc alterations: <none — additive only | ALTERED: <files>, N removed tokens>
 ═══════════════════════════════
 ```
+
+⛔ **The `Doc alterations` line is not optional and must be computed, not recalled.** Several of these docs are epic-recorded, and **an in-place rewrite is the one item in a PR that needs a second signature** — so a recap that omits it hands the conductor a clean-looking report with the only reviewable item missing. Measured 2026-09-17 on `matsengrp/phyz`: a worker reported gates, pinned values and base currency in careful detail and said nothing about having rewritten two epic-recorded rows in place (**11 removed tokens**). The rewrite was *correct* — the sentence its lever made false could not simply be appended to — and it still had to be announced and acked before the PR could land.
+
+➡ **Compute it with a THREE-DOT word-diff:**
+
+```sh
+git diff --word-diff=porcelain origin/main...HEAD -- docs/ | grep '^-' | grep -v '^--- '
+```
+
+⚠ **Three details, each of which produced a wrong answer the same day:**
+
+- **`--word-diff`, never `--numstat`.** Appending a clause to a one-line table row rewrites that line, so **`--numstat` reports a deletion either way** and its deletion count cannot separate the two states this line exists to separate. Measured on two PRs that touched the same two files: the ALTERED one reported `1	1` per file, the purely ADDITIVE one `2	1` — **both non-zero, and the additive one has the larger numbers.**
+- **`grep -v '^--- '` is load-bearing.** Porcelain word-diff emits a `--- a/<file>` header per file, and those start with `-`. Without the filter a purely additive two-file change reports **2 removed tokens**. A conductor hit exactly this, nearly reported a non-existent discrepancy to the worker, and caught it only by re-running with the filter.
+- **Three-dot, never two-dot.** Two-dot reports every commit landed on `main` after your fork as a deletion.
+
+⭐ **And a removed token is not by itself a fault — it is a question.** Check first whether provenance survived: the counts of `VERDICT-EVIDENCE`, `CORRECTED` and each cited issue number should be **no lower** on your branch than on `main`. A citation that changes form — `(issue #2757)` becoming `(issues #2757, #2764)` — shows up as a removal and is an *extension*. **Report the shape you measured and let the epic rule; do not pre-judge it in either direction.**
 
 The lead's PR comment is the source of truth for filed follow-ups;
 the recap doesn't duplicate it. Get the PR URL from
