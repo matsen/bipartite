@@ -583,6 +583,32 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 
 ⚠ **Scope is per repo, and these skills are shared across fleets.** A delegation recorded in one repo's log says nothing about another's. Widening one is a user decision, not an inference from similarity.
 
+⏳ **SUNSET NOTE on the two rules that follow.** Both are drawn from a single day (`matsengrp/phyz`, 2026-09-17). **CLAUDE.md's own standing advice is that behavioural notes from one incident age badly**, and these earn their place only because each carries three instances or a concrete near-miss. **If either stops earning it — no conductor hits that failure in a month — CUT it rather than qualifying it, and collapse the pair to the one-sentence general form.** A rule kept past its evidence is the kind that gets applied by rote in the wrong place.
+
+⭐ **THE GENERAL FORM, WHICH IS WORTH MORE THAN THE APPROVAL RULE BELOW: a condition naming an artifact is not satisfied by the artifact's EXISTENCE, only by its CURRENT CONTENT.**
+
+**The failure is not carelessness — it is ticking a genuine condition and stopping.** The condition was real, the artifact was there, the check passed; what mattered was a property of the object the condition pointed at, and nothing prompts you to look at it. Measured on `matsengrp/phyz` 2026-09-17, **three instances in one day, in three different artifact classes:**
+
+| condition | artifact | what had moved |
+|---|---|---|
+| "both approvals are on the PR" | two 🤖 comments | they named a SHA that had since been superseded — twice, and one of those commits did not compile |
+| "the doc row cites this code" | a `knob-correspondence.md` citation | the cited line had been extracted into a helper; `check-knob-citations` went red **three separate times** as workers shared code rather than duplicating it |
+| "the brief names the collisions" | a spawn brief | the issue body gained a new collision entry **after** the worker launched, and a brief freezes at spawn |
+
+➡ **So when a rule says "check that X exists", read X.** For an approval, the SHA it names; for a citation, the line it points at; for a brief, whether the issue body has moved since. ⚠ **A worker that had already verified two approvals were present came within one command of landing on a superseded pair — it had satisfied the rule as written.**
+
+⛔ **APPROVE ON A GREEN GATE, NOT ON A CLEAN ARTIFACT SET — "approved" AND "BUILDS" ARE INDEPENDENT UNLESS YOU MAKE THEM OTHERWISE.**
+
+**Every check in an approval is a source read.** Base currency, closing-keyword scope, doc-alteration shape, provenance tag counts, local-equals-remote — **none of them compiles anything.** So an approval issued while the worker's routed targets are still running says nothing whatever about whether the branch builds.
+
+⚠ **Measured 2026-09-17 on `matsengrp/phyz`, on the FIRST PR to run under a landing delegation.** Both the epic and the conductor posted 🤖 approvals naming head `df5ea4fc`. The worker's own routed set, still running at that moment, then failed to compile `test-core`: it had reworded a test's failure message to `'src/ml/cli_help{,_params}.zig'`, and **`{,` is a Zig format placeholder**, so `allocPrint` died with *too few arguments*. **Two approvals stood against a tree that did not build, and the only thing between them and `main` was the worker declining to land on an unreached gate.**
+
+➡ **So, before posting an approval: require the worker's gate report to name every routed target and its exit status AT THE SHA YOU ARE APPROVING.** "Gates running, will report" is not a gate. ⚠ **This binds the EPIC's approval too, not only the conductor's — and the epic's is the one that matters more, because it usually lands first and is the one a worker reads.** In the instance below BOTH approvals stood against the non-compiling tree; a rule read as conductor-only would have prevented neither. If the set is incomplete, **say you will approve when it lands** rather than approving now to save a round trip — the round trip is the cheaper half.
+
+⭐ **And the corollary that makes this cheap: an approval is scoped to a commit, so a fix moves the head and voids it anyway.** Approving early does not save a round trip; it just moves the re-approval to a worse moment, after someone has already read "both approvals present" off the PR. **Approving late costs one message. Approving early costs a near-miss.**
+
+⚠ **Do not let a worker credit the wrong instrument for the catch, either.** In the instance above the worker recorded the conductor's extra-gate ruling as what caught it; **it was not — the routed set was always going to run, and the worker's own refusal to land mid-gate is what caught it.** The lesson a later reader needs is *do not land while a gate is running*, not *add more gates*. **Correct that attribution when you see it; a rule credited to the wrong cause gets applied in the wrong place.**
+
 ⭐ **Two failures this cost before it was written, both on 2026-09-17, both cheap only because the rail failed safe.** `bip-conductor-spawn` told workers to land on two peer approvals while its own provenance table forbade exactly that; **two workers refused and both were right**, and the conductor merged their PRs by hand. Then the first attempt at a fix proposed accepting a PR approval *comment* as the authorization — **rejected on the fact that every session posts as the same account**, so a worker could author its own approval. That version would have failed open.
 
 ➡ **The general shape, which outlives this particular rule: when a rail and an instruction conflict, the conflict is a defect in the pair, not a puzzle for the worker to solve.** Both workers resolved it correctly and neither should have had to. **Fix the pair; do not teach the reader to arbitrate it.**
