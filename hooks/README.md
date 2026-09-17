@@ -45,6 +45,47 @@ because each replaced name was a word the session had already used —
 `survivors` for what the document elsewhere called kept donors, `exclusion
 table` for the sharing table.
 
+## `pr-body.py`
+
+`PreToolUse` on `Bash`. Holds a `gh pr create` — or a `gh pr edit` that
+replaces the body — when the session has not loaded
+[`/bip-pr-file`](../skills/bip-pr-file), and says what the body owes the
+reader.
+
+```json
+"PreToolUse": [
+  { "matcher": "Bash",
+    "hooks": [ { "type": "command", "command": "~/.claude/hooks/pr-body.py" } ] }
+]
+```
+
+The defect it is aimed at is a PR body that never says what the PR does. A
+reviewer put it as "i'm trying to figure out why i still have no idea what it
+does... so many PR bodies are just fragments of nonsense, instead of actually
+describing what they do and why". Across the last eight merged PRs in one
+downstream repo, five had section headings naming only a defect — "The check
+never fired", "Wrong numbers", "Silent success".
+
+**It checks that the rules were loaded, not that the body is good.** Every
+unreadable body so far was written by a session with no PR-body rules in front
+of it, so catching that case is the whole of the enforcement: a skill nobody
+opens at the moment it is needed changes nothing. What it cannot do is grade
+prose — sections that read well and never state the change are exactly what no
+regex sees, which is why a passing hook must not be read as a passing body.
+
+Same argument as the terminology hooks above: a rule in `CLAUDE.md` is read once
+at the start of a session, and `gh pr create` is a precise moment that
+`CLAUDE.md` is not.
+
+The evidence it looks for is the `Skill` tool-use record in the transcript, not
+the skill's name in prose — the hook's own message names the skill, so a looser
+match would pass on the retry with the skill never read. It stays silent when
+the skill is not installed, since blocking with no remedy to point at is worse
+than not firing, and when the transcript cannot be read, since that is our
+failure and not the author's.
+
+It fires at most once per PR and never in a session that used the skill.
+
 ## `novel-words.py`
 
 `Stop`. Reports words in the turn just finished that nobody has used earlier
