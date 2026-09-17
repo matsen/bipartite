@@ -898,6 +898,19 @@ done
 
 ⚠ **And do not repair this by guessing at the mechanism from a `ps` snapshot.** The conductor's first account of it was wrong: seeing `phyz-main` at 99.9% CPU alongside an empty `pgrep -x phyz`, it concluded the installed binary had been renamed and reported that to two peers. `pgrep -x phyz` matched 15 processes on the same box moments later; `phyz-main` is a **test-runner** executable. **Two true observations and an invented mechanism joining them** — the enumeration above is also the check that would have refuted it immediately.
 
+⛔ **AND A ZSH TRAP THAT RENDERS AS A NON-RESULT: AN UNQUOTED VARIABLE OF FLAGS IS ONE ARGUMENT, NOT SEVERAL.** `SH_WORD_SPLIT` is **off by default in zsh**, which is the shell on `pax`. So this passes a single argv entry:
+
+```zsh
+EXTRA="--param diag.bl_persist=1"
+./phyz ml ... $EXTRA          # argc contribution: 1, not 2
+```
+
+**The program rejects it — correctly and loudly — and the arm produces EMPTY OUTPUT.** In a results table that renders as a blank cell, **indistinguishable from "this arm did not reproduce".** Measured **twice in one day** on `matsengrp/phyz` 2026-09-17, by the same conductor, in two unrelated A/B measurements.
+
+➡ **Write the flags literally in the command, or use an array (`EXTRA=(--param k=v); ... "${EXTRA[@]}"`). Never interpolate a bare `$VAR` of arguments.** ⭐ **And the check that made both recoverable: read the failing arm's stderr BEFORE recording a non-result.** Both times the answer was sitting there — `error: unknown flag '--param diag.bl_persist=1'` — and both times the alternative was reporting a false non-reproduction of a real effect.
+
+⚠ **This is the same family as the `status=` and `path=` reserved-variable traps recorded elsewhere in this file** (`path` is tied to `$PATH`, so reading into it destroys the command search path mid-loop; that one cost an `awk: command not found` cascade the same day). **zsh's differences from bash are not stylistic here — each one fails by producing plausible output.**
+
 ⚠ **The wrong-universe case measured 2026-09-15, and it is the one with no local tell at all:** a conductor watching "has the remote sweep stopped" ran `pgrep -f snakemake` over ssh with no `-u`, matched **an unrelated user's** dasm2 snakemake on the same shared host, and **could never have reported STOPPED.** It was minutes from firing a false "the owner has not acted, intervene." Correctly scoped, the answer was available in one command.
 
 ⭐ **Keep these separate from a wrong *prescription*.** These three are *"my probe lied to me"*; a bad prescription is *"my reasoning outran my evidence."* Different remedies — the first wants a better instrument, the second wants re-deriving from the mechanism.
