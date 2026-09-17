@@ -571,8 +571,46 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 ### Run `lib/fleet-collisions.sh` before every spawn
 
 ```bash
-"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh"   # exit 0 = clear, 1 = found, 2 = could not check
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+# NOT OPTIONAL. `ROOT="${1:-$HOME/re/pz}"` substitutes on unset OR EMPTY, so an
+# empty argument is indistinguishable from no argument and silently restores the
+# phyz-pool default. Verified both ways; see below.
+[ -n "$CLONE_ROOT" ] || { echo "ABORT: could not resolve clone_root -- an empty argument falls back to \$HOME/re/pz, i.e. the phyz pool" >&2; exit 1; }
+"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # exit 0 = clear, 1 = found, 2 = could not check
 ```
+
+⛔ **PASS `$CLONE_ROOT` EXPLICITLY. THE SCRIPT DEFAULTS TO `$HOME/re/pz` AND NEVER READS `.epic-config.json`** — `ROOT="${1:-$HOME/re/pz}"` at `fleet-collisions.sh:59`, and `grep -n 'CLONE_ROOT\|clone_root\|epic-config'` over the whole script returns nothing. On any repo whose pool is not `~/re/pz`, the argument-less form every earlier version of this skill prescribed silently answered **the phyz fleet's** question.
+
+⚠ **This is the wrong-universe failure, and it is worse than every probe failure catalogued above, because it CANNOT FAIL TOWARD "NOTHING TO DO."** Those return an empty or reassuring result. This one returns a **populated, well-formed, entirely plausible report about somebody else's clones** — both pools exist, so there is no error, no `exit 2`, and no empty-denominator tell.
+
+⭐ **Measured 2026-09-17 on `matsengrp/superfamily-pcp`, by a conductor following this skill's own instruction literally.** No-argument run: `birch`/`cedar`, `COLLISION src/ml/stochastic_search.zig`. Re-run with the explicit root, same minute: `cobalt`/`copper`/`silver`, `COLLISION CLAUDE.md`. **Every clone name, branch, file, and the collision itself were wrong — and nothing in the first output looks wrong.** A conductor that trusted it would have sequenced that repo's spawns against another project's branches, and **missed a real three-way collision on `CLAUDE.md` that went on to produce two genuinely conflicting PRs.**
+
+⚠ **The script's own header says so, and that is exactly why the defect survived: the caveat was in the wrong document.** It reads *"Scope: written for and exercised only against matsengrp/phyz's `~/re/pz` pool. The clone-root argument makes it portable in principle; that is untested."* — true, accurate, and **in the file the caller does not open.** ⭐ Note what that caveat becomes: **following the instruction above IS that test, and it passed** — on `matsengrp/superfamily-pcp`, 2026-09-17. Say so, or the next reader inherits an untested-ness claim this instruction now contradicts.
+
+➡ **Corollary, worth more than the fix: when a shared helper takes a scoping argument and the instruction omits it, the default IS the bug.** An omitted scope argument does not produce "no scope"; it produces *somebody's* scope, silently.
+
+⛔ **THE NULL-CHECK ABOVE IS LOAD-BEARING, AND THE FIRST DRAFT OF THIS VERY FIX OMITTED IT AND REINSTATED THE BUG.** `:-` substitutes on unset **or empty**, so an unparseable `.epic-config.json` makes the explicit argument evaporate. ⚠ **And it does not merely fall back — it returns the REASSURING answer.** Measured, passing an explicit empty string: `files touched by MORE THAN ONE live clone ... none`. **A clean bill of health, about the wrong fleet, on the step whose output authorises a spawn.**
+
+⭐ **Two instances of this family in one afternoon were written INTO A FIX FOR IT, by authors holding the rule in mind as they typed** (this one, and the `EXPECTED` null-check in `/bip-epic`'s push snippet). **That is the strongest evidence available that this needs a mechanical check rather than care** — care demonstrably does not survive the act of writing the remedy.
+
+⛔ **AND THE HEADER'S OTHER PRESCRIPTION IS ITSELF FAIL-OPEN IN THIS FLEET'S DEFAULT SHELL.** `fleet-collisions.sh:37` correctly warns not to read `$?` after a pipe and prescribes `"${PIPESTATUS[0]}"`. **`PIPESTATUS` is a bash array. `zsh` — `/usr/bin/zsh`, the login shell on `pax` — spells it `$pipestatus[1]`, lowercase and 1-indexed, and evaluates `${PIPESTATUS[0]}` to the EMPTY STRING rather than erroring.** So the remedy for a fail-open reads as blank, not as a failure — `exit=` with nothing after it, which a reader scanning for a non-zero code passes straight over.
+
+⛔ **AND THE CORRECT SPELLING IS STILL A TRAP, BECAUSE BOTH VARIABLES ARE REBUILT BY EVERY COMMAND — INCLUDING THE ONE BEFORE YOUR READ.** Not zsh-specific; bash's `PIPESTATUS` behaves identically. The read is only valid as **the very next thing after the pipeline**:
+
+```
+false | head >/dev/null
+echo "first:  [$pipestatus[1]]"     # 1   <- correct
+echo "second: [$pipestatus[1]]"     # 0   <- now reports the FIRST echo
+```
+
+⭐ **Be precise about what clobbers it, because the obvious guess is wrong and produces the wrong remedy.** The command you use to *inspect* it is safe — parameter expansion happens before that command runs, so `echo "[$pipestatus[1]]"` reads the pipeline's status, not its own. What destroys the value is **any command that executes between the pipeline and the read**. Verified: three consecutive fresh runs of the inspecting `echo` all report `1`; inserting one unrelated command first reports `0`. ⚠ **So a reader debugging a suspected fail-open, who adds a diagnostic line before checking, gets `0` and concludes the pipeline succeeded.** ➡ **This is why "redirect to a file and run it un-piped" is the instruction rather than a preference** — it is the only form with no window between producing the status and reading it.
+
+⛔ **A COLLISION REPORT NAMING N CLONES ON A FILE MEANS N-CHOOSE-2 PAIRS TO TRIAL-MERGE. DERIVE THE PAIR SET FROM THE REPORT, NOT FROM WHICHEVER PRs YOU HAPPEN TO BE THINKING ABOUT.** ⚠ Measured 2026-09-17, by the conductor that had just fixed the root argument above. With `COLLISION CLAUDE.md <- cobalt copper silver` in hand it trial-merged **nine** PR pairs and reported that the three-way was *"live-clone file OVERLAP, not a merge conflict."* **One of the three `CLAUDE.md` pairs was never in the nine**, and it was the pair where both sides rewrite the same bullet. It conflicts in both directions. ⭐ **Every pair it ran was correct, and re-deriving would not have caught it** — the instrument was at full power; the population was wrong, and **the report had already named the population.**
+
+➡ **And the sharper form: WHEN YOU HAND A CONFLICT TO WHOEVER WILL RESOLVE IT, SAY WHAT DIFFERS, NOT ONLY THAT IT CONFLICTS.** The same conductor told a worker *"#369 and #372 CONFLICT, both are yours, you resolve it."* Accurate. The worker's own restatement became *"identical bug-fix content both sides, **per your trial-merge finding**"* — a claim the conductor never made, now carrying its attribution. The two sides were **not** identical: one had a narrowed `except ValueError as e:` with a re-raise guard, the other a bare `except ValueError:`, and the benign-looking resolution would have silently reinstated a swallowed exception the other PR existed to fix. ⚠ **"These two branches do not auto-merge" and "these two branches contain the same code" are different claims, and a trial-merge establishes only the first** — in neither direction. **An unspecified conflict invites the reader to guess, and the cheap guess is "same code."**
+
+⭐ **The worker caught it independently before the correction landed, which is the pattern rather than the exception.** Three times that afternoon a worker was right against guidance from above. **The tier closest to the artifact catches what the tier reasoning about it cannot** — so a conductor's correction to a worker should carry its evidence and invite contradiction rather than assert a verdict.
 
 **This check cannot be done from the epic side and is not a courtesy hand-off.** Clone branches are local (`shared_filesystem: false`), and remote refs are not a substitute: under squash-merge every historical branch stays permanently ahead of `main` — measured on `matsengrp/phyz`, **847 remote branches, the first 400 all ahead** — so "ahead of main" does not discriminate live from long-dead. The decisive case is **uncommitted** work, which exists only in the clone. A three-way collision on one test file was visible on 2026-09-14 solely in `git status` output on the conductor's machine.
 

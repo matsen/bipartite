@@ -665,6 +665,56 @@ So, whenever a check gates something destructive or outward-facing:
 - **Verify the mutation happened, not that the command ran.** After a scripted edit, `grep` for the new text before committing; after a commit, `git diff <base> HEAD -- <file>` should be exactly what you intended and nothing else.
 - **`git fetch` updates remote-tracking refs and not your working tree.** Editing a shared file after `fetch` alone edits a stale copy, and the resulting commit silently reverts whatever landed upstream in between. Pull. Ask of any guard you write or inherit: **what does this do when the thing it queries is unavailable?** If the answer is "the same as when everything is fine", it is not a guard. Capture into a variable, check the command actually succeeded, and only then compare — and prefer a shape where the failure mode is a loud abort rather than a quiet pass, especially when what follows is destructive or outward-facing.
 
+⛔ **THE CASE THE SNIPPET ABOVE DOES NOT COVER: WHEN YOUR PUSH SEQUENCE CONTAINS A WRITE OF ITS OWN, THAT WRITE INVALIDATES THE GUARD.** Replacing an EPIC body while archiving the old one to a comment is the common shape, and **posting the comment moves `updatedAt` by construction** — so a correctly-written conflict check fires on a delta you created yourself, with no concurrent editor anywhere in the window.
+
+⚠ **Measured 2026-09-17 on `matsengrp/superfamily-pcp`, and the instructive part is that TWO defects cancelled.** The conductor mandated comment-first ordering — right, for the data-safety reason below — without noticing it guaranteed a false positive. The epic session's guard had dropped its `elif [ "$PULLED_AT" != "$CURRENT_AT" ]` branch, so it failed open and pushed anyway; correctly, as it happened, since the only thing that had moved the timestamp was its own comment 42 seconds earlier. **A broken guard under a broken ordering produced exactly the right outcome, and neither defect was visible in the result.**
+
+⭐ **Hold on to the worse counterfactual: had the guard been written correctly it would have aborted spuriously, been overridden by hand, and plausibly been judged noise.** That is a durable loss. Today's was not.
+
+⛔ **AND THE TIMESTAMP IS NOT THE GUARD THAT PROTECTS THE DATA. A CONFLICT CHECK DEFENDS AGAINST A CONCURRENT EDITOR AND DOES NOTHING FOR THE CONTENT.** In the measured case the body was 63,870 characters and the archive comment 64,734 — large enough that truncation is a real possibility rather than a theoretical one. **Had the comment truncated, every timestamp in the sequence would have been consistent and the findings would still be gone.** So the timestamps catch a concurrent editor *before* you write, and **the verified copy authorises the destructive step**:
+
+```bash
+T0=$(gh issue view <N> --json updatedAt -q .updatedAt)          # at pull
+# ... edit locally ...
+T1=$(gh issue view <N> --json updatedAt -q .updatedAt)          # BEFORE your own write
+[ -n "$T0" ] && [ -n "$T1" ] || { echo "ABORT: could not read updatedAt"; exit 1; }
+[ "$T0" = "$T1" ] || { echo "CONFLICT: a real concurrent editor"; exit 1; }
+
+CID=$(gh issue comment <N> --body-file archive.md | grep -oE '[0-9]+$')
+[ -n "$CID" ] || { echo "ABORT: the archive post failed"; exit 1; }
+
+# `archive.md` is the SOURCE file you posted from, NOT a re-capture of the posted
+# body: `gh api -q .body > file` appends a newline, so a re-capture measures one
+# character longer. Measured both ways on the same comment: source 64,734 (exact
+# match to .body|length), re-capture 64,735.
+# Characters, NOT bytes: gh reports .body|length in characters, and these files are
+# full of multi-byte glyphs. Measured: a 64,734-character archive is 65,199 bytes.
+EXPECTED=$(jq -Rs 'length' < archive.md)
+# NULL-CHECK THIS. Bash evaluates an empty string as 0 in arithmetic, so an
+# unreadable archive.md makes the threshold 0 and the length gate pass
+# UNCONDITIONALLY -- fail-open, on the destructive step. Verified.
+[ -n "$EXPECTED" ] && [ "$EXPECTED" -gt 0 ] || { echo "ABORT: could not measure archive.md"; exit 1; }
+
+LEN=$(gh api repos/<org>/<repo>/issues/comments/"$CID" -q '.body|length')
+[ -n "$LEN" ] || { echo "ABORT: could not read the archive back"; exit 1; }
+# Generous on purpose: this detects TRUNCATION, which is large. An exact test is
+# brittle across encodings and trailing-newline handling -- measured in both
+# directions, +1 and -31 depending on how the local file was produced.
+[ "$LEN" -ge $((EXPECTED * 95 / 100)) ] || { echo "ABORT: archive short — $LEN of ~$EXPECTED"; exit 1; }
+
+# Anchor the content check at the END. Truncation removes the tail, so a string
+# from the opening passes on a truncated body. Pick a phrase from the LAST section.
+gh api repos/<org>/<repo>/issues/comments/"$CID" -q .body | tail -40 \
+  | grep -q '<a phrase from the archive'"'"'s final section>' \
+  || { echo "ABORT: archive tail missing — truncated"; exit 1; }
+
+gh issue edit <N> --body-file new-body.md   # authorised by the VERIFIED COPY, not by a timestamp
+```
+
+**Do not try to self-verify with a third timestamp.** The natural repair — re-read after your write and confirm it moved — fails because **`updatedAt` has been observed to lag a few seconds** (see the closing-keyword rules in this file), so a transient equality aborts a correct sequence. **Reading a value you never compare is worse still: an earlier draft of this passage read a `T2`, null-checked it, and left a comment claiming the edit was "gated on T2" when nothing compared it.**
+
+⭐ **This passage took five review rounds to write, and every defect found was an instance of the rule it states** — an unused `T2`; a byte-vs-character comparison; a content grep anchored where truncation would not show; a dry run that validated a near-neighbour of the artifact rather than the artifact; and a fail-open on the destructive step. **All five were caught by review, none by use.** The failure mode is invisible to the person writing it and cheap for anyone else to see — which is the argument for a second reader on anything shaped like this, and the reason not to trim this block on the assumption it was written carefully the first time.
+
 **Conflict check**: Record `updatedAt` when pulling.
 Before pushing, re-fetch `updatedAt` — if it changed, someone else edited.
 Re-pull, merge their changes, and retry.

@@ -400,6 +400,8 @@ must never be weaker than the condition to PRESERVE, and a preservation step
 must never have a silent no-op branch.** Both halves were violated here, and
 neither was visible in the output — the skip printed nothing at all.
 
+⭐ **The family, one layer up: THE SAFETY STEP AND THE PROTECTED STEP MUST AGREE ABOUT WHAT STATE THEY ARE REASONING OVER.** Here the delete's condition was weaker than the preserve's. The sibling is a guard whose comparand is **invalidated by the preserve itself** — measured 2026-09-17, an EPIC body replace whose archive comment moved the very `updatedAt` the conflict check compared against, so a *correct* guard would have fired on a delta its own author created. **A guard that degrades silently when its own precondition changes is not a guard, and a preserve-then-mutate changes that precondition by construction.** The construction, and the second and load-bearing guarantee — verify the preserved copy's **content**, not just the timestamp — are in `/bip-epic` beside its body-push snippet.
+
 ### Step 10: Confirm
 
 Report: "Landed #42.
