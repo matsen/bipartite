@@ -608,7 +608,23 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 
 ⛔ **A DOC-ALTERATION ACK AND AN APPROVAL ARE DIFFERENT OBJECTS, AND "TOUCHES NO DOCS" ANSWERS ONLY THE FIRST.** The delegation requires both parties' approvals on **every** PR. A doc ack is an additional gate that applies only when an epic-recorded row was altered. ⚠ **Measured 2026-09-17: a conductor wrote *"No epic ack is outstanding for this PR — it touches no `docs/` file"*, which was true of the ack and false as a statement about approvals. The worker correctly declined to land on one approval and the PR sat for 45 minutes.**
 
-⭐ **This failure is SILENT — nothing errors, nobody is blocked loudly, the PR simply does not move.** A stalled slot looks identical to a slow one. **So say the two separately when you say either: "no doc ack needed; the epic's approval is still required."**
+⭐ **This failure is SILENT — nothing errors, nobody is blocked loudly, the PR simply does not move.** A stalled slot looks identical to a slow one.
+
+➡ **Two halves, and the first matters more because it fixes the ambiguity at its source:**
+- ⛔ **WRITING a PR body: the approval requirement has NO exemptions at all, so any sentence saying an ack is NOT needed must name WHICH ack.** *(This form is the worker's, not the conductor's — it saw that its own PR body's prominent "no doc ack is needed this time" is what invited the conflation, and that the conductor read the nearest available meaning. A rule that only tells the reader to be careful leaves the ambiguous sentence in place to catch the next person.)*
+- **READING one: say the two separately when you say either** — *"no doc ack needed; the epic's approval is still required."*
+
+⭐ **AND THE CLASS THIS BELONGS TO, WHICH IS WORTH MORE THAN ANY OF ITS INSTANCES — found by a worker, not by the conductor or the epic: a TRUE statement about one object, read as a statement about a NEIGHBOURING one.** Five instances measured on `matsengrp/phyz` in a single day:
+
+| true of | read as | cost |
+|---|---|---|
+| the doc ack | the approval | a PR sat 45 minutes |
+| a population (rule 13) | a configuration (rule 14) | two correct hashes read as a failed reproduction |
+| the block EXECUTES | the defect is EXPOSED | a wrong blast-radius boundary shipped to a worker's brief |
+| a count | a rate | a `grep -c` of lines reported as occurrences |
+| `MERGEABLE` | currency | an approval on a head not atop `main` |
+
+➡ **Stating the class once, above its instances, is what lets a reader recognise the sixth.** None of the five is careless; each is a correct observation whose subject shifted by one step between measuring and writing.
 
 ⚠ **And do not read GitHub's `MERGEABLE` as a currency check — it is about CONFLICTS.** A branch can be `MERGEABLE` while `origin/main` is not its ancestor, which is the state that voids an approval. **`git merge-base --is-ancestor origin/main HEAD` is the currency test and `MERGEABLE` is not a substitute for it.** Approving a head that is not on top of current `main` is the same class as approving a superseded SHA. ⚠ **This is here because the two sit ADJACENT in every `gh pr view` output and one reads as covering the other — not because anyone substituted one for the other.** Run both and print both.
 
