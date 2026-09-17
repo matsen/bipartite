@@ -254,6 +254,38 @@ Both look fine to a reference-checking pass and both invalidate the issue.
 - Another draft's test plan gated on byte-identity of five committed artifacts; **two of them were outside the experiment's `.gitignore` allowlist** and could never have been diffed.
   The gate would have passed or failed for reasons unrelated to the change.
 
+#### Point at an artifact, do not transcribe it
+
+10e.
+⛔ **A body that QUOTES a document it expects to change is stale the moment that change lands. A body that POINTS AT the PR changing it stays true.** This is the drafting-side counterpart of 10d: that one is about revalidating a draft the world has moved under, this one is about writing a draft the world *cannot* move under.
+
+⚠ **Measured on `matsengrp/phyz`, 2026-09-17.** Issue #2750's job was to classify sites against a `knob-correspondence.md` row, and **its body was written ten minutes before PR #2749 rewrote that very row.** It survived intact, because the relevant line read:
+
+> `docs/ml/knob-correspondence.md` | PR #2749 is already in it — confirm it needs nothing further.
+
+**Had it instead quoted the row's then-current verdict — as the obvious way to "be specific" — its worker would have spent a pass classifying against text that no longer existed**, and the error would have looked like a disagreement with the code rather than a stale citation.
+
+➡ **So when a draft needs to refer to content that another in-flight PR or issue is changing, name the PR and the obligation, not the content.** *"PR #N is already in it — confirm it needs nothing further"* is checkable, survives the landing, and tells the worker what to do. The quoted paragraph is none of those things once #N merges.
+
+⭐ **The test is whether the sentence would still be TRUE after every open PR it names has landed.** If it would not, replace the transcription with a pointer.
+
+⚠ **But a draft's References list is a LOWER BOUND on what is in flight, not the whole of it.** #2750 happened to name #2749; **the dangerous draft is the one quoting a file that someone else's PR is rewriting without the drafter knowing that PR exists.** Same asymmetry as the rest of this family — the copy nobody knows is contended is the one that goes stale. So before quoting from a file, check what open work touches it, rather than only what your own References list mentions.
+
+⛔ **`gh pr list --search "<path>"` DOES NOT DO THIS, and it fails in the reassuring direction — it returns a non-empty, plausible list.** `--search` queries PR *text*, not changed files. Measured on `matsengrp/phyz` 2026-09-17: `gh pr list --search "docs/ml/knob-correspondence.md"` returned `2571 2581 2667 2653 2559`, while the eight most recent PRs that actually modified that file were `2749 2640 2746 2744 2739 2738 2727 2731` — **zero overlap.** (Some returned PRs do touch the file, found by text coincidence, which is what makes the output look like it worked.)
+
+➡ **Enumerate open PRs and read each one's file list — that is exact, and cheap when few are open:**
+
+```bash
+for n in $(gh pr list --state open --json number -q '.[].number'); do
+  gh pr view "$n" --json files -q '.files[].path' \
+    | grep -qxF "<path>" && echo "PR #$n touches <path>"
+done
+```
+
+**Flag as MEDIUM** when a draft quotes content from a file that any open PR modifies — whether or not the draft's References list mentions it.
+
+⚠ **This does not license vagueness.** Quoting a *stable* artifact — a symbol, a committed measurement, a source line in code nothing is touching — is still right, and 10d already covers revalidating those. The rule is narrow: **content under active change gets a pointer; content at rest gets a quote.**
+
 #### Prose discipline
 
 10c.
