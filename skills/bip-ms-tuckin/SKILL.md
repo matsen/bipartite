@@ -46,27 +46,48 @@ Report which EPICs were pushed and which were already up to date.
 Check whether `fetch_cmds` should be updated based on new experiments or results that arrived this session.
 If new result paths were discovered but not added to `fetch_cmds`, note them for the user.
 
-### Step 4: Update memory
+### Step 4: Update the durable session state
 
-Update the auto-memory files to reflect the session's work:
+**Do not write memory files** under `~/.claude/projects/*/memory/` — they are keyed by
+working directory, so they are invisible to other clones and to Erick.
+Everything below lives in the repo instead.
 
-1. **`project_dasmfit_status.md`** (or equivalent project memory):
-   - Mark newly completed items
-   - Update open issue list
-   - Note the current bottleneck
-   - Record any key decisions made this session
-   - Record **in-flight research threads**: analyses requested on PRs/issues this session, open scientific questions, and what each thread is waiting on — so the next session resumes the orchestration, not just the manuscript.
-     (A thread that has *completed* is what triggers a paper update; one still open stays here.)
+1. **`misc/session-onboarding.md`** (create it if the repo has none — see the copies in
+   `protein-dasm-tex` and `superfamily-pcp-tex` for the shape).
+   This is what a fresh session reads on its first turn, so it carries only what is needed
+   *before* acting: what the paper is and is not, the peer sessions and their remits, the
+   working disciplines that cost a round to learn, environment gotchas, and the open items.
+   Update it when any of those changed this session. Prefer pointing at the file that holds
+   a fact over restating the fact, so it stays short and cannot go stale on its own.
+   It is a standing document, not a log: **edit the lines that are now wrong rather than
+   appending**, and delete an item when it closes.
 
-2. **`project_pending_decisions.md`** (if it exists):
-   - Remove resolved decisions
-   - Update status of pending decisions
-   - Add any new unresolved items
+   Its **live-threads section** carries what each open thread would *mean for the paper* —
+   the reading that does not go stale — including analyses requested on PRs/issues this
+   session, open scientific questions, and what each is waiting on, so the next session
+   resumes the orchestration and not just the manuscript. (A thread that has *completed* is
+   what triggers a paper update; one still open stays here.) **Never record
+   open/merged/closed status**: GitHub is the source of truth and a status line is wrong
+   within hours.
 
-3. **Feedback memories**: If the user corrected an approach or confirmed a non-obvious choice, save it.
+2. **Keep it to ONE file.** If the repo has both an onboarding doc and a separate notes
+   file, merge them and delete the loser. Two documents with overlapping jobs is how state
+   goes stale: the one you are looking at stays true and the other quietly lies, and
+   whoever reads the wrong one has no way to tell. `protein-dasm-tex` had exactly this and
+   merged into `misc/session-onboarding.md` on 2026-09-18.
 
-Only update memories that changed.
-Do not rewrite unchanged files.
+3. **The `%PROV` / `%TODO` markers in the manuscript** are the primary memory for anything
+   attached to a specific number or sentence, and they beat both files above because they
+   sit where the claim is. If this session learned that a number is wrong, superseded, or
+   not yet citable, that belongs in the marker next to it — not in a notes file a future
+   session may not read. When marking a `%PROV` stale, **check its tail**: a prepended
+   correction does not neutralize the original claim further down.
+
+4. If Erick corrected an approach or confirmed a non-obvious choice, put it where it will
+   be enforced: a durable project fact in `CLAUDE.md`, a workflow rule in a
+   `~/re/bipartite/skills/` skill, a finding in the test, doc, or issue it concerns.
+
+Only update what changed. Do not rewrite unchanged files.
 
 ### Step 5: Verify build
 
@@ -88,6 +109,7 @@ Print a summary:
 - Committed: <yes/no, commit hash if yes>
 - Build: <clean/broken>
 - Uncommitted ISSUE files: <count>
+- Onboarding doc: <updated/unchanged — and what changed in it>
 
 ### EPICs
 - <repo> i<N>: <pushed/up-to-date/skipped>
