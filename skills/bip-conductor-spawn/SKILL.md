@@ -1216,6 +1216,14 @@ So append this to the command itself, substituting whatever command you actually
 
 ⚠ **The cost of omitting it is asymmetric**: a slot that wedges this way is simultaneously unreclaimable (`shell`, never `idle`) and unreachable (blocked on a foreground shell, so it drains no `SendMessage`). Only the conductor can clear it, from outside, and only if it notices.
 
+**An issue that adds a build-system target names, as a DELIVERABLE, whatever artifact makes that target discoverable in this repo** — a hand-maintained test-target table, a `make help` entry, a CI matrix row, a README list. ⛔ **If the answer is "nothing makes it discoverable", that is the finding and it belongs in the brief, not a reason to skip the deliverable.** ⭐ **The invariant is DISCOVERABILITY, not a row in any particular file.**
+
+**The worked instance, which is why this is not documentation hygiene:** `matsengrp/phyz`'s source→target map is hand-maintained **by necessity** — the file→step relation cannot be derived from `build.zig`'s text, and that repo records **two resolvers built and discarded** proving it. **A step absent from that table there is UNREACHABLE BY THE ONLY LOOKUP THAT EXISTS.** The gap has been paid for five times — #2298, #2499, #2599, #2603, #2627.
+
+⚠ **Measured 2026-09-18: two slots added an opt-in step the same afternoon; one wrote the row on its own initiative and one did not, and NEITHER BRIEF ASKED FOR IT.** ⭐ **So it is a brief defect, not a worker defect — without the line you are relying on which worker happens to think of it, and that coin came up both ways in one afternoon.** The entry should carry what the step covers, its cost, which targets it is wired into, and whether it depends on the install step (a step that does is not subprocess-free, and a reader budgeting its cost needs to know).
+
+⚠ **Sunset, because this line is paid for by every brief forever on the strength of one afternoon's n=2: if a month of briefs carrying it never produces an entry a worker would not have written anyway, cut it back to a single clause.** The measurement is real and it is still n=2.
+
 **For code changes:**
 ```
 - Run zig build test before committing
