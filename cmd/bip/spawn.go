@@ -43,6 +43,7 @@ var spawnPromptFile string
 var spawnDir string
 var spawnName string
 var spawnModel string
+var spawnAgent string
 var spawnForce bool
 
 func init() {
@@ -51,7 +52,8 @@ func init() {
 	spawnCmd.Flags().StringVar(&spawnPromptFile, "prompt-file", "", "Read prompt from file (avoids shell expansion issues)")
 	spawnCmd.Flags().StringVar(&spawnDir, "dir", "", "Working directory override (default: from sources.yml)")
 	spawnCmd.Flags().StringVar(&spawnName, "name", "", "Tmux window name override (default: repo#N)")
-	spawnCmd.Flags().StringVar(&spawnModel, "model", "", "Model to pass to the claude launcher (default: unspecified)")
+	spawnCmd.Flags().StringVar(&spawnModel, "model", "", "Model to pass to the agent launcher (default: unspecified)")
+	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "Agent runner for spawned session: claude, agy (default: claude)")
 	spawnCmd.Flags().BoolVar(&spawnForce, "force", false, "Spawn even if a live tmux pane already occupies the target directory")
 }
 
@@ -67,9 +69,33 @@ func resolvePrompt() string {
 	return spawnPrompt
 }
 
+// resolveAgent determines the agent runner to use for spawned sessions.
+// Precedence: CLI flag > configVal > default ("claude").
+// Allowed values are "claude" and "agy".
+func resolveAgent(flagVal, configVal string) (string, error) {
+	agent := flagVal
+	if agent == "" {
+		if configVal != "" {
+			agent = configVal
+		} else {
+			agent = "claude"
+		}
+	}
+	if err := spawn.ValidateAgent(agent); err != nil {
+		return "", err
+	}
+	return agent, nil
+}
+
 func runSpawn(cmd *cobra.Command, args []string) {
 	// Resolve prompt from --prompt or --prompt-file
 	spawnPrompt = resolvePrompt()
+
+	agent, err := resolveAgent(spawnAgent, config.GetSpawnAgent())
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Handle adhoc mode (--prompt without ref) - doesn't need nexus directory
 	if len(args) == 0 {
@@ -77,7 +103,7 @@ func runSpawn(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(os.Stderr, "Error: Either provide a GitHub reference, --prompt, or --prompt-file for adhoc sessions\n")
 			os.Exit(1)
 		}
-		runAdhocSpawn()
+		runAdhocSpawn(agent)
 		return
 	}
 
@@ -140,7 +166,6 @@ func runSpawn(cmd *cobra.Command, args []string) {
 
 	// Fetch data
 	var data *ItemData
-	var err error
 	if itemType == "pr" {
 		data, err = fetchPRData(ref.Repo, ref.Number)
 	} else {
@@ -223,13 +248,13 @@ func runSpawn(cmd *cobra.Command, args []string) {
 
 	// Create tmux window
 	url := flow.GitHubURL(ref.Repo, ref.Number, itemType)
-	spawnWindow(windowName, repoPath, prompt, url, spawnModel)
+	spawnWindow(windowName, repoPath, prompt, url, spawnModel, agent)
 
 	// Print URL as last line for easy clicking
 	fmt.Println(url)
 }
 
-func runAdhocSpawn() {
+func runAdhocSpawn(agent string) {
 	windowName := spawnName
 	if windowName == "" {
 		windowName = fmt.Sprintf("adhoc-%s", time.Now().Format("2006-01-02-150405"))
@@ -246,7 +271,7 @@ func runAdhocSpawn() {
 		}
 	}
 	fmt.Printf("Spawning tmux window %s...\n", windowName)
-	spawnWindow(windowName, workDir, spawnPrompt, "", spawnModel)
+	spawnWindow(windowName, workDir, spawnPrompt, "", spawnModel, agent)
 }
 
 func mustValidateDir(dir string) string {
@@ -268,7 +293,7 @@ func mustValidateDir(dir string) string {
 }
 
 // spawnWindow validates tmux, checks for duplicates, and creates the window.
-func spawnWindow(windowName, workDir, prompt, url, model string) {
+func spawnWindow(windowName, workDir, prompt, url, model, agent string) {
 	if !spawn.IsInTmux() {
 		fmt.Fprintf(os.Stderr, "Error: Must be running inside tmux\n")
 		os.Exit(1)
@@ -291,7 +316,7 @@ func spawnWindow(windowName, workDir, prompt, url, model string) {
 		}
 	}
 
-	if err := spawn.CreateWindow(windowName, workDir, prompt, url, model); err != nil {
+	if err := spawn.CreateWindow(windowName, workDir, prompt, url, model, agent); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}

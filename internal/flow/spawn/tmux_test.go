@@ -3,6 +3,7 @@ package spawn
 import (
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -141,6 +142,12 @@ func TestBuildClaudeInvocation(t *testing.T) {
 			windowName: "bipartite#281",
 			want:       `claude --dangerously-skip-permissions --model 'opus' --name 'bipartite#281' "$prompt"`,
 		},
+		{
+			name:       "single quotes in windowName and model are escaped",
+			model:      "test'model",
+			windowName: "repo#'test'",
+			want:       `claude --dangerously-skip-permissions --model 'test'\''model' --name 'repo#'\''test'\''' "$prompt"`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -150,5 +157,82 @@ func TestBuildClaudeInvocation(t *testing.T) {
 				t.Errorf("buildClaudeInvocation(%q, %q) = %q, want %q", tt.model, tt.windowName, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestBuildAgyInvocation(t *testing.T) {
+	tests := []struct {
+		name  string
+		model string
+		want  string
+	}{
+		{
+			name:  "empty model passes -i only",
+			model: "",
+			want:  `agy --dangerously-skip-permissions -i "$prompt"`,
+		},
+		{
+			name:  "model is passed through as --model",
+			model: "gemini-1.5-pro",
+			want:  `agy --dangerously-skip-permissions --model 'gemini-1.5-pro' -i "$prompt"`,
+		},
+		{
+			name:  "single quotes in model are escaped",
+			model: "gemini'pro",
+			want:  `agy --dangerously-skip-permissions --model 'gemini'\''pro' -i "$prompt"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAgyInvocation(tt.model)
+			if got != tt.want {
+				t.Errorf("buildAgyInvocation(%q) = %q, want %q", tt.model, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidateAgent(t *testing.T) {
+	tests := []struct {
+		agent   string
+		wantErr bool
+	}{
+		{"", false},
+		{"claude", false},
+		{"agy", false},
+		{"unsupported", true},
+		{"CLAUDE", true},
+		{"AGY", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.agent, func(t *testing.T) {
+			err := ValidateAgent(tt.agent)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateAgent(%q) err = %v, wantErr = %v", tt.agent, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCreateWindow_UnsupportedAgent(t *testing.T) {
+	err := CreateWindow("test-window", "/tmp", "prompt", "", "", "invalid")
+	if err == nil {
+		t.Fatal("CreateWindow with invalid agent should return error")
+	}
+	if !strings.Contains(err.Error(), "unsupported agent") {
+		t.Errorf("CreateWindow error = %q, want containing 'unsupported agent'", err.Error())
+	}
+}
+
+func TestCreateWindow_NotFoundInPATH(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	err := CreateWindow("test-window", "/tmp", "prompt", "", "", "agy")
+	if err == nil {
+		t.Fatal("CreateWindow with nonexistent executable should return error")
+	}
+	if !strings.Contains(err.Error(), "not found in PATH") {
+		t.Errorf("CreateWindow error = %q, want containing 'not found in PATH'", err.Error())
 	}
 }
