@@ -61,6 +61,7 @@ install-hooks:
 
 test-hooks:
 	python3 $(REPO_DIR)/hooks/test_novel_words.py
+	python3 $(REPO_DIR)/hooks/test_pr_body.py
 
 symlink-statusline:
 	mkdir -p ~/.claude/statusline
