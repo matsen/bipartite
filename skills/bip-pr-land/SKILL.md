@@ -19,9 +19,35 @@ Squash-merge the current branch's PR and clean up.
 If `bip spawn` created the working tree as a linked git worktree (because the user opted into the global `layout: { mode: worktree }` block in `~/.config/bip/config.yml`), this skill detects that in Step 6a and performs the base-branch pull from the primary clone, then removes the worktree in Step 8 before deleting the branch.
 In the common clone-mode case (no `layout:` block) every step runs as it always has — the worktree detection is a no-op.
 
+## Where to stand
+
+⛔ **This skill moves `HEAD` in the working directory. Never run it in a clone another live session is working in** — Step 7's `git checkout <base>` and Step 8's branch delete are exactly the operations that will move a peer's checkout out from under it. **A merge is a server-side operation; the local clone is only a place to stand, and what makes one the wrong place is that somebody else is standing there.**
+
+**So, in order of preference:**
+
+1. **The PR's own clone or worktree**, if a live session there is landing its own work. The normal case.
+2. ⭐ **Any idle pool clone**, when the lander is not the author — a conductor landing a peer's PR, say. Fetch the branch there and land from there. **It has no relationship to the PR and that is fine**; the only property that matters is that nobody else is live in it.
+3. ⛔ **Never the conductor's own clone if an epic or another session shares it**, and never a peer's.
+
+⚠ **Check rather than assume, because co-tenancy is invisible from inside:**
+
+```sh
+for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | grep -cE "^$PWD(/|$)"
+```
+
+**More than one is co-tenancy.** ⛔ **Anchor the match — a bare `grep -c "$PWD"` is a substring test and sibling clones collide.** Measured: with `~/re/pz/ash` and `~/re/pz/ash-iqtree-a00094e0` both present, the substring form counts every session in the sibling as a co-tenant (3 against an anchored 2 on a synthetic triple; both forms return 3 on a genuinely shared clone, so the fix costs nothing on the case you care about). The `(/|$)` keeps a session cwd'd into a **subdirectory** of the clone, which is a real co-tenant, and drops the sibling.
+
+⛔ **And say what it cannot see, because its two failure directions are asymmetric.** It reads each `claude` process's **own** cwd. **A session launched elsewhere that operates in this clone by `cd`-ing inside its Bash calls is invisible to it.** The substring looseness above fails toward a **false positive**, which costs a clone hop; this limit fails toward a **false negative**, which costs a peer's checkout. ➡ **The count is a floor, not a census — `1` is not proof of solitude.** Measured on `matsengrp/phyz` 2026-09-18: a conductor and an epic session had both been operating in one clone for a full day, each believing it was theirs; the conductor moved the epic's checkout to a temp branch and back while verifying a PR, and it was harmless **only because the epic's branch happened to sit at the PR head and it happened not to be mid-write.**
+
+⭐ **Read-only inspection is always safe in a shared clone — `git show <sha>:<path>`, `git diff <a> <b>`, `git log`.** It is only the operations that move `HEAD` that need a clone of your own. **Reach for `git show` before reaching for a checkout.**
+
+⛔ **AND IF YOU FETCH A PR BRANCH TO INSPECT IT: `git fetch origin pull/N/head:<branch>` SILENTLY LEAVES AN EXISTING LOCAL BRANCH AT ITS OLD SHA.** No output, exit 0, stale ref. **Two sessions hit this independently on `matsengrp/phyz` on 2026-09-18, hours apart and neither from the other's mistake** — one reviewed the wrong head for several minutes believing it was current and would have approved an artifact lacking the assertion it was describing as verified; the other found a local `pr<N>` branch two heads behind the live PR. ➡ **Use `git fetch -f`, or compare `git rev-parse <branch>` against `gh pr view <N> --json headRefOid` before reading a line of it.** ⭐ **Better still, skip the branch entirely: `gh pr view <N> --json headRefOid` gives you the SHA, and `git show <sha>:<path>` reads it with nothing to go stale.**
+
 ## Workflow
 
 ### Step 1: Check for uncommitted work
+
+⚠ **If you skipped straight here, read “Where to stand” above first** — it is a precondition to every step below, and a reader who meets it after Step 1 has already moved `HEAD` somewhere they may not own.
 
 ```bash
 git status --porcelain
