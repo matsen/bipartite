@@ -131,13 +131,23 @@ If checks are still queued/in progress, wait — do not assume they will pass.
 
 ### Step 6: Squash merge via gh
 
+⛔ **ASSERT BASE CURRENCY AND HEAD IDENTITY *INSIDE* THE MERGE COMMAND, NOT AS A PRECEDING STEP.**
+
 ```bash
 # If PR closes an issue (check PR body for "closes #N" or "fixes #N"):
-gh pr merge --squash --body "closes #N"
+test "$(git rev-parse HEAD)" = "$(gh pr view <N> --json headRefOid -q .headRefOid)" \
+  && git fetch -q origin <base> \
+  && git merge-base --is-ancestor origin/<base> HEAD \
+  && gh pr merge --squash --body "closes #N"
 
-# Otherwise:
-gh pr merge --squash --body ""
+# Otherwise: same guard, with --body ""
 ```
+
+⭐ **THE POSITION IS THE POINT, NOT THE THOROUGHNESS. A check in a preceding step has a window after it; this one has none.** Measured on `matsengrp/phyz` 2026-09-18: **the base moved under a fully approved head five times in one evening, and every catch came from this check at merge time — none from an approval SHA and neither approver noticed.** One instance landed inside **one minute** of both 🤖 approvals being posted; the worker re-checked, found `origin/main` was no longer an ancestor, and did not merge. ⛔ **An approval names a SHA. If the base moves, every approval on that PR is void** — so a merge that "was approved" is not the same claim as a merge whose approvals describe the tree being merged.
+
+⚠ **`HEAD == headRefOid` is the other half and catches a different thing: an unpushed local commit, or a push that raced the approval.** **Both, in the same command, or the guard has a gap.**
+
+⚠ **Do not refactor this back into a tidy preceding step.** It will read better and it will stop working.
 
 Follow the squash merge conventions from global CLAUDE.md — PR title becomes the commit message, body is minimal.
 
