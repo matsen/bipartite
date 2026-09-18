@@ -290,6 +290,16 @@ if [ -f "$LAND_DIR/.epic-status.json" ]; then
             # `$`s in scope here.
             find "$LAND_DIR" -maxdepth 1 \( -name '.epic-status.json' -o -name '.epic-worklog.md' \) -delete
             echo "Removed the now-redundant originals from $LAND_DIR"
+            # THE THIRD ORCHESTRATION FILE. It is not preserved -- it is machine
+            # state (iteration count, max, completion promise, owning session_id),
+            # not content -- so it is deleted rather than copied. It is deleted
+            # HERE, under the SAME verified-preservation condition as the two
+            # above, rather than at its own site: this step's own rule is that
+            # the condition to DELETE must never be weaker than the condition to
+            # PRESERVE, and a separate unconditional delete elsewhere is exactly
+            # the shape that lost two worklogs on 2026-09-16.
+            find "$LAND_DIR/.claude" -maxdepth 1 -name 'ralph-loop.local.md' -delete 2>/dev/null
+            echo "Removed the ralph-loop state file from $LAND_DIR/.claude"
             if gh pr comment <PR number from Step 2> --body "🤖 EPIC worklog preserved to \`$DEST\` (issue #2216)."; then
                 echo "Posted preservation pointer to PR #<PR number from Step 2>"
             else
@@ -411,7 +421,34 @@ The goal is a **totally clean `git status`** on main when landing is done.
 preservation succeeded, the "committed pointer" `bip-conductor-poll`'s
 three-part rescue rule requires was already posted via `gh pr comment` —
 inside Step 6a (issue #2216; see that step for why both have to happen
-there, before Step 8's worktree removal, rather than here). If Step 6a
+there, before Step 8's worktree removal, rather than here).
+
+**There is a THIRD orchestration file, `.claude/ralph-loop.local.md`, and it is
+also cleared in Step 6a.** It holds the ralph-loop plugin's own machine state —
+iteration count, max, completion promise, and the `session_id` that owns it — so
+it is *deleted rather than preserved*: there is no content in it anyone will want
+back. ⚠ **Landing used to clear two of the three, and the one it left behind is
+the one nothing else clears.** Measured 2026-09-18 on `matsengrp/phyz`: a clone
+that had just landed a PR sat on clean `main` with no status file and no worklog,
+carrying a `ralph-loop.local.md` reading `active: true, iteration: 11`.
+
+⭐ **The failure mode is that it misinforms a READER, not that it breaks a
+worker** — and that is precisely why it survived. The plugin's stop hook exits on
+a `session_id` mismatch, so a file left by a dead session **cannot** drive a new
+one; execution is unaffected. But a conductor deciding whether a slot is free
+reads it as a live loop, so the cost is a reclaimed slot held out of service, or
+a spawn withheld from a clone that is actually idle.
+
+⛔ **On a `session_id` that is not this land's: delete it anyway, and here is why
+that is safe rather than merely convenient.** A mismatched id means the owning
+session is gone (the common case — the file is already inert), or a second
+session is live in this clone. **The second case is already broken by the two
+deletes on the lines above it**, which remove that co-tenant's status file and
+worklog without asking, so this line adds no exposure that landing did not
+already carry. The guard against co-tenancy is `bip spawn`'s refusal to launch
+into a directory a live pane occupies — not a conditional here, which would only
+make this one file behave differently from the two beside it. **Do not add a
+`session_id` check to this line without also adding one to those.** If Step 6a
 reported a `PRESERVATION FAILED` line, **stop and resolve it before
 deleting anything** — do not let this step destroy the only copy of a
 file Step 6a couldn't back up.
