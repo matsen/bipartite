@@ -21,8 +21,10 @@ The evidence it looks for is the Skill tool-use record in the transcript, not
 the skill's name in prose -- this hook's own message names the skill, so a
 looser match would pass on the retry without the skill ever being read.
 
-Fires at most once per PR, and never in a session that used the skill, so it
-costs nothing in the case it is not needed.
+It runs on every Bash call and exits 0 in silence unless all of: the command
+files a PR body, the skill is installed, and the transcript holds no Skill
+record for it. So it blocks at most once per PR, and never in a session that
+loaded the skill.
 """
 
 import json
