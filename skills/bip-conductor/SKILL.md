@@ -852,6 +852,18 @@ Deciding *which other* open issues should be spawned next isn't this skill's cal
 
 Withholding ready on-topic work is its own failure, and it looks like prudence from the inside.
 
+⛔ **But "ready, in-scope, unblocked" was established WHEN THE BRIEF WAS WRITTEN, and the world moves. Before spawning, ask what the EPIC's top line is and whether this brief moves it — not whether the brief is on topic.** The framing above (*"the gate is topic, not count"*) is correct against the failure it was written for — a conductor throttling on volume — and **silent about objective**. Topic is necessary and not sufficient.
+
+⚠ **Measured on `matsengrp/phyz` 2026-09-17: four PRs, four workers, three sessions and seven hours of fleet capacity went to correcting registry prose, all of it #369-scoped and all of it approved. EPIC #369's standing top line — zero matched cross-engine cells have ever run — did not move.** The registry work was **correctly chosen** while the cell was blocked on a defect. **It became the wrong choice the moment that block cleared, and nobody re-asked.** ⭐ **The failure is not a bad decision. It is a decision that was never revisited** — which is why no amount of care at brief-writing time reaches it.
+
+⛔ **The conductor's instruments cannot see this, and the EPIC-distribution row is the one that looks like it can.** That row counts slots by EPIC *membership*, so **a fleet operating entirely inside one EPIC cannot register on it at all.** On-topic-but-not-on-objective is invisible to it, and to every other check in this file.
+
+➡ **The remedy is a QUESTION IN THE SPAWN PATH, not a metric — deliberately.** A row is an instrument, and this file's own record is that instruments here fail silently and toward agreement. **A question cannot return a confidently wrong number.** Before a spawn, and on every event that frees a slot, ask the epic: **"what is the next thing that moves this EPIC's top line, and is this it?"** The epic answers; the conductor does not judge the answer. ⭐ **A stated hold is a complete answer** — an idle slot is only waste when there is work that would move if it were used, and *"nothing tonight, the next brief needs writing awake"* is the epic exercising its filter rather than failing to.
+
+⚠ **The question is put to the epic — the party that had the information all along — so why would asking help?** Because **being asked forces a derivation that having the information does not.** The epic held every fact needed to notice this drift for seven hours and did not, and answered correctly the first time it was asked. ⭐ **Same mechanism as a reviewer whose hardest catch existed only because its own first parse disagreed and forced a reconciliation: the prompt to derive is the instrument, not the knowledge.**
+
+⚠ **And note what surfaced it, because it is not a procedure anyone can adopt: the drift became visible only because the conductor asked which of two ready briefs to fill, and the epic answered that neither was the objective.** The capacity ping was the nearest-ready-brief reflex — the failure itself — and it caught the drift by accident. **That is not a mechanism; the question above is the attempt to make one.**
+
 If a live worker's scope needs correcting *before* its next natural stopping point: the epic decides whether it's durable, drafts the line, and the conductor delivers it — see "Correcting a live worker" above for the mechanics and where the durable record goes.
 
 ### Step 7: Start slot monitor
