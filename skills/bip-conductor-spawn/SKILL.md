@@ -352,6 +352,14 @@ So the annotation is not a courtesy or a restatement of the brief: **it is the o
 
 **And put the fact that would invalidate an instruction *inside* that instruction, not in a warnings list elsewhere in the prompt.** `IMPORTANT CONTEXT` is the sharpest instance of this in the whole system: a persisted artifact, composed once, full of imperatives, read cold by a session with no history that trusts it to have resolved its own tensions — and read before the worker has seen the issue, the repo, or anything else. **A worker is even less able to notice a stale imperative than a resuming session is, because it has strictly less context to notice it with.** So don't write "be careful about X" in a trap list; name the claim the worker will encounter, say it is wrong, cite the sites with file:line, and say which one their own work sits on. An imperative gets executed before a warning gets applied.
 
+⛔ **SAY WHICH SOURCE WINS WHEN THE PROMPT AND THE ISSUE DISAGREE, BECAUSE THEY WILL AND THE WORKER CANNOT GUESS.** A composed prompt has two authors — the issue body and you — and a worker reading it cold has no way to rank them. ⭐ **The rule that survives: THE ISSUE BINDS WHAT THE WORK IS; THE PROMPT MAY NARROW IT BUT NOT WIDEN IT.** A prompt constraint that **subtracts** — *do not touch X*, *this phase only*, *defer Y until Z lands* — is yours to make and wins, because it rests on fleet state the issue cannot see. A prompt instruction that **adds** a deliverable the issue does not have is stale, and the issue wins. Gates are yours outright. **Write all three into the prompt.**
+
+⛔ **THE TEST IS THE DIRECTION, NOT THE TOPIC, and the obvious phrasing — "the issue wins on scope" — is WRONG in one direction.** Checked against live briefs on `matsengrp/phyz` 2026-09-18: an epic brief said *"add no `make` target and do not touch `CHECK_FAST_TARGETS` until #2790 lands."* That is a **scope** constraint, it came from the **prompt**, and it is **correct** — it rests on an unlanded diff the issue body cannot know about. **Under "the issue wins on scope", a worker hitting it would conclude the prompt was stale and add the target.** Two more briefs the same day carried the same shape (*"Tier B only"*, *"Tier A blocked"*). **Ask MORE-or-LESS, not what the sentence is about.**
+
+⚠ **The failure that produced this was a TEMPLATE REUSE, and the mechanism generalises past prompts.** Measured 2026-09-18 on `matsengrp/phyz`: a conductor composed a spawn prompt by copying a previous issue's and substituting on the literal issue number. One sentence — *"this issue requires re-running the breakdown on all seven #2784 fixtures"* — described the OTHER issue's mandate **without naming it**, so the substitution could not reach it, and it shipped into a slot whose own issue put re-running experiments explicitly out of scope. ⭐ **A find-and-replace whose population is defined by the token being replaced cannot see the sentences that describe the work without using it. Re-read every issue-specific SENTENCE, not every issue NUMBER.**
+
+⭐ **The worker asked instead of resolving it, and that is the behaviour to protect.** Obeying a contradictory brief silently costs the work the issue forbids; ignoring it silently leaves the conductor believing a deliverable is owed. **Neither surfaces.** A worker that quietly reconciles a contradictory brief produces work nobody can audit — so tell workers to raise a prompt-vs-issue conflict rather than settle it, and answer plainly when they do.
+
 **Answer the joint-landing-gate question explicitly in every prompt, YES or NO.** The template below carries a `JOINT LANDING GATE:` line, and the conductor fills it in. **The old design failed open**: the gate block was phrased "if this issue's prompt requires a joint landing gate", so a prompt that simply did not mention one read as NO — and a conductor that never considered the question produced exactly the same prompt as one that considered it and decided against. Those are different states and the worker cannot distinguish them.
 
 Measured on `matsengrp/phyz` 2026-09-13: a docs PR that edited an EPIC's own body — the template's *own example* of when two readers are warranted — shipped with no gate line, so the worker landed it correctly per its instructions, and the epic session's approval arrived **30 seconds after the merge** with zero reviews on the PR. **No tier erred** — say that in as many words when retelling this, because a reader given a named slot will go looking for who slipped, and the finding is that nobody did: the conductor never answered a question the design let it skip.
@@ -469,6 +477,25 @@ RECOVERING CONTEXT (after compaction):
 BRANCH: Create branch N-short-name from main.
 AUTONOMY: Do the work. Do not ask the user whether to proceed with
 implementation steps, run experiments, or set up tests — just do them.
+
+PROMPT VS ISSUE — RAISE IT, DO NOT SETTLE IT. This prompt has two authors:
+the issue body and the conductor. THE ISSUE BINDS WHAT THE WORK IS; THE
+PROMPT MAY NARROW IT BUT NOT WIDEN IT. The test is the DIRECTION, not the
+topic: ask whether obeying the prompt would make you do MORE than the issue
+asks, or LESS.
+
+- A prompt constraint that SUBTRACTS -- "do not touch X", "this phase only",
+  "defer Y until Z lands" -- is the conductor's to make and WINS, because it
+  rests on fleet state the issue body cannot see. Obey it.
+- A prompt instruction that ADDS a deliverable the issue does not have is
+  stale. The ISSUE wins. Tell the conductor.
+- On GATES -- routed test targets, base currency, SHA rules, approvals --
+  THE PROMPT'S GATE SECTION WINS outright, because the issue cannot see the
+  fleet at all.
+
+Do NOT quietly reconcile a contradiction in either direction: obeying a stale
+ADD costs work the issue forbids, and ignoring a legitimate SUBTRACT collides
+with another slot. Neither surfaces on its own.
 
 HUMAN INTERRUPT — The AUTONOMY rule governs YOUR decisions, not the
 human steering. If a human interrupts to ask a question, discuss, or
@@ -600,6 +627,14 @@ the whole probe in `|| echo`.**
 ⚠ **The two fail in opposite directions and only one of them is loud.** Fail-open advances the loop on nothing. **Fail-closed spins forever AND takes the slot's reachability with it**: the session reports `shell` rather than `idle`, so the conductor's `idle`-only reclaim gate never fires, and a session blocked on a foreground shell makes no tool call — so it cannot drain a `SendMessage`, including the one telling it to stop. Only the conductor can clear it, from outside.
 
 ➡ **So: poll on a PID you captured at launch (`$!`), never on a pattern — a pid cannot appear in your own cmdline.** Better still, don't poll: a backgrounded `Bash` re-invokes your session on exit, so the wait is the harness's job. The `[m]ake` bracket trick does not help; it only stops `grep` matching its own argv.
+
+⚠ **AND THE THIRD INSTANCE WAS NOT A BUG AT ALL — A WORKER PARKED ITSELF DELIBERATELY.** Measured 2026-09-18 on `matsengrp/phyz`: a slot that had finished its work ran `timeout 300 tail -f /dev/null` to hold the session open while it waited. Nothing is wrong with that command — it is bounded, it terminates, and it wastes nothing. ⛔ **But for those 300 seconds the session made no tool call, so it drained no `SendMessage`, so it was indistinguishable from a hung one to everything outside it.** The conductor's `idle`-only reclaim gate does not fire on `shell` either.
+
+➡ **So the rule is not "write correct wait loops". State the COST as general and the PROHIBITION as narrow, or it gets ignored wholesale — every real build holds the foreground for minutes and should:**
+
+> **Any long foreground command costs reachability — a build costs it and buys work; a wait costs it and buys nothing.** If you need to wait, background it and let the harness re-invoke you. **Never hold the foreground for something that is not work.**
+
+⭐ **The three instances share an external symptom BECAUSE the symptom is a property of foreground DURATION, not of the command.** A 20-minute `zig build test` is equally undrainable and equally indistinguishable from a hang. ⚠ **A conductor watching for unreachability has to know that, or it will read a legitimately busy worker as stuck** — which is the same misreading in the opposite direction.
 
 ⛔ **AFTER ANY `git commit`, CHECK THE MESSAGE, NOT JUST THE DIFF — AND VERIFY THE PUSH LANDED, NOT THAT THE COMMAND RAN.** A nested `"` inside a `-m "..."` string **terminates the shell string**: the message is silently truncated mid-sentence, the remainder runs as a command, and the `&&` chain breaks so the push never happens. ⚠ **`git show --stat` passes this**, because the diff is correct throughout. Measured 2026-09-15: `git ls-remote origin main` still read the old SHA while local `HEAD` had moved. **Write any multi-line message to a file and use `-F`.**
 
