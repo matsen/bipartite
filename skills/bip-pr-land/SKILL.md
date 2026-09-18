@@ -318,6 +318,19 @@ git checkout <base>
 git pull
 ```
 
+### Step 7.4: Confirm the LANDED TREE is the GATED TREE
+
+⭐ **Every other post-land check confirms the merge happened. This is the only one that confirms it carried what was reviewed** — it closes *approved at SHA X* to *landed content*.
+
+```bash
+git rev-parse <landed-sha>^{tree}    # must equal
+git rev-parse <gated-sha>^{tree}
+```
+
+**It is a TREE comparison, not a range one**, so it is immune to the rebase rewrite that makes `A..HEAD` lie about a branch whose SHAs were rewritten — the same tree-vs-range distinction this fleet keeps re-finding. Measured on `matsengrp/phyz` 2026-09-17: squash `05ee9d02` and gated head `18f327fd` both `b239be25f772dbec…`, `git diff --stat` empty, so both approvals described landed `main` byte-for-byte.
+
+⛔ **Valid only when the head was CURRENT with the base at merge time, and say so wherever you report it.** If the base moved between the gate and the merge, the squash legitimately carries those commits, the trees differ, and this check raises **a false alarm on a good land**. ⭐ **That precondition is the half that must travel with the command** — `/bip-pr-land`'s own `:403` records that *"a guard that degrades silently when its own precondition changes is not a guard,"* and this one's precondition is exactly the base currency the merge step already verifies. **If the base was not an ancestor at merge, this comparison does not apply and the land needs a re-gate rather than a tree check.**
+
 ### Step 7.5: Sync the primary clone (clone-mode only)
 
 **Skip this step if Step 6a already `cd`'d to the primary** — Step 7 has already pulled it.
