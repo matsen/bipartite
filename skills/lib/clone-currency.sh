@@ -44,6 +44,31 @@ CONFIG="$CONDUCTOR/.epic-config.json"
 # levels of parameter expansion made bash mis-parse the whole line (it reported
 # `:-: command not found` and, under `set -u`, `CLONE_ROOT: unbound variable`).
 # Found by running the four cases below, not by reading it.
+# ⛔ REFUSE A FROZEN WORKER SNAPSHOT. Every worker clone carries its own
+# .epic-config.json, taken at spawn time and never updated, and $PWD will happily
+# read one -- so the $PWD fallback above reintroduced this file's own bug one level
+# up. Measured 2026-09-18 on ~/re/sfpcp: zinc's copy is from 2026-05-12 and lists 7
+# clone_names against the conductor's 9. Run no-arg from zinc and the UNGUARDED
+# version returned exit 0, a well-formed 7-slot sweep of a 9-slot fleet, and
+# reported `tin` -- the slot running that EPIC's top line -- as "(unmanaged)".
+# Nothing errors, nothing is empty. Same fail-toward-"go ahead" shape as the
+# hardcoded default this patch removed, with the pool under-reported rather than
+# swapped. iron's and nickel's copies happen to be caught by the empty-clone_names
+# guard below; zinc's is not. CLAUDE.md #338 already says never to trust a clone's
+# own copy.
+#
+# REFUSE rather than silently re-resolve from main_checkout. Re-resolving works on
+# every sample we have, but it makes the script follow a pointer inside the very
+# file it just decided not to trust, and n=3 does not earn that. Refusing keeps the
+# fail-closed shape the rest of this patch is about. An empty or absent
+# main_checkout passes, so older configs without the key still work.
+# The compare is literal, not path-normalised: a symlinked or trailing-slash
+# CONDUCTOR yields a spurious FATAL naming the path to pass as $1, which is a loud
+# and self-describing failure rather than a silent wrong-pool sweep.
+MAIN=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('main_checkout') or '')" "$CONFIG" 2>/dev/null) || MAIN=""
+[ -z "$MAIN" ] || [ "$MAIN" = "$CONDUCTOR" ] || {
+  echo "FATAL: $CONFIG is a frozen worker snapshot (main_checkout=$MAIN, reading from $CONDUCTOR); run from $MAIN or pass it as \$1 -- NOT a clean sweep" >&2; exit 2; }
+
 CLONE_ROOT_ARG=${2:-}
 CLONE_ROOT_ENV=${CLONE_ROOT:-}
 if [ -n "$CLONE_ROOT_ARG" ]; then CLONE_ROOT="$CLONE_ROOT_ARG"
