@@ -155,6 +155,18 @@ That third one is the whole of the most common failure here — a check that ans
 **Neither licenses re-narrating the peer's analysis to the user — that is exactly the duplication the fleet/topic rule above forbids** ("consume it as a constraint, log it, and do not re-verify, re-narrate, or re-litigate it").
 Re-derive silently and report only the delta: a peer's five-item list that turns out to have nine is worth one line, not a second copy of their reasoning.
 
+⛔ **THE LIMIT, AND IT IS DERIVABLE FROM THE MECHANISM ABOVE RATHER THAN OBSERVED: THE SPLIT CATCHES WHAT THE OTHER SESSION WROTE. IT DOES NOT CATCH WHAT BOTH SESSIONS ASSUMED.**
+
+**The differing-working-sets property is what makes it work, and it is exactly what bounds it: the split surfaces whatever sits in one session's blind spot and not the other's.** ➡ **A premise BOTH have accepted is in neither differential, and no amount of cross-reading reaches it** — each session is checking the other's *text* against a shared premise, not the premise.
+
+⚠ **Measured 2026-09-19 on `matsengrp/phyz`, and the numbers are the argument.** In one day the arrangement caught **three** defining-claim errors, every one by the other session reading the draft and none by the author re-reading. **The same day it missed a fourth entirely**: a worker's diagnosis of a red test suite was relayed, reviewed, argued over on the shared evidence bar, annotated into a spawn brief and pushed as a skill edit **inside twenty minutes** — and the diagnosis was wrong. **Both sessions verified the explanation** (the test exists; it asserts those thresholds; the params file carries the enabling key; the wiring is real). ⛔ **Neither verified which target had actually failed.** It had not; the suite was green there. The edit was reverted.
+
+⭐ **So the remedy is NOT "verify more".** Between them the two sessions verified four true things. **The unchecked link was the one neither thought to name.**
+
+➡ **THE MECHANICAL FORM: WHEN A DIAGNOSIS ARRIVES, VERIFY THE OBSERVATION IT EXPLAINS BEFORE THE EXPLANATION.** ⛔ **A diagnosis does not merely explain an observation — it RESTATES it, more narrowly, and the restatement carries the smuggled premise.** *"The routed twelve went red"* becomes *"…red because of this test"*, which silently asserts **that test runs in a failing target**. **The explanation is the interesting half and gets the scrutiny; the restated observation feels like a given and gets none.**
+
+⚠ **Both sessions re-derived numbers freely all day and still shipped this**, so the practice above ("re-derive a peer's number before acting on it") does not reach it either: **the failure was not a wrong number but an unexamined conjunction of right ones.** ⏳ Whether the twenty-minute turnaround was causal or incidental is **not established** — it is recorded as a fact, not offered as a mechanism.
+
 A third practice reads as tone and is actually cost: **keep corrections low-ceremony.**
 "That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
 A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
