@@ -712,6 +712,23 @@ It reports four things: live branches and their touched files; **files touched b
 
 ⛔ **Exit 2 means "could not check" and must not be read as clear.** If `tmux` returns nothing while status files exist, the script refuses to report the pool stale and exits 2 — because the action on a STALE report is deleting a worker's state file.
 
+### Editing fleet tooling rewrites every live session's instructions, with no event
+
+⛔ **`~/.claude/skills/*` are SYMLINKS into `~/re/bipartite/skills/`** — measured 2026-09-18: **44 of 47 entries**, every `bip-*` skill among them. **So changing that worktree does not swap a helper script; it swaps the instructions every agent session on the box is operating under, mid-task, and nothing notifies any of them.**
+
+⚠ **The trigger is broader than a branch checkout, and the common case is the one that fired.** A plain `git pull` is sufficient. Measured from the reflog: `pull -q --ff-only origin main` at 17:17:57 brought in a commit touching `skills/bip-spawn/SKILL.md`; a peer session running in another repo entirely then observed `bip-spawn`'s description change under it — *"Open a tmux window with a Claude Code session…"* became *"…with an agent session (Claude Code or agy)…"* — **having done nothing.** The branch checkout came afterwards and was not what did it.
+
+⭐ **Two halves, and the second is much worse than the first:**
+
+| | what happens | detectable? |
+|---|---|---|
+| **a wrong answer** | a checked-out branch means a tool runs an older version — e.g. a smoke test reading the pre-patch `clone-currency.sh` and reporting another fleet's pool | **yes** — transient, self-correcting, caught by running it |
+| **a changed premise** | a session's own operating instructions are rewritten underneath it | ⛔ **no** — a session cannot diff its own instructions, produces no inconsistent behaviour an observer could spot, and has no event to notice |
+
+➡ **So: do fleet-tool work in a SEPARATE CLONE of `bipartite`, and treat any `pull`, `checkout`, `rebase` or `stash` in the primary one as a fleet-wide action.** A second clone costs nothing and removes the hazard entirely — the same reasoning that already makes a separate checkout the rule for a clone holding a live pipeline run. **Landing an edit still changes live instructions, which is the point; what this avoids is changing them to something nobody intended, or to a *branch*.**
+
+⚠ **This binds humans too, not only agents.** The commit above was authored by the user, landing directly on `main` while six agent sessions were mid-task.
+
 ### Unattended scheduled load is invisible to a worker and it will blame itself
 
 Before spawning, and before telling any slot to run a full suite, check what the machine is already committed to that no slot owns:
