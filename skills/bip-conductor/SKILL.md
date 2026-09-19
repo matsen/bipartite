@@ -498,7 +498,17 @@ Brief:
 
 ⭐ **This is a DIFFERENT SHAPE from the probe failures catalogued elsewhere in this file, and worse. Those all fail toward "nothing to do"; this one fails toward "go ahead."** A wasted check costs a command. A worker spawned 189 commits stale costs a result.
 
-Run `lib/clone-currency.sh` (sibling of `fleet-collisions.sh`) before every spawn. Three things it gets right that a hand-rolled loop does not:
+Run `lib/clone-currency.sh` before every spawn — **from your conductor clone, with no arguments**:
+
+```bash
+cd <your conductor clone> && "$(dirname "<this-skill's-base-directory>")/lib/clone-currency.sh"
+```
+
+⛔ **Its sibling `fleet-collisions.sh` takes a POSITIONAL root and this one does not — do not carry the sibling's shape across.** Before 2026-09-18 that mistake was silent: the positional argument was ignored, the script fell back to a hardcoded `$HOME/re/phyz` / `$HOME/re/pz`, and a conductor on another repo got a **well-formed, entirely plausible report about the phyz pool** — measured on `matsengrp/superfamily-pcp`, a 17-slot table naming alder/ash/balsa from a conductor whose pool is cobalt/copper/iron. ⚠ **Unlike every probe failure catalogued above, a wrong-fleet report cannot fail toward "nothing to do": it fails toward "go ahead", on the step whose output authorises a spawn.**
+
+⭐ **The hardcoded defaults are gone and the script now derives `clone_root` from the same `.epic-config.json` it already reads `clone_names` from**, so a wrong-pool answer is unreachable rather than merely discouraged, and an unresolvable scope exits 2 with `NOT a clean sweep` instead of defaulting. `CONDUCTOR=… CLONE_ROOT=… clone-currency.sh` still works for existing callers, and `clone-currency.sh <CONDUCTOR> [CLONE_ROOT]` is accepted; it prints the `scope:` line it resolved, so **read that line before reading the table** — it is the cheapest possible check that you measured your own fleet. ⚠ **`fleet-collisions.sh`'s own `ROOT="${1:-$HOME/re/pz}"` still has the original defect and is mitigated only by the explicit-argument instruction above; treat that as unfinished, not as fixed.**
+
+Three things it gets right that a hand-rolled loop does not:
 
 - **It resolves the tip ONCE, in the conductor, after an explicit `git fetch`** -- never from each clone's own `origin/main`. A clone that has not fetched has a stale remote-tracking ref and reports **0 behind while being arbitrarily far behind**, which is the reassuring answer.
 - **It counts in the CONDUCTOR's object DB**, because the clone may not have the objects; a per-clone `rev-list` returns empty and reads as "?" or as zero depending on how you wrote the loop.

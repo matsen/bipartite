@@ -12,11 +12,51 @@
 # state; "N behind" while a result is in flight is the repo-moved-under-a-result
 # trap. Same number, opposite meanings.
 #
-# Usage:  CONDUCTOR=~/re/phyz CLONE_ROOT=~/re/pz ./clone-currency.sh
+# Usage:  ./clone-currency.sh                      # from your conductor clone
+#         ./clone-currency.sh <CONDUCTOR> [CLONE_ROOT]
+#         CONDUCTOR=~/re/phyz CLONE_ROOT=~/re/pz ./clone-currency.sh   # still works
 set -u
-CONDUCTOR=${CONDUCTOR:-$HOME/re/phyz}
-CLONE_ROOT=${CLONE_ROOT:-$HOME/re/pz}
+
+# ⛔ NO HARDCODED FLEET PATH LIVES HERE, DELIBERATELY. This script used to default
+# to CONDUCTOR=$HOME/re/phyz and CLONE_ROOT=$HOME/re/pz. Because it takes its
+# scope from env vars while its sibling `fleet-collisions.sh` takes a POSITIONAL
+# root, a caller who followed the sibling's shape -- `clone-currency.sh "$CLONE_ROOT"` --
+# had the argument silently ignored and got a well-formed, entirely plausible
+# report about the phyz pool. Measured 2026-09-18 on matsengrp/superfamily-pcp:
+# a 17-slot report naming alder/ash/balsa, from a conductor whose pool is
+# cobalt/copper/iron. Nothing errors, nothing is empty, and the wrong-fleet
+# answer fails toward "go ahead" on the step whose output authorises a spawn.
+#
+# ⭐ THE ROOT CAUSE WAS AN INCONSISTENCY INSIDE THIS SCRIPT, not the caller's
+# mistake: it already reads `clone_names` from .epic-config.json, but took the
+# ROOT from a hardcoded default. Reading both from the same file makes a
+# wrong-pool answer unreachable rather than merely discouraged.
+#
+# Precedence, most explicit first: positional, then environment (back-compat for
+# existing callers), then derived from the conductor checkout's own config.
+CONDUCTOR=${1:-${CONDUCTOR:-$PWD}}
+CONDUCTOR=${CONDUCTOR/#\~/$HOME}
 CONFIG="$CONDUCTOR/.epic-config.json"
+[ -f "$CONFIG" ] || { echo "FATAL: no .epic-config.json at $CONDUCTOR -- run from a conductor clone, or pass one as \$1. NOT a clean sweep" >&2; exit 2; }
+
+# Resolved in separate steps, NOT as one nested ${2:-${CLONE_ROOT:-$(...)}}: the
+# command substitution contains parentheses and quotes, and nesting it inside two
+# levels of parameter expansion made bash mis-parse the whole line (it reported
+# `:-: command not found` and, under `set -u`, `CLONE_ROOT: unbound variable`).
+# Found by running the four cases below, not by reading it.
+CLONE_ROOT_ARG=${2:-}
+CLONE_ROOT_ENV=${CLONE_ROOT:-}
+if [ -n "$CLONE_ROOT_ARG" ]; then CLONE_ROOT="$CLONE_ROOT_ARG"
+elif [ -n "$CLONE_ROOT_ENV" ]; then CLONE_ROOT="$CLONE_ROOT_ENV"
+else CLONE_ROOT=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1])).get('clone_root') or '')" "$CONFIG" 2>/dev/null) || CLONE_ROOT=""
+fi
+CLONE_ROOT=${CLONE_ROOT/#\~/$HOME}
+# Same empty-denominator reasoning as the clone_names guard below: `:-` substitutes
+# on unset OR EMPTY, so an unparseable config or a missing clone_root key would
+# otherwise flow onward as "" and resolve every clone path against /.
+[ -n "$CLONE_ROOT" ] && [ -d "$CLONE_ROOT" ] || { echo "FATAL: clone_root '$CLONE_ROOT' missing or not a directory (from $CONFIG) -- NOT a clean sweep" >&2; exit 2; }
+
+echo "scope: conductor=$CONDUCTOR clone_root=$CLONE_ROOT"
 
 # The universe is `clone_names` from .epic-config.json -- NOT every directory
 # under CLONE_ROOT. The pool also holds CI clones (nightly-ci,
