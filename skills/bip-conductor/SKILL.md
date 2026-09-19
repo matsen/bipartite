@@ -167,6 +167,12 @@ Re-derive silently and report only the delta: a peer's five-item list that turns
 
 ⚠ **Both sessions re-derived numbers freely all day and still shipped this**, so the practice above ("re-derive a peer's number before acting on it") does not reach it either: **the failure was not a wrong number but an unexamined conjunction of right ones.** ⏳ Whether the twenty-minute turnaround was causal or incidental is **not established** — it is recorded as a fact, not offered as a mechanism.
 
+⭐ **AND THERE IS SOMEONE WHO CAN CHECK THE SHARED PREMISE — SO ROUTE THE OBSERVATION QUESTION TO WHOEVER HOLDS THE OBSERVATION.** Neither session can reach it; that is the limit above. But the premise was **an observation the RUNNER holds and both sessions hold only a restatement of.** ➡ ***"Which target failed?"* costs one message, is answerable only by the party that ran it, and settles the thing no artifact either session could read would have settled.** Above, both sessions tried to verify the observation from artifacts and could do so only partially — the failing target's identity was in none of them.
+
+⛔ **This is not the tempo rule wearing a better name, and the test that settles it is: does it survive if the wait is ZERO?** Had the retraction arrived instantly, you would *still* route the check to the runner rather than perform it yourself, because the runner holds the evidence and you hold a paraphrase. **A speed rule collapses in that case; this one does not.** ⚠ **Nor is it "wait for the runner's next message"** — the runner may have stood down, or the diagnosis may be the last thing it ever says, so a verifier that depends on it volunteering is contingent rather than free.
+
+⚠ **It also sits exactly inside the runner's licence** (see the runner/author asymmetry below): *"which target failed"* is a fact about an artifact and needs no standing. ⛔ **What was implicitly expected of the runner instead was that it volunteer that its own diagnosis was unfounded — which requires standing it does not have. The question nobody asked was the one it could safely answer.**
+
 A third practice reads as tone and is actually cost: **keep corrections low-ceremony.**
 "That framing is wrong, here is why" in one line, no preamble and no apology round, in either direction.
 A correction that costs a diplomatic round trip does not get made at the margin, and the marginal ones are where the value was.
