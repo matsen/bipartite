@@ -4,7 +4,7 @@ Whether a claim is **true**, as distinct from how it is written — that is `PRO
 
 **Apply these whenever you cite a number or write a correction** — drafting a body is the common case, not the trigger. A figure quoted in a commit message, a cross-session message, or a doc comment needs the same checks and gets them less often.
 
-**Budget.** This is the half that grows: ten consecutive kaizen commits to this repo added 166 lines and deleted 7, and nearly all of it landed here. Prefer a change that is roughly line-neutral — a new rule can usually pay for itself out of the previous rule's justification prose. Keep the clause that makes a measured example undeniable; cut the parameter-space texture around it.
+**Budget.** This is the half that grows, and it grows fastest: 1,053 words on 2026-09-05, 16,354 on 2026-09-20 (`git show f21d5cec:EVIDENCE-DISCIPLINE.md | wc -w` vs the same at `23371f0`). Keep the clause that makes a measured example undeniable; cut the parameter-space texture around it. **The budget itself, with the numbers and the pre-commit check, is `/bip-kaizen` Step 2b — it is a gate now, not a preference, and it is not restated here.**
 
 ## Before citing a measurement
 
