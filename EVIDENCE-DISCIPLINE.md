@@ -96,6 +96,24 @@ The constructive form is a **discriminating filter**: filter on the property the
 
 ⭐ **And the constructive shape both fixes share: three instruments that fail DIFFERENTLY, kept on purpose.** The harness gate matches binary names (blind to renames, but sees load and run-queue delay); an unscoped snapshot matches no name at all (catches anything above a CPU threshold under any user); the hard precondition refuses to start. ⛔ **None is sufficient and the worker established that by breaking the first two.** **Redundancy between instruments that share a failure mode is not redundancy.**
 
+⛔ **AND THE REASON THESE KEEP HAPPENING TO CAREFUL PEOPLE: THE CARE GOES TO THE ARTIFACT UNDER REVIEW, AND THE SCAFFOLDING AROUND IT GETS NONE — THOUGH THE SCAFFOLDING IS WHAT DECIDES WHETHER THE ARTIFACT IS EVER SEEN.**
+
+⭐ **Stated best by the worker it happened to, about itself:** *"I proved V11 could fail by trying to break it, and then wrote a guard I never tried to break at all, twenty minutes later. The discipline did not generalise from the artifact I was being careful about to the scaffolding around it."*
+
+⚠ **Measured 2026-09-20 on `matsengrp/phyz`: five instances in one evening, across three workers and the session coordinating them.** Every one of them was being careful about something else at the time — two had written or reviewed an entry in this document that same hour.
+
+| the scaffolding | the defect | direction |
+|---|---|---|
+| a wait loop's safety `break`, gated on `pgrep -f 'claude'` | matched the waiting shell's own cmdline — **unreachable from the moment it was written** | could never fire |
+| a hard precondition matching `phyz-.*` | a tmux wrapper's `comm` truncates to `phyz-tmux-cmd.s` | could never pass |
+| a splice check excluding a following `- ` bullet | did not exclude an indented `  - ` sub-bullet | false alarm |
+| `git merge-base --is-ancestor origin/main <sha>` | exits non-zero on a **missing object** exactly as on a true negative — a currency verdict against a comparand git could not resolve | wrong verdict |
+| a readiness probe grepping for `'EPIC claims'` | the approver writes **`Approved (claims)`** — both approvals sat on the PR for minutes while the loop reported not-ready | could never fire |
+
+➡ **So the rule is not "test your guards" — everyone believes that already. It is: when you are being careful about an artifact, the thing you are least likely to check is the mechanism you built to check it with.** ⭐ **Name the scaffolding out loud as a second artifact and give it the same treatment**: can it fire, can it pass, on the live system.
+
+⛔ **AND A SECOND WAY TO GET IT WRONG THAT HAS NOTHING TO DO WITH SELF-MATCHING: SCAFFOLDING THAT WATCHES ANOTHER PARTY IS CALIBRATED AGAINST THEIR BEHAVIOUR, NOT YOURS.** The last row is that case — the probe's author wrote the pattern from their own phrasing of what the other party would say. ⚠ **It failed CLOSED, which is the better direction, and that was luck rather than design: the same mistake in a "has the blocker cleared" probe releases work early.** ➡ **When a probe reads someone else's output, take the pattern from a real sample of their output, not from your description of it.**
+
 
 
 ## A source read that stops at the first plausible boundary
