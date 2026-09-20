@@ -50,7 +50,7 @@ Then retry the search.
    ```
 Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper.
 For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead.
-The PDF base path is `/Users/matsen/Google Drive/My Drive/Paperpile`.
+Get the PDF base path from `bip config pdf-root --human` rather than hardcoding it — it differs per machine (a Google Drive path on macOS, an rclone mount such as `~/gdrive/Paperpile` on Linux) and `$BIP_PDF_ROOT` may override the configured value.
 
 4. **Before concluding a paper is absent, try an exact-match check** — `bip search -a "LastName"` or `bip search --doi "..."` — rather than another keyword permutation.
    `bip search` reports when results are truncated (`Found N references (showing M; ...)`), so a plain "not found" is trustworthy, but a truncated keyword search on its own is not proof of absence.
@@ -227,7 +227,7 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 2. **Get PDF path** for a result:
    ```bash
    bip get <id> --human
-   # pdf_path field + "/Users/matsen/Google Drive/My Drive/Paperpile"
+   # full path = `bip config pdf-root --human` + the pdf_path field
    ```
 
 3. **Read the actual paper** to answer questions:

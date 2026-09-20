@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -39,12 +40,15 @@ func runConfig(cmd *cobra.Command, args []string) error {
 	// No args: show all config
 	if len(args) == 0 {
 		if humanOutput {
-			fmt.Printf("pdf-root:    %s\n", cfg.PDFRoot)
+			fmt.Printf("pdf-root:    %s\n", cfg.ResolvedPDFRoot())
+			if config.PDFRootOverridden() {
+				fmt.Printf("             (from $BIP_PDF_ROOT; config.yml has %q)\n", cfg.PDFRoot)
+			}
 			fmt.Printf("pdf-reader:  %s\n", cfg.PDFReader)
 			fmt.Printf("papers-repo: %s\n", cfg.PapersRepo)
 		} else {
 			outputJSON(ConfigResponse{
-				PDFRoot:    cfg.PDFRoot,
+				PDFRoot:    cfg.ResolvedPDFRoot(),
 				PDFReader:  cfg.PDFReader,
 				PapersRepo: cfg.PapersRepo,
 			})
@@ -61,9 +65,9 @@ func runConfig(cmd *cobra.Command, args []string) error {
 		switch normalizedKey {
 		case "pdf-root":
 			if humanOutput {
-				fmt.Println(cfg.PDFRoot)
+				fmt.Println(cfg.ResolvedPDFRoot())
 			} else {
-				outputJSON(map[string]string{"pdf_root": cfg.PDFRoot})
+				outputJSON(map[string]string{"pdf_root": cfg.ResolvedPDFRoot()})
 			}
 		case "pdf-reader":
 			if humanOutput {
@@ -95,6 +99,9 @@ func runConfig(cmd *cobra.Command, args []string) error {
 			exitWithError(ExitConfigError, "%v", err)
 		}
 		cfg.PDFRoot = expandedValue
+		if config.PDFRootOverridden() {
+			fmt.Fprintf(os.Stderr, "warning: $BIP_PDF_ROOT is set and will continue to shadow this value\n")
+		}
 
 	case "pdf-reader":
 		if err := config.ValidatePDFReader(value); err != nil {

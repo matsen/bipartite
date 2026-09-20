@@ -293,3 +293,64 @@ func TestConstants(t *testing.T) {
 		t.Errorf("DBFile = %q, want refs.db", DBFile)
 	}
 }
+
+func TestResolvedPDFRoot(t *testing.T) {
+	tests := []struct {
+		name      string
+		env       string
+		setEnv    bool
+		configVal string
+		want      string
+		overriden bool
+	}{
+		{name: "config value when env unset", configVal: "/from/config", want: "/from/config"},
+		{name: "env wins over config", env: "/from/env", setEnv: true, configVal: "/from/config", want: "/from/env", overriden: true},
+		{name: "empty env treated as unset", env: "", setEnv: true, configVal: "/from/config", want: "/from/config"},
+		{name: "env with empty config", env: "/from/env", setEnv: true, want: "/from/env", overriden: true},
+		{name: "both empty", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv("BIP_PDF_ROOT", tt.env)
+			} else {
+				t.Setenv("BIP_PDF_ROOT", "")
+			}
+
+			cfg := &Config{PDFRoot: tt.configVal}
+			if got := cfg.ResolvedPDFRoot(); got != tt.want {
+				t.Errorf("ResolvedPDFRoot() = %q, want %q", got, tt.want)
+			}
+			if got := PDFRootOverridden(); got != tt.overriden {
+				t.Errorf("PDFRootOverridden() = %v, want %v", got, tt.overriden)
+			}
+		})
+	}
+}
+
+// Load must not bake the env override into the struct it returns, or
+// `bip config <key> <value>` would Save the override into the tracked
+// .bipartite/config.yml.
+func TestLoadDoesNotApplyPDFRootOverride(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(BipartitePath(dir), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(ConfigPath(dir), []byte("pdf_root: /from/config\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("BIP_PDF_ROOT", "/from/env")
+
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.PDFRoot != "/from/config" {
+		t.Errorf("Load() PDFRoot = %q, want the on-disk value %q", cfg.PDFRoot, "/from/config")
+	}
+	if got := cfg.ResolvedPDFRoot(); got != "/from/env" {
+		t.Errorf("ResolvedPDFRoot() = %q, want %q", got, "/from/env")
+	}
+}

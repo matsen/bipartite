@@ -92,8 +92,8 @@ func runCheck(cmd *cobra.Command, args []string) error {
 	issues = append(issues, findDuplicateDOIs(refs)...)
 
 	// Check for missing PDFs (only if pdf_root is configured)
-	if cfg.PDFRoot != "" {
-		pdfRoot := config.ExpandPath(cfg.PDFRoot)
+	if resolved := cfg.ResolvedPDFRoot(); resolved != "" {
+		pdfRoot := config.ExpandPath(resolved)
 		for _, ref := range refs {
 			if ref.PDFPath != "" {
 				fullPath := filepath.Join(pdfRoot, ref.PDFPath)
