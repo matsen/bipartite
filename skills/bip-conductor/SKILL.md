@@ -773,6 +773,18 @@ It reports four things: live branches and their touched files; **files touched b
 ➡ **So: do fleet-tool work in a SEPARATE CLONE of `bipartite`, and treat any `pull`, `checkout`, `rebase` or `stash` in the primary one as a fleet-wide action.** A second clone costs nothing and removes the hazard entirely — the same reasoning that already makes a separate checkout the rule for a clone holding a live pipeline run. **Landing an edit still changes live instructions, which is the point; what this avoids is changing them to something nobody intended, or to a *branch*.**
 
 ⚠ **This binds humans too, not only agents.** The commit above was authored by the user, landing directly on `main` while six agent sessions were mid-task.
+⛔ **AND THE COMMIT HAZARD, WHICH IS DISTINCT FROM THE CHECKOUT ONE ABOVE AND BIT US THE SAME NIGHT: A PER-FILE `git add <file>` IS EXACTLY AS UNSCOPED AS `git add -A` WHEN ANOTHER SESSION HAS AN UNCOMMITTED HUNK IN THAT SAME FILE.**
+
+The section above is about operations that move `HEAD`. This one needs none: two sessions editing one shared clone, neither touching git history, and one of them commits.
+
+⚠ **Measured 2026-09-20 on `~/re/bipartite`.** One session staged a two-line addition to `EVIDENCE-DISCIPLINE.md` and held it pending clearance to push. A second session added its own entry to the *same file*, ran `git add EVIDENCE-DISCIPLINE.md` -- scoped to one file, deliberately, not `-A` -- and pushed. ⭐ **The commit landed 3 insertions, two of them the other session's, under a message describing only one entry.** Nothing errored, both texts were correct and both had been approved, and it surfaced only because the first session went to push and found its working tree already clean.
+
+➡ **`git diff --stat` answers *which files*. Only `git diff` answers *whose work*.** Run the second before committing in any clone another session can reach.
+
+⭐ **Note what makes a per-file add feel safe and is not: it bounds the PATHS, not the HUNKS.** A session reaching for `git add <file>` has already had the thought *"be careful what I sweep up"* and has taken the wrong precaution -- which is why this is worth stating separately rather than folding into "be careful in shared clones."
+
+⚠ **The other half is the holder's, and it is the cheaper fix: do not leave an edit staged in a clone you do not own.** Draft into a scratch clone, or commit immediately and coordinate only the push. **A hazard that needs two parties to misstep is closed by either one of them.**
+
 
 ### Unattended scheduled load is invisible to a worker and it will blame itself
 
