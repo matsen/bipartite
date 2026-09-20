@@ -253,6 +253,8 @@ The commit that *added* the two word-boundary rows described them in its own bod
 gh pr view <N> --json closingIssuesReferences --jq '.closingIssuesReferences[].number'
 ```
 
+⚠ **The field is EVENTUALLY CONSISTENT: an empty read seconds after a body edit is a LAG, not a failed edit.** Measured on the same PR 2026-09-20 -- immediately after adding the keyword, `gh pr view --json` returned empty while the GraphQL form already resolved; minutes later both returned the number. ➡ **Re-check before concluding the edit did not take, and treat only a PERSISTENT empty as a defect.**
+
 ⭐ **It is GitHub's OWN parse, so it is authoritative about code spans, word boundaries and every other tokenisation question this document keeps re-discovering.** ⛔ **Empty output means the PR closes nothing -- which is a defect when the PR has an issue, and the correct state when it does not.** ⚠ **A grep cannot distinguish those and cannot see a code span at all: it reports the inert quoted keyword as live and the missing one as absent, both wrong in opposite directions.** **Run it before requesting a gate, and again after any body edit.**
 
 
