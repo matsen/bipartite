@@ -43,8 +43,9 @@ func runOpen(cmd *cobra.Command, args []string) error {
 	cfg := mustLoadConfig(repoRoot)
 
 	// Check PDF root is configured
-	if cfg.PDFRoot == "" {
-		exitWithError(ExitConfigError, "pdf_root not configured\n  Hint: Use 'bip config pdf-root /path/to/pdfs' to set the PDF directory")
+	pdfRoot := cfg.ResolvedPDFRoot()
+	if pdfRoot == "" {
+		exitWithError(ExitConfigError, "pdf_root not configured\n  Hint: Use 'bip config pdf-root /path/to/pdfs' to set the PDF directory, or set $BIP_PDF_ROOT")
 	}
 
 	db := mustOpenDatabase(repoRoot)
@@ -114,7 +115,7 @@ func runOpen(cmd *cobra.Command, args []string) error {
 	}
 
 	// Open papers
-	opener := pdf.NewOpener(cfg.PDFRoot, cfg.PDFReader)
+	opener := pdf.NewOpener(pdfRoot, cfg.PDFReader)
 	var opened []OpenedPaper
 	var errors []OpenError
 

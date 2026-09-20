@@ -148,6 +148,32 @@ func validateDirectoryPath(path string) (string, error) {
 	return expandedPath, nil
 }
 
+// PDFRootEnvVars lists the environment variables consulted by
+// ResolvedPDFRoot, in precedence order.
+var PDFRootEnvVars = []string{"BIP_PDF_ROOT"}
+
+// ResolvedPDFRoot returns the effective PDF root directory.
+//
+// Precedence:
+//  1. $BIP_PDF_ROOT
+//  2. pdf_root in .bipartite/config.yml
+//
+// The env override exists because .bipartite/config.yml is tracked in the
+// nexus repository and shared across machines that mount the same PDF
+// library at different paths. Empty env vars are treated as unset.
+//
+// The result is not tilde-expanded; callers that touch the filesystem
+// should pass it through ExpandPath.
+func (c *Config) ResolvedPDFRoot() string {
+	return firstEnvOrConfig(PDFRootEnvVars, c.PDFRoot)
+}
+
+// PDFRootOverridden reports whether an environment variable is supplying
+// the value returned by ResolvedPDFRoot, shadowing the configured pdf_root.
+func PDFRootOverridden() bool {
+	return firstEnvOrConfig(PDFRootEnvVars, "") != ""
+}
+
 // ValidatePDFRoot checks that the PDF root path exists and is a directory.
 func ValidatePDFRoot(path string) error {
 	_, err := validateDirectoryPath(path)

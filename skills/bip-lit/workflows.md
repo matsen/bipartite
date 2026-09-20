@@ -44,7 +44,7 @@ Display results numbered, showing:
 ### Return PDF Paths
 
 Combine:
-- Root: `/Users/matsen/Google Drive/My Drive/Paperpile`
+- Root: output of `bip config pdf-root --human` (machine-dependent; honors `$BIP_PDF_ROOT`)
 - Plus `pdf_path` from `bip get <id>`
 
 ### Example Interactions
