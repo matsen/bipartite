@@ -606,6 +606,12 @@ real.
 3. ⛔ **Say explicitly that it is not a code review.** You review *claims*;
    an approve-review asserts the other thing.
 
+⛔ **A HOLD GETS A `🤖` COMMENT TOO, AND THIS IS THE HALF THE RULE ABOVE LEFT OUT.** The section as written makes an *approval* durable on the PR and leaves a *hold* point-to-point in a message — **so a PR carrying one approval and one live hold is, to anyone reading the artifact, indistinguishable from a PR carrying one approval and silence.** ⚠ **And those two states call for opposite actions: silence means nudge, a hold means wait.**
+
+Measured `matsengrp/phyz` 2026-09-20: the epic replied to a worker's gate request with a hold plus one stated condition, and the conductor — reading the PR's `🤖` comments, correctly — reported that **no approval of the epic's was outstanding**, which was true about approvals and false about obligations. ⭐ **It would have kept choosing wrong, because the artifact could not tell it.** ➡ **Post `🤖 Hold (claims) at <sha>: <condition>`**, same three conditions as an approval, and state what you have already ruled and closed so the worker's next push carries everything rather than one round per reviewer.
+
+⚠ **The generalisation worth more than the practice: when two states of a gate call for opposite actions, the artifact must distinguish them, or the party that cannot see the other state will guess — and its guess will be systematically wrong in one direction rather than randomly.** ⛔ **Check any gate you rely on for a state it renders as absence.**
+
 ⭐ **Why `🤖` rather than an approve object, and it is not decoration.** It
 matches `/bip-pr-land`'s existing `🤖 EPIC worklog preserved to …`
 convention, and it retires the strongest objection to `--approve` at zero
