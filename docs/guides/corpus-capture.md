@@ -50,8 +50,20 @@ fix capture and drift, and they say so.
 ### 1. `skills/lib/hazards/<slug>.md` — the missing container
 
 5–15 lines each, tagged with the contexts they apply to (`nextflow-cache`, `measurement`,
-`tmux`, `landing`, `remote-host`). Shape: the wrong-looking-right artifact, one number showing
-it is not a one-off, the discriminating check. Skills link rather than contain.
+`tmux`, `landing`, `remote-host`, `shell`). Shape: the wrong-looking-right artifact, one number
+showing it is not a one-off, the discriminating check. Skills link rather than contain.
+
+**First entry, so this ships as an existence proof rather than a specification:**
+`skills/lib/hazards/zsh-colon-modifier.md`. It also found the tag set's first gap — the
+original five had no home for "the language your commands run in behaves unlike the one they
+were written for", hence `shell`.
+
+Its provenance is worth recording, because it is the alternation argument working a tier lower
+than where that argument is written down: a worker session hit the bug, diagnosed it to the
+modifier, and told the conductor — which had already written the same symptom off as instrument
+flakiness. **The tier closest to the artifact found the mechanism; the tier above it had
+discarded the finding.** Whatever the hazard directory is for, it has to be writable from the
+worker tier.
 
 This is the cause, so it lands first. A hazard no brief ever includes becomes a deletion
 candidate **on evidence** (`grep -l` across emitted briefs), which makes the
