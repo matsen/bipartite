@@ -245,6 +245,16 @@ The commit that *added* the two word-boundary rows described them in its own bod
 ⭐ **That is the second time in one session that the documentation of this defect re-committed the defect** — the first was the phyz branch commit whose purpose was removing a `Closes` line and which quoted the line it removed. **It is not a coincidence and it will happen to you: writing about a trigger is the activity most likely to put the trigger in your commit message.** Run the gate on your own commit before pushing, including a direct push with no PR.
 
 ⭐ **The generalisation, which transfers well past `gh`: a defect's own documentation is executable context, so quoting a trigger re-arms it — prose is not inert.** Same class as the ⛔-citation rule in `bip-conductor` (a stale prohibition is more durable than a stale fact, because it suppresses the measurement that would expose it). Whenever a commit message, issue body, or skill file needs to *discuss* a syntax that something downstream acts on, break the token rather than quoting it.
+⭐ **AND THE THIRD INSTANCE, which shows what has been saving us: a closing keyword inside a CODE SPAN is inert, and the identical text unquoted is an ACTION. The safety comes from MARKDOWN FORMATTING, not from intent or review.** ⚠ **Measured on `matsengrp/phyz` 2026-09-20, and the recursion is exact.** A PR body contained a backticked `` `Closes #2620` `` inside narrative *about* `#2620` having once been closed by a stray closing keyword -- **the failure reproduced inside its own description, for the third time in this document's history.** GitHub did not parse it, so nothing closed; had the author written it unquoted it would have closed a resolved issue. ⛔ **And the same review turned up the other half: that PR closed NOTHING AT ALL, because its own `Closes #<its issue>` line was missing.** One body, one inert keyword that should not have been there and one absent keyword that should.
+
+➡ **So the check is one command and it answers both halves at once, which grepping the body for `closes` does not:**
+
+```sh
+gh pr view <N> --json closingIssuesReferences --jq '.closingIssuesReferences[].number'
+```
+
+⭐ **It is GitHub's OWN parse, so it is authoritative about code spans, word boundaries and every other tokenisation question this document keeps re-discovering.** ⛔ **Empty output means the PR closes nothing -- which is a defect when the PR has an issue, and the correct state when it does not.** ⚠ **A grep cannot distinguish those and cannot see a code span at all: it reports the inert quoted keyword as live and the missing one as absent, both wrong in opposite directions.** **Run it before requesting a gate, and again after any body edit.**
+
 
 ### Step 6a: Detect worktree mode, and preserve EPIC state before anything can destroy it
 
