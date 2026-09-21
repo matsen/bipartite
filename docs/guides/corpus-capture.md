@@ -132,7 +132,7 @@ merge-base rather than two-dot diffs, rename and whitespace-safe path handling, 
 denominators. The draft specified a binary exit and would have re-introduced a fail-open the
 script's header exists to prevent. So the honest version of this layer is **port
 `fleet-collisions.sh` to Go and replace the 2,494-byte symbol block in the same PR**, not
-"turn Step 4b into a command".
+"turn Step 4b into a command". **Filed as `#252`**, rescoped again after review: the command is `bip epic collide`, the script keeps its pane/process sections rather than being deleted, and the decisive argument turned out to be neither prose duplication nor size — it is that `fleet-collisions.sh:59` defaults its scope to another repository's clone pool, which `skills/bip-conductor/SKILL.md:529` records as *"unfinished, not as fixed"*.
 
 - **`bip epic-edit`** — pull, record `updatedAt`, guard *with the emptiness null-check*, push,
   verify read-back length and tail. Measure its mechanisable fraction before committing to it.
