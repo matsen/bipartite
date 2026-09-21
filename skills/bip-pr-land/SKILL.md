@@ -203,6 +203,21 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ⭐ **The property that unites all four manglings: a verification harness fails toward AGREEMENT.** A mangled pattern, a stripped-nothing control arm, and a display that eats a character all produce output shaped like confirmation. **A broken gate is loud eventually, because something slips past it. A broken instrument is silent forever, because nobody checks the checker.** That asymmetry is why these asserts are worth their keystrokes and a fifth careful read is not.
 
+⛔ **GITHUB DOES NOT UNDERSTAND NEGATION, AND *"this does NOT close #N"* IS THE SAME TOKEN STREAM AS *"closes #N"*.** ⚠ **Measured 2026-09-21 on `matsengrp/phyz`: a branch commit body read *"this cell does NOT close #369's standing limitation"* — and #369 is the parent EPIC of the entire programme.** **Under a bare `gh pr merge --squash` with no `--body`, that text reaches the merge commit and closes the EPIC.** The only thing that prevented it was passing `--body` explicitly.
+
+⭐ **This is a NEW SUB-SHAPE and it is worse than the two recorded above, which are both a keyword the author had REMOVED and then QUOTED.** ➡ **Here the keyword is written DELIBERATELY, in a sentence whose meaning is the OPPOSITE of what the parser sees.** ⛔ **Prose negation is invisible to a token scanner, and *"an issue this PR does not close"* is an ORDINARY SENTENCE TO WRITE** — especially in a body that is being careful about scope, which is exactly the body most likely to contain it. ⚠ **So the gate firing on your own hedge is not a false positive.** Reword — break the keyword token or move the number away from it — and pass `--body` regardless.
+
+⭐ **BASE RATE, MEASURED SO THE WARNING IS NOT JUST AN ANECDOTE — last 300 commit bodies on `origin/main`, the real gate pattern, GNU grep, two readers independently:**
+
+| | |
+|---|---|
+| gate pattern fires | **216 of 300 (72%)** |
+| negation MODIFYING a closing keyword | **0** |
+
+⛔ **Zero prior instances — and that is the argument, not a reassurance.** The first one appeared on the night this fleet adopted *"state what a result does NOT settle"* as a scoping discipline. ➡ **The hazard was CREATED BY A GOOD HABIT, which is why it has no history and why it will now recur.** ⚠ **And 72% is the other half: the gate fires on nearly three commits in four, so a wrong fire lands in a channel that is almost always live, not a quiet one.**
+
+⚠ **A detector caveat, because the first measurement of this got it wrong: a negation-proximity pattern over a body flattened with `tr '\n' ' '` returns FALSE POSITIVES** — a title like *"… by bipartition size, not node index"* followed on a LATER LINE by a legitimate `closes #2344` reads as one hazard. **That run reported 9; the correct count is 0.** ➡ **Require the negation to MODIFY the keyword (no sentence boundary between), and give the detector a POSITIVE CONTROL — it must find `does NOT close #369` — before believing a zero.**
+
 ⛔ **`/usr/bin/grep` IS PINNED AND THAT IS NOT PEDANTRY — A BARE `grep` ON THIS WORKSTATION IS `ugrep 7.8.4`, WHICH TRUNCATES THIS PATTERN'S ISSUE NUMBER TO ONE DIGIT.** Measured 2026-09-21 on `pax`, this file's own pattern, same input, full pipeline:
 
 | keyword | `/usr/bin/grep` (GNU 3.11) | bare `grep` (ugrep 7.8.4) |
@@ -212,7 +227,7 @@ git log --format='%B' "origin/$BASE"..HEAD \
 | `resolve #2872` | `2872` | **`2`** ⛔ |
 | the other six forms | `2872` | `2872` |
 
-**It breaks on exactly the three BARE forms — the ones where `[sd]?` / `(e[sd])?` matches empty — and GitHub honours all three.**
+**It breaks on exactly the three BARE forms — the ones where `[sd]?` / `(e[sd])?` matches empty — and GitHub honours all three.** ⭐ **The trigger, isolated on minimal input: a `\b` FOLLOWING AN OPTIONAL QUANTIFIER THAT MATCHED EMPTY.** `\bclose[sd]?\b[[:space:]]*#[0-9]+` and `\b(closes?)\b…` both truncate under ugrep; `(close[sd]?)…` without the `\b` and `\b(close)\b…` without the optional suffix are both CORRECT. ⛔ **The `(#|GH-)` alternation is INNOCENT and so is the grouping — do not "fix" either.** ⚠ **And GNU grep is correct on every one of these, so the `/usr/bin/grep` pin is a complete fix for this class, not a mitigation.** ⚠ **Neither this note nor the negation block above changes the PATTERN, so the table below owes no re-run on their account** — said explicitly because the table's own instruction is to re-run all of it on any change to the command.
 
 ⛔ **THE DIRECTION IS WHAT MAKES THIS WORSE THAN A MISS: IT DOES NOT FAIL TO FIRE. IT FIRES AND NAMES THE WRONG ISSUE.** A reader sees `#2`, finds it nonexistent or ancient, and **dismisses a true positive.** That is this file's own *"a check can emit a confident, specific, wrong answer"*, occurring inside the gate that warning is attached to.
 
