@@ -568,7 +568,15 @@ print("\n".join((d.get("clone_names") or []) + (d.get("new_clone_names") or []))
         gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null) || continue
         [ -n "$gd" ] || continue
         b=$(git -C "$d" branch --show-current 2>/dev/null)
-        dirty=$(git -C "$d" status --porcelain 2>/dev/null | grep -c . || true)
+        # Read status BEFORE counting. Piping git straight into `grep -c`
+        # cannot tell "clean tree" from "git failed": both give an empty pipe
+        # and `grep -c .` reports 0, which this function reads as CLEAN. That
+        # is fail-open on the one direction the whole check exists to catch.
+        status=$(git -C "$d" status --porcelain 2>/dev/null) || {
+            echo "DURABILITY UNCHECKABLE $c: cannot read working-tree status"
+            rc=1; continue
+        }
+        dirty=$(printf '%s' "$status" | grep -c . || true)
 
         if [ -z "$b" ]; then
             echo "DURABILITY DETACHED $c: detached HEAD with a live status file" \
