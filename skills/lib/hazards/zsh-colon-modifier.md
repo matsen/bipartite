@@ -5,26 +5,38 @@ measured: 2026-09-20
 
 # `$VAR:` in zsh is a modifier site, not string concatenation
 
+**Scope: what a human types in an interactive terminal.** The agent Bash tool can be pinned to
+bash via `CLAUDE_CODE_SHELL` (see `matsen/setup#1`, `#2`), which removes this from tool calls.
+The login shell on these boxes stays zsh either way, so the trap survives the harness fix — it
+just stops being a harness problem and stays a terminal one.
+
 **Looks right:** `git show $c:path/to/file`, `scp $host:$dir`, any `$VAR:` followed by text.
 
-**What happens:** zsh reads `:` after a parameter as an expansion modifier and consumes the
-next character. Of 15 letters measured, **13 fire and only one says so** — `:s` errors, and
-`a A P c e h l q Q r t u` all silently rewrite the value. Three of them (`:a`, `:A`, `:P`)
-prepend the working directory, producing a plausible absolute path that is simply wrong.
+**What happens:** zsh reads `:` after a parameter as an expansion modifier, applies it, and
+appends whatever is left. Of 15 letters measured, **13 are modifiers and only `:s` is loud**.
+
+This is worse than dropping a character, and reads as one only when the value has no slashes:
+
+```
+B=abc123       $B:tests/x  ->  abc123ests/x    looks like a typo
+B=origin/main  $B:tests/x  ->  mainests/x      :t took the tail, then appended "ests/x"
+B=a/b/c.txt    $B:tests/x  ->  c.txtests/x
+```
+
+`:a`, `:A`, `:P` prepend the working directory; `:h` gives a dirname; `:u` uppercases; `:e`
+drops the value entirely. `:d`, `:p`, `:x` pass through.
 
 **Check:** `"${VAR}:rest"` — brace the parameter, quote the argument. Unconditionally, not for
-a remembered set of letters: this entry originally published a letter list and got two of them
-backwards, which is the argument against carrying a list at all. bash is unaffected, so a line
-that works in a script fails when pasted into an interactive zsh.
+a remembered set: this entry first published a letter list and had two of them backwards, then
+described the mechanism as "eats a character", which understated it in the benign direction.
+A memorised list is the wrong instrument for a rule whose content is that the exceptions are
+unguessable.
 
-**Expect to underestimate it.** The one loud letter aborts and gets fixed; the twelve silent
-ones return an answer. You remember the instances that interrupted you, not the ones that
-agreed with you.
+**Expect to underestimate it.** One letter aborts and gets fixed; twelve return an answer. You
+remember the instances that interrupted you, not the ones that agreed with you. The same shape
+elsewhere: an omitted or misparsed scope argument yields *somebody's* scope rather than an
+error — `tmux kill-server` without `-L` killed every session on this box.
 
-**Measured 2026-09-20, `zsh` on `pax`, one isolated shell per case** (`c=abc123`): `$c:e…`
-dropped the value entirely, `$c:t…` `$c:r…` `$c:q…` ate one character, `$c:u…` uppercased,
-`$c:a…` prefixed the cwd. In a live check that night a loop over two commits returned `0` from
-both arms — git's error went to stderr and `grep -c` counted an empty pipe as zero. A false
-negative, which is the direction `EVIDENCE-DISCIPLINE.md` says needs evidence the test could
-have gone positive. That second half is fixed at the source in `skills/lib/spawn-intent.sh`
-rather than guarded by this note.
+**Not part of this trap, though it co-occurred:** `cmd 2>/dev/null | grep -c` reporting `0` for
+a failed command is POSIX pipeline behaviour, not zsh, and switching shells does not fix it.
+Fixed at the source in `skills/lib/spawn-intent.sh` rather than guarded by a note.
