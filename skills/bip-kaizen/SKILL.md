@@ -84,7 +84,19 @@ Two failures this exists to prevent, both measured 2026-09-01 in one session:
 - An addressing rule was strengthened in `bip-conductor` but not in `bip-conductor-poll` — which is *deliberately* the copy a mid-cycle conductor reads. The conductor that made the original error was mid-cycle.
 - A generalized gitignore rule in `bip-conductor` never reached the concrete checklist in `bip-conductor-spawn`, so the checklist kept omitting a file that "has bitten a real fleet twice".
 
-**Budget discipline:** ten consecutive kaizen commits to this repo added 166 lines and deleted 7, retiring zero rules. Prefer a change that is roughly line-neutral — a new rule can usually pay for itself out of the previous rule's justification prose. If you are adding a rule and deleting nothing, check whether you have actually found a *new* fact or are re-litigating one already written down.
+**Budget discipline.** If you are adding a rule and deleting nothing, the question is not how many lines — it is **what does this supersede?** Answer it in the proposal, or say explicitly that nothing does and why the fact is new. That question, not any ratio, is what catches a rule being re-litigated in a second file.
+
+Report the size of **your own change** alongside it, in words, because this corpus is written one paragraph per line and a line count measures newlines rather than context:
+
+```bash
+git diff HEAD -- '*.md' | grep '^+' | grep -v '^+++' | wc -w   # words you are adding
+```
+
+No threshold. A number with a cutoff invites an argument about the cutoff; a number stated next to "what does this supersede?" does not.
+
+**This paragraph previously set a 3:1 line ratio and was wrong three ways, all caught in review of the diff that introduced it** — worth keeping because it is the same failure the rule is about. Its check used `git diff` with no ref, so a *staged* change reported `+0/-0`, fail-open at exactly the moment the instruction said to run it. Its trend command divided by zero — `awk: fatal`, exit 2 — when nothing had been deleted, the precise condition it existed to detect, a crash already catalogued in `EVIDENCE-DISCIPLINE.md`. And measured on its own branch, one file added **782 words in 6 lines and passed** at exactly 3.0:1 while another added 357 words in 42 lines and failed worst: the threshold rewarded the writing style that costs the most context.
+
+**Before compressing a rule, check that anyone can cite an instance of it.** Some of what accumulates is anticipatory — written against a failure nobody has had. That is a candidate for deletion, not for shortening, and a pass that only shortens will preserve it while cutting a rule whose evidence was merely already thin. The compression pass is `matsen/bipartite#218`; its reviewer brief is `skills/lib/compression-reviewer-prompt.md`.
 
 ### Step 3: Propose the fix
 
@@ -172,5 +184,13 @@ gh pr create --title "kaizen: <description>" --body "..."
 - **Respect existing structure**: Follow the conventions already in CLAUDE.md and skill files
 - **Bipartite repo awareness**: Skills live in `~/re/bipartite/skills/`.
   The repo is `matsen/bipartite` on GitHub
+- **Spend emphasis like it is scarce, because it is.** <!-- emphasis-budget-exempt --> ⭐ ⛔ ⚠ ➡ and ALL-CAPS BOLD are a shared budget across the file, not a per-paragraph decision. **The mechanism a budget only caps: each kaizen reaches for a louder marker than the last one it sees, so the escalation is driven by the file's current state rather than by the new passage's importance — which is why it compounds and why no author notices their own step.** The numbers: `skills/bip-conductor/SKILL.md` carried **0** such markers on 2026-09-05, 13 on 09-14, 148 on 09-18, and 214 on 09-20 — one per 5.7 lines — while the file grew 2.1x in lines over the same window. `EVIDENCE-DISCIPLINE.md` went 0 → 201 across those same two dates. A marker every few lines marks nothing. Before adding one, count what is already there and decide whether your passage outranks them:
+
+  ```bash
+  # Skips this rule's own glyphs, which are mentions, not uses. <!-- emphasis-budget-exempt -->
+  grep -v 'emphasis-budget-exempt' <file> | grep -oE '⭐|⛔|⚠|➡' | wc -l
+  ```
+
+  **Expected baseline is 0** — every glyph in a clean file is a use, so any count is the real one, and this file reads 0 rather than the 8 a naive `grep` returns by counting the rule against itself. Without that exclusion the floor is inherited by every future run, and an author who genuinely cut their emphasis still sees a residue and concludes the budget is unmeetable. Then: does your marker displace one, or just join them? If the passage needs a marker to be taken seriously, the sentence is probably not carrying its own weight yet.
 - **Don't over-document**: If something is obvious from the code, it doesn't need a CLAUDE.md entry.
   Only document things the agent genuinely couldn't figure out on its own

@@ -176,8 +176,8 @@ The issue-lead's evaluation found two defects: the PR body said "Closes
 BASE=$(gh pr view --json baseRefName -q .baseRefName)
 git log --format='%B' "origin/$BASE"..HEAD \
   | tr '\n' ' ' \
-  | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b:?[[:space:]]*((([[:alnum:]._-]+/[[:alnum:]._-]+)?#|GH-)[0-9]+|https?://[^[:space:]]*/issues/[0-9]+)' \
-  | grep -oE '[0-9]+$' | sort -u
+  | /usr/bin/grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b:?[[:space:]]*((([[:alnum:]._-]+/[[:alnum:]._-]+)?#|GH-)[0-9]+|https?://[^[:space:]]*/issues/[0-9]+)' \
+  | /usr/bin/grep -oE '[0-9]+$' | sort -u
 ```
 
 ⛔ **THE `tr '\n' ' '` IS THE ENTIRE POINT AND IT IS NOT DECORATION. `grep` IS LINE-BASED, SO NO PATTERN — INCLUDING `[[:space:]]`, `\s`, OR `[[:space:]]*` — CAN MATCH ACROSS A NEWLINE IN ORDINARY `grep`.** The wrap is the mechanism, so a grep without the `tr` (or without `-Pz`) reads the two halves as unrelated lines and **reports clean on the real defect.**
@@ -194,7 +194,49 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ⛔ **AND ASSERT THAT THE CONTROL ARM ACTUALLY DIFFERS FROM THE TEST ARM — `assert arm_a != arm_b` BEFORE INTERPRETING EITHER.** The third mangling above is this exact failure: a `${PAT#\\b}` strip silently stripped nothing, so the "without-`\b`" arm *was* the with-`\b` pattern, both arms agreed, and the honest reading of that output was **"the boundary does nothing"** — the precise opposite of the truth. An A/B whose two arms are secretly identical does not report an error; it reports a null.
 
+⛔ **AND CONTROL THE COMPARATOR ITSELF, NOT ONLY THE PATTERN — WITH A PAIR, BECAUSE EITHER HALF ALONE IS BLIND TO THE FAILURE THE OTHER CATCHES.**
+
+- **A known-WRONG expectation that must FAIL** — `chk 'Closes #99' '12345'` reports FAIL. Catches a comparator failing toward **AGREEMENT**: if this reports ok, every green row below it is meaningless.
+- **A known-RIGHT expectation that must PASS, and its expected value must be NON-EMPTY** — `chk 'Closes #99' '99'` reports ok. Catches a comparator failing toward **DISAGREEMENT**, which the first half cannot see at all, **because such a comparator also fails the known-wrong row and failing is what that row demands.**
+
+⚠ Measured 2026-09-21 on `pax`, and the incident is why the pair is stated rather than the single: a table re-run reported **FAIL on 19 of 24 rows** and the gate was fine — the comparator was `[ "$(echo $g)" = "$(echo $e)" ]`, and **zsh does not word-split an unquoted `$VAR`**, so `echo $g` re-emitted the trailing space left by `tr '\n' ' '` and every non-empty answer mismatched. ⭐ **The five rows that PASSED were the five whose expected value was EMPTY — i.e. exactly the rows where the bug could not show**, which is why the known-right half must carry a non-empty expectation. ⛔ **And note what did NOT catch it: the known-wrong control passes under that comparator, correctly reporting FAIL.** What caught it was 19 loud reds — the ABSURDITY, not an instrument. ⚠ **That run was absurd rather than wrong, and absurd is the survivable direction**; the dangerous inversion shows 24 green and ships. ➡ **This is `assert arm_a != arm_b` one level down: the same object, applied to the thing DOING the comparing rather than to the thing being compared — and a one-sided control is an instrument that can confirm and cannot refute, or refute and cannot confirm.**
+
 ⭐ **The property that unites all four manglings: a verification harness fails toward AGREEMENT.** A mangled pattern, a stripped-nothing control arm, and a display that eats a character all produce output shaped like confirmation. **A broken gate is loud eventually, because something slips past it. A broken instrument is silent forever, because nobody checks the checker.** That asymmetry is why these asserts are worth their keystrokes and a fifth careful read is not.
+
+⛔ **GITHUB DOES NOT UNDERSTAND NEGATION, AND *"this does NOT close #N"* IS THE SAME TOKEN STREAM AS *"closes #N"*.** ⚠ **Measured 2026-09-21 on `matsengrp/phyz`: a branch commit body read *"this cell does NOT close #369's standing limitation"* — and #369 is the parent EPIC of the entire programme.** **Under a bare `gh pr merge --squash` with no `--body`, that text reaches the merge commit and closes the EPIC.** The only thing that prevented it was passing `--body` explicitly.
+
+⭐ **This is a NEW SUB-SHAPE and it is worse than the two recorded above, which are both a keyword the author had REMOVED and then QUOTED.** ➡ **Here the keyword is written DELIBERATELY, in a sentence whose meaning is the OPPOSITE of what the parser sees.** ⛔ **Prose negation is invisible to a token scanner, and *"an issue this PR does not close"* is an ORDINARY SENTENCE TO WRITE** — especially in a body that is being careful about scope, which is exactly the body most likely to contain it. ⚠ **So the gate firing on your own hedge is not a false positive.** Reword — break the keyword token or move the number away from it — and pass `--body` regardless.
+
+⭐ **BASE RATE, MEASURED SO THE WARNING IS NOT JUST AN ANECDOTE — last 300 commit bodies on `origin/main`, the real gate pattern, GNU grep, two readers independently:**
+
+| | |
+|---|---|
+| gate pattern fires, `matsengrp/phyz` | **216 of 300 (72%)** |
+| same pattern, `matsen/bipartite` | **23 of 300 (7.6%)** |
+| negation MODIFYING a closing keyword | **0** |
+
+⛔ **Zero prior instances — and that is the argument, not a reassurance.** The first one appeared on the night this fleet adopted *"state what a result does NOT settle"* as a scoping discipline. ➡ **The hazard was CREATED BY A GOOD HABIT, which is why it has no history and why it will now recur.** ⚠ **The base rate is repo-specific and the conclusion does not travel: 72% on `matsengrp/phyz` means a wrong fire lands in a channel that is almost always live; 7.6% here means it usually does not. Re-derive before reasoning from it.**
+
+⚠ **A detector caveat, because the first measurement of this got it wrong: a negation-proximity pattern over a body flattened with `tr '\n' ' '` returns FALSE POSITIVES** — a title like *"… by bipartition size, not node index"* followed on a LATER LINE by a legitimate `closes #2344` reads as one hazard. **That run reported 9; the correct count is 0.** ➡ **Require the negation to MODIFY the keyword (no sentence boundary between), and give the detector a POSITIVE CONTROL — it must find `does NOT close #369` — before believing a zero.**
+
+⛔ **`/usr/bin/grep` IS PINNED AND THAT IS NOT PEDANTRY — INSIDE A CLAUDE CODE BASH CALL, ON ANY MACHINE, A BARE `grep` IS A SHELL FUNCTION ROUTING TO `ugrep 7.8.4`, WHICH TRUNCATES THIS PATTERN'S ISSUE NUMBER TO ONE DIGIT.** It is not workstation-specific and it is not true in your own terminal, where `grep` is an alias to GNU 3.11 — `type grep` tells you which you have. See `skills/lib/hazards/claude-code-grep-shim.md`. Measured 2026-09-21 on `pax`, this file's own pattern, same input, full pipeline:
+
+| keyword | `/usr/bin/grep` (GNU 3.11) | bare `grep` (ugrep 7.8.4) |
+|---|---|---|
+| `close #2872` | `2872` | **`2`** ⛔ |
+| `fix #2872` | `2872` | **`2`** ⛔ |
+| `resolve #2872` | `2872` | **`2`** ⛔ |
+| the other six forms | `2872` | `2872` |
+
+**It breaks on exactly the three BARE forms — the ones where `[sd]?` / `(e[sd])?` matches empty — and GitHub honours all three.** ⭐ **The trigger, isolated on minimal input: a `\b` FOLLOWING AN OPTIONAL QUANTIFIER THAT MATCHED EMPTY.** `\bclose[sd]?\b[[:space:]]*#[0-9]+` and `\b(closes?)\b…` both truncate under ugrep; `(close[sd]?)…` without the `\b` and `\b(close)\b…` without the optional suffix are both CORRECT. ⛔ **The `(#|GH-)` alternation is INNOCENT and so is the grouping — do not "fix" either.** ⚠ **And GNU grep is correct on every one of these, so the `/usr/bin/grep` pin is a complete fix for this class, not a mitigation.** ⚠ **Neither this note nor the negation block above changes the PATTERN, so the table below owes no re-run on their account** — said explicitly because the table's own instruction is to re-run all of it on any change to the command.
+
+⛔ **THE DIRECTION IS WHAT MAKES THIS WORSE THAN A MISS: IT DOES NOT FAIL TO FIRE. IT FIRES AND NAMES THE WRONG ISSUE.** A reader sees `#2`, finds it nonexistent or ancient, and **dismisses a true positive.** That is this file's own *"a check can emit a confident, specific, wrong answer"*, occurring inside the gate that warning is attached to.
+
+⚠ **And "the `closingIssuesReferences` check below is authoritative anyway" is a reason this was survivable, NOT a reason to leave it: a reader who learns the grep lies stops running the STEP, not just the grep — including the authoritative check sitting beside it.** A gate that is both redundant and wrong is worse than either alone.
+
+⭐ **Why the 20-row table below could not catch it, which is the generalisable half: every pre-existing row used a SUFFIXED keyword (`Closes`, `Fixes`, `Resolves:`), because that is what everyone writes.** The fixture set was drawn from the same habit as the code, so the table was green on a machine where three of GitHub's nine keywords were broken. ➡ **GitHub's closing keywords are a CLOSED SET OF NINE. There is now one row per keyword, so the table is complete BY CONSTRUCTION rather than green by what it happens to contain** — and the next engine change is caught mechanically instead of by someone noticing.
+
+⚠ **Two independent readers each tested a SIMPLIFIED pattern first (`grep -oE '#[0-9]+'` and variants), got agreement between the two engines, and were one message from reporting "cannot reproduce" about a real machine-wide defect.** **A negative result about a PROXY, reported as a negative about the ARTIFACT.** ➡ **Extract the pattern from this file; do not test something like it.**
 
 ⚠ **Three details in that pattern are each load-bearing, and all three were added only after a narrower version was tested and found to fail OPEN — silently clean, which is the exact failure mode this gate exists to remove:**
 
@@ -203,7 +245,7 @@ git log --format='%B' "origin/$BASE"..HEAD \
 - **`GH-`** — GitHub honours `GH-123` as an issue reference.
 - **`[0-9]+$`, anchored, not bare `[0-9]+`** — once a URL or `org/repo` is inside the match, an unanchored digit class harvests numbers out of the repo path or the hostname.
 
-**Pinned behaviour — 17 rows, all verified. Re-run the whole table if you touch the command; a row with no artifact behind it is not a pin.**
+**Pinned behaviour — 29 rows, all verified. Re-run the whole table if you touch the command; a row with no artifact behind it is not a pin.** ⚠ *This header said `17` while the table held 20; a pinned table whose own count is stale is the shape the table exists to prevent. Count it when you add to it.*
 
 | input | gate reports | verdict |
 |---|---|---|
@@ -227,6 +269,15 @@ git log --format='%B' "origin/$BASE"..HEAD \
 | **`2672`'s own merge: body cites `#1728`, closes `#2672`** | **`2672`** | ⭐ **the only row sourced from production, not construction** |
 | `discloses #999` | *nothing* | ⭐ **word-boundary guard** |
 | `foreclosed #55` | *nothing* | ⭐ **word-boundary guard** |
+| `close #2872` | `2872` | ⭐ **keyword 1/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `closes #2872` | `2872` | ⭐ **keyword 2/9** — GitHub's closing set is closed; one row each |
+| `closed #2872` | `2872` | ⭐ **keyword 3/9** — GitHub's closing set is closed; one row each |
+| `fix #2872` | `2872` | ⭐ **keyword 4/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `fixes #2872` | `2872` | ⭐ **keyword 5/9** — GitHub's closing set is closed; one row each |
+| `fixed #2872` | `2872` | ⭐ **keyword 6/9** — GitHub's closing set is closed; one row each |
+| `resolve #2872` | `2872` | ⭐ **keyword 7/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `resolves #2872` | `2872` | ⭐ **keyword 8/9** — GitHub's closing set is closed; one row each |
+| `resolved #2872` | `2872` | ⭐ **keyword 9/9** — GitHub's closing set is closed; one row each |
 
 ⭐ **The `2672` row is the one to keep if the table is ever trimmed: it is a real merge that landed hours after this gate went in, on precisely the shape that had cost an issue that same morning** — a PR body naming an adjacent issue number while closing only its own. Merge body 3 lines (so `--body` was passed), gate returned `2672` alone, `#1728` still open. **A synthetic row proves the pattern matches; that row proves the safe path was actually taken under pressure.**
 
