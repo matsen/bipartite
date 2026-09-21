@@ -39,6 +39,43 @@ func callSpawnIntentFunc(t *testing.T, fn string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
+// TestSpawnIntentSourcesUnderZsh guards the shell this helper is actually used
+// from. The skills tell an agent to `source` spawn-intent.sh, so it runs in
+// that session's login shell -- zsh on these boxes -- while every other test
+// here invokes it under bash. A bash-only idiom would pass CI and break every
+// real caller silently; zsh and bash disagree on parameter expansion in ways
+// that mangle values rather than erroring (skills/lib/hazards/zsh-colon-modifier.md).
+//
+// Read-only functions only: mark_spawn_intent_consumed moves a file, so it
+// cannot be run twice against one fixture.
+func TestSpawnIntentSourcesUnderZsh(t *testing.T) {
+	if _, err := exec.LookPath("zsh"); err != nil {
+		t.Skip("zsh not installed")
+	}
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, ".epic-config.json")
+	if err := os.WriteFile(configPath, []byte(`{"clone_root": "~/re/pz"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+		"resolve_clone_root " + shellQuote(configPath)
+
+	outBash, errBash := exec.Command("bash", "-c", script).CombinedOutput()
+	if errBash != nil {
+		t.Fatalf("sourcing under bash failed: %v\nOutput: %s", errBash, outBash)
+	}
+	outZsh, errZsh := exec.Command("zsh", "-c", script).CombinedOutput()
+	if errZsh != nil {
+		t.Fatalf("sourcing under zsh failed: %v\nOutput: %s", errZsh, outZsh)
+	}
+
+	if got, want := strings.TrimSpace(string(outZsh)), strings.TrimSpace(string(outBash)); got != want {
+		t.Fatalf("zsh and bash disagree: zsh=%q bash=%q", got, want)
+	}
+}
+
 func TestResolveCloneRootTildeForm(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, ".epic-config.json")
