@@ -3,7 +3,6 @@ package gitx
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -119,16 +118,28 @@ type PoolScope struct {
 	// gated on. When empty, every non-dot directory under Root is a
 	// candidate — the only available rule when there is no config to read.
 	Names []string
+	// Empty declares that the slot list is authoritatively EMPTY rather
+	// than merely unsupplied. Without it, a worktree pool with no slots yet
+	// would be indistinguishable from "no config, discover everything" and
+	// would widen its own universe at the moment it has nothing in it.
+	Empty bool
 }
 
 // Rule describes the universe in one line, for the report to print. A
 // reader cannot otherwise tell which of the two populations was examined.
 func (p PoolScope) Rule() string {
-	if len(p.Names) > 0 {
-		return fmt.Sprintf("clone_names from .epic-config.json (%d slots)", len(p.Names))
+	if p.Empty {
+		return "a declared slot list that is empty (0 slots)"
 	}
-	return "every directory under the root (no clone_names available)"
+	if len(p.Names) > 0 {
+		return fmt.Sprintf("a declared slot list (%d slots)", len(p.Names))
+	}
+	return "every directory under the root (no slot list available)"
 }
+
+// scoped reports whether the slot list is authoritative, which is true both
+// when names were supplied and when an empty list was declared.
+func (p PoolScope) scoped() bool { return p.Empty || len(p.Names) > 0 }
 
 // Report is the full result of one Collide run over one clone pool.
 type Report struct {
@@ -211,6 +222,45 @@ func (r *Report) problem(format string, args ...interface{}) {
 	r.Problems = append(r.Problems, fmt.Sprintf(format, args...))
 }
 
+// touchFail records why a clone's file set could not be computed. It exists
+// so the "set the reason, record a problem, keep the entry" triple has one
+// implementation — an earlier version repeated it at every failure site,
+// which is how one of them would eventually forget the r.problem call and
+// turn an uncheckable clone into a silent skip.
+func (r *Report) touchFail(touch CloneTouch, reason string) CloneTouch {
+	touch.Unreadable = reason
+	touch.Files = nil
+	r.problem("%s: cannot compute touched files — %s", touch.Name, reason)
+	return touch
+}
+
+// landedFail is touchFail's counterpart for the live-vs-landed section.
+func (r *Report) landedFail(check LandedCheck, reason string) LandedCheck {
+	check.Reason = reason
+	r.problem("%s: %s", check.Name, reason)
+	return check
+}
+
+// workingTreeFiles returns every path the working tree at dir touches
+// relative to base: the merge-base diff (which already covers uncommitted
+// TRACKED changes, since it diffs the working tree against a commit) plus
+// the untracked pass, which no diff can see.
+//
+// Both report sections need this exact set for an unpushed branch, and an
+// earlier version computed it twice — doubling the git calls per clone and
+// leaving two copies of the rename and NUL-framing handling to drift.
+func workingTreeFiles(dir, base string) ([]string, error) {
+	files, err := diffNames(dir, base)
+	if err != nil {
+		return nil, fmt.Errorf("git diff against %s failed: %w", base, err)
+	}
+	untracked, err := statusPaths(dir)
+	if err != nil {
+		return nil, fmt.Errorf("git status failed: %w", err)
+	}
+	return dedupeSorted(append(files, untracked...)), nil
+}
+
 // ListPoolDirs returns the immediate subdirectories of root, excluding
 // dot-directories. It is the single source of the pool's universe: the
 // emptiness check and the per-clone loop both read this slice, so they
@@ -238,8 +288,14 @@ func ListPoolDirs(root string) ([]string, error) {
 // pool, with its branch already resolved (rebase recovery included) so both
 // report sections read the same branch name.
 type poolMember struct {
-	name, path, gitDir, branch, backend string
-	midRebase                           bool
+	name   string
+	path   string
+	gitDir string
+	branch string
+	// backend names which rebase directory the branch was recovered from,
+	// for the report's NOTE line. Empty unless midRebase.
+	backend   string
+	midRebase bool
 }
 
 // dirKind classifies a directory under the pool root.
@@ -354,7 +410,7 @@ func Collide(scope PoolScope) (*Report, error) {
 	// Narrow to the declared slots when there are any. The emptiness check
 	// below reads the SAME slice as the loops, so the guard and the loop
 	// cannot disagree about what counts as a clone.
-	if len(scope.Names) > 0 {
+	if scope.scoped() {
 		declared := make(map[string]bool, len(scope.Names))
 		for _, n := range scope.Names {
 			declared[n] = true
@@ -397,7 +453,11 @@ func Collide(scope PoolScope) (*Report, error) {
 			rep.NotClones = append(rep.NotClones, name)
 			continue
 		case kindUnreadable:
-			rep.Live = append(rep.Live, CloneTouch{Name: name, Branch: UnreadableCount, Unreadable: detail})
+			// Branch stays empty so the renderer's existing "?" fallback
+			// handles it. UnreadableCount is the FILE-COUNT placeholder;
+			// reusing it here printed UNREADABLE in two columns and
+			// contradicted its own doc comment.
+			rep.Live = append(rep.Live, CloneTouch{Name: name, Unreadable: detail})
 			rep.problem("%s: cannot examine clone — %s", name, detail)
 			continue
 		}
@@ -422,9 +482,11 @@ func Collide(scope PoolScope) (*Report, error) {
 		}
 	}
 
+	// Ordered, and the order is visible in the signatures: sectionTouched
+	// produces the live file sets, and the other two consume them.
 	rep.sectionTouched(members)
-	rep.sectionCollisions()
-	rep.sectionLanded(members)
+	rep.sectionCollisions(rep.Live)
+	rep.sectionLanded(members, rep.Live)
 	return rep, nil
 }
 
@@ -447,38 +509,25 @@ func (r *Report) sectionTouched(members []poolMember) {
 			// reinstating the two-dot behaviour the merge-base exists to
 			// avoid. A fallback that reinstates the defect is worse than
 			// no answer, so this is uncheckable instead.
-			touch.Unreadable = fmt.Sprintf("no merge-base for HEAD and origin/main: %v", err)
-			r.problem("%s: cannot compute touched files — %s", m.name, touch.Unreadable)
-			r.Live = append(r.Live, touch)
+			r.Live = append(r.Live, r.touchFail(touch,
+				fmt.Sprintf("no merge-base for HEAD and origin/main: %v", err)))
 			continue
 		}
-		files, err := diffNames(m.path, base)
+		files, err := workingTreeFiles(m.path, base)
 		if err != nil {
-			touch.Unreadable = fmt.Sprintf("git diff against %s failed: %v", base, err)
-			r.problem("%s: cannot compute touched files — %s", m.name, touch.Unreadable)
-			r.Live = append(r.Live, touch)
+			r.Live = append(r.Live, r.touchFail(touch, err.Error()))
 			continue
 		}
-		// The merge-base diff already covers uncommitted TRACKED changes —
-		// it diffs the working tree against a commit. This pass is for
-		// UNTRACKED files, which no diff can see.
-		untracked, err := statusPaths(m.path)
-		if err != nil {
-			touch.Unreadable = fmt.Sprintf("git status failed: %v", err)
-			r.problem("%s: cannot compute touched files — %s", m.name, touch.Unreadable)
-			r.Live = append(r.Live, touch)
-			continue
-		}
-		touch.Files = dedupeSorted(append(files, untracked...))
+		touch.Files = files
 		r.Live = append(r.Live, touch)
 	}
 }
 
 // sectionCollisions fills Collisions: files touched by more than one live
 // clone. Its universe is live-vs-live.
-func (r *Report) sectionCollisions() {
+func (r *Report) sectionCollisions(live []CloneTouch) {
 	byFile := map[string][]string{}
-	for _, c := range r.Live {
+	for _, c := range live {
 		if c.Unreadable != "" {
 			continue
 		}
@@ -507,15 +556,14 @@ func (r *Report) sectionCollisions() {
 // CONFLICTING against one that had merged two hours earlier while the
 // live-vs-live section reported clean and was correct about what it
 // measures.
-func (r *Report) sectionLanded(members []poolMember) {
+func (r *Report) sectionLanded(members []poolMember, live []CloneTouch) {
 	for _, m := range members {
 		if m.branch == "" {
 			// Detached and not rebasing — a bisect, or a hand checkout of a
 			// candidate commit. Skipping it silently would repeat this
 			// section's own mistake one notch along.
-			r.problem("%s: detached HEAD, no rebase in progress — cannot determine its branch", m.name)
-			r.Landed = append(r.Landed, LandedCheck{Name: m.name,
-				Reason: "detached HEAD, no rebase in progress"})
+			r.Landed = append(r.Landed, r.landedFail(LandedCheck{Name: m.name},
+				"detached HEAD, no rebase in progress — cannot determine its branch"))
 			continue
 		}
 		if m.branch == "main" {
@@ -543,9 +591,7 @@ func (r *Report) sectionLanded(members []poolMember) {
 			haveRemote = false
 		}
 		if !haveRemote && m.midRebase {
-			check.Reason = fmt.Sprintf("no %s and mid-rebase — HEAD is a partially-replayed commit, not a referent", remote)
-			r.problem("%s: %s", m.name, check.Reason)
-			r.Landed = append(r.Landed, check)
+			r.Landed = append(r.Landed, r.landedFail(check, fmt.Sprintf("no %s and mid-rebase — HEAD is a partially-replayed commit, not a referent", remote)))
 			continue
 		}
 		mineRef, baseRef := remote, remote
@@ -559,28 +605,28 @@ func (r *Report) sectionLanded(members []poolMember) {
 		}
 		base, err := runGit(m.path, "merge-base", baseRef, "origin/main")
 		if err != nil {
-			check.Reason = fmt.Sprintf("no merge-base for %s and origin/main", baseRef)
-			r.problem("%s: %s", m.name, check.Reason)
-			r.Landed = append(r.Landed, check)
+			r.Landed = append(r.Landed, r.landedFail(check, fmt.Sprintf("no merge-base for %s and origin/main", baseRef)))
 			continue
 		}
 		var mine []string
 		var err1 error
 		if mineRef == "" {
-			mine, err1 = diffNames(m.path, base)
-			if err1 == nil {
-				var untracked []string
-				untracked, err1 = statusPaths(m.path)
-				mine = append(mine, untracked...)
+			// Reuse the set sectionTouched already computed for this clone:
+			// it is the same base and the same working tree, so recomputing
+			// it doubles the git calls and lets the two frames drift about
+			// what "mine" means for one clone.
+			if cached, ok := touchedFiles(live, m.name); ok {
+				mine = cached
+			} else {
+				mine, err1 = workingTreeFiles(m.path, base)
 			}
 		} else {
 			mine, err1 = diffNames(m.path, base, mineRef)
 		}
 		landed, err2 := diffNames(m.path, base, "origin/main")
 		if err1 != nil || err2 != nil {
-			check.Reason = fmt.Sprintf("git diff against %s failed: %v %v", base, err1, err2)
-			r.problem("%s: %s", m.name, check.Reason)
-			r.Landed = append(r.Landed, check)
+			r.Landed = append(r.Landed, r.landedFail(check,
+				fmt.Sprintf("git diff against %s failed: %v %v", base, err1, err2)))
 			continue
 		}
 		mine = dedupeSorted(mine)
@@ -594,8 +640,8 @@ func (r *Report) sectionLanded(members []poolMember) {
 			// a clear result here is worthless. The denominators alone made
 			// this visible to a human who reads and thinks; they did not
 			// make the check say so, which is the fail-open one level in.
-			check.Reason = fmt.Sprintf("nothing to compare (mine=0 landed=%d) — do NOT read this as clear", check.Landed)
-			r.problem("%s: %s", m.name, check.Reason)
+			check = r.landedFail(check,
+				fmt.Sprintf("nothing to compare (mine=0 landed=%d) — do NOT read this as clear", check.Landed))
 		}
 		r.Landed = append(r.Landed, check)
 	}
@@ -650,6 +696,18 @@ func statusPaths(dir string) ([]string, error) {
 	return paths, nil
 }
 
+// touchedFiles returns the file set sectionTouched computed for one clone,
+// and whether it is usable — false when the clone is absent or could not be
+// read, in which case the caller must not treat a nil slice as "no files".
+func touchedFiles(live []CloneTouch, name string) ([]string, bool) {
+	for _, c := range live {
+		if c.Name == name {
+			return c.Files, c.Unreadable == ""
+		}
+	}
+	return nil, false
+}
+
 // intersect returns the sorted intersection of two sorted, deduped slices.
 func intersect(a, b []string) []string {
 	set := make(map[string]bool, len(b))
@@ -695,15 +753,5 @@ func splitNUL(s string) []string {
 // runGitRaw is runGit without the whitespace trim, for the -z forms whose
 // delimiters and paths must survive intact.
 func runGitRaw(dir string, args ...string) (string, error) {
-	fullArgs := append([]string{"-C", dir}, args...)
-	cmd := exec.Command("git", fullArgs...)
-	out, err := cmd.Output()
-	if err != nil {
-		stderr := ""
-		if ee, ok := err.(*exec.ExitError); ok {
-			stderr = strings.TrimSpace(string(ee.Stderr))
-		}
-		return "", fmt.Errorf("git %s: %w (%s)", strings.Join(fullArgs, " "), err, stderr)
-	}
-	return string(out), nil
+	return runGitCore(dir, args...)
 }

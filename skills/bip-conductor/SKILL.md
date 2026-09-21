@@ -761,10 +761,14 @@ slots. clone_names from the same config is authoritative where it exists,
 because a pool also holds clones nobody spawns into -- CI clones that reset
 hard to origin/main at run time, a pinned dependency checkout -- and a
 collision reported against one of those cannot involve a worker. They
-are listed as unmanaged and never compared. Without clone_names (worktree
-mode, or an explicit --root that may not be this config's pool) every
-non-dot directory is a candidate, and clones of other repositories are
-excluded by comparing origin against the pool's modal origin.
+are listed as unmanaged and never compared.
+
+In WORKTREE mode there is no clone_names, and the slot list comes from the
+issue-* subdirectories instead -- the same rule "bip epic watch" applies, so
+the two commands agree on what a slot is. Only an explicit --root, which may
+not be the pool this config describes, falls back to treating every non-dot
+directory as a candidate; there, clones of other repositories are excluded
+by comparing origin against the pool's modal origin.
 
 Both halves are on the first line of output -- read it before reading the
 report.

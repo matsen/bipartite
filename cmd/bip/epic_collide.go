@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/config"
+	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/gitx"
 	"github.com/spf13/cobra"
 )
@@ -50,10 +51,14 @@ slots. clone_names from the same config is authoritative where it exists,
 because a pool also holds clones nobody spawns into -- CI clones that reset
 hard to origin/main at run time, a pinned dependency checkout -- and a
 collision reported against one of those cannot involve a worker. They
-are listed as unmanaged and never compared. Without clone_names (worktree
-mode, or an explicit --root that may not be this config's pool) every
-non-dot directory is a candidate, and clones of other repositories are
-excluded by comparing origin against the pool's modal origin.
+are listed as unmanaged and never compared.
+
+In WORKTREE mode there is no clone_names, and the slot list comes from the
+issue-* subdirectories instead -- the same rule "bip epic watch" applies, so
+the two commands agree on what a slot is. Only an explicit --root, which may
+not be the pool this config describes, falls back to treating every non-dot
+directory as a candidate; there, clones of other repositories are excluded
+by comparing origin against the pool's modal origin.
 
 Both halves are on the first line of output -- read it before reading the
 report.
@@ -226,9 +231,24 @@ func resolveCollideScope(rootFlag string, rootGiven bool, cwd string) (scope git
 	if strings.TrimSpace(root) == "" {
 		return scope, "", fmt.Errorf("clone_root in %s resolved to an empty path", epicConfigName)
 	}
-	// clone_names is the authoritative slot list where it exists. In
-	// worktree mode there is none, and directory discovery is correct
-	// there: every issue-* subdirectory IS a slot.
+	// In WORKTREE mode there is no clone_names, and directory discovery is
+	// NOT correct there either: a slot is an `issue-*` subdirectory, so a
+	// stray checkout sharing the pool's origin would otherwise become a
+	// collision candidate. flow.ListWorktreeSlots applies the same
+	// slot-prefix rule the sibling `bip epic watch` uses (epic_watch.go's
+	// resolveSlots), so the two commands agree on what a slot is.
+	if cfg.LocalWorktrees {
+		names, err := flow.ListWorktreeSlots(root)
+		if err != nil {
+			return scope, "", fmt.Errorf("reading clone_root %s: %w", root, err)
+		}
+		// An empty result is a real answer — a worktree pool with no slots
+		// yet — and Collide reports it as "nothing to check". It must not
+		// fall through to discovery, which would widen the universe.
+		return gitx.PoolScope{Root: root, Names: names, Empty: len(names) == 0},
+			"from " + epicConfigName + " (worktree mode)", nil
+	}
+	// Clone mode: clone_names is the authoritative slot list.
 	return gitx.PoolScope{Root: root, Names: cfg.CloneNames}, "from " + epicConfigName, nil
 }
 

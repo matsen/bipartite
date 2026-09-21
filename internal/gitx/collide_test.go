@@ -609,11 +609,18 @@ func midRebaseWorktree(t *testing.T, p *pool, push bool) string {
 	mustGit(t, wt, "fetch", "--quiet", "origin", "main")
 	// Expected to fail: it stops mid-rebase, which is the state under test.
 	_ = exec.Command("git", "-C", wt, "rebase", "--apply", "origin/main").Run()
+	// FATAL, not SKIP. Everything above is under this fixture's own control,
+	// so failing to reach rebase-apply state is either a harness bug or a git
+	// version whose layout differs — and the production code reads these exact
+	// paths (resolveBranch), so a layout change breaks the command too. A skip
+	// here would hide that: `go test`'s summary does not distinguish a skipped
+	// test from a passing one, and these two lines are the only coverage of the
+	// worktree-plus-apply-backend scenario this file exists to pin.
 	if _, err := os.Stat(filepath.Join(primary, ".git", "worktrees", "wt", "rebase-apply", "head-name")); err != nil {
-		t.Skipf("fixture did not produce rebase-apply state: %v", err)
+		t.Fatalf("fixture did not produce rebase-apply state, so the mid-rebase paths are untested: %v", err)
 	}
 	if b, _ := runGit(wt, "branch", "--show-current"); b != "" {
-		t.Skipf("fixture is not detached mid-rebase (branch=%q)", b)
+		t.Fatalf("fixture is not detached mid-rebase (branch=%q); the recovery path is untested", b)
 	}
 	return wt
 }
@@ -686,9 +693,13 @@ func TestCollide_MidRebaseUnpushedIsUncheckable(t *testing.T) {
 // collision is to delay or resequence a spawn, so a false positive against
 // one of them costs a stalled slot for a reason nobody can reproduce.
 //
-// The second half of the test is the load-bearing one: with no clone_names
-// the same fixture DOES report the collision, so this is a scoping
-// behaviour rather than an accident of the fixture.
+// The FIRST subtest is the regression guard — verified by mutation: stubbing
+// out the narrowing block fails `declared slots only` and leaves `no
+// clone_names` passing, because that second case supplies no names and never
+// reaches the narrowing at all. The second subtest is a CONTROL: it rules out
+// "the fixture's edits do not really overlap" as an alternative explanation
+// for the first one's clear verdict. An earlier version of this comment called
+// the second one load-bearing, which was backwards.
 func TestCollide_ScopedToCloneNames(t *testing.T) {
 	p := newPool(t)
 	p.landOnMain(t, "seed", map[string]string{"shared.md": "base\n"})
@@ -716,8 +727,8 @@ func TestCollide_ScopedToCloneNames(t *testing.T) {
 		if strings.Join(rep.Missing, " ") != "charlie" {
 			t.Errorf("Missing = %v, want charlie named so the reader can see the declared-but-absent slot", rep.Missing)
 		}
-		if !strings.Contains(rep.ScopeRule, "clone_names") {
-			t.Errorf("ScopeRule = %q, want it to name the universe applied", rep.ScopeRule)
+		if !strings.Contains(rep.ScopeRule, "declared slot list") {
+			t.Errorf("ScopeRule = %q, want it to say the universe is a declared list", rep.ScopeRule)
 		}
 		if v := rep.Verdict(); v != VerdictClear {
 			t.Errorf("verdict = %v, want clear; problems=%v", v, rep.Problems)

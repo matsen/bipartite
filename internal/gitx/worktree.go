@@ -123,6 +123,18 @@ func realpath(p string) string {
 // git's own `-C` flag (matching the convention in internal/git) rather than
 // cmd.Dir, so the failing command is fully reconstructable from the args.
 func runGit(dir string, args ...string) (string, error) {
+	out, err := runGitCore(dir, args...)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// runGitCore is the shared body of runGit and runGitRaw. The two differ only
+// in whether stdout is trimmed, and that difference is expressed here as a
+// relationship rather than as a copy — an earlier version duplicated this
+// whole function to drop one call to TrimSpace.
+func runGitCore(dir string, args ...string) (string, error) {
 	fullArgs := append([]string{"-C", dir}, args...)
 	cmd := exec.Command("git", fullArgs...)
 	out, err := cmd.Output()
@@ -133,7 +145,7 @@ func runGit(dir string, args ...string) (string, error) {
 		}
 		return "", fmt.Errorf("git %s: %w (%s)", strings.Join(fullArgs, " "), err, stderr)
 	}
-	return strings.TrimSpace(string(out)), nil
+	return string(out), nil
 }
 
 // runGitCombined returns combined stdout+stderr as a single string, useful

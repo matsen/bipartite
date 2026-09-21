@@ -81,8 +81,53 @@ func TestResolveCollideScope_NeverDefaults(t *testing.T) {
 		if strings.Join(scope.Names, " ") != "alpha" {
 			t.Errorf("scope.Names = %v, want the config's clone_names", scope.Names)
 		}
-		if !strings.Contains(scope.Rule(), "clone_names") {
-			t.Errorf("scope.Rule() = %q, want it to name the universe applied", scope.Rule())
+		if !strings.Contains(scope.Rule(), "declared slot list") {
+			t.Errorf("scope.Rule() = %q, want it to say the universe is a declared list", scope.Rule())
+		}
+	})
+
+	t.Run("worktree mode uses the slot prefix, not discovery", func(t *testing.T) {
+		// The sibling `bip epic watch` restricts a worktree pool to issue-*
+		// subdirectories (epic_watch.go's resolveSlots). Falling through to
+		// directory discovery here would make a stray checkout sharing the
+		// pool's origin a collision candidate — the same wrong-population
+		// defect the clone_names scoping fixed, in the other mode.
+		cwd := t.TempDir()
+		pool := filepath.Join(cwd, "pool")
+		for _, d := range []string{"issue-100", "issue-205", "scratch", "notes"} {
+			if err := os.MkdirAll(filepath.Join(pool, d), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		writeConfig(t, cwd, `{"clone_root": "`+pool+`", "local_worktrees": true}`)
+		scope, _, err := resolveCollideScope("", false, cwd)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Join(scope.Names, " ") != "issue-100 issue-205" {
+			t.Errorf("scope.Names = %v, want only the issue-* slots", scope.Names)
+		}
+	})
+
+	t.Run("worktree mode with no slots declares empty, not discovery", func(t *testing.T) {
+		// A worktree pool with no slots yet is a real answer. If it fell
+		// through to discovery it would widen its own universe at the one
+		// moment it has nothing in it.
+		cwd := t.TempDir()
+		pool := filepath.Join(cwd, "pool")
+		if err := os.MkdirAll(filepath.Join(pool, "scratch"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		writeConfig(t, cwd, `{"clone_root": "`+pool+`", "local_worktrees": true}`)
+		scope, _, err := resolveCollideScope("", false, cwd)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(scope.Names) != 0 || !scope.Empty {
+			t.Errorf("scope = %+v, want an authoritatively empty slot list", scope)
+		}
+		if !strings.Contains(scope.Rule(), "empty") {
+			t.Errorf("scope.Rule() = %q, want it to say the declared list is empty", scope.Rule())
 		}
 	})
 
