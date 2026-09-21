@@ -368,7 +368,17 @@ if [ "$have_panes" -eq 1 ]; then
       uncheckable=1; continue
     fi
     rest=$(realpath "$ppath" 2>/dev/null); rest="${rest#"$RROOT"/}"; clone="${rest%%/*}"
-    dirty=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null | wc -l)
+    # Read status BEFORE counting. Piping git straight into `wc -l` cannot tell
+    # "clean tree" from "git failed" -- both give an empty pipe and 0 -- and here
+    # 0 prints as `uncommitted=0`, which reads as "nothing to preserve" on the
+    # one line that exists to say otherwise. Report UNKNOWN and set uncheckable,
+    # per this file's own "fail toward checking, never toward skipping".
+    if dirty_out=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null); then
+      dirty=$(printf '%s' "$dirty_out" | grep -c . || true)
+    else
+      dirty="UNKNOWN (git status failed -- assume work is present)"
+      uncheckable=1
+    fi
     echo "  DEAD-SESSION $clone  pane_pid=$ppid  uncommitted=$dirty"
     echo "    -> preserve worklog/status/diff BEFORE anything else; the pane's"
     echo "       last line usually carries resume command ('claude --resume <id>' or 'agy --conversation <id>')."

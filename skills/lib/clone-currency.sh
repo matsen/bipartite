@@ -109,7 +109,16 @@ for name in "${SLOTS[@]}"; do
   [ -e "$d/.git" ] || { printf '  %-12s MISSING\n' "$name"; notready=$((notready+1)); continue; }
   br=$(git -C "$d" rev-parse --abbrev-ref HEAD)
   head=$(git -C "$d" rev-parse HEAD)
-  dirty=$(git -C "$d" status --porcelain | wc -l | tr -d ' ')
+  # Read status BEFORE counting. `git ... | wc -l` cannot tell "clean tree" from
+  # "git failed": both give an empty pipe and 0, and 0 is what marks this clone
+  # READY below -- so an unreadable clone would be handed to a new worker as
+  # clean. Fail toward NOTREADY, the same direction the ancestry guard below
+  # fails toward for the same reason.
+  if dirty_out=$(git -C "$d" status --porcelain 2>/dev/null); then
+    dirty=$(printf '%s' "$dirty_out" | grep -c . | tr -d ' ')
+  else
+    dirty="UNREADABLE"
+  fi
   # Count in the CONDUCTOR's object DB: the clone may not have the objects, and
   # its own `origin/main` is stale exactly when it matters. Guard ancestry
   # first -- `A..B` returns a meaningless number when A is not an ancestor of B.
