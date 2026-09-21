@@ -176,8 +176,8 @@ The issue-lead's evaluation found two defects: the PR body said "Closes
 BASE=$(gh pr view --json baseRefName -q .baseRefName)
 git log --format='%B' "origin/$BASE"..HEAD \
   | tr '\n' ' ' \
-  | grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b:?[[:space:]]*((([[:alnum:]._-]+/[[:alnum:]._-]+)?#|GH-)[0-9]+|https?://[^[:space:]]*/issues/[0-9]+)' \
-  | grep -oE '[0-9]+$' | sort -u
+  | /usr/bin/grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?)\b:?[[:space:]]*((([[:alnum:]._-]+/[[:alnum:]._-]+)?#|GH-)[0-9]+|https?://[^[:space:]]*/issues/[0-9]+)' \
+  | /usr/bin/grep -oE '[0-9]+$' | sort -u
 ```
 
 ⛔ **THE `tr '\n' ' '` IS THE ENTIRE POINT AND IT IS NOT DECORATION. `grep` IS LINE-BASED, SO NO PATTERN — INCLUDING `[[:space:]]`, `\s`, OR `[[:space:]]*` — CAN MATCH ACROSS A NEWLINE IN ORDINARY `grep`.** The wrap is the mechanism, so a grep without the `tr` (or without `-Pz`) reads the two halves as unrelated lines and **reports clean on the real defect.**
@@ -196,6 +196,25 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ⭐ **The property that unites all four manglings: a verification harness fails toward AGREEMENT.** A mangled pattern, a stripped-nothing control arm, and a display that eats a character all produce output shaped like confirmation. **A broken gate is loud eventually, because something slips past it. A broken instrument is silent forever, because nobody checks the checker.** That asymmetry is why these asserts are worth their keystrokes and a fifth careful read is not.
 
+⛔ **`/usr/bin/grep` IS PINNED AND THAT IS NOT PEDANTRY — A BARE `grep` ON THIS WORKSTATION IS `ugrep 7.8.4`, WHICH TRUNCATES THIS PATTERN'S ISSUE NUMBER TO ONE DIGIT.** Measured 2026-09-21 on `pax`, this file's own pattern, same input, full pipeline:
+
+| keyword | `/usr/bin/grep` (GNU 3.11) | bare `grep` (ugrep 7.8.4) |
+|---|---|---|
+| `close #2872` | `2872` | **`2`** ⛔ |
+| `fix #2872` | `2872` | **`2`** ⛔ |
+| `resolve #2872` | `2872` | **`2`** ⛔ |
+| the other six forms | `2872` | `2872` |
+
+**It breaks on exactly the three BARE forms — the ones where `[sd]?` / `(e[sd])?` matches empty — and GitHub honours all three.**
+
+⛔ **THE DIRECTION IS WHAT MAKES THIS WORSE THAN A MISS: IT DOES NOT FAIL TO FIRE. IT FIRES AND NAMES THE WRONG ISSUE.** A reader sees `#2`, finds it nonexistent or ancient, and **dismisses a true positive.** That is this file's own *"a check can emit a confident, specific, wrong answer"*, occurring inside the gate that warning is attached to.
+
+⚠ **And "the `closingIssuesReferences` check below is authoritative anyway" is a reason this was survivable, NOT a reason to leave it: a reader who learns the grep lies stops running the STEP, not just the grep — including the authoritative check sitting beside it.** A gate that is both redundant and wrong is worse than either alone.
+
+⭐ **Why the 20-row table below could not catch it, which is the generalisable half: every pre-existing row used a SUFFIXED keyword (`Closes`, `Fixes`, `Resolves:`), because that is what everyone writes.** The fixture set was drawn from the same habit as the code, so the table was green on a machine where three of GitHub's nine keywords were broken. ➡ **GitHub's closing keywords are a CLOSED SET OF NINE. There is now one row per keyword, so the table is complete BY CONSTRUCTION rather than green by what it happens to contain** — and the next engine change is caught mechanically instead of by someone noticing.
+
+⚠ **Two independent readers each tested a SIMPLIFIED pattern first (`grep -oE '#[0-9]+'` and variants), got agreement between the two engines, and were one message from reporting "cannot reproduce" about a real machine-wide defect.** **A negative result about a PROXY, reported as a negative about the ARTIFACT.** ➡ **Extract the pattern from this file; do not test something like it.**
+
 ⚠ **Three details in that pattern are each load-bearing, and all three were added only after a narrower version was tested and found to fail OPEN — silently clean, which is the exact failure mode this gate exists to remove:**
 
 - **`:?`** — GitHub honours `Closes: #N`. Without it, one colon defeats the gate.
@@ -203,7 +222,7 @@ git log --format='%B' "origin/$BASE"..HEAD \
 - **`GH-`** — GitHub honours `GH-123` as an issue reference.
 - **`[0-9]+$`, anchored, not bare `[0-9]+`** — once a URL or `org/repo` is inside the match, an unanchored digit class harvests numbers out of the repo path or the hostname.
 
-**Pinned behaviour — 17 rows, all verified. Re-run the whole table if you touch the command; a row with no artifact behind it is not a pin.**
+**Pinned behaviour — 29 rows, all verified. Re-run the whole table if you touch the command; a row with no artifact behind it is not a pin.** ⚠ *This header said `17` while the table held 20; a pinned table whose own count is stale is the shape the table exists to prevent. Count it when you add to it.*
 
 | input | gate reports | verdict |
 |---|---|---|
@@ -227,6 +246,15 @@ git log --format='%B' "origin/$BASE"..HEAD \
 | **`2672`'s own merge: body cites `#1728`, closes `#2672`** | **`2672`** | ⭐ **the only row sourced from production, not construction** |
 | `discloses #999` | *nothing* | ⭐ **word-boundary guard** |
 | `foreclosed #55` | *nothing* | ⭐ **word-boundary guard** |
+| `close #2872` | `2872` | ⭐ **keyword 1/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `closes #2872` | `2872` | ⭐ **keyword 2/9** — GitHub's closing set is closed; one row each |
+| `closed #2872` | `2872` | ⭐ **keyword 3/9** — GitHub's closing set is closed; one row each |
+| `fix #2872` | `2872` | ⭐ **keyword 4/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `fixes #2872` | `2872` | ⭐ **keyword 5/9** — GitHub's closing set is closed; one row each |
+| `fixed #2872` | `2872` | ⭐ **keyword 6/9** — GitHub's closing set is closed; one row each |
+| `resolve #2872` | `2872` | ⭐ **keyword 7/9** — GitHub's closing set is closed; one row each ⛔ **truncates to `2` under bare `grep`/ugrep** |
+| `resolves #2872` | `2872` | ⭐ **keyword 8/9** — GitHub's closing set is closed; one row each |
+| `resolved #2872` | `2872` | ⭐ **keyword 9/9** — GitHub's closing set is closed; one row each |
 
 ⭐ **The `2672` row is the one to keep if the table is ever trimmed: it is a real merge that landed hours after this gate went in, on precisely the shape that had cost an issue that same morning** — a PR body naming an adjacent issue number while closing only its own. Merge body 3 lines (so `--body` was passed), gate returned `2672` alone, `#1728` still open. **A synthetic row proves the pattern matches; that row proves the safe path was actually taken under pressure.**
 
