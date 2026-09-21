@@ -38,9 +38,20 @@ Measured: identical output to `/usr/bin/find`, gitignored files included. It is 
 substitution, not a semantic one. The consequence is elsewhere: a bare `find` on `pax` *is*
 `bfs`, which is the tool the global `CLAUDE.md` records walking `/fh/fast` for 25 hours.
 
-**Not shell-scoped, so pinning bash does not remove it.** The shadow is injected by the harness,
-not inherited from shell config, and the binary carries a second snapshot generator on the bash
-path (evidence is the binary, not an observed bash snapshot). `CLAUDE_CODE_SHELL` fixes the
-zsh-parsing class in `zsh-colon-modifier.md` and leaves this one untouched. Related but also not
-shell-scoped: `cmd 2>/dev/null | grep -c` reporting `0` for a failed command is POSIX pipeline
-behaviour.
+**Not shell-scoped. `CLAUDE_CODE_SHELL=bash` does not remove it** — the shadow is injected by the
+harness, not inherited from shell config. Verified by reading an actual `snapshot-bash-*.sh`
+produced after the pin landed: it carries the identical `ugrep -G --ignore-files …` and
+`bfs -S dfs …` definitions. Do not read "the Bash tool now runs bash" as "the shim was a zsh
+artifact" and retire the `/usr/bin/grep` habit.
+
+| hazard | fixed by pinning bash? |
+|---|---|
+| zsh `$VAR:` colon modifier (`zsh-colon-modifier.md`) | yes — for sessions started after |
+| zsh not word-splitting an unquoted `$VAR` | yes — same |
+| `grep` → ugrep, `--ignore-files` skipping gitignored | **no — shell-independent** |
+| `find` → bfs | **no — shell-independent** |
+| `cmd \| wc -l` counting a failed command as 0 (`counting-a-failed-command.md`) | **no — POSIX** |
+
+**And the fix reaches new sessions only**, because a snapshot is captured at session start. A
+session running when the pin landed keeps its old shell until it restarts — measured, an
+already-running session still truncated `$c:experiments/x` to `xperiments/x` afterwards.

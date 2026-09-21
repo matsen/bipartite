@@ -39,3 +39,11 @@ wrong answers rather than errors:
 
 Neither is fixed by choosing a shell for this package; they're listed here because the first
 thing a shell-portability question runs into is one of them.
+
+And the shells are not strictly ordered by safety, so don't read the portability rule above as
+"bash is the safe one". Bash reads a script incrementally by byte offset, so editing a file while
+it runs lands in the running process — a longer replacement resumes mid-token, a shorter one
+stops early and silently, and **both exit 0**. Measured on this fleet; zsh did not reproduce the
+silent-early-stop case. Run anything long-lived from a copy outside the worktree
+(`cp s /tmp/s.$$.sh && bash /tmp/s.$$.sh`), which also protects it from a `git checkout` or a
+merge rewriting it underneath.
