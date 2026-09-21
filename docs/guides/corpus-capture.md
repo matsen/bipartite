@@ -1,6 +1,6 @@
 # Corpus capture: why rules land outside the repo, and the plan to fix it
 
-**Status: plan, not doctrine.** Written 2026-09-20 by four sessions (`bip-agent`,
+**Status: plan, not doctrine.** Written 2026-09-20 by five sessions (`bip-agent`,
 `phyz-conductor`, `sf-conductor`, `phyz-epic`, `sf-epic`). Delete this file when the work
 lands; it describes a change, not a convention.
 

@@ -84,21 +84,19 @@ Two failures this exists to prevent, both measured 2026-09-01 in one session:
 - An addressing rule was strengthened in `bip-conductor` but not in `bip-conductor-poll` — which is *deliberately* the copy a mid-cycle conductor reads. The conductor that made the original error was mid-cycle.
 - A generalized gitignore rule in `bip-conductor` never reached the concrete checklist in `bip-conductor-spawn`, so the checklist kept omitting a file that "has bitten a real fleet twice".
 
-**Budget discipline, and it is a gate rather than a preference because as a preference it did not hold.** Prefer a change that is roughly line-neutral — a new rule can usually pay for itself out of the previous rule's justification prose. If you are adding a rule and deleting nothing, check whether you have actually found a *new* fact or are re-litigating one already written down.
+**Budget discipline.** If you are adding a rule and deleting nothing, the question is not how many lines — it is **what does this supersede?** Answer it in the proposal, or say explicitly that nothing does and why the fact is new. That question, not any ratio, is what catches a rule being re-litigated in a second file.
 
-**The finding that converted it is not a ratio, it is that this paragraph was in force the whole time and every author had read it.** A growing corpus that is genuinely accumulating findings runs additive for a while, so no add/delete number settles anything by itself — but a budget the people who wrote it ignored for six days is not a budget. Measured 2026-09-20 over the six days since PR #241 landed (`git diff --numstat 3c5e6cb8..main -- '*.md'`): +1536 / -71 across 12 files, 21.6:1, against an earlier text here that cited 166/7 and asked for restraint. So do not merely intend to be line-neutral — measure, before you write the commit:
+Report the size of **your own change** alongside it, in words, because this corpus is written one paragraph per line and a line count measures newlines rather than context:
 
 ```bash
-cd ~/re/bipartite
-# Your own pending change:
-git diff --numstat -- '*.md' | awk '{a+=$1; d+=$2} END {printf "+%d/-%d\n", a, d}'
-# The recent trend you are adding to (last 30 doc commits):
-git log -30 --numstat --format= -- '*.md' | awk '{a+=$1; d+=$2} END {printf "+%d/-%d = %.1f:1\n", a, d, a/d}'
+git diff HEAD -- '*.md' | grep '^+' | grep -v '^+++' | wc -w   # words you are adding
 ```
 
-If the trend is already above roughly 3:1, a *purely additive* kaizen is the wrong move regardless of how good the new rule is: land it by superseding something, or file it as an issue instead. The compression pass that resets this is `matsen/bipartite#218`, and its reviewer brief is `skills/lib/compression-reviewer-prompt.md`.
+No threshold. A number with a cutoff invites an argument about the cutoff; a number stated next to "what does this supersede?" does not.
 
-**And before compressing a rule, check that anyone can cite an instance of it.** Some of what accumulates is anticipatory — written against a failure nobody has had. That is a candidate for deletion, not for shortening, and a compression pass that only shortens will preserve it while cutting a rule whose evidence was merely already thin.
+**This paragraph previously set a 3:1 line ratio and was wrong three ways, all caught in review of the diff that introduced it** — worth keeping because it is the same failure the rule is about. Its check used `git diff` with no ref, so a *staged* change reported `+0/-0`, fail-open at exactly the moment the instruction said to run it. Its trend command divided by zero — `awk: fatal`, exit 2 — when nothing had been deleted, the precise condition it existed to detect, a crash already catalogued in `EVIDENCE-DISCIPLINE.md`. And measured on its own branch, one file added **782 words in 6 lines and passed** at exactly 3.0:1 while another added 357 words in 42 lines and failed worst: the threshold rewarded the writing style that costs the most context.
+
+**Before compressing a rule, check that anyone can cite an instance of it.** Some of what accumulates is anticipatory — written against a failure nobody has had. That is a candidate for deletion, not for shortening, and a pass that only shortens will preserve it while cutting a rule whose evidence was merely already thin. The compression pass is `matsen/bipartite#218`; its reviewer brief is `skills/lib/compression-reviewer-prompt.md`.
 
 ### Step 3: Propose the fix
 

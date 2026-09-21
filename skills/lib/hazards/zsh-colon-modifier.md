@@ -5,9 +5,10 @@ measured: 2026-09-20
 
 # `$VAR:` in zsh is a modifier site, not string concatenation
 
-**Scope: what a human types in an interactive terminal.** The agent Bash tool can be pinned to
-bash via `CLAUDE_CODE_SHELL` (see `matsen/setup#1`, `#2`), which removes this from tool calls.
-The login shell on these boxes stays zsh either way, so the trap survives the harness fix — it
+**Scope: what a human types in an interactive terminal.** The agent Bash tool *could* be pinned
+to bash via `CLAUDE_CODE_SHELL` — `matsen/setup#1` and `#2`, both **open**, and the variable is
+unset on `pax` today — which would remove this from tool calls.
+The login shell on these boxes stays zsh either way, so the trap survives that fix if it lands — it
 just stops being a harness problem and stays a terminal one.
 
 **Looks right:** `git show $c:path/to/file`, `scp $host:$dir`, any `$VAR:` followed by text.
