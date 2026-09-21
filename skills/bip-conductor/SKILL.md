@@ -789,6 +789,27 @@ The section above is about operations that move `HEAD`. This one needs none: two
 
 ⚠ **The other half is the holder's, and it is the cheaper fix: do not leave an edit staged in a clone you do not own.** Draft into a scratch clone, or commit immediately and coordinate only the push. **A hazard that needs two parties to misstep is closed by either one of them.**
 
+### A running shell script is read incrementally, so editing it changes what it executes mid-flight
+
+This applies to any long-running script, not only fleet tooling. It sits here because the two hazards above are its siblings and because the fleet's version of it is involuntary — but a reader who files it as fleet-only has mis-scoped it.
+
+The two hazards above need a git operation or a commit. This one needs neither, and it does not need a second session either.
+
+`bash` does not read a script into memory. It reads and executes incrementally, tracking a byte offset. Edit a long-running script in place and the running process continues from that offset into whatever is now at it. Measured 2026-09-21, two symptoms:
+
+| replacement | what happens |
+|---|---|
+| **longer** than the original | resumes mid-token inside the new bytes, emits a spurious `command not found`, then executes the new content |
+| **shorter** | stops early — the remaining lines never run, nothing is printed and nothing errors |
+
+**Both exit 0.** A truncated run reports success, so a caller checking the exit status learns nothing.
+
+`zsh` did not reproduce the shorter case in the same test. Do not assume the shell you get is the one you wrote for — a `~/re/setup` change on 2026-09-21 switches Claude Code's Bash tool from zsh to bash, so scripts written under one are now running under the other.
+
+Run any long-lived script from an immutable copy outside the worktree: `cp watch.sh /tmp/watch.$$.sh && bash /tmp/watch.$$.sh` costs nothing and removes the hazard entirely.
+
+⭐ **The fleet has the precondition everywhere, and the edit is often involuntary — which is what earns this its own entry rather than a note on "be careful editing scripts."** A sweep, poller or driver wrapper living in a pooled clone can have its bytes rewritten by machinery nobody thinks of as editing it: `/bip-conductor-spawn`'s prep runs `git checkout main` in a clone being reassigned, and `/bip-pr-land` rewrites the tree at merge. **The party whose script changes is not the party who changed it.**
+
 
 ### Unattended scheduled load is invisible to a worker and it will blame itself
 
@@ -1067,6 +1088,10 @@ EXTRA="--param diag.bl_persist=1"
 ⚠ **Neither the `[m]ake` bracket trick nor `>/dev/null 2>&1` helps.** The bracket only stops `grep` matching its *own* argv; it says nothing about other processes' argv and nothing about the waiter's own cmdline.
 
 ⛔ **AND THE SIBLING THIS BLOCK USED TO OMIT: `pgrep` WITHOUT `-u $(id -u)` ON A SHARED HOST MATCHES OTHER USERS' PROCESSES.** Not self-matching — *cross-user* matching — and it fails in the same direction, toward "still running." The orca hosts and `/fh/fast` boxes are shared; `pgrep -x phyz` there answers *"is anyone's phyz running"*, not yours. **Scope every remote process check with `-u $(id -u)`, and attribute by `/proc/<pid>/cwd` as above.** Measured 2026-09-15: a conductor's own watch for a worker's sweep matched a different user's snakemake and was structurally unable to report the stop.
+
+⛔ **The prescribed discriminator silently fails on exactly the processes it exists to exclude: you cannot read `/proc/<pid>/cwd` for another user's process.** It does not error in a way a script notices — no output, and a non-zero status that `$(...)` swallows — so an unreadable cwd reads as *unknown* rather than as *foreign*, and a checker that sums the unknowns into its own count is wrong in the dangerous direction. **Treat an unreadable cwd as FOREIGN, and report own-versus-foreign counts separately rather than summing them.** Verified 2026-09-21: `readlink /proc/<other-user-pid>/cwd` exits 1 with no output; the same call on one's own pid returns the path.
+
+Measured 2026-09-21 on conatus: a run monitor testing its driver-gone branch found three processes matching `nextflow-.*-one.jar run`, two of them other users', both with unreadable cwd. Its alarm would have reported a stranger's job as our own healthy relaunch. **The consequence is worse than the 2026-09-15 instance above: that one was a monitor unable to report a STOP; this is a monitor reporting a corrupted all-clear on its most important branch.** A missed alarm is survivable; a false reassurance is not.
 
 ⛔ **AND IT IS NOT CONFINED TO LOOPS. A ONE-SHOT `pgrep -f` ASKING "IS X STILL RUNNING" RETURNS AN OFF-BY-ONE THAT INFLATES THE COUNT, AND THERE IS NO SYMPTOM AT ALL.** The deadlock above is the LOUD version of this bug; **the silent count is the one a human reads and believes.** ⚠ **`pgrep -c` makes it strictly worse, because it discards the pids that would have shown you the problem.**
 
