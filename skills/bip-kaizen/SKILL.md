@@ -191,12 +191,24 @@ gh pr create --title "kaizen: <description>" --body "..."
   grep -v 'emphasis-budget-exempt' <file> | grep -oE '⭐|⛔|⚠|➡' | wc -l
   ```
 
-  ⏳ is exempt from this budget only when followed by a ROUTING TARGET — a named reviewer, a dated
-  re-check, or a condition that resolves it. Layer 2 of `docs/guides/corpus-capture.md` defines it
-  as routing syntax (`⏳ PROMOTE → <path>`), addressed to a drain script rather than to a reader,
-  which is why the grep above does not count it. An unrouted ⏳ is a warning marker wearing the
-  wrong glyph: it marks provisionality and hands the reader nowhere to take it. When there is no
-  route, use the ordinary warning glyph and say what is unestablished. <!-- emphasis-budget-exempt -->
+  ⏳ is exempt from this budget only in the literal form `⏳ … → <target>`. **The `→` is the rule,
+  not an illustration of it** — so the exemption is a grep rather than a judgement:
+
+  ```bash
+  grep -o "⏳[^→]*→" <file> | wc -l      # routed, exempt
+  grep -o "⏳" <file> | wc -l            # every ⏳; the difference counts against the budget
+  ```
+
+  `docs/guides/corpus-capture.md:84` defines the syntax and says so outright — *"`⏳ PROMOTE →
+  docs/ml/369-method.md` on the line or block. That is the entire syntax."* It is addressed to a
+  drain script rather than to a reader, **and a drain script cannot parse "a condition that
+  resolves it"** — which is why an earlier draft of this rule, describing the target in prose as
+  *"a named reviewer, a dated re-check, or a condition that resolves it"*, did not hold: `SUNSET`
+  in words could be argued to satisfy it, so a re-marked line could re-acquire ⏳ on the same
+  reasoning that removed it. A marker rule needing judgement to apply is just more prose.
+  An unrouted ⏳ is a warning marker wearing the wrong glyph: it marks provisionality and hands the
+  reader nowhere to take it. When there is no route, use the ordinary warning glyph and say what is
+  unestablished. <!-- emphasis-budget-exempt -->
 
   This rule landed with its own population already clean, deliberately. Measured 2026-09-21: all
   three ⏳ in `skills/bip-conductor/SKILL.md` were unrouted (`grep -o "⏳" | wc -l` → 3;
