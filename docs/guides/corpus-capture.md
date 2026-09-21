@@ -111,19 +111,38 @@ partly, 3 pure judgement. But measure **bytes per rule, not rules**, and the pic
 the mechanisable ones are the biggest, and the pure-judgement ones are 791, 1,709 and 1,820
 bytes.
 
-`skills/bip-epic/SKILL.md`, 97,580 bytes, 29 sections. The top two are **31% of the file** and
-both are a command plus its regression suite, written out as prose:
+`skills/bip-epic/SKILL.md`, 97,580 bytes at the time of writing, 29 sections. Its top two are
+**31% of the file** — but an independent review of the first issue drafted against this layer
+found that framing overstated it, and the correction is the useful part:
 
-| bytes | section | is really |
+| bytes | section | mechanisable |
 |---|---|---|
-| 15,116 | Step 4b: File-overlap collision detection | `bip collide <branch>...` |
-| 15,086 | EPIC body update pattern | `bip epic-edit <issue> --body-file X` |
+| 15,117 | Step 4b: File-overlap collision detection | **~2,500 (17%)** — the `git grep -ln <SYMBOL>` blast-radius block |
+| 15,086 | EPIC body update pattern | not yet measured; assume less than it looks |
+
+**Step 4b contains no fenced command block at all** (measured: 0 bytes), and ~10,500 of its bytes
+are an argument that the check *cannot* be completed from where it is invoked — it hands
+live-branch intersection to `/bip-conductor` as *"not a courtesy hand-off; it is the only
+implementation"*, names a collision class it is *"structurally blind to"*, and says outright there
+is *"no cheap detector"*. None of that is procedure and none of it can become a command.
+
+**And Phase 1 of that draft already exists**: `skills/lib/fleet-collisions.sh` implements the
+live-clone overlap check, with a three-valued exit (`0` clear / `1` found / `2` could not check),
+merge-base rather than two-dot diffs, rename and whitespace-safe path handling, and printed
+denominators. The draft specified a binary exit and would have re-introduced a fail-open the
+script's header exists to prevent. So the honest version of this layer is **port
+`fleet-collisions.sh` to Go and replace the 2,494-byte symbol block in the same PR**, not
+"turn Step 4b into a command".
 
 - **`bip epic-edit`** — pull, record `updatedAt`, guard *with the emptiness null-check*, push,
-  verify read-back length and tail.
-- **`bip collide`** — pairwise `git diff --name-only main...<branch>`, intersect,
-  `git merge-tree`, hunk-position report, and `git grep -ln <SYMBOL>` blast radius split into
-  code hits versus prose hits.
+  verify read-back length and tail. Measure its mechanisable fraction before committing to it.
+- **`bip collide`** — a port of `skills/lib/fleet-collisions.sh`, preserving its exit contract,
+  plus `git grep -ln <SYMBOL>` blast radius split into code hits versus prose hits.
+
+⚠ **The general lesson, which outlives this layer: "31% of the file is two sections" is a size
+measurement, and it was read as a mechanisability measurement.** Before proposing a command,
+measure what fraction of the target section is procedure — and grep for an existing
+implementation, which `/bip-kaizen` Step 2b already requires and the first draft here skipped.
 
 **A mechanisable rule that fires tonight lands as a test case, not a paragraph.** A test is
 ungated (nobody reviews doctrine to add one), tracked, and runs instead of needing to be read
