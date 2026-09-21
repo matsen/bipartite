@@ -93,6 +93,43 @@ type LandedCheck struct {
 	Reason string
 }
 
+// PoolScope is the universe a Collide run examines. It exists because
+// "every directory under the clone root" is the WRONG population, and a
+// check at full power over the wrong population is worse than no check.
+//
+// Measured 2026-09-21 on matsengrp/phyz's ~/re/pz: 21 directories against
+// 17 entries in clone_names. One was a foreign clone (caught by the origin
+// test), one was not a clone at all, and two — `nightly-ci` and
+// `beagle-weekly-ci` — were genuine clones of the same origin that no
+// worker is ever spawned into. Each is named in a systemd unit and does
+// `git fetch && git reset --hard origin/main` at run time, so a moving HEAD
+// there is the EXPECTED state. A collision reported against one of them
+// cannot involve a worker, and a conductor's action on a reported collision
+// is to delay or resequence a spawn — so the false positive costs a stalled
+// slot for a reason nobody can reproduce.
+//
+// `skills/bip-conductor/SKILL.md` already records this for the sibling
+// currency sweep: "Its universe is clone_names from .epic-config.json, NOT
+// every directory under clone_root, and that is deliberate."
+type PoolScope struct {
+	// Root is the pool root. Never defaulted; an empty Root is an error.
+	Root string
+	// Names, when non-empty, is the authoritative slot list. Directories
+	// under Root that are not in it are reported as unmanaged and never
+	// gated on. When empty, every non-dot directory under Root is a
+	// candidate — the only available rule when there is no config to read.
+	Names []string
+}
+
+// Rule describes the universe in one line, for the report to print. A
+// reader cannot otherwise tell which of the two populations was examined.
+func (p PoolScope) Rule() string {
+	if len(p.Names) > 0 {
+		return fmt.Sprintf("clone_names from .epic-config.json (%d slots)", len(p.Names))
+	}
+	return "every directory under the root (no clone_names available)"
+}
+
 // Report is the full result of one Collide run over one clone pool.
 type Report struct {
 	// Root is the pool root that was actually examined. It is never
@@ -111,6 +148,17 @@ type Report struct {
 	// NotClones lists directories with no .git entry at all — pool
 	// machinery (.spawn-prompts/, .preserved/) that is not a slot.
 	NotClones []string
+	// ScopeRule is the universe rule that was applied, printed so a reader
+	// can tell which population was examined.
+	ScopeRule string
+	// Unmanaged lists directories present under Root but absent from
+	// clone_names — CI clones and hand checkouts. Informational, never
+	// gated on, and never compared against anything.
+	Unmanaged []string
+	// Missing lists clone_names entries with no directory. Informational:
+	// a slot that does not exist cannot hold a branch, and a brand-new
+	// pool legitimately has several.
+	Missing []string
 
 	Live       []CloneTouch
 	Collisions []Collision
@@ -285,7 +333,8 @@ func resolveBranch(dir, gitDir string) (branch string, midRebase bool, backend s
 // Everything else — an unreadable clone, a missing remote ref, a branch
 // with nothing to compare — lands in Report.Problems, so the caller gets a
 // verdict rather than an error for conditions that mean "could not check".
-func Collide(root string) (*Report, error) {
+func Collide(scope PoolScope) (*Report, error) {
+	root := scope.Root
 	if strings.TrimSpace(root) == "" {
 		return nil, fmt.Errorf("empty clone root: an empty root is not a root")
 	}
@@ -297,10 +346,36 @@ func Collide(root string) (*Report, error) {
 		return nil, fmt.Errorf("clone root %s is not a directory", root)
 	}
 
-	rep := &Report{Root: root}
+	rep := &Report{Root: root, ScopeRule: scope.Rule()}
 	dirs, err := ListPoolDirs(root)
 	if err != nil {
 		return nil, err
+	}
+	// Narrow to the declared slots when there are any. The emptiness check
+	// below reads the SAME slice as the loops, so the guard and the loop
+	// cannot disagree about what counts as a clone.
+	if len(scope.Names) > 0 {
+		declared := make(map[string]bool, len(scope.Names))
+		for _, n := range scope.Names {
+			declared[n] = true
+		}
+		present := map[string]bool{}
+		var kept []string
+		for _, d := range dirs {
+			name := filepath.Base(d)
+			present[name] = true
+			if declared[name] {
+				kept = append(kept, d)
+			} else {
+				rep.Unmanaged = append(rep.Unmanaged, name)
+			}
+		}
+		for _, n := range scope.Names {
+			if !present[n] {
+				rep.Missing = append(rep.Missing, n)
+			}
+		}
+		dirs = kept
 	}
 	rep.Pool = dirs
 	if len(dirs) == 0 {

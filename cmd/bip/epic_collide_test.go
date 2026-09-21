@@ -18,34 +18,34 @@ func writeConfig(t *testing.T, dir, body string) {
 	}
 }
 
-// TestResolveCollideRoot_NeverDefaults is the fix this command exists for.
+// TestResolveCollideScope_NeverDefaults is the fix this command exists for.
 // `ROOT="${1:-$HOME/re/pz}"` substitutes on unset OR EMPTY, so an
 // unparseable .epic-config.json made an explicitly-passed root evaporate
 // into another repository's clone pool — and returned a populated,
 // well-formed, entirely plausible report about the wrong fleet. Every case
 // below must fail to resolve rather than resolve to something else.
-func TestResolveCollideRoot_NeverDefaults(t *testing.T) {
+func TestResolveCollideScope_NeverDefaults(t *testing.T) {
 	t.Run("unparseable config", func(t *testing.T) {
 		cwd := t.TempDir()
 		writeConfig(t, cwd, "{ this is not json")
-		root, _, err := resolveCollideRoot("", false, cwd)
+		scope, _, err := resolveCollideScope("", false, cwd)
 		if err == nil {
-			t.Fatalf("resolved %q from an unparseable config; want could-not-check", root)
+			t.Fatalf("resolved %q from an unparseable config; want could-not-check", scope.Root)
 		}
 	})
 
 	t.Run("no config at all", func(t *testing.T) {
 		cwd := t.TempDir()
-		if root, _, err := resolveCollideRoot("", false, cwd); err == nil {
-			t.Fatalf("resolved %q with no config present", root)
+		if scope, _, err := resolveCollideScope("", false, cwd); err == nil {
+			t.Fatalf("resolved %q with no config present", scope.Root)
 		}
 	})
 
 	t.Run("config with no clone_root", func(t *testing.T) {
 		cwd := t.TempDir()
 		writeConfig(t, cwd, `{"clone_names": ["alpha"]}`)
-		if root, _, err := resolveCollideRoot("", false, cwd); err == nil {
-			t.Fatalf("resolved %q from a config with no clone_root", root)
+		if scope, _, err := resolveCollideScope("", false, cwd); err == nil {
+			t.Fatalf("resolved %q from a config with no clone_root", scope.Root)
 		}
 	})
 
@@ -55,9 +55,9 @@ func TestResolveCollideRoot_NeverDefaults(t *testing.T) {
 		// must not silently fall through to it either.
 		writeConfig(t, cwd, `{"clone_root": "/somewhere/else", "clone_names": ["alpha"]}`)
 		for _, given := range []string{"", "   "} {
-			root, _, err := resolveCollideRoot(given, true, cwd)
+			scope, _, err := resolveCollideScope(given, true, cwd)
 			if err == nil {
-				t.Errorf("--root %q resolved to %q; an empty root is not a root", given, root)
+				t.Errorf("--root %q resolved to %q; an empty root is not a root", given, scope.Root)
 			}
 		}
 	})
@@ -66,27 +66,41 @@ func TestResolveCollideRoot_NeverDefaults(t *testing.T) {
 		cwd := t.TempDir()
 		pool := filepath.Join(cwd, "pool")
 		writeConfig(t, cwd, `{"clone_root": "`+pool+`", "clone_names": ["alpha"]}`)
-		root, source, err := resolveCollideRoot("", false, cwd)
+		scope, source, err := resolveCollideScope("", false, cwd)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if root != pool {
-			t.Errorf("root = %q, want %q", root, pool)
+		if scope.Root != pool {
+			t.Errorf("root = %q, want %q", scope.Root, pool)
 		}
 		if !strings.Contains(source, epicConfigName) {
 			t.Errorf("source = %q, want it to name %s", source, epicConfigName)
+		}
+		// clone_names is the authoritative slot list, and it must reach the
+		// scope: every directory under the root is the WRONG population.
+		if strings.Join(scope.Names, " ") != "alpha" {
+			t.Errorf("scope.Names = %v, want the config's clone_names", scope.Names)
+		}
+		if !strings.Contains(scope.Rule(), "clone_names") {
+			t.Errorf("scope.Rule() = %q, want it to name the universe applied", scope.Rule())
 		}
 	})
 
 	t.Run("explicit root wins", func(t *testing.T) {
 		cwd := t.TempDir()
 		writeConfig(t, cwd, `{"clone_root": "/from/config", "clone_names": ["alpha"]}`)
-		root, source, err := resolveCollideRoot("/from/flag", true, cwd)
+		scope, source, err := resolveCollideScope("/from/flag", true, cwd)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if root != "/from/flag" || source != "--root" {
-			t.Errorf("root = %q source = %q, want /from/flag from --root", root, source)
+		if scope.Root != "/from/flag" || source != "--root" {
+			t.Errorf("root = %q source = %q, want /from/flag from --root", scope.Root, source)
+		}
+		// An explicit root may not be the pool this config describes, so
+		// carrying its clone_names across would be a worse error than
+		// having none.
+		if len(scope.Names) != 0 {
+			t.Errorf("scope.Names = %v, want empty for an explicit --root", scope.Names)
 		}
 	})
 }

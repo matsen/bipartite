@@ -40,11 +40,23 @@ under shared_filesystem: false, and remote refs are not a substitute --
 under squash-merge every historical branch stays permanently ahead of main.
 The decisive case is UNCOMMITTED work, which exists only in the clone.
 
-SCOPE IS DERIVED, NEVER DEFAULTED. With no --root, the pool root comes from
-clone_root in .epic-config.json in the current directory; if that cannot be
-resolved the command exits "could not check" rather than scanning anything.
-An empty --root is an error, not a root. The resolved root is the first line
-of output -- read it before reading the report.
+SCOPE IS DERIVED, NEVER DEFAULTED, AND IT HAS TWO HALVES. With no --root,
+the pool root comes from clone_root in .epic-config.json in the current
+directory; if that cannot be resolved the command exits "could not check"
+rather than scanning anything. An empty --root is an error, not a root.
+
+The second half is the UNIVERSE: which directories under that root are
+slots. clone_names from the same config is authoritative where it exists,
+because a pool also holds clones nobody spawns into -- CI clones that reset
+hard to origin/main at run time, a pinned dependency checkout -- and a
+collision reported against one of those cannot involve a worker. They
+are listed as unmanaged and never compared. Without clone_names (worktree
+mode, or an explicit --root that may not be this config's pool) every
+non-dot directory is a candidate, and clones of other repositories are
+excluded by comparing origin against the pool's modal origin.
+
+Both halves are on the first line of output -- read it before reading the
+report.
 
 Exit codes:
 
@@ -125,7 +137,7 @@ func runEpicCollide(cmd *cobra.Command, args []string) error {
 // whole report to w. Split out from runEpicCollide so the verdict-to-exit-
 // code mapping and the scope line are testable without a subprocess.
 func collideMain(w io.Writer, rootFlag string, rootGiven bool, cwd string) int {
-	root, source, err := resolveCollideRoot(rootFlag, rootGiven, cwd)
+	scope, source, err := resolveCollideScope(rootFlag, rootGiven, cwd)
 	if err != nil {
 		// Scope failures are "could not check", never a scan of some other
 		// directory. This is the whole reason the command exists: the shell
@@ -137,10 +149,12 @@ func collideMain(w io.Writer, rootFlag string, rootGiven bool, cwd string) int {
 		return ExitCollisionUncheckable
 	}
 	// Printed before the check runs, and first: it is the cheapest possible
-	// confirmation that you measured your own fleet.
-	fmt.Fprintf(w, "scope: clone_root=%s (%s)\n", root, source)
+	// confirmation that you measured your own fleet. The universe rule is
+	// on the same line because "which directories" is half the scope — a
+	// right root with the wrong population is still the wrong answer.
+	fmt.Fprintf(w, "scope: clone_root=%s (%s); universe=%s\n", scope.Root, source, scope.Rule())
 
-	rep, err := gitx.Collide(root)
+	rep, err := gitx.Collide(scope)
 	if err != nil {
 		fmt.Fprintf(w, "cannot examine pool: %v\n", err)
 		fmt.Fprintf(w, "verdict: %s\n", gitx.VerdictUncheckable)
@@ -157,13 +171,19 @@ func collideMain(w io.Writer, rootFlag string, rootGiven bool, cwd string) int {
 	return ExitSuccess
 }
 
-// resolveCollideRoot resolves the clone-pool root to examine. It is a pure
-// function of its arguments so the no-default guarantee is testable.
+// resolveCollideScope resolves BOTH halves of the scope: the pool root and
+// the universe of directories under it. It is a pure function of its
+// arguments so the no-default guarantee is testable.
 //
-// Precedence: an explicit --root, then clone_root from .epic-config.json in
-// cwd. There is no third case — no hardcoded pool, and no fallback when the
-// config is unreadable.
-func resolveCollideRoot(rootFlag string, rootGiven bool, cwd string) (root, source string, err error) {
+// Precedence: an explicit --root, then .epic-config.json in cwd. There is no
+// third case — no hardcoded pool, and no fallback when the config is
+// unreadable.
+//
+// An explicit --root implies directory discovery, because that root may not
+// be the pool the local config describes and clone_names from a different
+// pool would be a worse error than no clone_names at all. The no-argument
+// form is the one to prefer.
+func resolveCollideScope(rootFlag string, rootGiven bool, cwd string) (scope gitx.PoolScope, source string, err error) {
 	if rootGiven {
 		// Checked separately from "not given" on purpose. The shell
 		// `${1:-default}` form substitutes on unset OR EMPTY, so an
@@ -171,27 +191,30 @@ func resolveCollideRoot(rootFlag string, rootGiven bool, cwd string) (root, sour
 		// the default — and the reassuring answer about the wrong fleet is
 		// what came back.
 		if strings.TrimSpace(rootFlag) == "" {
-			return "", "", fmt.Errorf("--root was given an empty value; an empty root is not a root")
+			return scope, "", fmt.Errorf("--root was given an empty value; an empty root is not a root")
 		}
-		root = config.ExpandTilde(rootFlag)
+		root := config.ExpandTilde(rootFlag)
 		if !filepath.IsAbs(root) {
 			root = filepath.Join(cwd, root)
 		}
-		return root, "--root", nil
+		return gitx.PoolScope{Root: root}, "--root", nil
 	}
 
 	cfg, cfgErr := loadEpicConfig(cwd)
 	if cfgErr != nil {
-		return "", "", fmt.Errorf("no --root and cannot read a clone_root: %w", cfgErr)
+		return scope, "", fmt.Errorf("no --root and cannot read a clone_root: %w", cfgErr)
 	}
-	root = config.ExpandTilde(cfg.CloneRoot)
+	root := config.ExpandTilde(cfg.CloneRoot)
 	if !filepath.IsAbs(root) {
 		root = filepath.Join(cwd, root)
 	}
 	if strings.TrimSpace(root) == "" {
-		return "", "", fmt.Errorf("clone_root in %s resolved to an empty path", epicConfigName)
+		return scope, "", fmt.Errorf("clone_root in %s resolved to an empty path", epicConfigName)
 	}
-	return root, "from " + epicConfigName, nil
+	// clone_names is the authoritative slot list where it exists. In
+	// worktree mode there is none, and directory discovery is correct
+	// there: every issue-* subdirectory IS a slot.
+	return gitx.PoolScope{Root: root, Names: cfg.CloneNames}, "from " + epicConfigName, nil
 }
 
 // renderCollideReport writes the human-readable report. Every section
@@ -208,6 +231,15 @@ func renderCollideReport(w io.Writer, rep *gitx.Report) {
 		fmt.Fprintf(w, ", %d not clones (%s)", len(rep.NotClones), strings.Join(rep.NotClones, " "))
 	}
 	fmt.Fprintln(w)
+	// Informational, never gated on: these are outside the universe, so a
+	// report that did not mention them would look like it had examined
+	// them. Named after the sibling currency sweep's own label.
+	if len(rep.Unmanaged) > 0 {
+		fmt.Fprintf(w, "  (unmanaged, not compared: %s)\n", strings.Join(rep.Unmanaged, " "))
+	}
+	if len(rep.Missing) > 0 {
+		fmt.Fprintf(w, "  (declared but absent: %s)\n", strings.Join(rep.Missing, " "))
+	}
 
 	if rep.Empty {
 		// A pool root that exists and holds no clones is a legitimate state

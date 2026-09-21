@@ -125,11 +125,11 @@ func landedFor(t *testing.T, rep *Report, name string) LandedCheck {
 	return LandedCheck{}
 }
 
-func mustCollide(t *testing.T, root string) *Report {
+func mustCollide(t *testing.T, root string, names ...string) *Report {
 	t.Helper()
-	rep, err := Collide(root)
+	rep, err := Collide(PoolScope{Root: root, Names: names})
 	if err != nil {
-		t.Fatalf("Collide(%s): %v", root, err)
+		t.Fatalf("Collide(%s, %v): %v", root, names, err)
 	}
 	return rep
 }
@@ -482,11 +482,11 @@ func TestCollide_EmptyPoolRoot(t *testing.T) {
 // another repository's clone pool.
 func TestCollide_EmptyRootIsNotARoot(t *testing.T) {
 	for _, root := range []string{"", "   "} {
-		if _, err := Collide(root); err == nil {
+		if _, err := Collide(PoolScope{Root: root}); err == nil {
 			t.Errorf("Collide(%q) succeeded; an empty root is not a root", root)
 		}
 	}
-	if _, err := Collide(filepath.Join(t.TempDir(), "nope")); err == nil {
+	if _, err := Collide(PoolScope{Root: filepath.Join(t.TempDir(), "nope")}); err == nil {
 		t.Error("Collide on a nonexistent root succeeded; want an error the caller maps to could-not-check")
 	}
 }
@@ -674,4 +674,63 @@ func TestCollide_MidRebaseUnpushedIsUncheckable(t *testing.T) {
 	if v := rep.Verdict(); v != VerdictUncheckable {
 		t.Errorf("verdict = %v, want could-not-check", v)
 	}
+}
+
+// TestCollide_ScopedToCloneNames fails against a check that examines every
+// directory under the pool root. Measured 2026-09-21 on matsengrp/phyz's
+// ~/re/pz: 21 directories against 17 clone_names, and two of the extras
+// (`nightly-ci`, `beagle-weekly-ci`) are GENUINE clones of the same origin
+// that no worker is ever spawned into — each is named in a systemd unit and
+// does `git fetch && git reset --hard origin/main` at run time, so a moving
+// HEAD there is the expected state. A conductor's action on a reported
+// collision is to delay or resequence a spawn, so a false positive against
+// one of them costs a stalled slot for a reason nobody can reproduce.
+//
+// The second half of the test is the load-bearing one: with no clone_names
+// the same fixture DOES report the collision, so this is a scoping
+// behaviour rather than an accident of the fixture.
+func TestCollide_ScopedToCloneNames(t *testing.T) {
+	p := newPool(t)
+	p.landOnMain(t, "seed", map[string]string{"shared.md": "base\n"})
+	a := p.clone(t, "alpha")
+	branchWith(t, a, "a-work", map[string]string{"shared.md": "from a\n"})
+	p.clone(t, "bravo") // declared, on main, touches nothing
+	// A real clone of the same origin, on a live branch touching the same
+	// file — and deliberately not a slot.
+	ci := p.clone(t, "nightly-ci")
+	branchWith(t, ci, "ci-work", map[string]string{"shared.md": "from ci\n"})
+
+	t.Run("declared slots only", func(t *testing.T) {
+		rep := mustCollide(t, p.root, "alpha", "bravo", "charlie")
+		if len(rep.Collisions) != 0 {
+			t.Errorf("collisions = %+v, want none: nightly-ci is not a slot and cannot collide with a worker", rep.Collisions)
+		}
+		if strings.Join(rep.Unmanaged, " ") != "nightly-ci" {
+			t.Errorf("Unmanaged = %v, want nightly-ci reported informationally rather than compared", rep.Unmanaged)
+		}
+		if _, ok := touchedBy(rep, "nightly-ci"); ok {
+			t.Error("nightly-ci appears in the live-branch section; it is outside the universe")
+		}
+		// A declared slot with no directory is informational: a slot that
+		// does not exist cannot hold a branch, and a new pool has several.
+		if strings.Join(rep.Missing, " ") != "charlie" {
+			t.Errorf("Missing = %v, want charlie named so the reader can see the declared-but-absent slot", rep.Missing)
+		}
+		if !strings.Contains(rep.ScopeRule, "clone_names") {
+			t.Errorf("ScopeRule = %q, want it to name the universe applied", rep.ScopeRule)
+		}
+		if v := rep.Verdict(); v != VerdictClear {
+			t.Errorf("verdict = %v, want clear; problems=%v", v, rep.Problems)
+		}
+	})
+
+	t.Run("no clone_names falls back to discovery", func(t *testing.T) {
+		rep := mustCollide(t, p.root)
+		if len(rep.Collisions) != 1 || rep.Collisions[0].File != "shared.md" {
+			t.Fatalf("collisions = %+v, want shared.md — without clone_names every directory is a candidate", rep.Collisions)
+		}
+		if !strings.Contains(rep.ScopeRule, "every directory") {
+			t.Errorf("ScopeRule = %q, want it to say the universe was directory discovery", rep.ScopeRule)
+		}
+	})
 }

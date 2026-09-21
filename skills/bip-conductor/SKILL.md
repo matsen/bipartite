@@ -739,11 +739,23 @@ under shared_filesystem: false, and remote refs are not a substitute --
 under squash-merge every historical branch stays permanently ahead of main.
 The decisive case is UNCOMMITTED work, which exists only in the clone.
 
-SCOPE IS DERIVED, NEVER DEFAULTED. With no --root, the pool root comes from
-clone_root in .epic-config.json in the current directory; if that cannot be
-resolved the command exits "could not check" rather than scanning anything.
-An empty --root is an error, not a root. The resolved root is the first line
-of output -- read it before reading the report.
+SCOPE IS DERIVED, NEVER DEFAULTED, AND IT HAS TWO HALVES. With no --root,
+the pool root comes from clone_root in .epic-config.json in the current
+directory; if that cannot be resolved the command exits "could not check"
+rather than scanning anything. An empty --root is an error, not a root.
+
+The second half is the UNIVERSE: which directories under that root are
+slots. clone_names from the same config is authoritative where it exists,
+because a pool also holds clones nobody spawns into -- CI clones that reset
+hard to origin/main at run time, a pinned dependency checkout -- and a
+collision reported against one of those cannot involve a worker. They
+are listed as unmanaged and never compared. Without clone_names (worktree
+mode, or an explicit --root that may not be this config's pool) every
+non-dot directory is a candidate, and clones of other repositories are
+excluded by comparing origin against the pool's modal origin.
+
+Both halves are on the first line of output -- read it before reading the
+report.
 
 Exit codes:
 
@@ -800,7 +812,29 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json) || exit 1
 ```
 
 ⛔ **READ THE `scope:` LINE BEFORE READING THE REPORT.** It is the cheapest possible check that you
-measured your own fleet, and it is first for that reason.
+measured your own fleet, and it is first for that reason. It carries **both halves of the scope** —
+the root and the universe:
+
+```
+scope: clone_root=/home/matsen/re/pz (from .epic-config.json); universe=clone_names from .epic-config.json (17 slots)
+```
+
+⛔ **THE UNIVERSE IS `clone_names`, NOT EVERY DIRECTORY UNDER THE ROOT, AND THE FIRST RUN AGAINST A
+REAL POOL IS WHAT ESTABLISHED THAT.** Measured 2026-09-21 on `~/re/pz`: **21 directories against 17
+`clone_names`.** One was a foreign clone (excluded by the origin test), one was not a clone, and two
+— `nightly-ci` and `beagle-weekly-ci` — were **genuine `matsengrp/phyz` clones that no worker is
+ever spawned into.** Each is named in a systemd unit and resets hard to `origin/main` at run time,
+so a moving HEAD there is the **expected** state. ⚠ **A collision reported against one of them
+cannot involve a worker, and your action on a reported collision is to delay or resequence a
+spawn** — so the false positive costs a stalled slot for a reason nobody can reproduce. They are
+listed as `(unmanaged, not compared: ...)` and never gated on, which is the same treatment
+`clone-currency.sh` gives them and for the same reason.
+
+⭐ **That defect existed in this command until the conductor ran it against a 17-slot pool and read
+the first line.** The synthetic fixtures were all clean, and the issue that specified the command
+said to use *"the same universe as the script"* — which was every directory. ➡ **The fleet-scale
+run is not a formality after the tests pass; it is the only thing that had the wrong population in
+it.**
 
 ⛔ **`11` from the command, and `2` from the script, mean "could not check" and must NOT be read as
 clear.** Both dominate their "found" code structurally, because a caller acting on *found* believes
