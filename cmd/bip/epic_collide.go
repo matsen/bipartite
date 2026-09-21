@@ -77,6 +77,21 @@ the last stage's.
 The global --human flag has no effect here: this command's output is a
 report in both modes, and the exit code is the machine-readable verdict.
 
+KNOWN LIMITATION, issue #255: liveness is decided from the branch name
+alone, so a branch whose PR has already MERGED still counts as live. Under
+squash-merge every commit on such a branch reads as unmerged, so the residual
+branch in a not-yet-reclaimed clone is reported forever -- as a false
+collision in section 2, and as a false OVERLAPS-LANDED in section 3 whose
+printed remedy is to rebase a branch that no longer has a purpose. This has
+caught two conductors. Until #255 lands, check PR state before acting on any
+reported overlap:
+
+  gh pr list --state merged --head <branch> --json number,mergedAt
+
+A non-empty result means that branch is dead and its report lines are
+artifacts. Commit-identity checks do not work here: squash-merge guarantees
+git cherry confirms the wrong answer with full confidence.
+
 With --symbol, the command reports a symbol's blast radius in the current
 repository instead of checking the pool: the tracked files naming it, split
 into code, prose and data hits, stamped with the commit and time the count

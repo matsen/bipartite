@@ -250,7 +250,19 @@ Whether a correction needs this channel at all, and whether it's durable or tran
 - `SendMessage` only reaches addressable Claude sessions (tmux Claude windows on this machine, or connected cloud/Remote Control sessions) — never a plain shell, a remote SSH job, or a non-Claude compute node.
   Run `ListAgents` first to confirm the target session is actually addressable; fall back to the file-only correction (a `conductor_guidance` field or a `lead_notes` entry tagged `source: conductor` — never `lead_guidance`) and wait for the worker's own loop when it isn't.
   **The address is whatever `ListAgents` reports for that session — read it off its row, or off the message you are replying to, and never compose it.** Workers sign their own completion pushes with their own address, so that signature is the address to reply to. The bare clone name is never an address.
-  **Two naming schemes can coexist, which is why the rule is to read the address rather than derive it.** ⛔ **Do not infer which scheme applies from how the session was started — verify it against the INSTALLED binary or do not rely on it.** `bip spawn` *can* pass `--name '<windowName>'` (bipartite #241), which makes a worker answer to its tmux window name; a session started any other way — including this conductor and the epic — gets an auto-derived `<cwd>-<suffix>`. ⚠ **Measured 2026-09-19 on `pax`: four addresses composed from window names bounced in one evening, so workers were answering to `<cwd>-<suffix>`.** ⛔ **The mechanism first recorded for that is WRONG and the check it rested on is unsound — corrected 2026-09-21 rather than re-qualified.** The original read `strings ~/go/bin/bip | grep -cE '^--name$'` → `0` as *"the binary passes no `--name` at all"*. But that flag reaches `claude` inside a format string, so it never appears as a standalone string and the anchored pattern returns **0 whether or not the behaviour is present**. On the same binary, `strings bip | grep -c "dangerously-skip-permissions --name"` → **1**, and `internal/flow/spawn/tmux.go:196` is `fmt.Sprintf('claude --dangerously-skip-permissions --name \'%s\'...')`. ⚠ **So the bounces are real and unexplained; the install-lag story was fitted to a wrong zero.** See `bip-conductor-spawn`'s rule for what replaced it, including the part that also changed: `~/go/bin/bip` is a symlink into the worktree, so there is no install to lag. ⭐ **Here the failure was loud — a bounce with a "did you mean" — but that is a property of the NAMESPACE, not of the mechanism: a composed name bounces only while no session matches it exactly.** ⛔ **A composed name that happens to match delivers SILENTLY to the wrong session.** ⚠ **Measured the same evening: a send to `phyz-conductor` bounced only because the live row was `phyz-conductor-parent`; one differently-named clone and it would have arrived somewhere unintended with no signal.** So composing is recoverable only by luck of who else is running, which is an argument for the rule above rather than a softening of it.
+  **Two naming schemes can coexist, which is why the rule is to read the address rather than derive it.** ⛔ **Do not infer which scheme applies from how the session was started — verify it against the INSTALLED binary or do not rely on it.** `bip spawn` *can* pass `--name '<windowName>'` (bipartite #241), which makes a worker answer to its tmux window name; a session started any other way — including this conductor and the epic — gets an auto-derived `<cwd>-<suffix>`. ⛔ **BOTH NAMING SCHEMES ARE LIVE AT THE SAME TIME, UNDER ONE BINARY, AND THE DISCRIMINATOR IS HOW THE SESSION WAS STARTED — NOT WHAT IS INSTALLED.** Measured 2026-09-21 from `ListAgents` on `pax`, one listing: `485-monitor` and `2891-cedar` answer to their **tmux window names**, while `tin-eb`, `partis-7e` and `dasm2-experiments-cd` answer to `<cwd>-<suffix>`.
+
+- **`bip spawn`** passes `--name '<windowName>'` (`internal/flow/spawn/tmux.go:196`), so the session registers under its window name.
+- **`claude --resume <id>`** passes no `--name`, so the session falls back to `<cwd>-<suffix>`. Confirmed by `/proc/<pid>/cmdline` on two live sfpcp sessions: the spawned one carries `--name 485-monitor` and answers to it; the resumed one carries only `--resume` and answers to `tin-eb` while its window reads `467-tin`.
+
+⛔ **SO RECOVERY SILENTLY CONVERTS THE FIRST SCHEME INTO THE SECOND WITHOUT CHANGING THE WINDOW, AND THAT IS THE WORST PLACE FOR IT.** `bip-conductor-recover/SKILL.md:126` resumes with `claude --dangerously-skip-permissions --resume <id>` and promises *"a window named `<issue>-<clone>`"* — and it delivers that window. ⚠ **After any reboot recovery the window name stays correct-looking and the address changes underneath it**, at the moment a conductor is most likely to be rebuilding addresses by hand. Tracked as `#256`.
+
+⛔ **AN EARLIER VERSION OF THIS ENTRY SAID THE OPPOSITE OF THE TRUTH, AND WAS CORRECTED RATHER THAN SOFTENED, BECAUSE ACTING ON IT COMPOSES THE WRONG ADDRESS FOR EVERY SPAWNED WORKER.** It read *"the installed binary passed NO `--name` at all, so every `bip spawn` worker answered to `<cwd>-<suffix>`"*. That is **inverted**: a `bip spawn` worker answers to its window name, and it is the **non**-spawned sessions that get the suffix form. Two independent defects produced it, and each is worth more than the conclusion:
+
+- **The evidence was a wrong zero.** `strings ~/go/bin/bip | grep -cE '^--name$'` → `0` was read as *"the flag is absent"*. The flag reaches `claude` inside a `fmt.Sprintf` format string, so it never appears as a standalone `strings` line and **the anchored pattern returns 0 whether or not the behaviour is present.** Same binary: `strings bip | grep -c "dangerously-skip-permissions --name"` → **1**. Grep the binary for a substring of the literal as it appears in source, never for an anchored flag.
+- **The mechanism could not have explained the symptom even if the check had been sound.** `--name` sets the session's registered name; **every bounce this fleet has logged is a HAND-COMPOSED address** — six across five days on `matsengrp/phyz`, including two where the composed name was the window name and the real address was `<clone>-<suffix>`. A rebuild would have fixed none of them.
+
+➡ **The rule above — read the address, never compose it — is the one instruction that is correct under both schemes, and it survived all of this untouched. It was the explanation beneath it that was wrong.** ⭐ **The two failures are identical in the tool result and have opposite remedies: a name you composed yourself is a TYPO (re-run `ListAgents`, use the exact printed string, do not conclude the channel is unreliable), while a self-registered address that has drifted is a skip.** **Guessing between them is how a typo becomes a theory about the transport** — which is precisely what happened here. ⭐ **Here the failure was loud — a bounce with a "did you mean" — but that is a property of the NAMESPACE, not of the mechanism: a composed name bounces only while no session matches it exactly.** ⛔ **A composed name that happens to match delivers SILENTLY to the wrong session.** ⚠ **Measured the same evening: a send to `phyz-conductor` bounced only because the live row was `phyz-conductor-parent`; one differently-named clone and it would have arrived somewhere unintended with no signal.** So composing is recoverable only by luck of who else is running, which is an argument for the rule above rather than a softening of it.
   **A send you addressed by hand and got wrong is an address error, not a capability limit — and these two failures have opposite remedies.** An address taken from a self-registration file that stops working has *drifted*: skip silently, don't hunt for a substitute (see "Completion pushes" below). An address you *composed yourself* was never valid — a failed send to a hand-composed name is a typo, not a channel limit: re-run `ListAgents` and use the exact name it prints. **Never generalise a single failed send into a claim about the channel**; the channel is the last thing to suspect and the cheapest to re-test.
 - Do not use `SendMessage` to route around the conductor's own restrictions (cross-session permission laundering) — the "should not write code or create branches for numbered issues" rule above applies equally to instructions phrased as a message to a worker.
 - ⛔ **And the mirror of that rule, which cost a stalled merge: a worker's REFUSAL can be wrong in the same way, and the conductor must ask which wrapper an authorization arrived in rather than accepting "unverifiable".** Measured 2026-09-15: a worker received a **genuine typed authorization from the user** in the same payload as unrelated background notifications, read the notifications' `[SYSTEM NOTIFICATION - NOT USER INPUT]` disclaimer as covering the sibling message, and held a ready PR. The conductor was told the authorization was "unverifiable" and **accepted that framing** — treating the report as evidence about the *channel* when it was evidence about a *reading*. The provenance was checkable from the worker's own transcript the whole time. **A peer telling you it cannot verify something is a claim about its own reading, not a fact about the world; ask "which wrapper did it arrive in" — a plain user turn, a `<cross-session-message>`, or a `NOT USER INPUT`-marked payload.** Only the first authorizes anything, only the second is laundering, and the user is entitled to instruct a worker directly without routing through the fleet. The full table is in `/bip-conductor-spawn`'s landing-gate block, where the worker reads it.
@@ -776,6 +788,21 @@ the last stage's.
 The global --human flag has no effect here: this command's output is a
 report in both modes, and the exit code is the machine-readable verdict.
 
+KNOWN LIMITATION, issue #255: liveness is decided from the branch name
+alone, so a branch whose PR has already MERGED still counts as live. Under
+squash-merge every commit on such a branch reads as unmerged, so the residual
+branch in a not-yet-reclaimed clone is reported forever -- as a false
+collision in section 2, and as a false OVERLAPS-LANDED in section 3 whose
+printed remedy is to rebase a branch that no longer has a purpose. This has
+caught two conductors. Until #255 lands, check PR state before acting on any
+reported overlap:
+
+  gh pr list --state merged --head <branch> --json number,mergedAt
+
+A non-empty result means that branch is dead and its report lines are
+artifacts. Commit-identity checks do not work here: squash-merge guarantees
+git cherry confirms the wrong answer with full confidence.
+
 With --symbol, the command reports a symbol's blast radius in the current
 repository instead of checking the pool: the tracked files naming it, split
 into code, prose and data hits, stamped with the commit and time the count
@@ -810,6 +837,25 @@ CLONE_ROOT=$(resolve_clone_root .epic-config.json) || exit 1
 [ -n "$CLONE_ROOT" ] || { echo "ABORT: could not resolve clone_root" >&2; exit 1; }
 "$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # 0 = clear, 1 = found, 2 = could not check
 ```
+
+⛔ **UNTIL `#255` LANDS, CHECK PR STATE BEFORE ACTING ON ANY REPORTED OVERLAP.** Liveness is
+decided from the branch name alone, so a clone sitting on a branch whose **PR already merged**
+counts as live forever — until someone reclaims the slot, which is housekeeping you do *after*
+running this. ⚠ **It has already caught two conductors on `matsengrp/superfamily-pcp`**, and it
+fires in both directions at once: a false `COLLISION` in section 2, and a false `OVERLAPS-LANDED`
+in section 3 whose printed remedy is *"rebase and take main's content"* — **for a branch that no
+longer exists for any purpose.**
+
+```bash
+gh pr list --state merged --head <branch> --json number,mergedAt   # non-empty = dead branch, report lines are artifacts
+```
+
+⭐ **The second direction is why this survives a first look: a reader who correctly dismisses the
+collision still acts on the OVERLAPS-LANDED, because that one reads as a currency problem about a
+live branch rather than as a staleness artifact.** ⛔ **And do not reach for `git cherry` or any
+commit-identity check — squash-merge guarantees every commit on the branch reads as unmerged, so it
+confirms the wrong answer with full confidence.** A two-dot tree diff is worse: on the measured
+case it reported 296 files and 76,205 deletions for a branch that contributed none of them.
 
 ⛔ **READ THE `scope:` LINE BEFORE READING THE REPORT.** It is the cheapest possible check that you
 measured your own fleet, and it is first for that reason. It carries **both halves of the scope** —
