@@ -30,6 +30,9 @@ facts no skill carries.
 
 - `go build -o bip ./cmd/bip && ./bip --help`
 - Run `go fmt ./...` and `go vet ./...` before any PR. Exported symbols get doc comments.
+- `skills/lib/spawn-intent.sh` is **sourced**, so it runs in the caller's shell and must stay
+  bash/zsh portable — a shebang would be ignored. The other `.sh` files are executed and keep
+  theirs. `docs/guides/shell-assumptions.md`.
 
 ## Database location (easy to get wrong)
 
