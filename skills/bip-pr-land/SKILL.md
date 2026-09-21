@@ -211,14 +211,15 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 | | |
 |---|---|
-| gate pattern fires | **216 of 300 (72%)** |
+| gate pattern fires, `matsengrp/phyz` | **216 of 300 (72%)** |
+| same pattern, `matsen/bipartite` | **23 of 300 (7.6%)** |
 | negation MODIFYING a closing keyword | **0** |
 
-⛔ **Zero prior instances — and that is the argument, not a reassurance.** The first one appeared on the night this fleet adopted *"state what a result does NOT settle"* as a scoping discipline. ➡ **The hazard was CREATED BY A GOOD HABIT, which is why it has no history and why it will now recur.** ⚠ **And 72% is the other half: the gate fires on nearly three commits in four, so a wrong fire lands in a channel that is almost always live, not a quiet one.**
+⛔ **Zero prior instances — and that is the argument, not a reassurance.** The first one appeared on the night this fleet adopted *"state what a result does NOT settle"* as a scoping discipline. ➡ **The hazard was CREATED BY A GOOD HABIT, which is why it has no history and why it will now recur.** ⚠ **The base rate is repo-specific and the conclusion does not travel: 72% on `matsengrp/phyz` means a wrong fire lands in a channel that is almost always live; 7.6% here means it usually does not. Re-derive before reasoning from it.**
 
 ⚠ **A detector caveat, because the first measurement of this got it wrong: a negation-proximity pattern over a body flattened with `tr '\n' ' '` returns FALSE POSITIVES** — a title like *"… by bipartition size, not node index"* followed on a LATER LINE by a legitimate `closes #2344` reads as one hazard. **That run reported 9; the correct count is 0.** ➡ **Require the negation to MODIFY the keyword (no sentence boundary between), and give the detector a POSITIVE CONTROL — it must find `does NOT close #369` — before believing a zero.**
 
-⛔ **`/usr/bin/grep` IS PINNED AND THAT IS NOT PEDANTRY — A BARE `grep` ON THIS WORKSTATION IS `ugrep 7.8.4`, WHICH TRUNCATES THIS PATTERN'S ISSUE NUMBER TO ONE DIGIT.** Measured 2026-09-21 on `pax`, this file's own pattern, same input, full pipeline:
+⛔ **`/usr/bin/grep` IS PINNED AND THAT IS NOT PEDANTRY — INSIDE A CLAUDE CODE BASH CALL, ON ANY MACHINE, A BARE `grep` IS A SHELL FUNCTION ROUTING TO `ugrep 7.8.4`, WHICH TRUNCATES THIS PATTERN'S ISSUE NUMBER TO ONE DIGIT.** It is not workstation-specific and it is not true in your own terminal, where `grep` is an alias to GNU 3.11 — `type grep` tells you which you have. See `skills/lib/hazards/claude-code-grep-shim.md`. Measured 2026-09-21 on `pax`, this file's own pattern, same input, full pipeline:
 
 | keyword | `/usr/bin/grep` (GNU 3.11) | bare `grep` (ugrep 7.8.4) |
 |---|---|---|
