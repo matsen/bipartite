@@ -191,6 +191,26 @@ gh pr create --title "kaizen: <description>" --body "..."
   grep -v 'emphasis-budget-exempt' <file> | grep -oE '⭐|⛔|⚠|➡' | wc -l
   ```
 
+  ⏳ is exempt from this budget only when followed by a ROUTING TARGET — a named reviewer, a dated
+  re-check, or a condition that resolves it. Layer 2 of `docs/guides/corpus-capture.md` defines it
+  as routing syntax (`⏳ PROMOTE → <path>`), addressed to a drain script rather than to a reader,
+  which is why the grep above does not count it. An unrouted ⏳ is a warning marker wearing the
+  wrong glyph: it marks provisionality and hands the reader nowhere to take it. When there is no
+  route, use the ordinary warning glyph and say what is unestablished. <!-- emphasis-budget-exempt -->
+
+  This rule landed with its own population already clean, deliberately. Measured 2026-09-21: all
+  three ⏳ in `skills/bip-conductor/SKILL.md` were unrouted (`grep -o "⏳" | wc -l` → 3;
+  `grep -o "⏳[^→]*→" | wc -l` → 0), and they were re-marked in the same commit rather than
+  grandfathered — an exemption list is itself unrouted provisionality, so grandfathering would be
+  this rule violating itself on the day it lands. Two of the three were found only by counting
+  glyph OCCURRENCES rather than matching LINES: one sat at character 260 of a line that begins with
+  a different glyph, so a line-leading scan saw two and missed it. Never infer a line's markers
+  from the one it starts with.
+
+  This paragraph carries no emphasis glyphs of its own, and that is the point rather than modesty:
+  before it, this file's count was 0. The file that defines the budget is the one place where a
+  marker cannot be afforded.
+
   **Expected baseline is 0** — every glyph in a clean file is a use, so any count is the real one, and this file reads 0 rather than the 8 a naive `grep` returns by counting the rule against itself. Without that exclusion the floor is inherited by every future run, and an author who genuinely cut their emphasis still sees a residue and concludes the budget is unmeetable. Then: does your marker displace one, or just join them? If the passage needs a marker to be taken seriously, the sentence is probably not carrying its own weight yet.
 - **Don't over-document**: If something is obvious from the code, it doesn't need a CLAUDE.md entry.
   Only document things the agent genuinely couldn't figure out on its own
