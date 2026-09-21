@@ -34,6 +34,13 @@ followed the spec instead of the sibling; the fixtures inherited it.
   count of things examined is the cheapest discriminator; a population that disagrees with the
   authoritative list by any amount is the finding.
 
+⭐ **The general form, which is why this is not only about tests: the author of a rule is the last
+person to test it against their own live behaviour.** Two instances the same day, different
+domains, identical shape — a draft of the emphasis-budget rule put four emphasis glyphs into the
+one file that defines the budget and had measured 0; and a conductor asserted that `--name` does
+not work while successfully using it ten times that evening. **Writing fixtures from the
+specification you authored is the same blindness one layer down.**
+
 **Corollary for a spec.** When an issue tells you what a predecessor did, grep for a *sibling* that
 answers the same question — the predecessor is the thing being replaced, so its choices are the
 ones most likely to be the defect. Here `clone-currency.sh` was one directory away.
