@@ -26,6 +26,8 @@ commits returned `0` from both, contradicting a diff just read. `git`'s error we
 "nothing found." It fails *toward a negative result*, which is the direction
 `EVIDENCE-DISCIPLINE.md` already says needs evidence the test could have gone positive.
 
+⛔ **You will UNDERESTIMATE how often this fires, and the table above is why: half of it announces itself.** `src/` and `scripts/` throw `bad substitution` and get fixed in seconds, so those are the instances you remember; `experiments/`, `tests/`, `results/` and `lib/` fail silently and are the ones that reach a conclusion. ⚠ **The table is the evidence and no tally of incidents is needed: four of the nine directory prefixes tested fail silently and three fail loudly, so the two halves are selected for by different things — the loud ones by your attention, the silent ones by your results.** ➡ **So the hazard feels rare because its loud half is over-represented in memory and its silent half is over-represented in results.**
+
 **Check:** `git show "${c}:${path}"` — brace the variable, quote the argument.
 
 **Recognise it without memorising the letter list:** a `$VAR` immediately followed by `:` is a
