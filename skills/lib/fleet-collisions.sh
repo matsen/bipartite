@@ -1,18 +1,27 @@
 #!/usr/bin/env bash
-# Conductor-only pre-spawn check. The epic side cannot implement this: clone
-# branches are local (`shared_filesystem: false`), and remote refs are not a
-# substitute -- under squash-merge every historical branch stays permanently
-# ahead of `main` (measured on matsengrp/phyz: 847 remote branches, the first
-# 400 all ahead), so "ahead of main" does not discriminate live from dead.
-# The decisive case is UNCOMMITTED work, which exists only in the clone.
+# Conductor-only pre-spawn check: the PANE AND PROCESS half.
+#
+# ⛔ THE FILE-OVERLAP HALF OF THIS SCRIPT IS NOW `bip epic collide`. Sections
+# 1, 2 and 2b (live branches and their touched files; files touched by more
+# than one live clone; a live branch versus what LANDED since it forked) were
+# ported to Go in issue #252 and removed from here. Run BOTH:
+#
+#   bip epic collide                 # 0 = clear, 10 = found, 11 = could not check
+#   fleet-collisions.sh "$ROOT"      # 0 = clear, 1 = found,  2 = could not check
+#
+# The port was not a translation. The command derives its clone-pool root from
+# `.epic-config.json` instead of defaulting to one, which is the defect this
+# script had at its `ROOT="${1:-$HOME/re/pz}"` line -- measured 2026-09-17 on
+# matsengrp/superfamily-pcp, an argument-less run returned a well-formed,
+# entirely plausible report about ANOTHER repository's clone pool and missed a
+# real three-way collision. This file's own root is now REQUIRED for the same
+# reason; see below.
+#
+# WHY THESE THREE SECTIONS STAYED IN SHELL: they need a tmux socket, a process
+# subtree walk, and `jq`. They are about this MACHINE's live state, not about
+# the EPIC's branches, so they do not share the command's scope model.
 #
 # Reports, and exits non-zero if ANY of the three fires:
-#   1. every live branch across the pool and the files it touches
-#   2. files touched by MORE THAN ONE live clone        <- permits a collision
-#   2b. a live branch touching a file that LANDED on main since that branch
-#      forked. Section 2's universe is live-vs-live; this is live-vs-landed,
-#      a different frame. Measured 2026-09-14: a PR went CONFLICTING against
-#      one that merged two hours earlier and section 2 reported clean.
 #   3. a .epic-status.json whose clone has no live pane <- suppresses a spawn
 #   4. a live pane with no status file  <- invisible to state-file sweeps
 #   5. a pane whose agent session is DEAD <- both artifacts present, healthy-
@@ -33,8 +42,14 @@
 # VERIFYING THIS SCRIPT'S OWN EXIT CODE: do not read `$?` after a pipeline.
 # Anyone checking these exit codes will reach for `... | sed -n '/foo/,/bar/p'`
 # to read the output, and `$?` then reports SED's status, not this script's.
-# Measured 2026-09-14: read as 0 when the real status was 1. Use
-# `"${PIPESTATUS[0]}"`, or redirect to a file and run it un-piped.
+# Measured 2026-09-14: read as 0 when the real status was 1. REDIRECT TO A FILE
+# AND RUN IT UN-PIPED. The `"${PIPESTATUS[0]}"` form this header used to
+# prescribe is itself fail-open in the fleet's login shell -- zsh spells it
+# `$pipestatus[1]`, and evaluates `${PIPESTATUS[0]}` to the EMPTY STRING rather
+# than erroring -- and both spellings are rebuilt by every command, so the read
+# is only valid as the very next thing after the pipeline. A redirect has no
+# window between producing the status and reading it. See
+# `skills/bip-conductor/SKILL.md`.
 #
 # Run it from a conductor's own pane. A non-interactive context (a systemd
 # timer, say) has no tmux socket, so PANES is empty every time and this
@@ -44,21 +59,20 @@
 # containment on pane cwd, not equality: a worker that `cd`s into a
 # subdirectory is still in its clone and must not be reported stale.
 #
-# `git diff --name-only origin/main` already covers uncommitted TRACKED
-# changes -- it diffs the working tree against that commit. The
-# `status --porcelain -z` pass is there for UNTRACKED files only, and is
-# NUL-delimited because git quotes paths containing spaces and a
-# whitespace-split would mangle them into a silent non-match.
-#
-# Scope: written for and exercised only against matsengrp/phyz's ~/re/pz pool.
-# The clone-root argument makes it portable in principle; that is untested.
-#
-# Usage: fleet-collisions.sh [clone-root]      (default ~/re/pz)
+# Usage: fleet-collisions.sh <clone-root>      (REQUIRED)
 # Exit:  0 = nothing found, 1 = something found, 2 = could not check
 set -uo pipefail
-ROOT="${1:-$HOME/re/pz}"
+# ⛔ NO DEFAULT, DELIBERATELY. This used to be `ROOT="${1:-$HOME/re/pz}"`, and
+# `${x:-y}` substitutes on unset OR EMPTY -- so an unparseable config upstream
+# made an explicitly-passed root evaporate into another repository's clone pool
+# and returned the reassuring answer about the wrong fleet. An empty root is not
+# a root. `bip epic collide` derives its scope from `.epic-config.json`; this
+# script takes it as an argument because it is also run against pools with no
+# config, but it will not invent one.
+ROOT="${1:-}"
+[ -n "$ROOT" ] || { echo "FATAL: no clone root given. Usage: fleet-collisions.sh <clone-root> -- there is no default, and an empty argument is not a root. NOT a clean check" >&2; exit 2; }
 [ -d "$ROOT" ] || { echo "no clone root at $ROOT" >&2; exit 2; }
-# A clone root that EXISTS but is EMPTY has to be handled before the three
+# A clone root that EXISTS but is EMPTY has to be handled before the
 # `for d in "$ROOT"/*/` loops below, because that idiom behaves differently and
 # badly in both shells when nothing matches. Measured 2026-09-14 on an empty
 # directory:
@@ -70,7 +84,7 @@ ROOT="${1:-$HOME/re/pz}"
 # loop below happens to degrade safely in bash today (a failing `git`/`rev-parse`
 # sends it to `continue`), but that is ACCIDENTAL, it is absent in zsh, and an
 # empty pool is a legitimate state rather than an error -- so say so once and
-# exit clean instead of letting three loops discover it three different ways.
+# exit clean instead of letting the loops discover it several different ways.
 # `find`, not a glob, for the same reason the loops are the problem. Tested
 # against `bfs 4.1.1`, this fleet's `find`, not GNU findutils.
 # `! -name '.*'` matters: `*/` does not match dot-directories but `find -type d`
@@ -81,7 +95,6 @@ if [ -z "$(find "$ROOT" -maxdepth 1 -mindepth 1 -type d ! -name '.*' -print -qui
   echo "no clones under $ROOT yet -- nothing to check"
   exit 0
 fi
-TMP=$(mktemp) || exit 2; trap 'rm -f "$TMP"' EXIT
 mapfile -t PANES < <(tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null)
 mapfile -t PANE_PP < <(tmux list-panes -a -F '#{pane_current_path} #{pane_pid}' 2>/dev/null)
 
@@ -126,195 +139,11 @@ have_panes=1; [ "${#PANES[@]}" -eq 0 ] && have_panes=0
 # Never write `rc=` in a new section. Set `uncheckable=1` for "a clone could
 # not be examined" and `found_any=1` for "a real problem was found". The
 # resolution below makes 2 dominate 1 structurally, so the next section
-# someone adds cannot get the precedence wrong -- the same argument as the
-# denominator comment further down.
-# THE POOL'S OWN REMOTE. A clone root can legitimately hold clones of OTHER
-# repositories -- matsengrp/phyz's pool holds `ash-iqtree-a00094e0`, a pinned
-# checkout of matsen/iqtree2 that experiments reference by absolute path. Those
-# are not slots and must not be reported as anything.
-#
-# Invisible until the detached-HEAD path started reporting weird states loudly:
-# that IQ-TREE clone sits at a detached tag commit permanently, so it emitted
-# `UNCHECKABLE ... detached HEAD` on every run, setting uncheckable=1 and making
-# EVERY run exit 2 -- destroying the signal the stickiness fix had been added to
-# protect, one commit after adding it.
-#
-# Modal origin across the pool rather than the conductor's own: this script
-# takes the root as an argument and may be run from anywhere.
-POOL_ORIGIN=$(for _d in "$ROOT"/*/; do git -C "$_d" remote get-url origin 2>/dev/null; done \
-              | sort | uniq -c | sort -rn | head -1 | sed 's/^ *[0-9]* //')
-
-# is_pool_clone <dir> -- true when <dir>'s origin matches the pool's modal one.
-# Returns TRUE when POOL_ORIGIN could not be determined: an unknown pool must
-# not silently exclude every clone. That is not hypothetical -- an earlier draft
-# of this call site ran with the function undefined, `|| continue` fired on the
-# "command not found" status, and the whole section skipped every slot while
-# printing nothing but errors. Fail toward checking, never toward skipping.
-is_pool_clone() {
-  [ -n "$POOL_ORIGIN" ] || return 0
-  [ "$(git -C "$1" remote get-url origin 2>/dev/null)" = "$POOL_ORIGIN" ]
-}
-
+# someone adds cannot get the precedence wrong. `bip epic collide` carries the
+# same contract with the same reasoning, at 11 and 10.
 uncheckable=0
 found_any=0
 
-echo "=== live branches and their touched files ==="
-any_live=0
-for d in "$ROOT"/*/; do
-  n=$(basename "${d%/}")
-  b=$(git -C "$d" branch --show-current 2>/dev/null) || continue
-  { [ -z "$b" ] || [ "$b" = main ]; } && continue
-  any_live=1
-  git -C "$d" fetch -q origin main 2>/dev/null \
-    || echo "  WARN $n: fetch failed; origin/main may be stale -> false collisions" >&2
-  # Diff against the MERGE BASE, not origin/main: a branch even one commit
-  # behind otherwise reports every file main changed since the branch point
-  # as its own. Measured 2026-09-14: a slot 1 commit behind reported 15 files
-  # when it had touched 6, and the 9 phantoms produced a false collision.
-  base=$(git -C "$d" merge-base HEAD origin/main 2>/dev/null) || base=origin/main
-  { git -C "$d" diff --name-only "$base" 2>/dev/null
-    git -C "$d" status --porcelain -z 2>/dev/null \
-      | while IFS= read -r -d '' e; do
-          printf '%s\n' "${e:3}"
-          # R/C entries emit a SECOND NUL field holding the OLD path, whole
-          # (no 3-char status prefix). Both paths are real and either can
-          # collide, so emit both rather than stripping the second.
-          case "$e" in R*|C*) IFS= read -r -d '' old && printf '%s\n' "$old";; esac
-        done
-  } | sort -u | while IFS= read -r f; do [ -n "$f" ] && printf '%s\t%s\n' "$n" "$f"; done >> "$TMP"
-  cnt=0; pfx="$n$(printf '\t')"
-  while IFS= read -r l; do case "$l" in "$pfx"*) cnt=$((cnt+1));; esac; done < "$TMP"
-  printf "  %-10s %-34s %s files\n" "$n" "$b" "$cnt"
-done
-[ "$any_live" = 0 ] && echo "  none"
-
-echo
-echo "=== files touched by MORE THAN ONE live clone (the 4b gap) ==="
-if awk -F'\t' '{c[$2]=c[$2]" "$1} END{f=0; for(k in c){n=split(c[k],a," ");
-      if(n>1){print "  COLLISION "k" <-"c[k]; f=1}} exit !f}' "$TMP" | sort; then
-  found_any=1
-else
-  echo "  none"
-fi
-
-echo
-echo "=== live branch vs. what LANDED since it forked (the 4b gap's OTHER half) ==="
-# Section 2 compares live clones against EACH OTHER. It is silent about a
-# branch that conflicts with a commit ALREADY ON main -- which is a different
-# universe, not a weaker version of the same one.
-#
-# Measured 2026-09-14 (matsengrp/phyz): PR #2653 went CONFLICTING against
-# PR #2648, which had merged two hours earlier and edited the same
-# `docs/ml/knob-correspondence.md` row the live branch was marking. Section 2
-# reported clean and was CORRECT about what it measures. Recently-landed
-# commits were outside its frame, so it was SILENT rather than wrong -- and
-# silence reads as safety.
-#
-# The generalizable question a future editor should ask before adding a
-# section here is not "is my check correct?" but "what is this check's
-# DENOMINATOR, and does it contain the thing that actually fires?"
-#
-# TWO THINGS THIS SECTION DOES THAT THE OBVIOUS VERSION DOES NOT:
-#
-# 1. It handles a clone that is MID-REBASE. Section 1 skips any clone whose
-#    `git branch --show-current` is empty -- which is exactly the state a
-#    conflicted clone is in, i.e. the one you most want checked. The branch
-#    name is recovered from `.git/rebase-merge/head-name` and the comparison
-#    runs against the REMOTE ref, which is stable while a local rebase churns.
-#    A local HEAD is not a stable referent while another session is rebasing.
-#
-# 2. It PRINTS THE DENOMINATORS on a clear result. `clear (mine=8 landed=0)`
-#    says nothing has landed since that branch forked; `clear (mine=36
-#    landed=44)` says the check had real data on both sides and found no
-#    overlap. Without them, a trivially-clear result, a genuinely-clear
-#    result, and a BROKEN check all print the same word. The first draft of
-#    this section derived branch names from `branch --show-current`, returned
-#    empty for the mid-rebase clone, produced two empty diffs, and reported
-#    `clear` for the one slot whose PR was CONFLICTING at that moment -- a
-#    command error laundered into a reassuring result.
-found_landed=0
-any_checked=0
-for d in "$ROOT"/*/; do
-  n=$(basename "${d%/}")
-  # Skip clones of OTHER repositories living in the same root -- see
-  # POOL_ORIGIN above. Without this, the pool's pinned IQ-TREE checkout sits on
-  # a permanent detached HEAD, trips the detached-HEAD report below, and sets
-  # uncheckable=1 on EVERY run -- destroying the "could not check" signal one
-  # commit after the stickiness fix was added to protect it.
-  is_pool_clone "$d" || continue
-  b=$(git -C "$d" branch --show-current 2>/dev/null)
-  # ASK GIT FOR THE GIT DIR; DO NOT ASSUME THE LAYOUT. In a clone `.git` is a
-  # directory, but in a WORKTREE it is a FILE containing `gitdir: ...`, so
-  # `$d/.git/<rebase-dir>` does not resolve and `[ -d "$d/.git" ]` is FALSE.
-  # Both of the weird-state paths below would then silently skip a worktree --
-  # reinstating, in a supported mode, the exact gap they exist to close.
-  # `skills/bip-epic/SKILL.md` already records this trap ("in a worktree
-  # `.git` is a file, not a directory"), where it produced a correct verdict
-  # on a false premise and nearly authorised deleting two branches.
-  # `--absolute-git-dir` is the one form that works in both layouts.
-  gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null)
-  if [ -z "$b" ] && [ -n "$gd" ]; then
-    # Git has TWO rebase backends and they store head-name in different
-    # directories: rebase-merge/ (the merge backend) and rebase-apply/
-    # (--apply / am-based). Covering only one leaves the other as a silent
-    # skip, which is the exact failure this section exists to stop.
-    for rd in rebase-merge rebase-apply; do
-      if [ -r "$gd/$rd/head-name" ]; then
-        b=$(sed 's#^refs/heads/##' "$gd/$rd/head-name" 2>/dev/null)
-        [ -n "$b" ] && echo "  NOTE $n is mid-rebase; using branch '$b' from $rd/head-name"
-        break
-      fi
-    done
-  fi
-  if [ -z "$b" ]; then
-    # Detached and NOT rebasing -- e.g. a bisect, or a hand checkout of a
-    # candidate commit. Silently skipping it would repeat this section's own
-    # mistake one notch along: the clone in the weird state is the one you
-    # most want checked.
-    if [ -n "$gd" ]; then
-      echo "  UNCHECKABLE $n: detached HEAD, no rebase in progress -- cannot determine its branch" >&2
-      uncheckable=1
-    fi
-    continue
-  fi
-  [ "$b" = main ] && continue
-  # Compare the REMOTE ref: a local rebase rewrites HEAD under us.
-  if ! git -C "$d" rev-parse --verify --quiet "origin/$b" >/dev/null 2>&1; then
-    echo "  UNCHECKABLE $n: no origin/$b (branch never pushed) -- cannot compare against landed work" >&2
-    uncheckable=1; continue
-  fi
-  base=$(git -C "$d" merge-base "origin/$b" origin/main 2>/dev/null)
-  if [ -z "$base" ]; then
-    echo "  UNCHECKABLE $n: no merge-base for origin/$b and origin/main" >&2
-    uncheckable=1; continue
-  fi
-  any_checked=1
-  mine=$(git -C "$d" diff --name-only "$base" "origin/$b" 2>/dev/null | sort -u)
-  landed=$(git -C "$d" diff --name-only "$base" origin/main 2>/dev/null | sort -u)
-  ov=$(comm -12 <(printf '%s\n' "$mine") <(printf '%s\n' "$landed") | grep -v '^$')
-  nm=$(printf '%s\n' "$mine" | grep -c .)
-  nl=$(printf '%s\n' "$landed" | grep -c .)
-  if [ -n "$ov" ]; then
-    echo "  OVERLAPS-LANDED $n: $(echo $ov)"
-    echo "    -> rebase and take main's content for those files; your copy predates the merge."
-    echo "       Verify with: git -C $d diff origin/main -- <file>   (should show ONLY your additions)"
-    found_landed=1
-  elif [ "$nm" = 0 ]; then
-    # A live branch that has changed NOTHING relative to its fork point is
-    # either not started or not measurable, and both mean a clear result here
-    # is worthless. The denominators alone made this visible to a human who
-    # reads and thinks; they did not make the SCRIPT say so, which is the
-    # fail-open one level in.
-    echo "  NO-COMMITS $n (mine=0, landed=$nl) -- nothing to compare; do NOT read this as clear" >&2
-    uncheckable=1
-  else
-    echo "  $n clear (mine=$nm landed=$nl)"
-  fi
-done
-[ "$any_checked" = 0 ] && echo "  (no pushed live branches to check)"
-[ "$found_landed" = 1 ] && found_any=1
-
-echo
 echo "=== stale .epic-status.json (status file, no live pane in that clone) ==="
 # Builtin glob, not `ls`: an external that fails for any reason would
 # short-circuit this guard and let the script mark the whole pool STALE.
@@ -373,6 +202,7 @@ if [ "$have_panes" -eq 1 ]; then
     # 0 prints as `uncommitted=0`, which reads as "nothing to preserve" on the
     # one line that exists to say otherwise. Report UNKNOWN and set uncheckable,
     # per this file's own "fail toward checking, never toward skipping".
+    # `skills/lib/hazards/counting-a-failed-command.md`.
     if dirty_out=$(git -C "$RROOT/$clone" status --porcelain 2>/dev/null); then
       dirty=$(printf '%s' "$dirty_out" | grep -c . || true)
     else

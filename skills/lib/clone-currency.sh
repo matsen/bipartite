@@ -27,6 +27,13 @@ set -u
 # cobalt/copper/iron. Nothing errors, nothing is empty, and the wrong-fleet
 # answer fails toward "go ahead" on the step whose output authorises a spawn.
 #
+# ⚠ AND THE THREE HELPERS NOW HAVE THREE DIFFERENT SCOPE SHAPES, so do not carry
+# any one of them across (issue #252): `bip epic collide` takes NO scope argument
+# and derives clone_root from .epic-config.json; `fleet-collisions.sh` REQUIRES a
+# positional root and exits 2 on an empty one; this script takes positional, then
+# env, then derives. All three print the scope they resolved as their first line
+# -- read that line before reading the report, in every case.
+#
 # ⭐ THE ROOT CAUSE WAS AN INCONSISTENCY INSIDE THIS SCRIPT, not the caller's
 # mistake: it already reads `clone_names` from .epic-config.json, but took the
 # ROOT from a hardcoded default. Reading both from the same file makes a

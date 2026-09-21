@@ -134,10 +134,14 @@ script's header exists to prevent. So the honest version of this layer is **port
 `fleet-collisions.sh` to Go and replace the 2,494-byte symbol block in the same PR**, not
 "turn Step 4b into a command". **Filed as `#252`**, rescoped again after review: the command is `bip epic collide`, the script keeps its pane/process sections rather than being deleted, and the decisive argument turned out to be neither prose duplication nor size — it is that `fleet-collisions.sh:59` defaults its scope to another repository's clone pool, which `skills/bip-conductor/SKILL.md:529` records as *"unfinished, not as fixed"*.
 
+⭐ **LANDED, AND THE SIZE PROJECTION IN THIS LAYER WAS WRONG BY ROUGHLY 8x — record that rather than the projection.** `bip epic collide` ships with `fleet-collisions.sh`'s sections 1/2/2b removed, and `skills/bip-epic/SKILL.md` Step 4b went **15,117 → 14,804 bytes: a 313-byte reduction, not the ~2,494 forecast above** (`git show <ref>:skills/bip-epic/SKILL.md | awk '/^### Step 4b/{f=1} /^### Step 5/{f=0} f' | wc -c`, at `9aae634` and at this PR's commit). The forecast assumed the symbol block was procedure that evaporates into an invocation. The invocation *is* one line — but **the measured instances around it all had to stay**, because the command replaces the *counting*, not the *reading*, and two of the three instances (an importing sibling that appends a duplicate key; a live branch that partitions the list by prefix) are invisible to any count. ⚠ **So layer 3's claim to be "the only layer that reduces load-time cost" survives in direction but not in magnitude.** What it actually delivered was the fail-open fix and a tested implementation — which is what the `#252` rescope had already concluded. ➡ **The generalisable form, now measured twice in the same direction: a byte count of a section is not a measurement of what is mechanisable inside it.**
+
 - **`bip epic-edit`** — pull, record `updatedAt`, guard *with the emptiness null-check*, push,
   verify read-back length and tail. Measure its mechanisable fraction before committing to it.
-- **`bip collide`** — a port of `skills/lib/fleet-collisions.sh`, preserving its exit contract,
-  plus `git grep -ln <SYMBOL>` blast radius split into code hits versus prose hits.
+- ~~**`bip collide`**~~ — **landed as `bip epic collide`**, and its exit contract is *not* the
+  script's: `0/1/2` collided with `bip`'s existing meanings for 1 and 2, so the command uses
+  `0/10/11` and keeps the same domination rule. The blast radius splits three ways rather than
+  two — code, prose, and committed data artifacts that must not be edited.
 
 ⚠ **The general lesson, which outlives this layer: "31% of the file is two sections" is a size
 measurement, and it was read as a mechanisability measurement.** Before proposing a command,
@@ -154,6 +158,16 @@ words of prose.
 **Falsifier, to be tested on the first command rather than assumed for both:** if `bip collide`
 or `bip epic-edit` needs a judgement call per invocation, the prose returns as comments and
 nothing is saved.
+
+⭐ **NOT FALSIFIED for `bip epic collide`, and the reason is worth more than the verdict: it needs
+no judgement per invocation because it takes no judgement input** — the scope comes from
+`.epic-config.json` and the verdict is three-valued, so there is nothing for a caller to decide.
+⚠ **The prose did not return as comments; it returned as TEST NAMES.** Each behaviour the old
+script's header argued for is now a test that fails without it
+(`internal/gitx/collide_test.go`), which is the "lands as a test case, not a paragraph" claim
+below, executed rather than asserted. ⛔ **The part that did NOT mechanise is the part the command
+hands back: what to do with a `COLLISION` line, and the N-choose-2 pair set it implies. That is
+still prose in `bip-conductor`, and it should be.**
 
 ### 4. `bip spawn-preamble` — stop recomposing the corpus per spawn
 
@@ -178,8 +192,9 @@ of those does not exist. **De-duplicate the source; do not de-duplicate the deli
 ## Sequencing
 
 1. **`skills/lib/hazards/` and the `.gitignore` line.** Near-zero cost, unblocks the rest.
-2. **`bip collide`.** Build this one first because it carries the falsifier — if it needs
-   per-invocation judgement, the mechanisation layer dies before a second command is built.
+2. ~~**`bip collide`.**~~ **Done** (`bip epic collide`, `#252`). It carried the falsifier and did
+   not trip it, so the mechanisation layer survives to a second command — on the narrower claim
+   established above, not the byte-count one.
 3. **`check_promotions.py` drain**, then **`bip spawn-preamble`**.
 
 ## What this does not do

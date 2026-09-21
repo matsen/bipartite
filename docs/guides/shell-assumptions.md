@@ -16,6 +16,14 @@ that matters if you change it.
 — they re-exec under bash no matter who calls them. `spawn-intent.sh` has no shebang, by design,
 because it defines functions the caller needs in its own environment. It runs in your shell.
 
+`fleet-collisions.sh` is now half the size that table implies: its file-overlap sections became
+`bip epic collide` in issue #252 and the pane/process sections stayed in shell. ➡ **That split is
+the one available answer to a shell-portability question that keeps recurring in the same file.**
+The Go half has no `${x:-default}` substituting on empty, no glob-on-an-empty-directory
+difference between the shells, and no `PIPESTATUS`-versus-`pipestatus` divergence — three of this
+document's own hazards are simply unspellable there. It is not a general rule: what stayed needs
+a tmux socket, a process-subtree walk and `jq`, which is what shell is for.
+
 ## The rule
 
 **`skills/lib/spawn-intent.sh` must work in bash and zsh.** Don't add `[[ ]]`, arrays, `local -n`,

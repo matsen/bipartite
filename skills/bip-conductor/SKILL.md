@@ -524,9 +524,9 @@ Run `lib/clone-currency.sh` before every spawn — **from your conductor clone, 
 cd <your conductor clone> && "$(dirname "<this-skill's-base-directory>")/lib/clone-currency.sh"
 ```
 
-⛔ **Its sibling `fleet-collisions.sh` takes a POSITIONAL root and this one does not — do not carry the sibling's shape across.** Before 2026-09-18 that mistake was silent: the positional argument was ignored, the script fell back to a hardcoded `$HOME/re/phyz` / `$HOME/re/pz`, and a conductor on another repo got a **well-formed, entirely plausible report about the phyz pool** — measured on `matsengrp/superfamily-pcp`, a 17-slot table naming alder/ash/balsa from a conductor whose pool is cobalt/copper/iron. ⚠ **Unlike every probe failure catalogued above, a wrong-fleet report cannot fail toward "nothing to do": it fails toward "go ahead", on the step whose output authorises a spawn.**
+⛔ **Its sibling `fleet-collisions.sh` takes a POSITIONAL root (now required) and this one does not — do not carry the sibling's shape across.** Before 2026-09-18 that mistake was silent: the positional argument was ignored, the script fell back to a hardcoded `$HOME/re/phyz` / `$HOME/re/pz`, and a conductor on another repo got a **well-formed, entirely plausible report about the phyz pool** — measured on `matsengrp/superfamily-pcp`, a 17-slot table naming alder/ash/balsa from a conductor whose pool is cobalt/copper/iron. ⚠ **Unlike every probe failure catalogued above, a wrong-fleet report cannot fail toward "nothing to do": it fails toward "go ahead", on the step whose output authorises a spawn.**
 
-⭐ **The hardcoded defaults are gone and the script now derives `clone_root` from the same `.epic-config.json` it already reads `clone_names` from**, so a wrong-pool answer is unreachable rather than merely discouraged, and an unresolvable scope exits 2 with `NOT a clean sweep` instead of defaulting. `CONDUCTOR=… CLONE_ROOT=… clone-currency.sh` still works for existing callers, and `clone-currency.sh <CONDUCTOR> [CLONE_ROOT]` is accepted; it prints the `scope:` line it resolved, so **read that line before reading the table** — it is the cheapest possible check that you measured your own fleet. ⚠ **`fleet-collisions.sh`'s own `ROOT="${1:-$HOME/re/pz}"` still has the original defect and is mitigated only by the explicit-argument instruction above; treat that as unfinished, not as fixed.**
+⭐ **The hardcoded defaults are gone and the script now derives `clone_root` from the same `.epic-config.json` it already reads `clone_names` from**, so a wrong-pool answer is unreachable rather than merely discouraged, and an unresolvable scope exits 2 with `NOT a clean sweep` instead of defaulting. `CONDUCTOR=… CLONE_ROOT=… clone-currency.sh` still works for existing callers, and `clone-currency.sh <CONDUCTOR> [CLONE_ROOT]` is accepted; it prints the `scope:` line it resolved, so **read that line before reading the table** — it is the cheapest possible check that you measured your own fleet. ⭐ **`fleet-collisions.sh`'s own `ROOT="${1:-$HOME/re/pz}"` is now gone too, and it was closed in two different ways for two different reasons** (issue #252). Its file-overlap half became `bip epic collide`, which DERIVES `clone_root` from `.epic-config.json` and takes no positional argument at all. What is left of the script still takes the root positionally — it is also run against pools with no config — but the argument is **REQUIRED**, and an empty one exits 2 with `NOT a clean check` rather than substituting a pool. ⚠ **So the three helpers now have three different scope shapes. Read each one's first line of output rather than assuming; that line exists for this.**
 
 Three things it gets right that a hand-rolled loop does not:
 
@@ -588,7 +588,7 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 
 | about to… | check | cost of skipping it, measured 2026-09-14 |
 |---|---|---|
-| **spawn** | run `lib/fleet-collisions.sh`; confirm the issue body has not changed since its brief was written | a duplicate slot spawned onto work already in progress; a three-way file collision missed |
+| **spawn** | run `bip epic collide` AND `lib/fleet-collisions.sh`; confirm the issue body has not changed since its brief was written | a duplicate slot spawned onto work already in progress; a three-way file collision missed |
 | **file an issue** | does a success criterion name a denominator, a population, or "a default run" without naming the dispatch path? | #2627 shipped a stderr regression AND a wrong fraction — the worker followed the criterion correctly |
 | **deliver a correction to a worker** | append it to that slot's `.epic-worklog.md` in the same step | a correction delivered only by message does not survive the worker's next compaction |
 | **reclaim a slot** | all three state files, including `.claude/ralph-loop.local.md` | a preserved `.epic-status.json` survived a window closure and made an idle clone read as occupied — silently |
@@ -705,33 +705,150 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 
 ⭐ **The cost column is load-bearing, not decoration.** A tired conductor skips a rule; it does not skip a rule with last night's scar attached. When a row's incident is superseded by a worse one, replace it — an entry whose cost has gone stale is the first one to be ignored.
 
-### Run `lib/fleet-collisions.sh` before every spawn
+### Run `bip epic collide` before every spawn, then `lib/fleet-collisions.sh`
+
+**The check is two halves and they are two commands.** Run both. The file-overlap half is
+`bip epic collide` (issue #252); the pane-and-process half is what is left of
+`lib/fleet-collisions.sh`.
+
+```bash
+bip epic collide            # from your conductor clone, no arguments
+```
+
+⭐ **NO ARGUMENT, AND THAT IS THE FIX RATHER THAN A CONVENIENCE.** It reads `clone_root` from the
+same `.epic-config.json` the rest of the fleet tooling reads, prints the root it resolved as its
+first line, and exits **could not check** if it cannot resolve one. There is no default to fall
+back to, so there is no wrong pool to fall back to. Pass `--root` only for a pool with no config.
+
+```
+Check every clone in one EPIC clone pool for file overlap.
+
+Reports three things, in this order:
+
+  1. every live (non-main) branch in the pool and the files it touches
+  2. files touched by MORE THAN ONE live clone       <- permits a collision
+  3. each live branch against what LANDED on origin/main since it forked
+
+Section 3 is a different frame from section 2, not a weaker version of it:
+section 2 is live-vs-live, section 3 is live-vs-landed. A branch can be
+clear of every other clone and still conflict with a commit that merged an
+hour ago.
+
+This check cannot be done from an EPIC session. Clone branches are local
+under shared_filesystem: false, and remote refs are not a substitute --
+under squash-merge every historical branch stays permanently ahead of main.
+The decisive case is UNCOMMITTED work, which exists only in the clone.
+
+SCOPE IS DERIVED, NEVER DEFAULTED. With no --root, the pool root comes from
+clone_root in .epic-config.json in the current directory; if that cannot be
+resolved the command exits "could not check" rather than scanning anything.
+An empty --root is an error, not a root. The resolved root is the first line
+of output -- read it before reading the report.
+
+Exit codes:
+
+  0   clear         the pool was examined and no overlap was found
+  10  found         a real overlap was found
+  11  could not check  some part of the pool could not be examined
+
+11 dominates 10: a caller acting on "found" believes the pool was fully
+examined. Do not read 11 as clear. These are deliberately outside the 1-6
+range used by the rest of bip, where 1 is a general error and 2 is a config
+error.
+
+All report lines -- including UNCHECKABLE reasons and the verdict -- go to
+stdout, so one redirect captures the whole report. Do not read $? after a
+pipeline; redirect to a file and run it un-piped, or the status you read is
+the last stage's.
+
+The global --human flag has no effect here: this command's output is a
+report in both modes, and the exit code is the machine-readable verdict.
+
+With --symbol, the command reports a symbol's blast radius in the current
+repository instead of checking the pool: the tracked files naming it, split
+into code, prose and data hits, stamped with the commit and time the count
+was taken at. A blast-radius count is a measurement with a date, not a
+property of the symbol.
+
+Examples:
+  bip epic collide
+  bip epic collide --root ~/re/pz
+  bip epic collide --symbol MATCHED_PARAMS
+  bip epic collide --symbol MATCHED_PARAMS --path experiments/
+
+Usage:
+  bip epic collide [flags]
+
+Flags:
+  -h, --help            help for collide
+      --path strings    Limit --symbol to these pathspecs (repeatable)
+      --root string     Clone-pool root to check (default: clone_root from .epic-config.json in the current directory)
+      --symbol string   Report this symbol's blast radius in the current repo instead of checking the pool
+
+Global Flags:
+      --human   Use human-readable output instead of JSON
+```
+
+Then the pane-and-process half, which needs a tmux socket, a process-subtree walk and `jq`, and
+stays in shell for that reason:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
-CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-# NOT OPTIONAL. `ROOT="${1:-$HOME/re/pz}"` substitutes on unset OR EMPTY, so an
-# empty argument is indistinguishable from no argument and silently restores the
-# phyz-pool default. Verified both ways; see below.
-[ -n "$CLONE_ROOT" ] || { echo "ABORT: could not resolve clone_root -- an empty argument falls back to \$HOME/re/pz, i.e. the phyz pool" >&2; exit 1; }
-"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # exit 0 = clear, 1 = found, 2 = could not check
+CLONE_ROOT=$(resolve_clone_root .epic-config.json) || exit 1
+[ -n "$CLONE_ROOT" ] || { echo "ABORT: could not resolve clone_root" >&2; exit 1; }
+"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # 0 = clear, 1 = found, 2 = could not check
 ```
 
-⛔ **PASS `$CLONE_ROOT` EXPLICITLY. THE SCRIPT DEFAULTS TO `$HOME/re/pz` AND NEVER READS `.epic-config.json`** — `ROOT="${1:-$HOME/re/pz}"` at `fleet-collisions.sh:59`, and `grep -n 'CLONE_ROOT\|clone_root\|epic-config'` over the whole script returns nothing. On any repo whose pool is not `~/re/pz`, the argument-less form every earlier version of this skill prescribed silently answered **the phyz fleet's** question.
+⛔ **READ THE `scope:` LINE BEFORE READING THE REPORT.** It is the cheapest possible check that you
+measured your own fleet, and it is first for that reason.
 
-⚠ **This is the wrong-universe failure, and it is worse than every probe failure catalogued above, because it CANNOT FAIL TOWARD "NOTHING TO DO."** Those return an empty or reassuring result. This one returns a **populated, well-formed, entirely plausible report about somebody else's clones** — both pools exist, so there is no error, no `exit 2`, and no empty-denominator tell.
+⛔ **`11` from the command, and `2` from the script, mean "could not check" and must NOT be read as
+clear.** Both dominate their "found" code structurally, because a caller acting on *found* believes
+the pool was fully examined. On the script's side, if `tmux` returns nothing while status files
+exist it refuses to report the pool stale and exits 2 — the action on a STALE report is deleting a
+worker's state file.
 
-⭐ **Measured 2026-09-17 on `matsengrp/superfamily-pcp`, by a conductor following this skill's own instruction literally.** No-argument run: `birch`/`cedar`, `COLLISION src/ml/stochastic_search.zig`. Re-run with the explicit root, same minute: `cobalt`/`copper`/`silver`, `COLLISION CLAUDE.md`. **Every clone name, branch, file, and the collision itself were wrong — and nothing in the first output looks wrong.** A conductor that trusted it would have sequenced that repo's spawns against another project's branches, and **missed a real three-way collision on `CLAUDE.md` that went on to produce two genuinely conflicting PRs.**
+⭐ **WHY THIS IS A COMMAND NOW, because the argument generalises past this check.** The script used
+to take the pool root as an OPTIONAL positional with `ROOT="${1:-$HOME/re/pz}"`. ⚠ **That is the
+wrong-universe failure, and it is worse than every probe failure catalogued above, because it
+CANNOT FAIL TOWARD "NOTHING TO DO."** Those return an empty or reassuring result; this one returns
+a **populated, well-formed, entirely plausible report about somebody else's clones** — both pools
+exist, so there is no error, no non-zero exit, and no empty-denominator tell.
 
-⚠ **The script's own header says so, and that is exactly why the defect survived: the caveat was in the wrong document.** It reads *"Scope: written for and exercised only against matsengrp/phyz's `~/re/pz` pool. The clone-root argument makes it portable in principle; that is untested."* — true, accurate, and **in the file the caller does not open.** ⭐ Note what that caveat becomes: **following the instruction above IS that test, and it passed** — on `matsengrp/superfamily-pcp`, 2026-09-17. Say so, or the next reader inherits an untested-ness claim this instruction now contradicts.
+⭐ **Measured 2026-09-17 on `matsengrp/superfamily-pcp`, by a conductor following this skill's own
+instruction literally.** No-argument run: `birch`/`cedar`, `COLLISION src/ml/stochastic_search.zig`.
+Re-run with the explicit root, same minute: `cobalt`/`copper`/`silver`, `COLLISION CLAUDE.md`.
+**Every clone name, branch, file, and the collision itself were wrong — and nothing in the first
+output looks wrong.** A conductor that trusted it would have sequenced that repo's spawns against
+another project's branches, and **missed a real three-way collision on `CLAUDE.md` that went on to
+produce two genuinely conflicting PRs.**
 
-➡ **Corollary, worth more than the fix: when a shared helper takes a scoping argument and the instruction omits it, the default IS the bug.** An omitted scope argument does not produce "no scope"; it produces *somebody's* scope, silently.
+➡ **Corollary, worth more than the fix: when a shared helper takes a scoping argument and the
+instruction omits it, the default IS the bug.** An omitted scope argument does not produce "no
+scope"; it produces *somebody's* scope, silently.
 
-⛔ **THE NULL-CHECK ABOVE IS LOAD-BEARING, AND THE FIRST DRAFT OF THIS VERY FIX OMITTED IT AND REINSTATED THE BUG.** `:-` substitutes on unset **or empty**, so an unparseable `.epic-config.json` makes the explicit argument evaporate. ⚠ **And it does not merely fall back — it returns the REASSURING answer.** Measured, passing an explicit empty string: `files touched by MORE THAN ONE live clone ... none`. **A clean bill of health, about the wrong fleet, on the step whose output authorises a spawn.**
+⛔ **AND THE REMEDY EVERY INTERMEDIATE VERSION REACHED FOR WAS ITSELF FAIL-OPEN, WHICH IS WHY THE
+ARGUMENT IS GONE RATHER THAN DOCUMENTED.** `:-` substitutes on unset **or empty**, so an
+unparseable `.epic-config.json` made the explicitly-passed root evaporate — and measured, passing
+an explicit empty string, it returned `files touched by MORE THAN ONE live clone ... none`: **a
+clean bill of health, about the wrong fleet, on the step whose output authorises a spawn.** ⭐ **Two
+instances of that family in one afternoon were written INTO A FIX FOR IT, by authors holding the
+rule in mind as they typed** (that null-check, and the `EXPECTED` null-check in `/bip-epic`'s push
+snippet). **That is the strongest evidence available that this needed a mechanical check rather
+than care** — care demonstrably does not survive the act of writing the remedy. The command has no
+spelling for the defect: an empty root is an error, and
+`internal/gitx/collide_test.go:TestCollide_EmptyRootIsNotARoot` plus
+`cmd/bip/epic_collide_test.go:TestResolveCollideRoot_NeverDefaults` fail if it comes back.
 
-⭐ **Two instances of this family in one afternoon were written INTO A FIX FOR IT, by authors holding the rule in mind as they typed** (this one, and the `EXPECTED` null-check in `/bip-epic`'s push snippet). **That is the strongest evidence available that this needs a mechanical check rather than care** — care demonstrably does not survive the act of writing the remedy.
+⛔ **DO NOT READ AN EXIT CODE AFTER A PIPE. REDIRECT TO A FILE AND RUN IT UN-PIPED.** Anyone
+checking these codes will reach for `... | sed -n '/foo/,/bar/p'` to read the output, and `$?` then
+reports SED's status. Measured 2026-09-14: read as 0 when the real status was 1.
 
-⛔ **AND THE HEADER'S OTHER PRESCRIPTION IS ITSELF FAIL-OPEN IN THIS FLEET'S DEFAULT SHELL.** `fleet-collisions.sh:37` correctly warns not to read `$?` after a pipe and prescribes `"${PIPESTATUS[0]}"`. **`PIPESTATUS` is a bash array. `zsh` — `/usr/bin/zsh`, the login shell on `pax` — spells it `$pipestatus[1]`, lowercase and 1-indexed, and evaluates `${PIPESTATUS[0]}` to the EMPTY STRING rather than erroring.** So the remedy for a fail-open reads as blank, not as a failure — `exit=` with nothing after it, which a reader scanning for a non-zero code passes straight over.
+⛔ **The `"${PIPESTATUS[0]}"` form that used to be prescribed for this is itself fail-open in this
+fleet's default shell.** **`PIPESTATUS` is a bash array. `zsh` — `/usr/bin/zsh`, the login shell on
+`pax` — spells it `$pipestatus[1]`, lowercase and 1-indexed, and evaluates `${PIPESTATUS[0]}` to the
+EMPTY STRING rather than erroring.** So the remedy for a fail-open reads as blank, not as a failure
+— `exit=` with nothing after it, which a reader scanning for a non-zero code passes straight over.
 
 ⛔ **AND THE CORRECT SPELLING IS STILL A TRAP, BECAUSE BOTH VARIABLES ARE REBUILT BY EVERY COMMAND — INCLUDING THE ONE BEFORE YOUR READ.** Not zsh-specific; bash's `PIPESTATUS` behaves identically. The read is only valid as **the very next thing after the pipeline**:
 
@@ -749,15 +866,15 @@ echo "second: [$pipestatus[1]]"     # 0   <- now reports the FIRST echo
 
 ⭐ **The worker caught it independently before the correction landed, which is the pattern rather than the exception.** Three times that afternoon a worker was right against guidance from above. **The tier closest to the artifact catches what the tier reasoning about it cannot** — so a conductor's correction to a worker should carry its evidence and invite contradiction rather than assert a verdict.
 
-**This check cannot be done from the epic side and is not a courtesy hand-off.** Clone branches are local (`shared_filesystem: false`), and remote refs are not a substitute: under squash-merge every historical branch stays permanently ahead of `main` — measured on `matsengrp/phyz`, **847 remote branches, the first 400 all ahead** — so "ahead of main" does not discriminate live from long-dead. The decisive case is **uncommitted** work, which exists only in the clone. A three-way collision on one test file was visible on 2026-09-14 solely in `git status` output on the conductor's machine.
+**Neither half can be done from the epic side, and this is not a courtesy hand-off.** Clone branches are local (`shared_filesystem: false`), and remote refs are not a substitute: under squash-merge every historical branch stays permanently ahead of `main` — measured on `matsengrp/phyz`, **847 remote branches, the first 400 all ahead** — so "ahead of main" does not discriminate live from long-dead. The decisive case is **uncommitted** work, which exists only in the clone. A three-way collision on one test file was visible on 2026-09-14 solely in `git status` output on the conductor's machine.
 
-It reports four things: live branches and their touched files; **files touched by more than one live clone**; **a `.epic-status.json` whose clone has no live pane**; and **a live pane with no status file**.
+⭐ **That is also why `bip epic collide` falls back to the WORKING TREE for a branch that is not pushed, and prints which referent it used.** An unpushed branch is the normal state here, so refusing to compare it — what the script did — would have made almost every real run exit "could not check", which is signal destruction rather than caution. `mine=7` from a pushed branch and `mine=7` from a working tree are different claims, so the line says which.
+
+**Between them the two halves report five things**: live branches and their touched files; **files touched by more than one live clone**; **a live branch versus what LANDED since it forked** (all three from `bip epic collide`); **a `.epic-status.json` whose clone has no live pane**; and **a live pane with no status file** (both from the script, along with a pane whose agent session is dead).
 
 ⭐ **Those last two are one asymmetric check and the second direction is the worse one.** A stale file makes an idle clone read busy and costs a spawn. A *missing* file makes a busy clone invisible to every state-file sweep **including the phase monitor** — so a stall there produces silence rather than a stale timestamp, and a conductor can spawn a second worker into an occupied clone. Both were live on 2026-09-14, hours apart.
 
-⚠ **And the general lesson, which is why both directions are in one script: fixing one direction of an asymmetric check is the moment you are least likely to examine the other.** The missing-file section exists only because the epic asked about the direction the conductor had just stopped looking at, and it fired on its first run.
-
-⛔ **Exit 2 means "could not check" and must not be read as clear.** If `tmux` returns nothing while status files exist, the script refuses to report the pool stale and exits 2 — because the action on a STALE report is deleting a worker's state file.
+⚠ **And the general lesson, which is why both directions stayed in one script: fixing one direction of an asymmetric check is the moment you are least likely to examine the other.** The missing-file section exists only because the epic asked about the direction the conductor had just stopped looking at, and it fired on its first run.
 
 ### Editing fleet tooling rewrites every live session's instructions, with no event
 
