@@ -1251,6 +1251,22 @@ So append this to the command itself, substituting whatever command you actually
 
 ⚠ **The cost of omitting it is asymmetric**: a slot that wedges this way is simultaneously unreclaimable (`shell`, never `idle`) and unreachable (blocked on a foreground shell, so it drains no `SendMessage`). Only the conductor can clear it, from outside, and only if it notices.
 
+**An issue that proposes an arm as a DEFAULT names, as a DELIVERABLE, the statistic that matches how the result will be CONSUMED** — and a best-of-N comparison does not match a consumer that runs the thing once. Best-of-N answers *"what is the best this can do"*; a deploy-once consumer is asking *"what will this do."* Those are different questions, and scoring the second with the first rewards dispersion.
+
+Best-of-N is monotone in variance, so a variance-inflating lever wins a max comparison mechanically, without being better. Verified on a zero-mean Gaussian, 200k draws per row:
+
+| dispersion | E[single draw] | E[max of 5] |
+|---|---|---|
+| σ = 1 | +0.000 | **+1.162** |
+| σ = 2 | −0.010 | **+2.327** |
+| σ = 4 | +0.002 | **+4.649** |
+
+⛔ **So a best-of-5 protocol pays about 1.16σ for dispersion alone, and an arm that wins that way is WORSE for a deploy-once consumer than one that wins by being better.** The worked instance, `matsengrp/phyz` EPIC #369 at fixture `151921`: arm `S1w` took pooled ranks **1, 2, 3, 9, 10** against `A1`'s **4, 5, 6, 7, 8** — rank sums 25 vs 30 against a null of 27.5, exact two-sided Mann–Whitney **p = 0.69**. It owns the top three and the bottom two. It is not better in location, it is more dispersed, and every `>127` arm comparison in that programme had been scored best-of-five while `pcp-pipeline` runs a tree once.
+
+⚠ **Scope this honestly rather than as a universal: it is the CONSUMER that decides the statistic.** A programme whose consumer genuinely takes a best-of-N wants the max, and for it this clause is wrong. What generalises is the matching requirement, not the preference for order statistics.
+
+➡ **And state it as a DELIVERABLE rather than as guidance, which is the part that is not specific to statistics at all: a brief freezes at spawn and is read cold, so guidance in surrounding prose does not survive that reading.** This is the general reason every hazard in this section is phrased as a named deliverable — the deliverable list is the part a cold worker executes.
+
 **An issue that adds a build-system target names, as a DELIVERABLE, whatever artifact makes that target discoverable in this repo** — a hand-maintained test-target table, a `make help` entry, a CI matrix row, a README list. ⛔ **If the answer is "nothing makes it discoverable", that is the finding and it belongs in the brief, not a reason to skip the deliverable.** ⭐ **The invariant is DISCOVERABILITY, not a row in any particular file.**
 
 **The worked instance, which is why this is not documentation hygiene:** `matsengrp/phyz`'s source→target map is hand-maintained **by necessity** — the file→step relation cannot be derived from `build.zig`'s text, and that repo records **two resolvers built and discarded** proving it. **A step absent from that table there is UNREACHABLE BY THE ONLY LOOKUP THAT EXISTS.** The gap has been paid for five times — #2298, #2499, #2599, #2603, #2627.
