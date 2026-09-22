@@ -460,11 +460,25 @@ Pull it forward so the canonical checkout matches `main`.
 1. Resolve the primary clone path the way `bip spawn` does (mirrors `flow.ResolveRepoPath`: `nexus_path` from `~/.config/bip/config.yml`, repo from `git remote get-url origin`, then `sources.yml` + `config.yml` paths).
    If `$(pwd -P)` already equals it, or the repo isn't listed, skip this step.
 
-2. `git -C "$PRIMARY" pull --ff-only`.
+2. ⛔ **Skip if the primary is co-tenanted, and skip if you cannot tell.** This step moves `HEAD` in a clone you are **not standing in**, which is the one place the "Where to stand" precondition above does not reach — see the note after this list. Reuse that section's anchored count, against `$PRIMARY` rather than `$PWD`:
+
+   ```sh
+   for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | grep -cE "^$PRIMARY(/|$)"
+   ```
+
+   ⚠ **More than one means skip — and `1` does not mean pull.** That count is a **floor, not a census** (the caveat eleven lines into this skill, which applies here unchanged): a session that `cd`s into the clone from elsewhere is invisible to it. **So the rule is "skip when co-tenancy is detected OR when the primary is a known fleet clone" — in a conductor-run fleet the primary is the normal home of the conductor and the epic, so skipping is the DEFAULT there, not the exception.**
+
+   ⛔ **When you skip, report the primary's behind-count to the conductor as a loose end. Do not fix it silently.** A fast-forward under a co-tenant is the repo-moved-under-a-finished-result hazard: measured on `matsengrp/phyz`, pulling that clone after a landing staled the epic's binary against `HEAD` in the same motion, and the epic had to be told which of its published figures survived.
+
+3. Otherwise, `git -C "$PRIMARY" pull --ff-only`.
    On failure, warn with the error and continue — the merge is already upstream, nothing is lost.
    Never stash.
 
-3. Report what you did in Step 10.
+4. Report what you did in Step 10.
+
+⭐ **Why this step needed its own precondition when no other step does, stated so the next one inherits it: "Where to stand" is scoped to where you STAND, and the hazard is a property of which clone `HEAD` MOVES IN.** Verified across this file — every other `HEAD`-mover here (`git rebase origin/<base>`, `git checkout <base>`, `git pull`) is bare and runs in the clone you are standing in, so the opening precondition covers it. **This is the only `git -C <another clone>` that moves `HEAD`, and so the only one the precondition slipped past.** ➡ **Any future step that reaches into a clone you are not standing in inherits the same requirement — the rule is not "check before you stand", it is "check before `HEAD` moves, wherever it moves."**
+
+**Two workers hit this contradiction independently on one day, four hours apart, and both refused the step and flagged it rather than arbitrating** — which is what this repo's own rule asks for (*"when a rail and an instruction conflict, the conflict is a defect in the pair, not a puzzle for the worker to solve"*). **The pair stayed broken through both refusals, which is the argument for fixing the document rather than commending the workers.**
 
 ### Step 8: Remove worktree (if applicable) and delete branch
 
