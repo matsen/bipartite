@@ -1261,7 +1261,20 @@ Best-of-N is monotone in variance, so a variance-inflating lever wins a max comp
 | σ = 2 | −0.010 | **+2.327** |
 | σ = 4 | +0.002 | **+4.649** |
 
-⛔ **So a best-of-5 protocol pays about 1.16σ for dispersion alone, and an arm that wins that way is WORSE for a deploy-once consumer than one that wins by being better.** The worked instance, `matsengrp/phyz` EPIC #369 at fixture `151921`: arm `S1w` took pooled ranks **1, 2, 3, 9, 10** against `A1`'s **4, 5, 6, 7, 8** — rank sums 25 vs 30 against a null of 27.5, exact two-sided Mann–Whitney **p = 0.69**. It owns the top three and the bottom two. It is not better in location, it is more dispersed, and every `>127` arm comparison in that programme had been scored best-of-five while `pcp-pipeline` runs a tree once.
+So a best-of-5 protocol pays about 1.16σ for dispersion alone, and an arm that wins that way is worse for a deploy-once consumer than one that wins by being better.
+
+⛔ **THAT CONSTANT IS A SCREENING TEST, AND IT IS THE DELIVERABLE: a best-of-N win is uninterpretable unless the observed delta exceeds `~1.16 × sd`.** It costs no new compute — `sd` comes from the per-seed deltas already committed. Applied to the four comparisons `matsengrp/phyz` EPIC #369 was ranking (its body carries the table), the premium exceeds the observed effect by **4–11×** in three of them:
+
+| comparison | sd | premium | observed | ratio |
+|---|---|---|---|---|
+| `151921` patience → composed | 21.47 | 24.95 | 2.22 | **11.2×** |
+| `151921` shipped → width-alone | 35.79 | 41.59 | 3.67 | **11.3×** |
+| `142704` shipped → composed | 11.10 | 12.90 | 3.04 | **4.2×** |
+| `142704` shipped → patience | 11.26 | 13.09 | 15.05 | 0.9× |
+
+⭐ **Three of those four "effects" are smaller than what a null arm would win by on spread alone, and the one that clears the screen is the same one an independent required-`n` calculation put at `n ≥ 6` while the others needed 10, 53 and ~360.** Two unrelated routes to the same partition is what makes this a test rather than a coincidence.
+
+The instance that surfaced it, same EPIC at fixture `151921`: arm `S1w` took pooled ranks **1, 2, 3, 9, 10** against `A1`'s **4, 5, 6, 7, 8** — rank sums 25 vs 30 against a null of 27.5, exact two-sided Mann–Whitney **p = 0.69**. It owns the top three and the bottom two: not better in location, more dispersed. Every `>127` arm comparison in that programme had been scored best-of-five while `pcp-pipeline` runs a tree once.
 
 ⚠ **Scope this honestly rather than as a universal: it is the CONSUMER that decides the statistic.** A programme whose consumer genuinely takes a best-of-N wants the max, and for it this clause is wrong. What generalises is the matching requirement, not the preference for order statistics.
 
