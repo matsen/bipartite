@@ -980,6 +980,20 @@ echo "second: [$pipestatus[1]]"     # 0   <- now reports the FIRST echo
 ⚠ **This binds humans too, not only agents.** The commit above was authored by the user, landing directly on `main` while six agent sessions were mid-task.
 ⛔ **AND THE COMMIT HAZARD, WHICH IS DISTINCT FROM THE CHECKOUT ONE ABOVE AND BIT US THE SAME NIGHT: A PER-FILE `git add <file>` IS EXACTLY AS UNSCOPED AS `git add -A` WHEN ANOTHER SESSION HAS AN UNCOMMITTED HUNK IN THAT SAME FILE.**
 
+⛔ **THE PRECONDITION FOR ALL OF THE ABOVE, AND THE FLEET HAS THE INSTRUMENT WITHOUT THE RULE: BEFORE `HEAD` MOVES IN A CLONE YOU DO NOT EXCLUSIVELY OWN, COUNT THE SESSIONS IN IT.** The count is the one this file already prints for its dashboard further down — run it against the target clone rather than for inventory:
+
+```sh
+for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | grep -cE "^<clone>(/|$)"
+```
+
+**More than one is co-tenancy, and `1` is not proof of solitude** — it reads each session's *own* cwd, so a session that `cd`s in from elsewhere is invisible. `/bip-pr-land`'s "Where to stand" states the same caveat and the anchoring requirement; this is the same check, applied to a conductor acting by hand rather than to that skill.
+
+**THIS IS THE FIRST TIME THIS FILE SAYS IT, AND THAT IS THE POINT — the nearby material is a SIBLING hazard, not this one.** The section below about editing fleet tooling is scoped to **`~/re/bipartite`**, the document tree: its trigger is a `pull` bringing in a commit touching `skills/*`, and its remedy is to do that work in a separate clone. A **project** clone staling a peer's **binary** is a different mechanism with a different blast radius, and this file's only prior mention of it is at the clone-currency sweep, where it appears as something a behind-count *cannot* tell you and is explicitly disclaimed as *"NOT this check's job"*, sourced to another repo's `CLAUDE.md`.
+
+⛔ **So do not read this as a rule that was nearly here and got missed through carelessness. It was not here.** Measured 2026-09-22: a conductor ran `cd ~/re/phyz && git pull` as ordinary hygiene after a landing — the same act as `/bip-pr-land`'s `git -C "$PRIMARY" pull` with the `cd` on the other side of the invocation, and nothing governed it because no skill was being run. The epic sharing that clone had its binary go stale against `HEAD` in the same motion and had to be told which of its published figures survived. **Its own account is the useful one: it had read the tooling-tree section, correctly concluded it did not apply because `~/re/phyz` is not the tooling tree, and had nothing else to hit. A rule applied correctly, to the wrong clone.**
+
+➡ **So the rule is not "check before you stand" — it is "check before `HEAD` moves, wherever it moves, and whoever is moving it."** **A sweep of `/bip-pr-land` makes the shape visible: three of its four `HEAD`-movers are bare commands that run where you stand, and they are safe only because standing-there and moving-there COINCIDE — an accident of those commands rather than a property anyone checked.** The fourth reaches into another clone, and it is the one that slipped the precondition. **A conductor at a shell is that fourth case every time.**
+
 The section above is about operations that move `HEAD`. This one needs none: two sessions editing one shared clone, neither touching git history, and one of them commits.
 
 ⚠ **Measured 2026-09-20 on `~/re/bipartite`.** One session staged a two-line addition to `EVIDENCE-DISCIPLINE.md` and held it pending clearance to push. A second session added its own entry to the *same file*, ran `git add EVIDENCE-DISCIPLINE.md` -- scoped to one file, deliberately, not `-A` -- and pushed. ⭐ **The commit landed 3 insertions, two of them the other session's, under a message describing only one entry.** Nothing errored, both texts were correct and both had been approved, and it surfaced only because the first session went to push and found its working tree already clean.
