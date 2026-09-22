@@ -6,6 +6,35 @@ Whether a claim is **true**, as distinct from how it is written — that is `PRO
 
 **Budget.** This is the half that grows, and it grows fastest: 1,053 words on 2026-09-05, 16,354 on 2026-09-20 (`git show f21d5cec:EVIDENCE-DISCIPLINE.md | wc -w` vs the same at `23371f0`). Keep the clause that makes a measured example undeniable; cut the parameter-space texture around it. **The budget itself, with the numbers and the pre-commit check, is `/bip-kaizen` Step 2b — it is a gate now, not a preference, and it is not restated here.**
 
+## Classify a check before adding one
+
+**A check has two independent properties and this file has been collapsing them.** What **triggers** it: a signature a MACHINE can fire on, or a suspicion someone must already hold. What its **remedy** needs: a human re-reading, or a command returning data nobody has.
+
+| | remedy: re-read | remedy: command |
+|---|---|---|
+| **trigger: machine-detectable** | a hook fires, a human resolves | **fully automatable** — a hook fires and resolves |
+| **trigger: suspicion** | needs a peer to supply the doubt | needs a peer *and* a shell |
+
+⛔ **Almost everything in this file is in the bottom row, and that is why "verify more" does not work: you cannot run a check you have no reason to run.** A peer's contribution is rarely the checking — it is **supplying the trigger.**
+
+⚠ **The axis is "machine-detectable", NOT "a person could notice it", and that distinction was bought with a failure rather than reasoned out.** An earlier draft of this entry read the top row as *"survives a session working alone."* It does not. ⛔ **Measured 2026-09-22: the author of a check, having just written it into this file, asserted an uncomputed figure in the very commit that adds it — and then did it a second time after a peer corrected the first.** The trigger was present, freshly authored, and scannable by eye. **A human holding a check in mind is not a mechanism for firing it.**
+
+⭐ **So the table's real output is a list of HOOK CANDIDATES — the top row is what can be automated, not what a careful reader will remember.** A hedge word and a quantifier beside a diff hunk each fire from a one-line grep; *"what will this answer be used for?"* has no textual signature at all. ⚠ **But a trigger that fires on everything equals no trigger, because it gets ignored** — the marker budget's own arithmetic, one cell over. **The top row needs a signature that DISCRIMINATES, not merely one that exists.**
+
+➡ **When you add a check, say which cell it lands in, and prefer MOVING one up over adding another to the bottom row.** This classifier is why it earns its bytes: later entries name a cell instead of re-deriving the distinction, and the top two cells are a build list.
+
+**Top-left, both 2026-09-22:** *does the conclusion change if this hedge is false?* (trigger: a hedge word you wrote; if no, it is decoration and reads as doubt). *Does this sentence quantify over a set I just added to?* (trigger: a quantifier beside your own change).
+
+**Top-right, and it is ONE check with two triggers rather than two checks:** *a figure in your text whose warrant is a command — did you run it?* **Trigger A:** you reported a count without its denominator. **Trigger B:** you wrote a number after changing the thing it counts. ⛔ **The cell is set by what the remedy DEMANDS, not by whether the question is answerable from memory** — *"did I recompute?"* is answerable by recall, and *recomputing* is `wc -w`.
+
+⚠ **And one that reads as self-applicable and empirically is not:** *what will this answer be used for?* has no textual trigger, and the wrong-axis errors it caught on 2026-09-22 were all caught **by the other party**, all of them true measurements that re-derivation would have confirmed.
+
+⭐ **The table's job is to disagree with you, and its first real use was against the person proposing the entry.** Trigger B above was offered as a third top-left check; the axes put it top-right, and top-right is correct. **A list would have accepted it — it is a good check, and a list has no way to disagree.** That is the whole argument for classifying rather than collecting.
+
+⭐ **A worked bottom-left instance, and the move that gets it out:** citing `bip-conductor/SKILL.md`'s fleet-tooling section as covering a project clone, when its scope line — *"a SEPARATE CLONE of `bipartite`"* — sat four lines away. Nothing in the citing text flagged it, so the trigger was suspicion and the remedy was a four-line re-read: **bottom-left**. ➡ **It moves to top-left by naming a scannable trigger: *am I citing a section as evidence? Then read its scope line.*** That is the shape of "prefer moving one up" — the miss was not the reading, it was that nothing asked for it.
+
+⚠ **Evidence for the whole entry: one day, one fleet, three sessions — two top-left checks against perhaps a dozen elsewhere. That hedge is load-bearing and stays:** run the hedge check on it and the conclusion *does* change if it is false, because "rare and worth hunting" becomes "common and worth cataloguing", which is a different instruction.
+
 ## Before citing a measurement
 
 A number in an issue body licenses work. Before one goes in, establish what its presence in a file does not establish on its own.
