@@ -207,6 +207,16 @@ git log --format='%B' "origin/$BASE"..HEAD \
 
 ⭐ **This is a NEW SUB-SHAPE and it is worse than the two recorded above, which are both a keyword the author had REMOVED and then QUOTED.** ➡ **Here the keyword is written DELIBERATELY, in a sentence whose meaning is the OPPOSITE of what the parser sees.** ⛔ **Prose negation is invisible to a token scanner, and *"an issue this PR does not close"* is an ORDINARY SENTENCE TO WRITE** — especially in a body that is being careful about scope, which is exactly the body most likely to contain it. ⚠ **So the gate firing on your own hedge is not a false positive.** Reword — break the keyword token or move the number away from it — and pass `--body` regardless.
 
+⛔ **THIRD SUB-SHAPE, AND THE DETECTOR ALREADY CATCHES IT — THE GAP IS THAT YOU WILL DISMISS THE HIT.** A follow-up body reading *"Follow-up to #2902, which closed #2900"* arms the enumeration for **this** PR, and the pinned pattern above does match `closed #2900` in that sentence (verified). So this is not a hole in the grep; it is a hole in the reading — the sentence is ordinary past-tense narration about a **different** PR, so a reader recognises it as not-a-directive and waves the flag through.
+
+**The parser does not read attribution.** *"which #2902 closed"* and *"closes"* are the same token stream to GitHub, and nothing in the sentence's meaning reaches it. ➡ **A keyword hit is live regardless of what the sentence is ABOUT, so the `closingIssuesReferences` read decides — never your reading of the prose.**
+
+⚠ **This is the dangerous one of the three, structurally rather than by frequency: *"Follow-up to #X, which closed #Y"* is the modal phrasing of an entire PR class, and a follow-up is precisely when the parent is most often still OPEN.** The two sub-shapes above are written by an author being careful about scope; this one by an author narrating history who is not thinking about parsers at all.
+
+Remedy, in order. **Rephrase first** — *"which #2902 resolved"* moves the number away from the keyword, costs nothing, and is verified clean against the pattern. A zero-width space inside the keyword is the fallback for when you must quote the literal token, and only then: an invisible character survives copy-paste but not every renderer, a later re-quote yields a keyword that re-arms, and a document that defuses the hazard that way can no longer be grepped for the hazard it describes.
+
+**`closingIssuesReferences` is eventually consistent, so one read after an edit is not evidence** — re-read until two consecutive reads agree. Reported from `matsengrp/phyz` 2026-09-22: the first read after the edit still returned the stale number, the next returned empty. *Not independently reproduced; the body had already been corrected by the time this was written up, so treat the two-reads rule as the durable part and the timing as one observation.*
+
 ⭐ **BASE RATE, MEASURED SO THE WARNING IS NOT JUST AN ANECDOTE — last 300 commit bodies on `origin/main`, the real gate pattern, GNU grep, two readers independently:**
 
 | | |
