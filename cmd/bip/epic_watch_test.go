@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -717,6 +718,89 @@ func TestPhasesFlagOverride(t *testing.T) {
 	}
 	if events[0].NewPhase != "coding" {
 		t.Errorf("unexpected event phase: %s", events[0].NewPhase)
+	}
+}
+
+// A slot moving into a phase that is not legal must alert whatever the
+// filter says: otherwise it is invisible until it moves back out.
+func TestOffSpecPhaseAlwaysEmits(t *testing.T) {
+	dir := t.TempDir()
+	slot := slotInfo{name: "alpha", statusPath: filepath.Join(dir, "alpha", epicStatusName)}
+	logPath := filepath.Join(dir, epicNotificationsName)
+
+	writeStatus(t, slot.statusPath, 1, "coding", "")
+	h := startWatcher(t, []slotInfo{slot}, parsePhasesFilter(defaultEpicWatchPhases), logPath, 50*time.Millisecond)
+	defer h.stop(t)
+
+	writeStatus(t, slot.statusPath, 1, "premature-deferral", "")
+	waitFor(t, 2*time.Second, func() bool {
+		return len(readLogEvents(t, logPath)) >= 1
+	})
+	// Back to a legal phase outside the filter: silent, as before.
+	writeStatus(t, slot.statusPath, 1, "testing", "")
+	time.Sleep(250 * time.Millisecond)
+
+	events := readLogEvents(t, logPath)
+	if len(events) != 1 {
+		t.Fatalf("expected exactly 1 event, got %d: %+v", len(events), events)
+	}
+	if events[0].NewPhase != "premature-deferral" || events[0].OldPhase == nil || *events[0].OldPhase != "coding" {
+		t.Errorf("unexpected event: %+v", events[0])
+	}
+}
+
+func TestDropIllegalPhases(t *testing.T) {
+	if bad := dropIllegalPhases(parsePhasesFilter(defaultEpicWatchPhases)); len(bad) != 0 {
+		t.Errorf("default filter lost %v", bad)
+	}
+	phases := parsePhasesFilter("coding,premature-deferral,done")
+	bad := dropIllegalPhases(phases)
+	if strings.Join(bad, ",") != "done,premature-deferral" || len(phases) != 1 || !phases["coding"] {
+		t.Errorf("got bad=%v phases=%v", bad, phases)
+	}
+}
+
+// TestEpicPhasesMatchDocs fails when a doc that lists the legal phases
+// drifts from epicPhases.
+func TestEpicPhasesMatchDocs(t *testing.T) {
+	backticked := regexp.MustCompile("`([a-z-]+)`")
+	cases := []struct {
+		file, marker string
+		parse        func(rest string) []string
+	}{
+		{"agents/issue-lead.md", "**`phase` is one of seven:**", func(rest string) []string {
+			var out []string
+			for _, m := range backticked.FindAllStringSubmatch(strings.SplitN(rest, ". ", 2)[0], -1) {
+				out = append(out, m[1])
+			}
+			return out
+		}},
+		{"skills/bip-conductor-spawn/SKILL.md", "phase — one of:", func(rest string) []string {
+			return strings.Split(rest, ",")
+		}},
+		{"skills/bip-conductor/SKILL.md", `"phase": "`, func(rest string) []string {
+			return strings.Split(strings.SplitN(rest, `"`, 2)[0], "|")
+		}},
+	}
+	want := strings.Join(epicPhases, ",")
+	for _, c := range cases {
+		data, err := os.ReadFile(filepath.Join("..", "..", c.file))
+		if err != nil {
+			t.Fatalf("%v", err)
+		}
+		_, rest, ok := strings.Cut(string(data), c.marker)
+		if !ok {
+			t.Errorf("%s: marker %q not found", c.file, c.marker)
+			continue
+		}
+		rest, _, _ = strings.Cut(rest, "\n")
+		var got []string
+		for _, p := range c.parse(rest) {
+			got = append(got, strings.TrimSpace(p))
+		}
+		if strings.Join(got, ",") != want {
+			t.Errorf("%s lists %v, want %s", c.file, got, want)
+		}
 	}
 }
 

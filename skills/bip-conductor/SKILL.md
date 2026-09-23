@@ -466,10 +466,9 @@ case "$(fleet_watchers | wc -l)" in
   *) echo "DUPLICATE watchers: $(fleet_watchers | tr '\n' ' ')" ;;
 esac
 ```
-The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`).
+The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`). A transition into a phase that is not one of the seven legal values always emits, so `--phases` only ever lists legal phases.
 
 It is not liveness detection. It is silent when:
-- a `phase` value is off-spec and outside `--phases` (the flag takes an explicit list; add any off-spec value you have seen);
 - a slot never transitions — only the staleness checks in the spec below catch that;
 - a slot was already in its phase when the watcher first read it. Restarting the watcher re-baselines the whole fleet, so re-run `/bip-conductor` after a restart; a clone added to `clone_names` after launch is never enumerated;
 - **a slot lands**: `/bip-pr-land` deletes the status file, so `completed` is never observed. Run a second Monitor polling `gh pr list --state merged`; for landings it is a correctness requirement.

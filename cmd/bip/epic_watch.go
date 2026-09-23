@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -29,6 +30,20 @@ const (
 	defaultPollInterval    = "2s"
 )
 
+// epicPhases are the legal values of .epic-status.json's phase field.
+// agents/issue-lead.md and the skills list the same seven;
+// TestEpicPhasesMatchDocs keeps them in step.
+var epicPhases = []string{"exploring", "coding", "testing", "awaiting-results", "quality-gate", "needs-human", "completed"}
+
+func isEpicPhase(p string) bool {
+	for _, q := range epicPhases {
+		if p == q {
+			return true
+		}
+	}
+	return false
+}
+
 var (
 	epicWatchPhases string
 	epicWatchSince  string
@@ -46,6 +61,10 @@ func newWatchCmd(group string) *cobra.Command {
 phase-transition events to .epic-notifications.log (one JSONL line per
 event) and to stdout (one human-readable line per event).
 
+--phases selects which legal phases alert; other values are ignored with a
+warning. A transition into a phase that is not legal always alerts,
+whatever --phases says.
+
 Reads .epic-config.json from the current working directory to discover
 slots. Watches each slot's parent directory using fsnotify, or falls back
 to stat polling when --poll is set (e.g. for NFS-mounted clone roots
@@ -61,7 +80,7 @@ Examples:
 		RunE: runEpicWatch,
 	}
 	cmd.Flags().StringVar(&epicWatchPhases, "phases", defaultEpicWatchPhases,
-		"Comma-separated phases to alert on")
+		"Comma-separated phases to alert on, from: "+strings.Join(epicPhases, ","))
 	cmd.Flags().StringVar(&epicWatchSince, "since", "",
 		"Replay log entries newer than DURATION to stdout, then exit (e.g. 30m, 2h)")
 	cmd.Flags().StringVar(&epicWatchPoll, "poll", "",
@@ -167,12 +186,17 @@ func runEpicWatch(cmd *cobra.Command, args []string) error {
 		pollInterval = d
 	}
 
+	phases := parsePhasesFilter(epicWatchPhases)
+	if bad := dropIllegalPhases(phases); len(bad) > 0 {
+		fmt.Fprintf(os.Stderr, "warning: ignoring --phases values that are not legal phases (a transition into one always alerts): %s\n", strings.Join(bad, ","))
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	return runWatcher(ctx, watchConfig{
 		slots:        slots,
-		phases:       parsePhasesFilter(epicWatchPhases),
+		phases:       phases,
 		pollInterval: pollInterval,
 		logPath:      logPath,
 		stdout:       os.Stdout,
@@ -268,6 +292,22 @@ func parsePhasesFilter(s string) map[string]bool {
 		out[p] = true
 	}
 	return out
+}
+
+// dropIllegalPhases removes values that are not legal phases from a
+// --phases filter and returns them sorted. It warns rather than fails
+// because a watcher is started detached, where an error goes unseen, and
+// such a value is redundant anyway: a transition into one always alerts.
+func dropIllegalPhases(phases map[string]bool) []string {
+	var bad []string
+	for p := range phases {
+		if !isEpicPhase(p) {
+			bad = append(bad, p)
+			delete(phases, p)
+		}
+	}
+	sort.Strings(bad)
+	return bad
 }
 
 // readStatus loads and validates a slot's .epic-status.json.
@@ -452,7 +492,8 @@ func signalReady(cfg watchConfig) {
 }
 
 // processStatus reads the slot's status file and emits a transition event
-// when the phase has changed and matches the filter. A slot first observed
+// when the phase has changed and either matches the filter or is not a
+// legal phase, since a slot in one is otherwise invisible. A slot first observed
 // without a prior phase has its phase recorded as a baseline (no emission).
 func processStatus(s slotInfo, lastPhase map[string]string, cfg watchConfig, logFile *os.File) {
 	status, err := readStatus(s.statusPath)
@@ -470,7 +511,7 @@ func processStatus(s slotInfo, lastPhase map[string]string, cfg watchConfig, log
 	if prev == status.Phase {
 		return
 	}
-	if !cfg.phases[status.Phase] {
+	if !cfg.phases[status.Phase] && isEpicPhase(status.Phase) {
 		// Non-milestone transition: silently update state.
 		lastPhase[s.name] = status.Phase
 		return
