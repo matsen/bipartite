@@ -33,8 +33,9 @@ Reach for a subagent when the work fits in one call and only you need the answer
 ## Rules
 
 - **The helper gets a directory of its own.**
-  Never a checkout another live session works in: `reclaim_slot` holds on a second session in a slot, and `/bip-issue-work` sends a co-tenant's branch work into a worktree.
-  A pooled clone is allowed only when it is free and you hold it first (start, step 2).
+  Never a checkout another live session works in: `/bip-issue-work` sends a co-tenant's branch work into a worktree, and `reclaim_slot` stops with `NOT FREE` while any process is still in the slot.
+  A pooled clone is allowed only when it is available and you hold it first (start, step 2).
+  A `--bg` helper has no tmux window, so the hold is the only thing that marks the clone as in use.
 - **A worker in a pooled slot does not start helpers.**
   Its helper's worktree would hang off the slot's repo, and `reclaim_slot` neither removes nor reports it, so it would outlive the slot.
   Ask the epic or the conductor to start one instead.
@@ -73,12 +74,17 @@ mkdir -p "$HELPERS"
    It branches there itself (for example via `/bip-issue-work`), as the checkout's only session.
 
    If it runs gates or builds that need a built environment (a `.pixi` env, a vendored binary), a fresh worktree would pay a full install first.
-   A conductor or epic session that manages a clone pool can instead lend it a **free** pooled clone (idle, clean, on `main`, as `/bip-conductor` classifies it), held so spawn selection and `bip spawn` skip it:
+   A conductor or epic session that manages a clone pool can instead lend it an `available` pooled clone (as `/bip-conductor` Step 5 classifies it), held so spawn selection and `bip spawn` skip it:
    ```bash
-   mkdir -p "$CLONE_ROOT/.holds" && echo "helper <primary>-<role>" > "$CLONE_ROOT/.holds/<clone>"
+   source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+   CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+   HOLD="$CLONE_ROOT/.holds/<clone>"
+   mkdir -p "$CLONE_ROOT/.holds" && echo "helper <primary>-<role>" > "$HOLD"
    DIR="$CLONE_ROOT/<clone>"
    ```
-   Write the hold before anything else touches the clone, and record its path as `hold`.
+   Run it from your own checkout, where `.epic-config.json` lives.
+   `<this-skill's-base-directory>` is this skill's base directory as given at invocation; `lib/spawn-intent.sh` is a sibling of every skill directory.
+   Write the hold before anything else touches the clone, then confirm the clone is still `available`; if it is not, delete the hold and pick another.
 
    Otherwise, a scratch directory: `DIR=$(mktemp -d "${TMPDIR:-/tmp}/<primary>-<role>.XXXX")`.
 
@@ -88,7 +94,7 @@ mkdir -p "$HELPERS"
    ARGS=(-n "<primary>-<role>")
    [ -f "$SETTINGS" ] && ARGS=(--settings "$SETTINGS" "${ARGS[@]}")
    OUT=$(cd "$DIR" && claude --bg "${ARGS[@]}" "<brief>" 2>&1)
-   ID=$(printf '%s\n' "$OUT" | sed -n 's/^backgrounded · \([0-9a-f]*\) · .*/\1/p')
+   ID=$(printf '%s\n' "$OUT" | sed -n 's/^backgrounded · \([0-9a-f]\{1,\}\) · .*/\1/p')
    SID=$(claude agents --json --all | jq -r --arg id "$ID" '.[] | select(.id==$id) | .sessionId')
    ```
    If `ID` or `SID` is empty, stop and show the user `$OUT`; do not guess an id from the listing.
@@ -96,17 +102,37 @@ mkdir -p "$HELPERS"
    It must also tell the helper to write its final result to `$HELPERS/<name>.result.md` (give the expanded path) before reporting, so you can read it without resuming the helper.
    A held clone must be left clean and on `main` when it finishes.
 
-4. **Write the record**, with `jq -n --arg …` into `$HELPERS/$ID.json`; `primary_cwd` is your own `pwd -P`.
+4. **Write the record.**
+   Set `KIND` to `worktree`, `scratch` or `held-clone`; `REPO` is the repo you made the worktree from, and `HOLD` the hold path, each empty when it does not apply.
+   ```bash
+   jq -n --arg id "$ID" --arg sid "$SID" --arg name "<primary>-<role>" --arg primary "<primary>" \
+       --arg pcwd "$(pwd -P)" --arg dir "$DIR" --arg kind "$KIND" --arg repo "${REPO:-}" --arg hold "${HOLD:-}" \
+       '{id:$id, session_id:$sid, name:$name, primary:$primary, primary_cwd:$pcwd, dir:$dir, dir_kind:$kind, repo:$repo, hold:$hold}' \
+       > "$HELPERS/$ID.json"
+   ```
 
 5. **Confirm it is up**: it should appear in `ListAgents` under its name within a minute.
    If `claude agents --json --all` shows it `failed`, read `claude logs $ID` and report — a failed first turn is most often the wrong account.
+
+## Finding a helper's record
+
+`stop`, `sweep`, and a later turn start from the record, not from shell variables left over from `start`:
+
+```bash
+HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
+R=$(jq -r --arg n "<primary>-<role>" 'select(.name==$n) | input_filename' "$HELPERS"/*.json)
+```
+
+If `R` names no file or more than one, stop and show the user the records.
+Read `id`, `session_id`, `dir`, `dir_kind`, `repo`, and `hold` from `$R` with `jq -r`.
 
 ## Talking to it
 
 - `SendMessage` to its name; its replies arrive as cross-session messages.
 - To hear when it finishes a turn, send with `notify_when_idle: true` instead of polling.
 - For a finished task, read `$HELPERS/<name>.result.md` first; resume only if you need more than that.
-- If it is missing from `ListAgents`, it has stopped. Resume it, then send:
+- If it is missing from `ListAgents`, it has stopped.
+  Resume it, then send:
   ```bash
   cd "$DIR" && claude --bg --resume "$SID" "<message>"
   ```
@@ -123,7 +149,7 @@ mkdir -p "$HELPERS"
    Worktree: `git -C <repo> worktree remove "$DIR"` — it refuses on uncommitted changes; if so, show the user rather than forcing.
    Scratch: after checking the path is the one in the record, `find "$DIR" -delete`.
    Held clone: never delete it.
-   If `git -C "$DIR" status --porcelain` is empty and it is on `main`, lift the hold with `find "$CLONE_ROOT/.holds" -maxdepth 1 -name "<clone>" -delete`.
+   If `git -C "$DIR" status --porcelain` is empty and it is on `main`, lift the recorded hold with `find "$(dirname "$hold")" -maxdepth 1 -name "$(basename "$hold")" -delete`.
    Otherwise keep the hold and show the user what the helper left.
 4. Delete the record and result with `find "$HELPERS" -maxdepth 1 \( -name "<id>.json" -o -name "<name>.result.md" \) -delete`, and tell the user the helper is gone.
 
