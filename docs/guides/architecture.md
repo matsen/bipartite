@@ -61,7 +61,6 @@ Skills are prompt templates that invoke `bip` commands with appropriate context.
 ├── bip-lit/                  # /bip-lit - Search, add papers, library guidance
 ├── bip-checkin/              # /bip-checkin - GitHub activity check
 ├── bip-digest/               # /bip-digest - Activity digests
-├── bip-spawn/                # /bip-spawn - Spawn tmux sessions
 ├── bip-board/                # /bip-board - Project boards
 ├── bip-scout/                # /bip-scout - Server availability
 └── bip-narrative/            # /bip-narrative - Prose digests
@@ -81,7 +80,7 @@ ln -s ~/re/bipartite/skills/* ~/.claude/skills/
 | Add a paper | `bip s2 add DOI:...` | `/bip` (guides S2 vs ASTA) |
 | Daily check-in | `bip checkin` | `/bip-checkin` (adds context) |
 | Generate digest | `bip digest --channel x` | `/bip-digest` (interactive) |
-| Spawn issue session | `bip spawn org/repo#123` | `/bip-spawn` (sets up context) |
+| Spawn issue session | `bip spawn org/repo#123` | — |
 
 Skills add value when context matters — they read project files, understand your workflow, and guide the interaction.
 
