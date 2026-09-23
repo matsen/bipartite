@@ -353,18 +353,22 @@ For each slot whose PR has merged (cross-reference merged PRs from check 1 with 
 **First, the issue-lead's terminal ceremony, if nothing else will run it.** Where a human merges (`LANDING DELEGATION: NONE RECORDED`), the worker ended at a clean gate with `stop_reason: awaiting-human-merge`, and nothing after the merge calls the lead. You are that call's owner. It has to run **before** the preserve-and-checkout below, because that step removes the state files the lead reads.
 
 ```bash
-gh pr view <N> -R <owner/repo> --json state,comments \
-  -q '.state, ([.comments[].body | select(test("\\*\\*Category\\*\\*:[ `*]*completed"))] | length)'
-ls "$CLONE_ROOT/<clone>/.epic-status.json"
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+post_merge_ceremony "$CLONE_ROOT/<slot>" <owner/repo> <PR number>
 ```
 
-- **Terminal comment count ≥ 1** → the ceremony ran. Go on to the cleanup.
-- **Count 0, status file present** → `/bip-pr-land` did not run, since it deletes that file, so no worker lead is going to run the ceremony either. If the slot's session is `busy` in `ListAgents`, its own lead may be mid-run. Skip this slot for this cycle. Otherwise spawn the lead:
+`<slot>` is the clone name, or `issue-<N>` in worktree mode. It prints one line:
 
-  > Agent tool, `subagent_type: issue-lead`: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<absolute clone path>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."*
+- **`CEREMONY RAN #<pr>`** → a terminal lead comment is on the PR. Go on to the cleanup.
+- **`CEREMONY OWED #<pr> <slot-dir>`** → no terminal comment, and the status file is still there. `/bip-pr-land` deletes that file, so it did not run, and no worker lead is going to run the ceremony. If the slot's session is `busy` in `ListAgents`, its own lead may be mid-run: skip this slot for this cycle. Otherwise spawn the lead:
 
-  Leave this slot's cleanup until the lead returns. Then re-run the count yourself, because a subagent's report is a snapshot. It must be exactly `1`; then do the cleanup. The lead writes `phase: completed` into the status file before cleanup preserves it, so the `.preserved/` copy records the ceremony.
-- **Count 0, no status file** → `/bip-pr-land` ran, and the worker's own final lead call owns the ceremony, or else the state is already gone. If the PR carries `/bip-pr-land`'s `🤖 EPIC worklog preserved` comment, it is the first case: leave it to the worker. Otherwise print `ceremony UNRUN for #<issue>` and put it in this poll's report. Do not skip it silently. A lead that filed nothing and a lead that never ran look the same from outside. The user decides whether a lead run from the PR alone is worth it. Its guard and its follow-up source (the PR body's DEFERRED section) are both on the PR, but the worklog it would have read is gone.
+  > Agent tool, `subagent_type: issue-lead`: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."*
+
+  Leave this slot's cleanup until the lead returns. Then re-run `post_merge_ceremony` yourself, because a subagent's report is a snapshot. It must print `CEREMONY RAN`; then do the cleanup. The lead writes `phase: completed` into the status file before the cleanup preserves it, so the `.preserved/` copy records the ceremony.
+- **`CEREMONY WORKER-OWNS #<pr>`** → `/bip-pr-land` ran (its `🤖 EPIC worklog preserved` comment is on the PR), so the worker's own final lead call owns the ceremony. Go on to the cleanup; the reclaim gate in `/bip-conductor` Step 6 is what keeps a mid-ceremony worker alive.
+- **`ceremony UNRUN for #<issue> (PR #<pr>)`**, exit 1 → no terminal comment, and the state is already gone. Put the line in this poll's report; do not skip it silently. A lead that filed nothing and a lead that never ran look the same from outside. The user decides whether a lead run from the PR alone is worth it. Its guard and its follow-up source (the PR body's DEFERRED section) are both on the PR, but the worklog it would have read is gone.
+- **`CEREMONY UNKNOWN #<pr>: …`**, exit 2 → the PR is not `MERGED`, or `gh` failed. Clean up nothing for this slot this cycle.
 
 **Worktree mode**:
 ```bash
