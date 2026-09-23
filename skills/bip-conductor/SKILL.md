@@ -359,7 +359,7 @@ Check this by what you are about to **do**:
 | **spawn** | `lib/clone-currency.sh` and `lib/fleet-collisions.sh "$CLONE_ROOT"` (below); confirm the issue body has not changed since its brief was written; ask the epic what moves its EPIC's top line (Step 6) |
 | **file an issue** | does a success criterion name a denominator, a population, or "a default run" without naming the dispatch path? |
 | **deliver a correction to a worker** | append it to that slot's `.epic-worklog.md` first |
-| **reclaim a slot** | Step 6's conditions; all three state files, including `.claude/ralph-loop.local.md` |
+| **reclaim a slot** | `reclaim_slot` (Step 6) |
 | **report a number you did not compute** | re-derive it, or relay the basis — *"it reports X"*, not *"X"* |
 | **close or reopen an issue** | verify the criterion against `main`, not against the PR that claims it |
 | **land a PR** | `/bip-pr-land`, never a hand-rolled `gh pr merge`. Never send a worker a runnable `gh pr merge` recipe either — it bypasses the skill's preservation and cleanup. Say *"`/bip-pr-land`"* |
@@ -419,62 +419,27 @@ Use `list-timers` (it shows LAST and NEXT), not `is-active` on the service. On `
 
 First, do housekeeping automatically (no need to ask).
 
-**Reclaim** a slot when all of these hold, re-checked immediately before the kill:
-- the issue is closed (check `gh`, not `phase`);
-- the clone is on `main` and clean;
-- work is preserved (below);
-- the prompt line holds nothing authored (cursor test below);
-- the session reports exactly `idle` in `ListAgents` — `waiting` and `shell` are not finished, and neither is `busy`.
-
-Then kill the window, and **after** the kill verify nothing survived in the clone before marking it free (a `run_in_background` build outlives the window; before the kill, the slot's own session and shell match by construction):
-
-```bash
-# AFTER tmux kill-window. Anything still here survived the kill.
-live=0
-for pid in $(pgrep -x zig; pgrep -x claude; pgrep -x zsh; pgrep -x rsync; pgrep -x python3); do
-  [ "$(readlink /proc/$pid/cwd 2>/dev/null)" = "$CLONE" ] && { live=$((live+1)); echo "SURVIVED: $pid $(ps -o comm= -p $pid)"; }
-done
-[ "$live" -eq 0 ] && echo "free" || echo "NOT free: $live"
-```
-
-A just-killed session's own pid can linger mid-teardown; poll it out rather than concluding from one sample:
-
-```bash
-until ! [ -d /proc/$PID ] || [ "$(readlink /proc/$PID/cwd 2>/dev/null)" != "$CLONE" ]; do sleep 3; done
-```
-
-This check cannot see a process writing into the clone from outside it (`git -C`, `rsync` in, absolute-path output).
-
-**Hold** when there is genuinely typed, unsubmitted input at the prompt. Autosuggest pre-fills the composer on idle windows, and `capture-pane -p` strips the escapes that distinguish it, so check the cursor:
-
-```bash
-tmux display-message -p -t <pane> '#{cursor_x} #{cursor_y}'
-tmux capture-pane -p -e -t <pane> | /usr/bin/grep -a '❯' | tail -1 | cat -v
-```
-
-| | prompt row | escapes | `cursor_x` |
-|---|---|---|---|
-| **autosuggest** | `❯ check progress` | `^[[2m`…`^[[0m` wrapper | **2** |
-| **really typed** | `❯ this is some real text` | no wrapper | **2 + len** |
-
-Hold on disagreement. The ralph-loop stop hook never writes to the composer, so there are no "hook leftovers" to distinguish.
-
-**A loop is live** when `.claude/ralph-loop.local.md` exists **and** its `session_id` belongs to a running session.
-
-**If the slot's PR was merged by anything but the worker's own `/bip-pr-land` (a human, or you with a guarded `gh pr merge`), run the issue-lead's terminal ceremony first** — nothing else calls it, and the reclaim removes the state files it reads:
+**Reclaim** a slot from outside its clone, passing what `ListAgents` reports for its session right before the call (`none` if it has none). Only `idle` and `none` proceed; `waiting`, `shell` and `busy` are not finished:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
-post_merge_ceremony "$CLONE_ROOT/<slot>" <owner/repo> <PR number>
+reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 ```
 
-`CEREMONY RAN` or `CEREMONY WORKER-OWNS` → reclaim. `CEREMONY OWED #<pr> <slot-dir>` → spawn an `issue-lead` subagent: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."* Then re-run `post_merge_ceremony`; it must print `CEREMONY RAN` before you reclaim. `ceremony UNRUN` (exit 1) → tell the user; the worklog is gone. `CEREMONY UNKNOWN` (exit 2) → leave the slot alone.
+It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty. It then preserves the worklog into the clone root's `.preserved/`, kills the slot's window, waits until no process has its cwd in the clone, checks out the base, and deletes the three state files and the merged branch. Its one output line:
 
-Reclaim: *clone mode* `git checkout main && git pull --ff-only`, then remove `.epic-status.json`, `.epic-worklog.md`, and `.claude/ralph-loop.local.md`; *worktree mode* `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`.
+- `RECLAIMED` → spawn pending intent (below).
+- `HOLD` → nothing changed. Fix the cause, or leave the slot.
+- `NOT FREE` (exit 2) → the window is gone but something still runs in the clone. Find it before re-running. The check cannot see a process writing in from outside (`git -C`, `rsync`).
+- `CEREMONY OWED #<pr> <slot-dir>` → spawn an `issue-lead` subagent: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."* Then re-run `reclaim_slot`.
+- `ceremony UNRUN` → tell the user; the worklog is gone.
+- `CEREMONY UNKNOWN` → leave the slot alone.
 
-**Preserve the worklog before reclaiming any slot**, including one that landed a PR — it is gitignored and `/bip-conductor-spawn`'s prep deletes it on the next assignment. Use `preserve_epic_state` from `lib/spawn-intent.sh` into `$CLONE_ROOT/.preserved/`.
-- Re-preserve unconditionally at reclaim; don't test whether a copy exists. Never overwrite a larger preserved copy with a smaller live one — write alongside.
-- `/bip-pr-land` preserves and deletes both files at land time. If they still exist after a land, the skill did not run: preserve by hand, post the `🤖 EPIC worklog preserved to …` comment yourself, and say in the README that the land-time step did not run.
+**A loop is live** when `.claude/ralph-loop.local.md` exists **and** its `session_id` belongs to a running session.
+
+*Worktree mode* has no helper: preserve with `preserve_epic_state`, then `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`.
+
+If a worklog seems lost:
 - Before concluding a worklog is lost, look in the wrong place too: `<clone_root>/<clone>/.preserved/`.
 - A deleted worklog is usually recoverable from the slot's transcript, `~/.claude/projects/$(echo "$CLONE" | sed 's|/|-|g')/<session-id>.jsonl`: replay the seed `Write`'s `input.content`, then each `Edit`'s `old_string`→`new_string`, then any Bash heredoc appends, in timestamp order. Stop if an `old_string` doesn't match. Mark the result as a reconstruction in its README.
 
