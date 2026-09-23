@@ -808,6 +808,7 @@ reclaim_slot() {
     case "$panes" in *"
 "*) echo "HOLD $clone: more than one tmux pane"; return 1 ;; esac
     pane=$panes
+    [ "$agent" = none ] && [ -n "$pane" ] && { echo "HOLD $clone: state 'none' but a pane is live in the clone"; return 1; }
     if [ -n "$pane" ]; then
         # 2 is an empty composer; autosuggest text leaves it at 2 too.
         cx=$(tmux display-message -p -t "$pane" '#{cursor_x}')

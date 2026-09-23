@@ -191,6 +191,14 @@ func TestReclaimSlot(t *testing.T) {
 			}
 			f.assertUntouched(t)
 		})
+		t.Run(shell+"/state none but a pane is live", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "2")
+			got, code := f.runAs(t, shell, "none")
+			if want := "HOLD " + f.clone + ": state 'none' but a pane is live in the clone"; got != want || code != 1 {
+				t.Errorf("got %q (exit %d), want %q", got, code, want)
+			}
+			f.assertUntouched(t)
+		})
 		// bip-pr-land's moved-base default rebases the PR elsewhere and
 		// force-pushes, so the merged head is a new SHA with the same patch.
 		t.Run(shell+"/head rebased elsewhere", func(t *testing.T) {
