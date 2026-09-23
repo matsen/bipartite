@@ -42,7 +42,7 @@ INTENT=$(find_spawn_intent "$CLONE_ROOT" <N>)
   Check it against live fleet state (Step 2b) and append fleet facts it structurally couldn't know: which host/clone is actually free, a concurrent worker editing an overlapping file, a build running on a target remote host.
   Mark it consumed after a successful launch (Step 6).
   An epic-written brief carries an `EPIC:` reference near the top; the conductor counts live slots by it. Match it tolerantly — `grep -iE '^\**EPIC\**:? *#?([0-9]+)'` — since both `EPIC: 369` and `**EPIC**: #369` are in use. If an epic brief lacks one, ask the epic rather than inferring it. A user-originated brief legitimately has none.
-- **No intent file** — compose the prompt from the issue directly. This is a first-class path: a user-originated spawn, a conductor-initiated respawn, routine maintenance. A user-originated issue may belong to no EPIC; never reject or defer it for that. See `/bip-conductor`'s "Two intake paths".
+- **No intent file** — compose the prompt from the issue directly. This is a first-class path: a user-originated spawn, a conductor-initiated respawn, routine maintenance. A user-originated issue may belong to no EPIC; never reject or defer it for that. See `/bip-conductor`'s "Terms and intake".
 
 If the intent conflicts with current fleet state, resolve it from measured state and say so in your report — a contended host or a taken clone is a placement decision. Escalate only if either resolution risks an actual problem (see `/bip-conductor`'s "Arbitration").
 
