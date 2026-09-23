@@ -21,7 +21,18 @@ In the common clone-mode case (no `layout:` block) every step runs as it always 
 
 ## Where to stand
 
-This skill moves `HEAD` (Steps 7 and 8). Never run it in a clone another live session is working in. The merge itself is server-side, so if you are landing someone else's PR, stand in any idle clone. Check:
+This skill moves `HEAD` (Steps 7 and 8) and preserves the state files of the directory it runs in (Step 7a). Never run it in a clone another live session is working in. To land a PR checked out in another session's clone, don't run this skill: run Step 6's guard from any checkout of the repo, against the PR head instead of `HEAD`, so nothing moves:
+
+```bash
+git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
+  && test "$(git rev-parse refs/pr/<N>)" = "$(gh pr view <N> --json headRefOid -q .headRefOid)" \
+  && git merge-base --is-ancestor origin/<base> refs/pr/<N> \
+  && gh pr merge <N> --squash --body "closes #N"
+```
+
+If that clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
+
+Check for co-tenancy:
 
 ```sh
 for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | /usr/bin/grep -cE "^$PWD(/|$)"
