@@ -36,6 +36,15 @@ Once everything is clear, proceed.
 
 ### Step 3: Create a feature branch
 
+If another live session works in this checkout (the co-tenancy check in `/bip-pr-land`'s "Where to stand"), don't move its `HEAD`: branch in a worktree outside it and do all remaining steps there.
+
+```bash
+git fetch origin
+git worktree add <path> -b $ARGUMENTS-<short-description> origin/main
+```
+
+Otherwise:
+
 ```bash
 git pull origin main
 git checkout -b $ARGUMENTS-<short-description>
