@@ -122,6 +122,10 @@ Print a summary:
 
 ### Key decisions
 - <any decisions the next session should know about>
-
-Safe to reset context.
 ```
+
+### Step 7: Continuation prompt
+
+Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+For this session: start in the tex repo, run `/bip-ms`, and the durable state is `misc/session-onboarding.md` plus the manuscript's `%PROV`/`%TODO` markers.
+Then: safe to reset context.
