@@ -25,6 +25,7 @@ Reach for a subagent when the work fits in one call and only you need the answer
   Claude Code stores only the path, and re-reads it whenever the session is resumed, so the file must still exist then.
 - A stopped helper disappears from `ListAgents`, so `SendMessage` cannot reach it; resume it first.
 - Idle background sessions nobody is attached to are stopped automatically after roughly an hour.
+  A helper that has finished and is waiting for you will therefore often be missing from `ListAgents`; that is the expected state, not a failure.
 - `claude --bg` prints a short id (`backgrounded · <id> · <name>`); `stop`, `rm`, `logs`, and `attach` take that id.
   `--resume` takes the full session id from `claude agents --json --all`.
   The ref `ListAgents` shows in brackets is a third, different id.
@@ -32,7 +33,8 @@ Reach for a subagent when the work fits in one call and only you need the answer
 ## Rules
 
 - **The helper gets a directory of its own.**
-  Never a pooled worker slot, and never a checkout another live session works in: `reclaim_slot` holds on a second session in a slot, and `/bip-issue-work` sends a co-tenant's branch work into a worktree.
+  Never a checkout another live session works in: `reclaim_slot` holds on a second session in a slot, and `/bip-issue-work` sends a co-tenant's branch work into a worktree.
+  A pooled clone is allowed only when it is free and you hold it first (start, step 2).
 - **A worker in a pooled slot does not start helpers.**
   Its helper's worktree would hang off the slot's repo, and `reclaim_slot` neither removes nor reports it, so it would outlive the slot.
   Ask the epic or the conductor to start one instead.
@@ -50,7 +52,8 @@ Each helper has one record file, so a later session (yours after compaction, or 
 HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 mkdir -p "$HELPERS"
 # $HELPERS/<short-id>.json
-# {"id":"…","session_id":"…","name":"…","primary":"…","primary_cwd":"…","dir":"…","dir_kind":"worktree|scratch","repo":"…"}
+# {"id":"…","session_id":"…","name":"…","primary":"…","primary_cwd":"…","dir":"…","dir_kind":"worktree|scratch|held-clone","repo":"…","hold":"…"}
+# $HELPERS/<name>.result.md   -- written by the helper: its final result
 ```
 
 ## start
@@ -68,6 +71,15 @@ mkdir -p "$HELPERS"
    git -C <repo> worktree add --detach "$DIR" origin/main
    ```
    It branches there itself (for example via `/bip-issue-work`), as the checkout's only session.
+
+   If it runs gates or builds that need a built environment (a `.pixi` env, a vendored binary), a fresh worktree would pay a full install first.
+   A conductor or epic session that manages a clone pool can instead lend it a **free** pooled clone (idle, clean, on `main`, as `/bip-conductor` classifies it), held so spawn selection and `bip spawn` skip it:
+   ```bash
+   mkdir -p "$CLONE_ROOT/.holds" && echo "helper <primary>-<role>" > "$CLONE_ROOT/.holds/<clone>"
+   DIR="$CLONE_ROOT/<clone>"
+   ```
+   Write the hold before anything else touches the clone, and record its path as `hold`.
+
    Otherwise, a scratch directory: `DIR=$(mktemp -d "${TMPDIR:-/tmp}/<primary>-<role>.XXXX")`.
 
 3. **Start it** from `$DIR`, adding `--settings` only when the account file exists:
@@ -80,7 +92,9 @@ mkdir -p "$HELPERS"
    SID=$(claude agents --json --all | jq -r --arg id "$ID" '.[] | select(.id==$id) | .sessionId')
    ```
    If `ID` or `SID` is empty, stop and show the user `$OUT`; do not guess an id from the listing.
-   The brief must name you as the primary, say to report by `SendMessage` to you, name its directory, and state what it must not do (merge, push to main, touch other checkouts) — the helper starts with no other context.
+   The brief must name you as the primary, say to report by `SendMessage` to you, name its directory, and state what it must not do (merge, push to main, touch other checkouts, start helpers of its own) — the helper starts with no other context.
+   It must also tell the helper to write its final result to `$HELPERS/<name>.result.md` (give the expanded path) before reporting, so you can read it without resuming the helper.
+   A held clone must be left clean and on `main` when it finishes.
 
 4. **Write the record**, with `jq -n --arg …` into `$HELPERS/$ID.json`; `primary_cwd` is your own `pwd -P`.
 
@@ -91,6 +105,7 @@ mkdir -p "$HELPERS"
 
 - `SendMessage` to its name; its replies arrive as cross-session messages.
 - To hear when it finishes a turn, send with `notify_when_idle: true` instead of polling.
+- For a finished task, read `$HELPERS/<name>.result.md` first; resume only if you need more than that.
 - If it is missing from `ListAgents`, it has stopped. Resume it, then send:
   ```bash
   cd "$DIR" && claude --bg --resume "$SID" "<message>"
@@ -107,13 +122,16 @@ mkdir -p "$HELPERS"
 3. Remove the directory.
    Worktree: `git -C <repo> worktree remove "$DIR"` — it refuses on uncommitted changes; if so, show the user rather than forcing.
    Scratch: after checking the path is the one in the record, `find "$DIR" -delete`.
-4. Delete the record with `find "$HELPERS" -maxdepth 1 -name "<id>.json" -delete`, and tell the user the helper is gone.
+   Held clone: never delete it.
+   If `git -C "$DIR" status --porcelain` is empty and it is on `main`, lift the hold with `find "$CLONE_ROOT/.holds" -maxdepth 1 -name "<clone>" -delete`.
+   Otherwise keep the hold and show the user what the helper left.
+4. Delete the record and result with `find "$HELPERS" -maxdepth 1 \( -name "<id>.json" -o -name "<name>.result.md" \) -delete`, and tell the user the helper is gone.
 
 ## sweep
 
 For each record in `$HELPERS`, look up its `id` in `claude agents --json --all` and its `primary` in `ListAgents`, then report one line per record:
 
-- **stale** — id not in the listing: the session was removed; offer to remove the directory and record.
+- **stale** — id not in the listing: the session was removed; offer to remove the directory and record, or, for a held clone, to lift the hold as in stop step 3.
 - **primary not found** — session present but no `ListAgents` row carries the recorded primary name.
   `ListAgents` renames a session when it is resumed (`birch` becomes `birch-61`), so this is not proof the primary is gone.
   Say whether any session in `claude agents --json` has the recorded `primary_cwd`, and offer to message the helper or stop it.
