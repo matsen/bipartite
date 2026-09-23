@@ -152,60 +152,10 @@ Read `lead_notes` in `.epic-status.json`:
 
 ### Step 7: Write your assessment
 
-⛔ **Two rules about writing this file, both from defects a lead
-actually shipped on 2026-09-14. Neither is reachable from the
-worker-facing spawn prompt, which is why they live here.**
+Two rules for writing the status file:
 
-**(a) NEVER construct a timestamp. Shell out and use what it prints.**
-
-```bash
-date -u +%Y-%m-%dT%H:%M:%SZ
-```
-
-Every timestamp you write — `updated_at`, `completed_at`,
-`awaiting.started_at` — comes from that command's output, verbatim.
-**Do not write a time from your own sense of what time it is, even
-one that looks right.** Two leads wrote future-dated `updated_at`
-values that day (up to ~1 h ahead of the clock), and a future
-timestamp is the direction that **hides a stall** rather than
-inventing one — nothing in the fleet will notice the slot has died.
-⭐ **The tell, if you ever audit these: both fabricated values ended
-in `:00` seconds, while all 15 correctly-written values in the pool
-did not.** `date -u` distributes seconds uniformly, so a round-minute
-timestamp is evidence of a constructed one. The existing spec line
-said "never a placeholder" and was not read as forbidding this —
-a plausible-looking constructed value does not feel like a
-placeholder, which is exactly why it needs naming separately.
-
-**(b) `phase` must be one of the documented seven**, and nothing
-else: `exploring`, `coding`, `testing`, `awaiting-results`,
-`quality-gate`, `needs-human`, `completed`. ⚠ **A `stop_reason`
-value is not a phase** — one lead wrote `phase: "premature-deferral"`,
-and a worker wrote `phase: "implementing"` (a synonym for `coding`).
-Three distinct off-spec values surfaced in one day. ⛔ **If your
-classification has no home in those seven, that is a signal to
-escalate, not to invent a value** — an unrecognised phase means
-every fleet mechanism that keys on phase silently stops seeing this
-slot.
-
-⛔ **The specific confusion to guard against, because it accounts for
-THREE of the four off-spec values seen in one day: `phase` and
-`stop_reason` are different vocabularies and you write both in the
-same step.** `premature-deferral`, `needs-instrumentation` and the
-legacy pair were all `stop_reason` values copied into `phase`.
-
-- **`phase` answers "where is this slot in its lifecycle"** — one of
-  the seven, and the fleet keys on it.
-- **`stop_reason` answers "why did the worker stop this time"** — your
-  classification, free-form, read by humans and by your own next
-  invocation.
-
-➡ **A rich `stop_reason` and a boring `phase` is the correct shape.**
-When your classification feels too specific for any of the seven, that
-specificity belongs in `stop_reason` and `lead_guidance`; the `phase`
-stays boring. **The pull toward collapsing them is strongest exactly
-when the situation is unusual — which is when the fleet most needs to
-still be able to see the slot.**
+- **Never construct a timestamp.** Every `updated_at`, `completed_at` and `awaiting.started_at` is the verbatim output of `date -u +%Y-%m-%dT%H:%M:%SZ`. (A constructed time tends to run ahead of the clock, which hides a stall.)
+- **`phase` is one of seven:** `exploring`, `coding`, `testing`, `awaiting-results`, `quality-gate`, `needs-human`, `completed`. `phase` says where the slot is in its lifecycle, and the fleet keys on it. `stop_reason` says why the worker stopped, in your own words. A specific classification goes in `stop_reason` and `lead_guidance`, never in `phase`. If none of the seven fits, escalate rather than invent one.
 
 1. **Update `.epic-status.json`**:
    - Set `phase` (if changing) — one of the seven above, no others
@@ -269,59 +219,17 @@ still be able to see the slot.**
 Runs **only** when you are setting `phase: "completed"`. Skip for all
 other classifications.
 
-⛔ **PRECONDITION: DO NOT SET `completed` OR `completed_at` UNTIL THE
-PR IS ACTUALLY MERGED. Verify it, do not infer it:**
+**Precondition: don't set `completed` or `completed_at` until the PR is merged.** Verify it:
 
 ```bash
 gh pr view <N> --json state,mergedAt   # state must be MERGED
 ```
 
-A clean quality gate, a green suite, and an open-and-MERGEABLE PR are
-**not** landing. Measured 2026-09-14: a lead set `completed` +
-`completed_at` while its PR was still `OPEN`/`MERGEABLE`.
+If the work is done and the PR is open, the phase is `quality-gate`. (A `completed` phase invites the conductor to reclaim the slot.)
 
-**Two things make this worse than a mislabel.** First, the idempotency
-guard below keys on `completed_at` — **setting it early tells the NEXT
-lead invocation that the terminal ceremony already ran**, so the
-follow-up filing and the Step 7 comment are silently skipped forever.
-Second, a `completed` phase reads to the fleet as an invitation to
-reclaim the slot, so the file spends that window asserting a slot is
-free while an unlanded PR sits in it. (A conductor that gates reclaim
-on `gh` rather than on `phase` is protected — but that protection is at
-the point of *action*, not at the point of *assertion*, and you are the
-one asserting.)
+**Who calls you.** Where the worker lands its own PR, it calls you after `/bip-pr-land`. Where a human merges (`stop_reason: awaiting-human-merge`), the conductor spawns you from `/bip-conductor`'s reclaim step with the clone's absolute path. Read the state files by that path, and pass `-R <owner/repo>` to `gh`.
 
-➡ **If the work is done and the PR is open, the phase is
-`quality-gate`, not `completed`.**
-
-**Who makes the post-merge call depends on who merges.** Where the
-worker lands its own PR, it calls you after `/bip-pr-land`. Where a
-human merges (`stop_reason: awaiting-human-merge`), the worker has
-already ended. The conductor then spawns you from
-`/bip-conductor`'s reclaim step, with the
-clone's absolute path, once `gh` reports the PR `MERGED`. That call is
-the one that runs this step. Read the state files by that absolute
-path, and pass `-R <owner/repo>` to `gh`, since your working directory
-is the conductor's, not the clone's.
-
-**Idempotency guard.** ⛔ **Check the PR, not the status file.** If the PR
-already carries a terminal lead comment, the ceremony already ran —
-return "PHASE: completed" immediately without posting or filing. The
-marker is the `**Category**: completed` line. Every lead iteration
-posts a `🤖 **Issue Lead** (iteration N)` comment, so that header alone
-is not the marker. A PR that sat at a clean gate before a human merged
-it already carries several. It must be in a comment that begins with the `🤖 **Issue Lead**`
-header, so a review comment quoting the line, or quoting both the line
-and the header, is not read as the ceremony. The pattern tolerates `**Category:**` as well as `**Category**:`,
-and backticks or bold around `completed`, but requires `completed` to
-be the first word after the label. Measured 2026-09-23 over the 60 most recent merged
-`matsengrp/phyz` PRs: of the 29 that carry a terminal comment, a plain
-`: completed` match finds 24. The other five wrote `` `completed` ``.
-A looser "completed anywhere on the line" match false-hit
-`superfamily-pcp#477`, whose line reads `` `quality-gate` … Not
-`completed` ``. phyz#2909 carries two terminal comments, posted 14
-minutes apart by two lead runs under the older guard. The second run
-did not treat the first comment as the ceremony having run.
+**Idempotency guard: check the PR, not the status file** (`/bip-pr-land` deletes the status file). The ceremony has run if some comment *begins* with the `🤖 **Issue Lead**` header and has `completed` as the first word after its `**Category**` label:
 
 ```bash
 gh pr view <N> --json comments \
@@ -330,28 +238,7 @@ gh pr view <N> --json comments \
 # jq's ^ anchors to the start of the string, not of a line.
 ```
 
-⛔ **Why not `.epic-status.json#completed_at`, which this guard used to
-key on: `/bip-pr-land` DELETES that file.** Its Step 6 merges the PR,
-Step 6a preserves the orchestration files, and **Step 9.5 removes
-`.epic-status.json` and `.epic-worklog.md` from the clone.** Since the
-rule above forbids setting `completed` until the PR is merged, and this
-ceremony therefore runs *after* the land, **the guard was keying on a
-field in a file the landing step had already removed** — so it could
-never fire, and a re-invocation would post and file a second time.
-Measured 2026-09-14: a terminal ceremony ran post-land in a clone whose
-status file was already gone.
-
-⭐ **The general rule, and it is why the PR is the right referent: the
-durable artifact is the one in the repo, not the one in a pooled clone.**
-A clone-local file can be deleted by a later step, by a reclaim, or by
-the next spawn's prep; a PR comment cannot. **A guard should check the
-artifact it is trying to avoid duplicating** — here, the comment itself —
-rather than a private flag that is supposed to correlate with it.
-
-⚠ **Still write `completed_at` if the file exists** (see step 3 below),
-for the conductor's dashboard and for `bip epic watch`. **Just do not
-depend on it for idempotency, and do not recreate the file solely to
-hold it.**
+If it has run, return "PHASE: completed" without posting or filing.
 
 Otherwise:
 
@@ -379,12 +266,9 @@ Otherwise:
    omit both. Post the comment.
 
 3. Set `.epic-status.json#completed_at` to the current ISO 8601
-   timestamp — **from `date -u +%Y-%m-%dT%H:%M:%SZ`, per Step 7's
-   rule (a); never a constructed value** — then return
-   "PHASE: completed". ⚠ **If `/bip-pr-land` has already removed the
-   file, skip this write and say so in your return line.** It is a
-   dashboard convenience, not the idempotency record; the guard above
-   keys on the PR comment precisely so this write is allowed to fail.
+   timestamp from `date -u`, then return "PHASE: completed". If the
+   file is already gone, skip the write and say so in your return line;
+   it is a dashboard convenience, not the idempotency record.
 
 **Do not file on non-terminal evaluations.** Signals may change as
 the worker addresses feedback; filing only at `completed` means the
@@ -393,50 +277,7 @@ guard above, is what makes re-invocation idempotent.
 
 ## Never poll for a subagent you spawned
 
-**When you spawn a subagent, the harness notifies you when it finishes. Do
-not write a shell loop to wait for it.** Every instance below is a worker
-on `matsengrp/phyz` that did, and sat blocked after its real work had
-already completed:
-
-| slot | date | wait condition | blocked for | mechanism |
-|---|---|---|---|---|
-| `fir` | 2026-09-12 | `! pgrep -f <agent-id>` | **3h33m** | **verified** unsatisfiable — the polling shell matched its own `pgrep`, confirmed by PID |
-| `birch` | 2026-09-12 | `pgrep -f "zig build.*-j28 test$"` | **2h29m** | same family; self-match not verified, the process exited before it could be tested |
-| `ash` | 2026-09-07 | `grep -q '<marker>' <transcript>` | unknown | idiom found in the transcript under `bip-pr-review`; that it hung is **not** established |
-
-Only the first is proven. It is enough: the mechanism is structural, not a
-typo, and the other two are the same shape in different costumes.
-
-The idiom that hangs looks reasonable:
-
-```sh
-until [ -s <task-output> ] && ! pgrep -f <agent-id>; do sleep 10; done
-```
-
-**`pgrep -f <agent-id>` matches the polling shell's own argv**, because the
-agent id is sitting inside the `until` condition being matched. So `! pgrep`
-is permanently false and the loop can never exit, whatever the subagent
-does. A variant using `until grep -q '<marker>' <transcript>` hangs the same
-way when the marker never appears in the form expected.
-
-**This is invisible to the fleet's stall detection, which is why it costs
-hours rather than minutes.** `/bip-pr-land` deletes `.epic-status.json` and
-`.epic-worklog.md` before the terminal ceremony runs, so by the time the
-hang occurs there is no file mtime left to age — the liveness instrument is
-removed exactly in the window where the failure happens. Nothing will come
-and find you.
-
-**One-command diagnosis**, for anyone looking at a slot that has "been busy"
-implausibly long: find the `zsh` whose cwd is the clone and print its argv.
-
-```sh
-ps -o args= -p <pid>     # the full loop condition is right there
-```
-
-If you genuinely must wait on something external — a CI run, a file another
-process writes — poll on a condition that **cannot match itself**: test the
-artifact (`test -s`, `test -f`), or the tool's own exit status. Never a
-process-table search for a string that appears in your own command.
+The harness notifies you when a subagent finishes, so don't write a loop to wait for it. If you must wait on something external, poll on a condition that can't match itself: test the artifact (`test -s`, `test -f`) or the tool's exit status. Never use `pgrep -f <string>` where the string appears in your own command (the polling shell matches itself, and the loop never exits).
 
 ## Awaiting-results Protocol
 
