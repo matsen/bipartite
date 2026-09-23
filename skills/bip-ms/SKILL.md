@@ -116,24 +116,18 @@ Then create `.ms-config.json` and proceed.
 
 ## Workflow
 
-### Step 0: Load config and memory
+### Step 0: Load config and onboarding
 
 ```bash
 cat .ms-config.json
 ```
 
-Read `MEMORY.md` from the auto-memory directory.
-For each memory file listed there, read it and apply:
+Read `misc/session-onboarding.md` and `CLAUDE.md`.
+Durable session state lives in the repo, not in `~/.claude/*/memory/` files — `/bip-ms-tuckin` Step 4 is the contract for what goes where.
+The onboarding doc carries what the paper is and is not, the peer sessions and their remits, the working disciplines, and the open threads; take it as the baseline for what is done vs. in flight.
 
-- **Project memories** (e.g., `project_dasmfit_status.md`): Use as the baseline for what's done vs pending.
-  Cross-check against live GitHub state — memories can be stale.
-  When a memory says "PR open" but `gh pr view` says merged, trust GitHub and update the memory.
-- **Pending decisions** (e.g., `project_pending_decisions.md`): Check whether they've been resolved since last session.
-  Remove resolved items, flag unresolved ones in the status table.
-- **Feedback memories**: Apply silently — these are behavioral guidelines, not status items.
-
-After loading, briefly note what the memory says the current state is, then verify it in Steps 1-4.
-Do not trust memory over live state.
+It never records open/merged/closed status, so cross-check every open thread against live GitHub before acting: where the doc and `gh pr view`/`gh issue view` disagree on where a thread stands, trust GitHub.
+After loading, briefly note what the doc says the current state is, then verify it in Steps 1-4 — do not trust the doc over live state.
 
 ### Step 1: Check manuscript state
 
@@ -333,4 +327,4 @@ Always check the actual files on disk.
 
 ## Session end
 
-Before ending a manuscript session or resetting context, run `/bip-ms-tuckin` to persist session state to memory and commit any manuscript changes.
+Before ending a manuscript session or resetting context, run `/bip-ms-tuckin` to persist session state to the repo (`misc/session-onboarding.md` and the manuscript's `%PROV`/`%TODO` markers) and commit any manuscript changes.
