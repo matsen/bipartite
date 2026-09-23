@@ -457,8 +457,11 @@ COMPLETION: When done (or when lead says completed):
    JOINT LANDING GATE: <YES | NO>. Anything else or a missing line is a
    defect in this prompt: ask the conductor before landing.
 
-   IF JOINT LANDING GATE IS YES, request it yourself. Set phase to
-   quality-gate and SendMessage BOTH, reading each address at send time:
+   IF JOINT LANDING GATE IS YES, request it yourself. First rebase onto
+   the PR's base branch as it is on origin, push, and wait for CI on that
+   head: an approval names a SHA, and /bip-pr-land rebases a stale head,
+   which voids it. Then set phase to quality-gate and SendMessage BOTH,
+   reading each address at send time:
        the conductor -> $CLONE_ROOT/.conductor-session
        the epic      -> $CLONE_ROOT/.epic-session
    Say the PR is quality-gate clean, give the headline result and SHA,
