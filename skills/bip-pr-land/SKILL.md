@@ -31,6 +31,8 @@ git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
   && gh pr merge <N> --squash --match-head-commit "$sha" --body "closes #<issue>"
 ```
 
+If the ancestor test fails (the base moved, e.g. mid-batch), the default is to rebase `refs/pr/<N>` onto `origin/<base>` in a scratch worktree, `git push --force-with-lease origin HEAD:<headRefName>`, run the repo's gate on the rebased head (CI per Step 5.5; in a repo with no CI, the local gate its CLAUDE.md names, since Step 5.5 then checks nothing), and re-run the guard. Merging a stale head without the rebase is your call when you can say why it is safe (e.g. its files are disjoint from what landed since it branched); say so in a PR comment.
+
 Do this only for a worker that has ended (`stop_reason: awaiting-human-merge`, session idle). A live worker holding a landing delegation lands its own PR. If that clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
 
 Check for co-tenancy:
