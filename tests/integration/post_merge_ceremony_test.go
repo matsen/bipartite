@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -11,17 +12,19 @@ import (
 )
 
 // runPostMergeCeremony sources spawn-intent.sh under shell and calls
-// post_merge_ceremony with a fake `gh` first on PATH. The fake prints
-// ghOutput and exits ghExit, standing in for `gh pr view --json ...`.
-// Returns trimmed stdout and the function's exit code.
-func runPostMergeCeremony(t *testing.T, shell, cloneDir, ghOutput string, ghExit int) (string, int) {
+// post_merge_ceremony with a fake `gh` first on PATH. The fake records its
+// arguments, prints ghOutput and exits ghExit, standing in for
+// `gh pr view --json ...`. Returns trimmed stdout, the function's exit
+// code, and the arguments gh was called with.
+func runPostMergeCeremony(t *testing.T, shell, cloneDir, ghOutput string, ghExit int) (string, int, string) {
 	t.Helper()
 	binDir := t.TempDir()
 	payload := filepath.Join(binDir, "payload.json")
 	if err := os.WriteFile(payload, []byte(ghOutput), 0644); err != nil {
 		t.Fatal(err)
 	}
-	fake := "#!/bin/sh\ncat " + shellQuote(payload) + "\nexit " + strconv.Itoa(ghExit) + "\n"
+	argsFile := filepath.Join(binDir, "args")
+	fake := "#!/bin/sh\necho \"$@\" > " + shellQuote(argsFile) + "\ncat " + shellQuote(payload) + "\nexit " + strconv.Itoa(ghExit) + "\n"
 	if err := os.WriteFile(filepath.Join(binDir, "gh"), []byte(fake), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +40,8 @@ func runPostMergeCeremony(t *testing.T, shell, cloneDir, ghOutput string, ghExit
 	} else if err != nil {
 		t.Fatalf("running %s: %v", shell, err)
 	}
-	return strings.TrimSpace(string(out)), code
+	args, _ := os.ReadFile(argsFile)
+	return strings.TrimSpace(string(out)), code, strings.TrimSpace(string(args))
 }
 
 // cloneWithStatus returns a temp clone dir, with an .epic-status.json in it
@@ -57,74 +61,129 @@ func cloneWithStatus(t *testing.T, withStatus bool) string {
 const (
 	// A clean-gate comment from a repo where humans merge. It names
 	// `completed` on its Category line, but not as the first word, and it
-	// carries the same header a terminal comment does.
-	nonTerminalLead = "🤖 **Issue Lead** (iteration 1)\n\n**Category**: `quality-gate` — gates clean. Not `completed`: humans merge here.\n"
+	// carries the same header a terminal comment does. The quotes and
+	// backslash exercise JSON escaping on the way through the fake gh.
+	nonTerminalLead = "🤖 **Issue Lead** (iteration 1)\n\n**Category**: `quality-gate` — gates clean. Not `completed`: \"humans merge\" here (C:\\no).\n"
 	terminalLead    = "🤖 **Issue Lead** (iteration 3)\n\n**Category**: completed\n**Action**: none\n"
 	// phyz#2920 wrote its terminal Category this way.
 	terminalLeadBackticked = "🤖 **Issue Lead** (iteration 1) — terminal evaluation, post-land.\n\n**Category**: `completed`\n"
+	// phyz#2909 wrote this one; text after `completed` is allowed.
+	terminalLeadTrailing = "🤖 **Issue Lead** (iteration 1)\n\n**Category**: completed — post-landing review.\n"
 	// The label's bold can also close after the colon.
 	terminalLeadColonInBold = "🤖 **Issue Lead** (iteration 2)\n\n**Category:** completed\n"
 	prLandComment           = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
 )
 
-func prJSON(state string, comments ...string) string {
-	var b strings.Builder
-	b.WriteString(`{"state":"` + state + `","closingIssuesReferences":[{"number":3}],"comments":[`)
-	for i, c := range comments {
-		if i > 0 {
-			b.WriteString(",")
-		}
-		q := strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`).Replace(c)
-		b.WriteString(`{"body":"` + q + `"}`)
+type ghComment struct {
+	Body string `json:"body"`
+}
+
+type ghIssueRef struct {
+	Number int `json:"number"`
+}
+
+type ghPR struct {
+	State                   string       `json:"state"`
+	ClosingIssuesReferences []ghIssueRef `json:"closingIssuesReferences"`
+	Comments                []ghComment  `json:"comments"`
+}
+
+// prJSON renders what `gh pr view --json state,comments,closingIssuesReferences`
+// prints for a PR that closes the given issues (none if nil).
+func prJSON(t *testing.T, state string, closes []int, comments ...string) string {
+	t.Helper()
+	pr := ghPR{State: state, ClosingIssuesReferences: []ghIssueRef{}, Comments: []ghComment{}}
+	for _, n := range closes {
+		pr.ClosingIssuesReferences = append(pr.ClosingIssuesReferences, ghIssueRef{Number: n})
 	}
-	b.WriteString("]}")
-	return b.String()
+	for _, c := range comments {
+		pr.Comments = append(pr.Comments, ghComment{Body: c})
+	}
+	b, err := json.Marshal(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(b)
 }
 
 // TestPostMergeCeremony covers the decision the merged-PR slot cleanup in
 // bip-conductor-poll acts on (issue #258).
 func TestPostMergeCeremony(t *testing.T) {
+	closes3 := []int{3}
 	cases := []struct {
 		name       string
 		withStatus bool
-		gh         string
+		gh         func(t *testing.T) string
 		ghExit     int
-		wantPrefix string
+		want       string // exact output; "<dir>" is replaced by the clone dir
+		wantPrefix bool   // match want as a prefix only
 		wantCode   int
 	}{
-		{"terminal comment present", true, prJSON("MERGED", nonTerminalLead, nonTerminalLead, terminalLead), 0, "CEREMONY RAN #7", 0},
-		{"backticked terminal comment", false, prJSON("MERGED", terminalLeadBackticked), 0, "CEREMONY RAN #7", 0},
+		{"terminal comment present", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, nonTerminalLead, nonTerminalLead, terminalLead)
+		}, 0, "CEREMONY RAN #7", false, 0},
+		{"backticked terminal comment", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, terminalLeadBackticked)
+		}, 0, "CEREMONY RAN #7", false, 0},
+		{"text after completed", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, terminalLeadTrailing)
+		}, 0, "CEREMONY RAN #7", false, 0},
+		{"colon inside the bold", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, terminalLeadColonInBold)
+		}, 0, "CEREMONY RAN #7", false, 0},
 		// Human merge: the worker ended at a clean gate with its state files
 		// in place, and the PR carries non-terminal lead comments only.
-		{"human merge, lead owed", true, prJSON("MERGED", nonTerminalLead, nonTerminalLead), 0, "CEREMONY OWED #7 ", 0},
-		{"colon inside the bold", false, prJSON("MERGED", terminalLeadColonInBold), 0, "CEREMONY RAN #7", 0},
+		{"human merge, lead owed", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, nonTerminalLead, nonTerminalLead)
+		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
 		// A /bip-pr-land that posted its marker (Step 6a) and died before
 		// deleting the state files (Step 9.5): the file wins, so the
 		// ceremony is still owed rather than handed to an ended worker.
-		{"pr-land marker but state still on disk", true, prJSON("MERGED", prLandComment), 0, "CEREMONY OWED #7 ", 0},
+		{"pr-land marker but state still on disk", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, prLandComment)
+		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
 		// Worker landed with /bip-pr-land, which deleted the state files;
 		// its own final lead call owns the ceremony.
-		{"pr-land ran, worker owns it", false, prJSON("MERGED", prLandComment), 0, "CEREMONY WORKER-OWNS #7", 0},
+		{"pr-land ran, worker owns it", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, prLandComment)
+		}, 0, "CEREMONY WORKER-OWNS #7", false, 0},
 		// Lost race: the state files are gone and nothing else will run it.
-		{"state gone, ceremony unrun", false, prJSON("MERGED", nonTerminalLead), 0, "ceremony UNRUN for #3 (PR #7)", 1},
-		{"not merged", true, prJSON("OPEN"), 0, "CEREMONY UNKNOWN #7: state is OPEN", 2},
-		{"gh fails", true, "HTTP 502", 1, "CEREMONY UNKNOWN #7: gh pr view failed", 2},
-		{"gh prints non-JSON", true, "HTTP 502", 0, "CEREMONY UNKNOWN #7: gh output is not JSON", 2},
+		{"state gone, ceremony unrun", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, nonTerminalLead)
+		}, 0, "ceremony UNRUN for #3 (PR #7)", false, 1},
+		{"unrun, PR names no closing issue", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", nil)
+		}, 0, "ceremony UNRUN for ? (PR #7)", false, 1},
+		{"not merged", true, func(t *testing.T) string {
+			return prJSON(t, "OPEN", closes3)
+		}, 0, "CEREMONY UNKNOWN #7: state is OPEN, not MERGED", false, 2},
+		{"gh fails", true, func(*testing.T) string { return "HTTP 502" }, 1,
+			"CEREMONY UNKNOWN #7: gh pr view failed", true, 2},
+		{"gh prints non-JSON", true, func(*testing.T) string { return "HTTP 502" }, 0,
+			"CEREMONY UNKNOWN #7: gh output is not JSON", true, 2},
 	}
 	shells := []string{"bash"}
 	if _, err := exec.LookPath("zsh"); err == nil {
 		shells = append(shells, "zsh")
+	} else {
+		t.Log("zsh not on PATH: running the bash half only")
 	}
 	for _, shell := range shells {
 		for _, tc := range cases {
 			t.Run(shell+"/"+tc.name, func(t *testing.T) {
 				dir := cloneWithStatus(t, tc.withStatus)
-				got, code := runPostMergeCeremony(t, shell, dir, tc.gh, tc.ghExit)
-				if !strings.HasPrefix(got, tc.wantPrefix) {
-					t.Errorf("output = %q, want prefix %q", got, tc.wantPrefix)
+				got, code, args := runPostMergeCeremony(t, shell, dir, tc.gh(t), tc.ghExit)
+				want := strings.ReplaceAll(tc.want, "<dir>", dir)
+				if tc.wantPrefix && !strings.HasPrefix(got, want) {
+					t.Errorf("output = %q, want prefix %q", got, want)
+				} else if !tc.wantPrefix && got != want {
+					t.Errorf("output = %q, want %q", got, want)
 				}
 				if code != tc.wantCode {
 					t.Errorf("exit code = %d, want %d (output %q)", code, tc.wantCode, got)
+				}
+				if wantArgs := "pr view 7 -R owner/repo --json state,comments,closingIssuesReferences"; args != wantArgs {
+					t.Errorf("gh called with %q, want %q", args, wantArgs)
 				}
 			})
 		}
