@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -219,6 +220,20 @@ func TestReclaimSlot(t *testing.T) {
 			got, code := f.run(t, shell)
 			if code != 0 || !strings.HasPrefix(got, "RECLAIMED ") {
 				t.Errorf("got %q (exit %d), want RECLAIMED", got, code)
+			}
+		})
+		t.Run(shell+"/ssh ControlMaster in the clone", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "")
+			mux := exec.Command("perl", "-e", `$0 = "ssh: /sock/host:22 [mux]"; sleep 60`)
+			mux.Dir = f.clone
+			if err := mux.Start(); err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = mux.Process.Kill(); _ = mux.Wait() }()
+			want := "; ssh ControlMaster " + strconv.Itoa(mux.Process.Pid) + " left in place"
+			got, code := f.run(t, shell)
+			if code != 0 || !strings.HasPrefix(got, "RECLAIMED ") || !strings.HasSuffix(got, want) {
+				t.Errorf("got %q (exit %d), want RECLAIMED ending %q", got, code, want)
 			}
 		})
 		t.Run(shell+"/PR closes no issue", func(t *testing.T) {

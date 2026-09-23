@@ -768,13 +768,13 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 # but `idle`/`none` holds (a busy session also shows an empty composer,
 # and a WORKER-OWNS worker may still be running its final lead). Deletes use `find -delete` so the calling command carries
 # no removal word for Claude Code's guard. Prints exactly one line:
-#   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>]
+#   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>][; ssh ControlMaster <pids> left in place]
 #   HOLD <clone>: <why>          nothing changed
 #   <post_merge_ceremony line>   ceremony not settled; nothing changed
 #   NOT FREE <clone>: <why>      window killed, clone NOT reset
 # Returns 0, 1, 1 and 2 respectively.
 reclaim_slot() {
-    local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live pid cwd
+    local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live mux pid cwd
     clone=$(cd "$1" 2>/dev/null && pwd -P) || { echo "HOLD $1: no such directory"; return 1; }
     case "$agent" in idle|none) ;; *) echo "HOLD $clone: session state is '$agent', not idle"; return 1 ;; esac
     case "$(pwd -P)" in "$clone"|"$clone"/*) echo "HOLD $clone: run this from outside the clone"; return 1 ;; esac
@@ -827,11 +827,14 @@ reclaim_slot() {
     # After the kill: a run_in_background build outlives the window.
     n=0
     while :; do
-        live=""
+        live="" mux=""
         for pid in /proc/[0-9]*; do
             # Unreadable means another user's process, which cannot be in a clone under our home.
             cwd=$(readlink "$pid/cwd" 2>/dev/null) || continue
-            case "$cwd" in "$clone"|"$clone"/*) live="$live ${pid#/proc/}" ;; esac
+            case "$cwd" in "$clone"|"$clone"/*) ;; *) continue ;; esac
+            # An ssh ControlMaster keeps the cwd its first client ran in and never touches the clone.
+            case "$(tr '\0' ' ' < "$pid/cmdline" 2>/dev/null)" in "ssh: "*" [mux] ") mux="$mux ${pid#/proc/}"; continue ;; esac
+            live="$live ${pid#/proc/}"
         done
         [ -z "$live" ] && break
         n=$((n + 1))
@@ -847,7 +850,7 @@ reclaim_slot() {
         git -C "$clone" ls-remote --exit-code --heads origin "$head" >/dev/null 2>&1 \
             && git -C "$clone" push -q origin --delete "$head"
     fi
-    echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}"
+    echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}${mux:+; ssh ControlMaster$mux left in place}"
 }
 
 # fleet_watchers [conductor-dir]
