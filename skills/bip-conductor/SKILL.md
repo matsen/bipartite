@@ -419,14 +419,14 @@ Use `list-timers` (it shows LAST and NEXT), not `is-active` on the service. On `
 
 First, do housekeeping automatically (no need to ask).
 
-**Reclaim** a slot once `ListAgents` reports its session exactly `idle` (`waiting`, `shell` and `busy` are not finished) or it has none. Run from outside the clone:
+**Reclaim** a slot from outside its clone, passing what `ListAgents` reports for its session right before the call (`none` if it has none). Only `idle` and `none` proceed; `waiting`, `shell` and `busy` are not finished:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
-reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number>
+reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 ```
 
-It holds unless the terminal ceremony has run, the PR's closing issues are closed, the tree is clean, the local branch is the merged head, and the composer is empty. It then preserves the worklog into the clone root's `.preserved/`, kills the slot's window, waits until no process has its cwd in the clone, checks out the base, and deletes the three state files and the merged branch. Its one output line:
+It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty. It then preserves the worklog into the clone root's `.preserved/`, kills the slot's window, waits until no process has its cwd in the clone, checks out the base, and deletes the three state files and the merged branch. Its one output line:
 
 - `RECLAIMED` → spawn pending intent (below).
 - `HOLD` → nothing changed. Fix the cause, or leave the slot.

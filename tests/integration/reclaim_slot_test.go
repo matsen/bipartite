@@ -52,7 +52,7 @@ func newReclaimFixture(t *testing.T, ceremony, issueState, cursor string) reclai
 	writeFile(t, filepath.Join(f.clone, "x"), "x\n", 0644)
 	runGit(t, f.clone, "add", "x")
 	runGit(t, f.clone, "commit", "-qm", "feat")
-	runGit(t, f.clone, "push", "-q", "origin", "feat")
+	runGit(t, f.clone, "push", "-q", "origin", "feat", "feat:refs/pull/7/head")
 	writeFile(t, filepath.Join(f.clone, ".epic-status.json"), `{"issue": 3, "phase": "quality-gate"}`, 0644)
 	writeFile(t, filepath.Join(f.clone, ".epic-worklog.md"), "worklog\n", 0644)
 
@@ -68,7 +68,7 @@ func newReclaimFixture(t *testing.T, ceremony, issueState, cursor string) reclai
 	writeFile(t, filepath.Join(f.bin, "gh"), gh, 0755)
 	pane := ""
 	if cursor != "" {
-		pane = "echo '%9 " + f.clone + "'"
+		pane = "echo '%9 " + f.clone + "/sub'"
 	}
 	tmux := "#!/bin/sh\ncase \"$1\" in\n" +
 		"list-panes) " + pane + " ;;\n" +
@@ -81,7 +81,12 @@ func newReclaimFixture(t *testing.T, ceremony, issueState, cursor string) reclai
 
 func (f reclaimFixture) run(t *testing.T, shell string) (string, int) {
 	t.Helper()
-	cmd := exec.Command(shell, "-c", spawnIntentCall(t, "reclaim_slot", f.clone, "owner/repo", "7"))
+	return f.runAs(t, shell, "idle")
+}
+
+func (f reclaimFixture) runAs(t *testing.T, shell, agentState string) (string, int) {
+	t.Helper()
+	cmd := exec.Command(shell, "-c", spawnIntentCall(t, "reclaim_slot", f.clone, "owner/repo", "7", agentState))
 	cmd.Dir = f.root
 	cmd.Env = append(os.Environ(), "PATH="+f.bin+":"+os.Getenv("PATH"),
 		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@t", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@t")
@@ -173,7 +178,46 @@ func TestReclaimSlot(t *testing.T) {
 			runGit(t, f.clone, "add", "y")
 			runGit(t, f.clone, "commit", "-qm", "unpushed")
 			got, code := f.run(t, shell)
-			if want := "HOLD " + f.clone + ": local feat is not the merged head"; got != want || code != 1 {
+			if want := "HOLD " + f.clone + ": local feat has commits the merged head lacks"; got != want || code != 1 {
+				t.Errorf("got %q (exit %d), want %q", got, code, want)
+			}
+			f.assertUntouched(t)
+		})
+		t.Run(shell+"/busy session", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "2")
+			got, code := f.runAs(t, shell, "busy")
+			if want := "HOLD " + f.clone + ": session state is 'busy', not idle"; got != want || code != 1 {
+				t.Errorf("got %q (exit %d), want %q", got, code, want)
+			}
+			f.assertUntouched(t)
+		})
+		// bip-pr-land's moved-base default rebases the PR elsewhere and
+		// force-pushes, so the merged head is a new SHA with the same patch.
+		t.Run(shell+"/head rebased elsewhere", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "")
+			other := filepath.Join(f.root, "other")
+			runGit(t, f.root, "clone", "-q", "-b", "main", f.origin, other)
+			writeFile(t, filepath.Join(other, "z"), "z\n", 0644)
+			runGit(t, other, "add", "z")
+			runGit(t, other, "commit", "-qm", "moved base")
+			runGit(t, other, "push", "-q", "origin", "main")
+			runGit(t, other, "fetch", "-q", "origin", "feat")
+			runGit(t, other, "checkout", "-q", "-b", "feat", "FETCH_HEAD")
+			runGit(t, other, "rebase", "-q", "main")
+			runGit(t, other, "push", "-q", "-f", "origin", "feat", "feat:refs/pull/7/head")
+			writeFile(t, filepath.Join(f.bin, "meta.json"),
+				`{"baseRefName":"main","headRefName":"feat","headRefOid":"`+runGit(t, other, "rev-parse", "HEAD")+
+					`","closingIssuesReferences":[{"number":3,"url":"https://github.com/owner/repo/issues/3"}]}`, 0644)
+			got, code := f.run(t, shell)
+			if code != 0 || !strings.HasPrefix(got, "RECLAIMED ") {
+				t.Errorf("got %q (exit %d), want RECLAIMED", got, code)
+			}
+		})
+		t.Run(shell+"/PR closes no issue", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "")
+			writeFile(t, filepath.Join(f.bin, "meta.json"), `{"baseRefName":"main","headRefName":"feat","headRefOid":"x","closingIssuesReferences":[]}`, 0644)
+			got, code := f.run(t, shell)
+			if want := "HOLD " + f.clone + ": PR #7 closes no issue; reclaim by hand"; got != want || code != 1 {
 				t.Errorf("got %q (exit %d), want %q", got, code, want)
 			}
 			f.assertUntouched(t)
@@ -182,7 +226,7 @@ func TestReclaimSlot(t *testing.T) {
 			f := newReclaimFixture(t, ran, "CLOSED", "")
 			writeFile(t, filepath.Join(f.clone, "x"), "edited\n", 0644)
 			got, code := f.run(t, shell)
-			if want := "HOLD " + f.clone + ": uncommitted changes"; got != want || code != 1 {
+			if want := "HOLD " + f.clone + ": uncommitted changes in x"; got != want || code != 1 {
 				t.Errorf("got %q (exit %d), want %q", got, code, want)
 			}
 			f.assertUntouched(t)

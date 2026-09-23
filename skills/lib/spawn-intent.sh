@@ -757,13 +757,14 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 ' "$clone_dir" "$pr"
 }
 
-# reclaim_slot <clone-dir> <owner/repo> <pr-number>
+# reclaim_slot <clone-dir> <owner/repo> <pr-number> <agent-state>
 # Returns a clone-mode slot whose PR has merged to the pool, in the order
 # bip-conductor's reclaim requires: ceremony gate, closed issues, clean
 # tree, empty composer, preserve, kill the window, wait for the clone to
-# go quiet, then reset. The caller first checks that ListAgents reports
-# the slot's session exactly `idle` (or that it has none); nothing here
-# can see that. Deletes use `find -delete` so the calling command carries
+# go quiet, then reset. <agent-state> is what ListAgents reported for the
+# slot's session just before the call, or `none` if it has none; anything
+# but `idle`/`none` holds (a busy session also shows an empty composer,
+# and a WORKER-OWNS worker may still be running its final lead). Deletes use `find -delete` so the calling command carries
 # no removal word for Claude Code's guard. Prints exactly one line:
 #   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>]
 #   HOLD <clone>: <why>          nothing changed
@@ -771,8 +772,9 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 #   NOT FREE <clone>: <why>      window killed, clone NOT reset
 # Returns 0, 1, 1 and 2 respectively.
 reclaim_slot() {
-    local clone repo="$2" pr="$3" cer meta base head issue state panes pane cx root dest n live pid cwd
+    local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live pid cwd
     clone=$(cd "$1" 2>/dev/null && pwd -P) || { echo "HOLD $1: no such directory"; return 1; }
+    case "$agent" in idle|none) ;; *) echo "HOLD $clone: session state is '$agent', not idle"; return 1 ;; esac
     case "$(pwd -P)" in "$clone"|"$clone"/*) echo "HOLD $clone: run this from outside the clone"; return 1 ;; esac
     [ -d "$clone/.git" ] || { echo "HOLD $clone: not a clone-mode slot (worktree mode reclaims with git worktree remove)"; return 1; }
     cer=$(post_merge_ceremony "$clone" "$repo" "$pr")
@@ -784,17 +786,25 @@ reclaim_slot() {
         || { echo "HOLD $clone: gh pr view failed"; return 1; }
     base=$(printf '%s' "$meta" | jq -r .baseRefName)
     head=$(printf '%s' "$meta" | jq -r .headRefName)
+    [ "$(printf '%s' "$meta" | jq '.closingIssuesReferences | length')" -gt 0 ] \
+        || { echo "HOLD $clone: PR #$pr closes no issue; reclaim by hand"; return 1; }
     for issue in $(printf '%s' "$meta" | jq -r '.closingIssuesReferences[].url'); do
         state=$(gh issue view "$issue" --json state -q .state) || { echo "HOLD $clone: gh issue view $issue failed"; return 1; }
         [ "$state" = CLOSED ] || { echo "HOLD $clone: $issue is $state"; return 1; }
     done
-    [ -z "$(git -C "$clone" status --porcelain)" ] || { echo "HOLD $clone: uncommitted changes"; return 1; }
-    # branch -D below would drop commits the merge never saw.
-    if git -C "$clone" rev-parse -q --verify "refs/heads/$head" >/dev/null; then
-        [ "$(git -C "$clone" rev-parse "refs/heads/$head")" = "$(printf '%s' "$meta" | jq -r .headRefOid)" ] \
-            || { echo "HOLD $clone: local $head is not the merged head"; return 1; }
+    dirty=$(git -C "$clone" status --porcelain | cut -c4- | tr '\n' ' ')
+    [ -z "$dirty" ] || { echo "HOLD $clone: uncommitted changes in ${dirty% }"; return 1; }
+    # branch -D below would drop commits the merge never saw. A head
+    # rebased elsewhere (bip-pr-land's moved-base default) differs in SHA
+    # only, so compare patches.
+    if git -C "$clone" rev-parse -q --verify "refs/heads/$head" >/dev/null \
+        && [ "$(git -C "$clone" rev-parse "refs/heads/$head")" != "$(printf '%s' "$meta" | jq -r .headRefOid)" ]; then
+        git -C "$clone" fetch -q origin "pull/$pr/head" || { echo "HOLD $clone: cannot fetch pull/$pr/head"; return 1; }
+        case "$(git -C "$clone" cherry FETCH_HEAD "refs/heads/$head")" in
+            *+*) echo "HOLD $clone: local $head has commits the merged head lacks"; return 1 ;;
+        esac
     fi
-    panes=$(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' 2>/dev/null | awk -v d="$clone" '$2==d {print $1}')
+    panes=$(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' 2>/dev/null | awk -v d="$clone" '$2==d || index($2, d"/")==1 {print $1}')
     case "$panes" in *"
 "*) echo "HOLD $clone: more than one tmux pane"; return 1 ;; esac
     pane=$panes
