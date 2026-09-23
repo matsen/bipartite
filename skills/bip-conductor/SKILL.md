@@ -20,7 +20,7 @@ To spawn work, use `/bip-conductor-spawn`.
 
 - **An EPIC** is a GitHub tracking issue for a programme of work; a repo can have many open.
 - **The epic agent** is a `/bip-epic` session scoped to exactly one EPIC. Currently one epic agent per conductor (what N would need is sketched in `matsen/bipartite#211`; don't build toward it here).
-- **The slot protocol** — `.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip epic watch` — is per-slot work tracking and applies to **every** spawn, whatever its source. The `.epic-` prefix is a legacy name, not "epic machinery".
+- **The slot protocol** — `.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch` — is per-slot work tracking and applies to **every** spawn, whatever its source. The `.epic-` prefix is a legacy name, not "epic machinery".
 
 Work reaches a slot two ways, and the source decides who owns scope:
 - **Epic-originated**: the epic wrote a brief to `$CLONE_ROOT/.spawn-prompts/`. The epic has already judged the work worth a slot; the conductor checks only mechanics — gates, staleness, host and slot availability, file collisions.
@@ -295,16 +295,15 @@ The conductor clone sits outside `clone_root`, so its own drafts (and the epic's
 No subagent: this is a handful of shell calls, run from the conductor clone.
 
 ```bash
-L="$(dirname "<this-skill's-base-directory>")/lib"
-"$L/clone-currency.sh"                   # per slot: branch, dirty, behind, head
-"$L/fleet-collisions.sh" "$CLONE_ROOT"   # live branches, missing or stale status files
+bip fleet currency     # per slot: branch, dirty, behind, head
+bip fleet collisions   # live branches, missing or stale status files
 tmux list-windows -a -F '#W'
 find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)
 find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
   -exec jq -c --arg f {} '{f: $f, issue, phase, summary, scope, stop_reason, lead_guidance}' {} \;
 ```
 
-In worktree mode (`local_worktrees: true`), the slots are `find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d`; `clone-currency.sh` covers clone mode only.
+In worktree mode (`local_worktrees: true`), the slots are `find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d`; `bip fleet currency` covers clone mode only.
 
 Classify each slot:
 - `occupied`: has a tmux window, whatever the agent's status (the user may be doing follow-up work).
@@ -313,13 +312,7 @@ Classify each slot:
 
 Also note phase migrations (`blocked`/`pr-review`), missing status files, and contradictions.
 
-**Clean is not current.** Run `lib/clone-currency.sh` before every spawn, from the conductor clone, with no arguments:
-
-```bash
-cd <your conductor clone> && "$(dirname "<this-skill's-base-directory>")/lib/clone-currency.sh"
-```
-
-It derives `clone_root` and `clone_names` from `.epic-config.json`, fetches once in the conductor, counts in the conductor's object DB, reports `DIVERGED` rather than a count when ancestry fails, and lists non-pool directories as `(unmanaged)`. Read its `scope:` line before the table. Unlike `fleet-collisions.sh`, it takes no positional root. Fast-forward an idle slot that is behind.
+**Clean is not current.** Run `bip fleet currency` from the conductor clone before every spawn. It derives `clone_root` and `clone_names` from `.epic-config.json`, fetches once in the conductor, counts in the conductor's object DB, reports `DIVERGED` rather than a count when ancestry fails, and lists non-pool directories as `(unmanaged)`. Read its `scope:` line before the table. Fast-forward an idle slot that is behind.
 
 A behind-count does not tell you whether a **finished result** is stale. For that, take the build commit recorded in the artifact and run the tree form: `git diff <build-commit> <tip> -- <source paths>`.
 
@@ -356,7 +349,7 @@ Check this by what you are about to **do**:
 
 | about to… | check |
 |---|---|
-| **spawn** | `lib/clone-currency.sh` and `lib/fleet-collisions.sh "$CLONE_ROOT"` (below); confirm the issue body has not changed since its brief was written; ask the epic what moves its EPIC's top line (Step 6) |
+| **spawn** | `bip fleet currency` and `bip fleet collisions` (below); confirm the issue body has not changed since its brief was written; ask the epic what moves its EPIC's top line (Step 6) |
 | **file an issue** | does a success criterion name a denominator, a population, or "a default run" without naming the dispatch path? |
 | **deliver a correction to a worker** | append it to that slot's `.epic-worklog.md` first |
 | **reclaim a slot** | `reclaim_slot` (Step 6) |
@@ -383,15 +376,13 @@ Delegations are per repo. Widening one is a user decision.
 Before a path appears in anything durable, copy it to `$CLONE_ROOT/.preserved/<slug>/` with a `README.md`: the binary and its commit, the host, the argv per arm, and what the numbers do **not** establish. Check copies with `ls -la` (dotfiles). Never overwrite a larger preserved artifact with a smaller live one — keep both.
 A README is a claim about what the data means: when a defect lands, `grep -rl` the preserved directories for artifacts produced before it and rewrite affected labels, leading with the current rule.
 
-### Run `lib/fleet-collisions.sh` before every spawn
+### Run `bip fleet collisions` before every spawn
 
 ```bash
-source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
-CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-"$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # exit 0 = clear, 1 = found, 2 = could not check
+bip fleet collisions   # from the conductor clone; exit 0 = clear, 1 = found, 2 = could not check
 ```
 
-The root is required: an omitted or empty one exits 2. Read the `scope:` first line. Don't pipe it and read `${PIPESTATUS[0]}`: that is empty in zsh, and in both shells the next command overwrites it.
+Both `bip fleet` checks take the pool from `.epic-config.json` in the cwd, and exit 2 on a worker's frozen copy of it or when `~/.claude/skills/lib` is missing. Read the `scope:` first line. Don't pipe it and read `${PIPESTATUS[0]}`: that is empty in zsh, and in both shells the next command overwrites it.
 
 It reports live branches and their touched files; files touched by more than one live clone; each live branch against what landed on `origin/main` since it forked; a `.epic-status.json` whose clone has no live pane; a live pane with no status file; and a pane whose agent session is dead. **Exit 2 means could not check, never clear.** The against-landed section needs a pushed branch, so a freshly spawned worker's unpushed branch shows there as `UNCHECKABLE`. This has to run on the conductor's machine: clone branches and uncommitted work are local.
 
@@ -461,18 +452,19 @@ If a live worker's scope needs correcting before its next stopping point: the ep
 
 ### Step 7: Start slot monitor
 
-After the dashboard is built and any spawns are launched, start the **persistent slot monitor** — `bip epic watch` — which observes every slot's `.epic-status.json` and writes phase-transition events to `.epic-notifications.log` (JSONL) in the conductor cwd.
+After the dashboard is built and any spawns are launched, start the **persistent slot monitor** — `bip fleet watch` — which observes every slot's `.epic-status.json` and writes phase-transition events to `.epic-notifications.log` (JSONL) in the conductor cwd.
 The log survives watcher restarts and conductor compaction.
 
-Start one only if none is running, since two watchers log every transition twice. Add `--poll` (2 s stat loop) only when the clone root is on NFS or sshfs, where inotify misses remote writes:
+Keep exactly one running per conductor, since two log every transition twice. `fleet_watchers` lists the watchers whose cwd is this conductor, under either name; other fleets' watchers on the host are not counted. Add `--poll` (2 s stat loop) only when the clone root is on NFS or sshfs, where inotify misses remote writes:
 
 ```bash
-if ps -eo pid,args | /usr/bin/grep -qE '^\s*[0-9]+ bip epic watch'; then
-  echo "watcher already running"
-else
-  case "$(stat -f -c %T "$CLONE_ROOT")" in nfs*|fuse*) POLL=--poll;; *) POLL=;; esac
-  nohup bip epic watch $POLL >/dev/null 2>&1 &
-fi
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+case "$(fleet_watchers | wc -l)" in
+  0) case "$(stat -f -c %T "$CLONE_ROOT")" in nfs*|fuse*) POLL=--poll;; *) POLL=;; esac
+     setsid nohup bip fleet watch $POLL </dev/null >/dev/null 2>&1 & ;;   # own session, so the Bash call's teardown can't reap it
+  1) echo "watcher already running" ;;
+  *) echo "DUPLICATE watchers: $(fleet_watchers | tr '\n' ' ')" ;;
+esac
 ```
 The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`).
 
