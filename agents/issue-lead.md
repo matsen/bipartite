@@ -298,7 +298,7 @@ one asserting.)
 worker lands its own PR, it calls you after `/bip-pr-land`. Where a
 human merges (`stop_reason: awaiting-human-merge`), the worker has
 already ended. The conductor then spawns you from
-`/bip-conductor-poll`'s "Slot cleanup for merged PRs", with the
+`/bip-conductor`'s reclaim step, with the
 clone's absolute path, once `gh` reports the PR `MERGED`. That call is
 the one that runs this step. Read the state files by that absolute
 path, and pass `-R <owner/repo>` to `gh`, since your working directory
