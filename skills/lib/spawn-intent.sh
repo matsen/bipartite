@@ -702,10 +702,12 @@ mark_spawn_intent_consumed() {
 #
 # The terminal marker is the `**Category**: completed` line (or
 # `**Category:** completed`), tolerant of backticks/bold but with
-# `completed` as the first word, in a comment that also carries the
-# `🤖 **Issue Lead**` header. The header alone would read a clean-gate
-# comment as the ceremony having run; the Category line alone would read
-# any comment quoting it (a review of this very helper) the same way. The
+# `completed` as the first word, in a comment that BEGINS with the
+# `🤖 **Issue Lead**` header (leading whitespace aside), as the lead's
+# template emits it. The header alone would read a clean-gate comment as
+# the ceremony having run; the header anywhere in the body would read a
+# review that quotes both strings the same way (#259's steward approval
+# did, issue #260). The
 # pr-land marker is matched as the exact prefix /bip-pr-land posts, since
 # a hand-posted "EPIC worklog preserved" note can say the skill did NOT
 # run (phyz#2817). agents/issue-lead.md Step 8 carries the same pattern as
@@ -738,7 +740,7 @@ state = d.get("state")
 if state != "MERGED":
     print(f"CEREMONY UNKNOWN #{pr}: state is {state}, not MERGED"); sys.exit(2)
 bodies = [c.get("body", "") for c in d.get("comments", [])]
-if any("**Issue Lead**" in b and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
+if any(b.lstrip().startswith("🤖 **Issue Lead**") and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
     print(f"CEREMONY RAN #{pr}"); sys.exit(0)
 # Load-bearing order: the status file before the pr-land marker.
 # /bip-pr-land posts the marker at Step 6a and deletes the file at Step

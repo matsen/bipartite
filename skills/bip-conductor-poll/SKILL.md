@@ -360,7 +360,7 @@ post_merge_ceremony "$CLONE_ROOT/<slot>" <owner/repo> <PR number>
 
 `<slot>` is the clone name, or `issue-<N>` in worktree mode. It prints one line:
 
-- **`CEREMONY RAN #<pr>`** → a terminal lead comment (an `🤖 **Issue Lead**` comment whose Category is `completed`) is on the PR. Go on to the cleanup.
+- **`CEREMONY RAN #<pr>`** → a terminal lead comment (a comment beginning with `🤖 **Issue Lead**` whose Category is `completed`) is on the PR. Go on to the cleanup.
 - **`CEREMONY OWED #<pr> <slot-dir>`** → no terminal comment, and the status file is still there. `/bip-pr-land` deletes that file, so it did not run, and no worker lead is going to run the ceremony. If the slot's session is `busy` in `ListAgents`, its own lead may be mid-run: skip this slot for this cycle. Otherwise spawn the lead:
 
   > Agent tool, `subagent_type: issue-lead`: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."*
