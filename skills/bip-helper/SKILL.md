@@ -33,6 +33,11 @@ Reach for a subagent when the work fits in one call and only you need the answer
 
 - **The helper gets a directory of its own.**
   Never a pooled worker slot, and never a checkout another live session works in: `reclaim_slot` holds on a second session in a slot, and `/bip-issue-work` sends a co-tenant's branch work into a worktree.
+- **A worker in a pooled slot does not start helpers.**
+  Its helper's worktree would hang off the slot's repo, and `reclaim_slot` neither removes nor reports it, so it would outlive the slot.
+  Ask the epic or the conductor to start one instead.
+- **Delete with `find <path> -delete`, never `rm`.**
+  A `$` in the same command as `rm` trips Claude Code's destructive-removal guard, which bypass mode does not suppress.
 - **Kill only by the recorded short id.**
   Never `pgrep`/`pkill`, a session name, or argv — a spawn prompt is argv and quotes arbitrary text, so a pattern match can hit the wrong process, including your own shell.
 - **Tell the user** when you start or stop a helper, with its name and short id.
@@ -45,7 +50,7 @@ Each helper has one record file, so a later session (yours after compaction, or 
 HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 mkdir -p "$HELPERS"
 # $HELPERS/<short-id>.json
-# {"id":"…","session_id":"…","name":"…","primary":"…","dir":"…","dir_kind":"worktree|scratch","repo":"…"}
+# {"id":"…","session_id":"…","name":"…","primary":"…","primary_cwd":"…","dir":"…","dir_kind":"worktree|scratch","repo":"…"}
 ```
 
 ## start
@@ -77,7 +82,7 @@ mkdir -p "$HELPERS"
    If `ID` or `SID` is empty, stop and show the user `$OUT`; do not guess an id from the listing.
    The brief must name you as the primary, say to report by `SendMessage` to you, name its directory, and state what it must not do (merge, push to main, touch other checkouts) — the helper starts with no other context.
 
-4. **Write the record**, with `jq -n --arg …` into `$HELPERS/$ID.json`.
+4. **Write the record**, with `jq -n --arg …` into `$HELPERS/$ID.json`; `primary_cwd` is your own `pwd -P`.
 
 5. **Confirm it is up**: it should appear in `ListAgents` under its name within a minute.
    If `claude agents --json --all` shows it `failed`, read `claude logs $ID` and report — a failed first turn is most often the wrong account.
@@ -101,15 +106,17 @@ mkdir -p "$HELPERS"
    If `rm` reports unpushed commits or a worktree it could not remove, stop and show the user; do not pass `--discard-unpushed` or `--force-remove-worktree` without their go-ahead.
 3. Remove the directory.
    Worktree: `git -C <repo> worktree remove "$DIR"` — it refuses on uncommitted changes; if so, show the user rather than forcing.
-   Scratch: `rm -rf "$DIR"` after checking the path is the one in the record.
-4. Delete the record, and tell the user the helper is gone.
+   Scratch: after checking the path is the one in the record, `find "$DIR" -delete`.
+4. Delete the record with `find "$HELPERS" -maxdepth 1 -name "<id>.json" -delete`, and tell the user the helper is gone.
 
 ## sweep
 
 For each record in `$HELPERS`, look up its `id` in `claude agents --json --all` and its `primary` in `ListAgents`, then report one line per record:
 
 - **stale** — id not in the listing: the session was removed; offer to remove the directory and record.
-- **orphaned** — session present but its primary is not in `ListAgents`: offer to message the helper or stop it.
+- **primary not found** — session present but no `ListAgents` row carries the recorded primary name.
+  `ListAgents` renames a session when it is resumed (`birch` becomes `birch-61`), so this is not proof the primary is gone.
+  Say whether any session in `claude agents --json` has the recorded `primary_cwd`, and offer to message the helper or stop it.
 - **live** — both present: leave it.
 
 Report and ask; do not stop or remove anything in a sweep without the user's go-ahead.
