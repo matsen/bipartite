@@ -313,7 +313,7 @@ Classify each slot:
 
 Also note phase migrations (`blocked`/`pr-review`), missing status files, and contradictions.
 
-**Hold a slot** when something outside it still depends on its contents: another live slot reads files inside the clone, or remote jobs run from it. Write the reason to `$CLONE_ROOT/.holds/<slot>` (`mkdir -p "$CLONE_ROOT/.holds" && echo "<reason>" > "$CLONE_ROOT/.holds/<slot>"`), and delete that file when the dependency ends. It lives outside the clone, so reclaim leaves it and a clean-tree check never sees it; spawn selection skips the slot while it exists.
+**Hold a slot** when something outside it still depends on its contents: another live slot reads files inside the clone, or remote jobs run from it. Write the reason to `$CLONE_ROOT/.holds/<slot>` (`mkdir -p "$CLONE_ROOT/.holds" && echo "<reason>" > "$CLONE_ROOT/.holds/<slot>"`), and delete that file when the dependency ends. It lives outside the clone, so reclaim leaves it and a clean-tree check never sees it. While it exists, `bip spawn` refuses the slot (`--force` overrides), `bip fleet currency` reports it `HELD`, and spawn selection skips it.
 
 **Clean is not current.** Run `bip fleet currency` from the conductor clone before every spawn. It derives `clone_root` and `clone_names` from `.epic-config.json`, fetches once in the conductor, counts in the conductor's object DB, reports `DIVERGED` rather than a count when ancestry fails, and lists non-pool directories as `(unmanaged)`. Read its `scope:` line before the table. Fast-forward an idle slot that is behind.
 
