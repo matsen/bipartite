@@ -53,10 +53,13 @@
 # Scope: written for and exercised only against matsengrp/phyz's ~/re/pz pool.
 # The clone-root argument makes it portable in principle; that is untested.
 #
-# Usage: fleet-collisions.sh [clone-root]      (default ~/re/pz)
+# Usage: fleet-collisions.sh <clone-root>      (required; no default)
 # Exit:  0 = nothing found, 1 = something found, 2 = could not check
 set -uo pipefail
-ROOT="${1:-$HOME/re/pz}"
+# No default: an omitted or empty root used to fall back to ~/re/pz, which
+# silently reported on another repository's pool.
+ROOT="${1:-}"
+[ -n "$ROOT" ] || { echo "usage: fleet-collisions.sh <clone-root> -- NOT a clean check" >&2; exit 2; }
 [ -d "$ROOT" ] || { echo "no clone root at $ROOT" >&2; exit 2; }
 # A clone root that EXISTS but is EMPTY has to be handled before the three
 # `for d in "$ROOT"/*/` loops below, because that idiom behaves differently and
