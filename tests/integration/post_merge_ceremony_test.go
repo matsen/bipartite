@@ -170,8 +170,8 @@ func ceremonyCases() []ceremonyCase {
 		{"human merge, lead owed", true, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, nonTerminalLead, nonTerminalLead)
 		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
-		// A /bip-pr-land that posted its marker (Step 6a) and died before
-		// deleting the state files (Step 9.5): the file wins, so the
+		// The pr-land marker is present but the state files are still on
+		// disk (Step 7a's delete failed): the file wins, so the
 		// ceremony is still owed rather than handed to an ended worker.
 		{"pr-land marker but state still on disk", true, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, prLandComment)
