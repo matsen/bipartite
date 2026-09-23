@@ -633,7 +633,7 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 **So the question before any merge is: is there a recorded standing user delegation for THIS repo?**
 
 - **Yes** — it names its own trigger (on `matsengrp/phyz`, 2026-09-17: both the epic and the conductor approve, with the epic's 🤖 comment posted on the PR before merge). **The worker may then land its own PR, and you fill that delegation into every spawn brief's `LANDING DELEGATION:` line** so the worker carries the authority rather than inferring it from a message.
-- **No** — `NONE RECORDED`. **The worker stops at a clean gate and notifies, and you put the MERGE to the user.** This is the default and it is the safe one, so a fleet nobody has thought about lands here automatically.
+- **No** — `NONE RECORDED`. **The worker stops at a clean gate and notifies, and you put the MERGE to the user.** This is the default and it is the safe one, so a fleet nobody has thought about lands here automatically. The worker ends with `stop_reason: awaiting-human-merge` and its state files in place. After the user merges, the issue-lead's terminal ceremony is yours to trigger: `/bip-conductor-poll`'s "Slot cleanup for merged PRs" spawns the lead before it preserves and checks out the clone.
 
   ⛔ **You do not merge it yourself on this branch, and the first draft of this rule said you could.** "You merge, or you put it to the user" handed the conductor, on its own authority, the exact action the worker had just been denied — **the authority does not appear from being one role further up.** With no recorded delegation **nobody in the fleet holds merge authority**, so the only move is to ask.
 

@@ -209,7 +209,19 @@ still be able to see the slot.**
 
 1. **Update `.epic-status.json`**:
    - Set `phase` (if changing) — one of the seven above, no others
-   - Set `stop_reason` to your classification
+   - Set `stop_reason` to your classification. **One exception:** if
+     the worker wrote `stop_reason: awaiting-human-merge` (its brief
+     says `LANDING DELEGATION: NONE RECORDED`, so a human merges) and
+     you find the gate clean with nothing left for the worker, leave
+     that exact value in place and keep phase `quality-gate`. The
+     worker ends its loop on it, and the fleet reads it as "waiting on
+     a human", not "still working the gate". Put your own
+     classification in the `lead_notes` entry. If the gate is not
+     clean, overwrite it as usual; that is how the worker learns to
+     keep going. Keep it through the post-merge ceremony too (Step 8
+     sets phase `completed` but leaves this value): it is still why
+     the worker stopped, and the conductor's reclaim reads it to tell
+     a human merge from a land that bypassed `/bip-pr-land`.
    - Set `lead_guidance` — clear, actionable instruction for the worker
    - Set `scope` — one-line restatement of the issue's goal
    - Append to `lead_notes`:
@@ -242,6 +254,10 @@ still be able to see the slot.**
    **Assessment**: <what you observed, 2-3 sentences>
    **Action**: <what happens next>
    ```
+
+   On a non-terminal comment, `completed` must not be the first word
+   after `**Category**:`. On the terminal one it must be. Step 8's
+   idempotency guard keys on that line.
 
 3. **Return your verdict** to the worker as your final output — but
    for `completed`, only after Step 8 runs:
@@ -278,12 +294,36 @@ one asserting.)
 ➡ **If the work is done and the PR is open, the phase is
 `quality-gate`, not `completed`.**
 
+**Who makes the post-merge call depends on who merges.** Where the
+worker lands its own PR, it calls you after `/bip-pr-land`. Where a
+human merges (`stop_reason: awaiting-human-merge`), the worker has
+already ended. The conductor then spawns you from
+`/bip-conductor-poll`'s "Slot cleanup for merged PRs", with the
+clone's absolute path, once `gh` reports the PR `MERGED`. That call is
+the one that runs this step. Read the state files by that absolute
+path, and pass `-R <owner/repo>` to `gh`, since your working directory
+is the conductor's, not the clone's.
+
 **Idempotency guard.** ⛔ **Check the PR, not the status file.** If the PR
-already carries this ceremony's own Step 7 comment, the ceremony already
-ran — return "PHASE: completed" immediately without posting or filing.
+already carries a terminal lead comment, the ceremony already ran —
+return "PHASE: completed" immediately without posting or filing. The
+marker is the `**Category**: completed` line. Every lead iteration
+posts a `🤖 **Issue Lead** (iteration N)` comment, so that header alone
+is not the marker. A PR that sat at a clean gate before a human merged
+it already carries several. The pattern tolerates backticks and bold
+around `completed` but requires it to be the first word after the
+label. Measured 2026-09-23 over 60 merged `matsengrp/phyz` PRs: a
+plain `: completed` match found 24 of the 29 terminal comments (five
+wrote `` `completed` ``). A looser "completed anywhere on the line" match
+false-hit `superfamily-pcp#477`, whose line reads `` `quality-gate` … Not
+`completed` ``. phyz#2909 carries two terminal comments, posted 14
+minutes apart by two lead runs under the older guard. The second run
+did not treat the first comment as the ceremony having run.
 
 ```bash
-gh pr view <N> --json comments -q '.comments[].body'   # look for your Step 7 comment
+gh pr view <N> --json comments \
+  -q '[.comments[].body | select(test("\\*\\*Category\\*\\*:[ `*]*completed"))] | length'
+# 0 → run the ceremony; 1 or more → it already ran
 ```
 
 ⛔ **Why not `.epic-status.json#completed_at`, which this guard used to
@@ -344,8 +384,8 @@ Otherwise:
 
 **Do not file on non-terminal evaluations.** Signals may change as
 the worker addresses feedback; filing only at `completed` means the
-final state is authoritative. `completed_at` ensures re-invocation is
-idempotent.
+final state is authoritative. The terminal comment, checked by the
+guard above, is what makes re-invocation idempotent.
 
 ## Never poll for a subagent you spawned
 

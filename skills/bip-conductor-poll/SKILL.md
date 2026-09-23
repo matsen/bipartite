@@ -350,6 +350,22 @@ how two writers end up indistinguishable in one file.
 
 For each slot whose PR has merged (cross-reference merged PRs from check 1 with slot branches):
 
+**First, the issue-lead's terminal ceremony, if nothing else will run it.** Where a human merges (`LANDING DELEGATION: NONE RECORDED`), the worker ended at a clean gate with `stop_reason: awaiting-human-merge`, and nothing after the merge calls the lead. You are that call's owner. It has to run **before** the preserve-and-checkout below, because that step removes the state files the lead reads.
+
+```bash
+gh pr view <N> -R <owner/repo> --json state,comments \
+  -q '.state, ([.comments[].body | select(test("\\*\\*Category\\*\\*:[ `*]*completed"))] | length)'
+ls "$CLONE_ROOT/<clone>/.epic-status.json"
+```
+
+- **Terminal comment count ≥ 1** → the ceremony ran. Go on to the cleanup.
+- **Count 0, status file present** → `/bip-pr-land` did not run, since it deletes that file, so no worker lead is going to run the ceremony either. If the slot's session is `busy` in `ListAgents`, its own lead may be mid-run. Skip this slot for this cycle. Otherwise spawn the lead:
+
+  > Agent tool, `subagent_type: issue-lead`: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<absolute clone path>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."*
+
+  Leave this slot's cleanup until the lead returns. Then re-run the count yourself, because a subagent's report is a snapshot. It must be exactly `1`; then do the cleanup. The lead writes `phase: completed` into the status file before cleanup preserves it, so the `.preserved/` copy records the ceremony.
+- **Count 0, no status file** → `/bip-pr-land` ran, and the worker's own final lead call owns the ceremony, or else the state is already gone. If the PR carries `/bip-pr-land`'s `🤖 EPIC worklog preserved` comment, it is the first case: leave it to the worker. Otherwise print `ceremony UNRUN for #<issue>` and put it in this poll's report. Do not skip it silently. A lead that filed nothing and a lead that never ran look the same from outside. The user decides whether a lead run from the PR alone is worth it. Its guard and its follow-up source (the PR body's DEFERRED section) are both on the PR, but the worklog it would have read is gone.
+
 **Worktree mode**:
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
@@ -369,23 +385,30 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 git -C "$CLONE_ROOT/<clone>" checkout main
 git -C "$CLONE_ROOT/<clone>" pull --ff-only origin main
-# .epic-status.json/.epic-worklog.md should already be gone here -- /bip-pr-land's
-# own Step 6a preserves them (and Step 9.5 deletes them) at land time
-# (issue #2216). The block below is defense in depth for a land that
-# bypassed /bip-pr-land; if the files are still present, preserve before
-# deleting rather than assuming reclaim is a safe place to drop them
-# silently. Uses the same preserve_epic_state() helper Step 6a does
-# (issue #2216 follow-up) rather than a hand-rolled variant -- a
-# backstop that behaves differently from what it backstops is its own
-# silent gap.
+# After a worker's own land, .epic-status.json/.epic-worklog.md are already
+# gone -- /bip-pr-land's Step 6a preserves them (and Step 9.5 deletes them)
+# at land time (issue #2216). They are still here in two cases: a human
+# merged (stop_reason awaiting-human-merge -- expected; the ceremony above
+# has just run from them), or a land bypassed /bip-pr-land (a defect to
+# report). Either way, preserve before deleting rather than assuming
+# reclaim is a safe place to drop them silently. Uses the same
+# preserve_epic_state() helper Step 6a does (issue #2216 follow-up) rather
+# than a hand-rolled variant -- a backstop that behaves differently from
+# what it backstops is its own silent gap.
 if [ -f "$CLONE_ROOT/<clone>/.epic-status.json" ]; then
     ISSUE_N=$(jq -r '.issue // "unknown"' "$CLONE_ROOT/<clone>/.epic-status.json" 2>/dev/null)
-    DEST=$(preserve_epic_state "$CLONE_ROOT/<clone>" "$CLONE_ROOT" \
-        "at reclaim. This clone landed a PR without /bip-pr-land preserving first -- investigate why.")
+    if [ "$(jq -r '.stop_reason // ""' "$CLONE_ROOT/<clone>/.epic-status.json" 2>/dev/null)" = "awaiting-human-merge" ]; then
+        WHY="at reclaim, after a human merged the PR and the post-merge issue-lead ran."
+        NOTE="after the human merge"
+    else
+        WHY="at reclaim. This clone landed a PR without /bip-pr-land preserving first -- investigate why."
+        NOTE="the land that closed this issue skipped /bip-pr-land's preservation step"
+    fi
+    DEST=$(preserve_epic_state "$CLONE_ROOT/<clone>" "$CLONE_ROOT" "$WHY")
     rc=$?
     if [ "$rc" -eq 0 ]; then
-        echo "Reclaim found un-preserved EPIC state for issue $ISSUE_N -- copied to $DEST (report this, it means the land skipped /bip-pr-land's Step 6a)"
-        gh issue comment "$ISSUE_N" --body "🤖 EPIC worklog preserved to \`$DEST\` at reclaim (the land that closed this issue skipped /bip-pr-land's preservation step)." 2>&1
+        echo "Reclaim preserved EPIC state for issue $ISSUE_N to $DEST ($NOTE)"
+        gh issue comment "$ISSUE_N" --body "🤖 EPIC worklog preserved to \`$DEST\` at reclaim ($NOTE)." 2>&1
     elif [ "$rc" -eq 2 ]; then
         echo "PRESERVATION FAILED at reclaim for issue $ISSUE_N -- stop, do not let the delete below run until this is resolved by hand" >&2
     fi
@@ -434,7 +457,9 @@ Same cleanup as above.
 for f in "$CLONE_ROOT"/*/.epic-status.json; do
   [ -n "$(find "$f" -mmin +45 2>/dev/null)" ] || continue
   d=$(dirname "$f")
-  if tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null | grep -qxF "$d"; then
+  if [ "$(jq -r '.stop_reason // ""' "$f" 2>/dev/null)" = "awaiting-human-merge" ]; then
+    echo "AWAITING-MERGE $d — clean gate, PR is the user's to merge; not a stall"
+  elif tmux list-panes -a -F '#{pane_current_path}' 2>/dev/null | grep -qxF "$d"; then
     echo "STALLED?  $d — window OPEN, never clean up; check the worklog next"
   else
     echo "ABANDONED $d — no window, cleanup candidate per the rule above"
