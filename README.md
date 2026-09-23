@@ -26,7 +26,7 @@ Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conduct
 
 Cross-cutting tools that span both sides of the workflow: themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows for review, Slack integration, and server resource scouting via SSH.
 
-Key skills: `/bip-checkin`, `/bip-digest`, `/bip-narrative`, `/bip-spawn`, `/bip-scout`
+Key skills: `/bip-checkin`, `/bip-digest`, `/bip-narrative`, `/bip-scout`
 
 ### Reference Management
 

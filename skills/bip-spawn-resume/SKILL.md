@@ -5,7 +5,7 @@ description: Cold-start into a worktree/clone from a fresh conversation — read
 
 # /bip-spawn-resume
 
-For a fresh conversation dropped into a worktree/clone that was spawned (via `/bip-spawn` or `/bip-conductor-spawn`) and already has history — a PR out, review feedback waiting, an EPIC worker mid-phase, or something stalled.
+For a fresh conversation dropped into a worktree/clone that was spawned (via `bip spawn` or `/bip-conductor-spawn`) and already has history — a PR out, review feedback waiting, an EPIC worker mid-phase, or something stalled.
 This skill's job is entirely **orientation**: gather context, report it, and stop.
 It does not decide what happens next — the most common case is a vetted PR the user wants to modify (directly, or via PR review comments), but treat that as a prior, not a restriction.
 Let the actual state (and the user) drive what happens after Step 2.
@@ -69,4 +69,4 @@ A few things carry over regardless of what they ask for:
 - Distinct from `/bip-conductor-tuckin` (fleet-side, persists slot status across many clones), `/bip-epic-tuckin` (topic-side, persists EPIC dashboards), and `/bip-conductor-recover` (rebuilds processes killed by a host reboot).
   This skill is for a plain new conversation re-orienting inside one slot.
 - Its write-side counterpart is `/bip-spawn-tuckin` — run that before a context reset so this skill has a clean commit/PR state to read on the next cold-start.
-- Works for both EPIC slots (`.epic-status.json` present) and plain `/bip-spawn` sessions (no status file — just a branch and maybe a PR).
+- Works for both EPIC slots (`.epic-status.json` present) and plain `bip spawn` sessions (no status file — just a branch and maybe a PR).

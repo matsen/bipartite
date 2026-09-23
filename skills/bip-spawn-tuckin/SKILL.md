@@ -5,7 +5,7 @@ description: Persist a plain (non-EPIC) spawn session's state before context res
 
 # /bip-spawn-tuckin
 
-Flush a `/bip-spawn` worker's state to durable storage before a context reset or session end.
+Flush a `bip spawn` worker's state to durable storage before a context reset or session end.
 Run this when context is getting long or before stopping.
 
 This is the write-side counterpart to `/bip-spawn-resume` (which reads what this writes) and the single-slot, non-EPIC counterpart to `/bip-conductor-tuckin` (which persists the fleet's view across many slots).
