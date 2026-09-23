@@ -66,7 +66,7 @@ Read `clone_root` and `local_worktrees` from `.epic-config.json`.
 
 **Clone mode** (`local_worktrees` absent or false):
 
-If clone-name not specified, find an idle clone: on `main`, clean, no live tmux pane in its directory, no `.epic-status.json`:
+If clone-name not specified, find an idle clone: on `main`, clean, no live tmux pane in its directory, no `.epic-status.json`, no hold:
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
@@ -80,6 +80,7 @@ for name in $(jq -r '.clone_names[]' .epic-config.json); do
   [ -z "$st" ] || continue
   echo "$OCCUPIED" | grep -qxF "$dir" && continue   # live tmux pane here → owned
   [ -f "$dir/.epic-status.json" ] && continue         # a worker claimed it, unfinished
+  [ -f "$CLONE_ROOT/.holds/$name" ] && continue       # a conductor hold (bip-conductor Step 4)
   echo "$name"
 done
 ```
