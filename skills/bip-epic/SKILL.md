@@ -180,7 +180,7 @@ A distinct analysis from 4a: extract file paths from issue bodies and build an o
 Resolve paths against the actual repo before recording an overlap or its absence — a filename with no directory component is unresolved, and per-experiment `scripts/` copies share filenames. When naming a file in a brief or message, include the directory.
 
 **Scope:**
-- **4b covers filed issues only.** A live worker's branch is usually unpushed and lives in its clone, so report the verdict as "collisions among the filed issues" and hand live-branch intersection to the conductor, which runs `lib/fleet-collisions.sh "$CLONE_ROOT"`.
+- **4b covers filed issues only.** A live worker's branch is usually unpushed and lives in its clone, so report the verdict as "collisions among the filed issues" and hand live-branch intersection to the conductor, which runs `bip fleet collisions`.
 - **Once a branch exists, its diff supersedes the issue body:** `git diff --name-only origin/main...<branch>`.
 - **Shared symbols:** an issue that edits a shared definition (a constant, a params list, a fixture path) has a footprint equal to its consumer set. Run `git grep -ln <SYMBOL> -- <subtree>`, report code hits and prose hits separately, with the commit, and tell the worker to re-run it at branch time. The grep does not see files that import the defining module without naming the symbol.
 - **Meaning collisions have no detector.** For any issue that regenerates or replaces a committed artifact, ask: does anything cite this artifact as evidence, and is its value that it is current or that it is the historical record of what a landed result was computed from?

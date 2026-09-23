@@ -7,13 +7,13 @@ that matters if you change it.
 
 | file | how skills invoke it | runs under |
 |---|---|---|
-| `skills/lib/clone-currency.sh` | as a path — `".../lib/clone-currency.sh"` | its shebang, `bash` |
-| `skills/lib/fleet-collisions.sh` | as a path | its shebang, `bash` |
+| `skills/lib/clone-currency.sh` | through `bip fleet currency` | `bash` |
+| `skills/lib/fleet-collisions.sh` | through `bip fleet collisions` | `bash` |
 | `scripts/marimo-check.sh` | as a path | its shebang |
 | `skills/lib/spawn-intent.sh` | **`source`d** | **your shell**, whatever it is |
 
 **A shebang is ignored when a file is sourced.** So the first three are safe in any login shell
-— they re-exec under bash no matter who calls them. `spawn-intent.sh` has no shebang, by design,
+— they run under bash no matter who calls them. `spawn-intent.sh` has no shebang, by design,
 because it defines functions the caller needs in its own environment. It runs in your shell.
 
 ## The rule

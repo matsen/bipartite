@@ -35,10 +35,14 @@ var (
 	epicWatchPoll   string
 )
 
-var epicWatchCmd = &cobra.Command{
-	Use:   "watch",
-	Short: "Watch .epic-status.json files for phase transitions",
-	Long: `Watch .epic-status.json files across all configured slots and emit
+// newWatchCmd builds the watch command. It is registered twice, as
+// `bip fleet watch` and the deprecated `bip epic watch`; a cobra command
+// can have only one parent, so each registration needs its own instance.
+func newWatchCmd(group string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Watch .epic-status.json files for phase transitions",
+		Long: `Watch .epic-status.json files across all configured slots and emit
 phase-transition events to .epic-notifications.log (one JSONL line per
 event) and to stdout (one human-readable line per event).
 
@@ -50,27 +54,33 @@ where inotify does not fire on remote writes).
 Run as a long-lived process. Exits cleanly on SIGINT or SIGTERM.
 
 Examples:
-  bip epic watch
-  bip epic watch --phases needs-human,completed
-  bip epic watch --since 30m
-  bip epic watch --poll=100ms`,
-	RunE: runEpicWatch,
+  bip ` + group + ` watch
+  bip ` + group + ` watch --phases needs-human,completed
+  bip ` + group + ` watch --since 30m
+  bip ` + group + ` watch --poll=100ms`,
+		RunE: runEpicWatch,
+	}
+	cmd.Flags().StringVar(&epicWatchPhases, "phases", defaultEpicWatchPhases,
+		"Comma-separated phases to alert on")
+	cmd.Flags().StringVar(&epicWatchSince, "since", "",
+		"Replay log entries newer than DURATION to stdout, then exit (e.g. 30m, 2h)")
+	cmd.Flags().StringVar(&epicWatchPoll, "poll", "",
+		"Stat-poll at DURATION instead of fsnotify (omit value to use 2s)")
+	cmd.Flags().Lookup("poll").NoOptDefVal = defaultPollInterval
+	return cmd
 }
 
 func init() {
-	epicWatchCmd.Flags().StringVar(&epicWatchPhases, "phases", defaultEpicWatchPhases,
-		"Comma-separated phases to alert on")
-	epicWatchCmd.Flags().StringVar(&epicWatchSince, "since", "",
-		"Replay log entries newer than DURATION to stdout, then exit (e.g. 30m, 2h)")
-	epicWatchCmd.Flags().StringVar(&epicWatchPoll, "poll", "",
-		"Stat-poll at DURATION instead of fsnotify (omit value to use 2s)")
-	epicWatchCmd.Flags().Lookup("poll").NoOptDefVal = defaultPollInterval
-	epicCmd.AddCommand(epicWatchCmd)
+	fleetCmd.AddCommand(newWatchCmd("fleet"))
+	epicWatch := newWatchCmd("epic")
+	epicWatch.Deprecated = "use `bip fleet watch`"
+	epicCmd.AddCommand(epicWatch)
 }
 
 // epicConfig mirrors the relevant fields of .epic-config.json.
 type epicConfig struct {
 	CloneRoot      string   `json:"clone_root"`
+	MainCheckout   string   `json:"main_checkout"`
 	CloneNames     []string `json:"clone_names"`
 	LocalWorktrees bool     `json:"local_worktrees"`
 }
@@ -207,12 +217,7 @@ func loadEpicConfig(dir string) (*epicConfig, error) {
 // Returns an empty slice (no error) if the worktree mode clone_root has no
 // issue-* subdirectories yet — the caller decides whether that is fatal.
 func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
-	// config.ExpandTilde is the same expansion ResolveRepoPath uses for
-	// worktree.root, so EPIC and bip spawn agree on how "~/re/foo" resolves.
-	cloneRoot := config.ExpandTilde(cfg.CloneRoot)
-	if !filepath.IsAbs(cloneRoot) {
-		cloneRoot = filepath.Join(repoDir, cloneRoot)
-	}
+	cloneRoot := resolveCloneRoot(repoDir, cfg)
 
 	if cfg.LocalWorktrees {
 		names, err := flow.ListWorktreeSlots(cloneRoot)
@@ -237,6 +242,18 @@ func resolveSlots(repoDir string, cfg *epicConfig) ([]slotInfo, error) {
 		})
 	}
 	return slots, nil
+}
+
+// resolveCloneRoot returns cfg's clone_root as an absolute path, relative
+// paths taken against repoDir. config.ExpandTilde is the same expansion
+// ResolveRepoPath uses for worktree.root, so EPIC and bip spawn agree on how
+// "~/re/foo" resolves.
+func resolveCloneRoot(repoDir string, cfg *epicConfig) string {
+	cloneRoot := config.ExpandTilde(cfg.CloneRoot)
+	if !filepath.IsAbs(cloneRoot) {
+		cloneRoot = filepath.Join(repoDir, cloneRoot)
+	}
+	return cloneRoot
 }
 
 // parsePhasesFilter parses the comma-separated --phases value.

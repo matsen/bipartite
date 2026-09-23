@@ -447,7 +447,7 @@ COMPLETION: When done (or when lead says completed):
 
    IF YOU RESUME WORK AFTER THIS POINT, RE-CREATE `.epic-status.json` FIRST,
    naming the issue and a live phase: the conductor's reclaim gate and
-   `bip epic watch` key on the file existing. Commit and push before
+   `bip fleet watch` key on the file existing. Commit and push before
    verifying — the clone is pooled.
 
    LANDING DELEGATION: <quote the recorded standing user delegation for
@@ -792,7 +792,7 @@ Then all of:
 
 1. **Add the name to `clone_names` in `.epic-config.json`.** `bip spawn` doesn't consult it, but Step 1's selection and the conductor's scans do; an unregistered clone is invisible.
 2. **Trust the directory before spawning into it.** A fresh clone opens on Claude Code's folder-trust dialog, which queues the prompt. If you answer it from the conductor, read which option is highlighted first (`grep -nE 'No, exit|Yes, I trust'` the pane) and send `Down` before `Enter` when `No, exit` is highlighted — never a blind `Enter`.
-3. **Restart `bip epic watch`.** It enumerates slots at startup only. Find it with `ps -eo pid,args | grep -E '^\s*[0-9]+ bip epic watch'`, not `pgrep -af` (which matches every worker's prompt).
+3. **Restart `bip fleet watch`.** It enumerates slots at startup only. From the conductor clone, `kill $(fleet_watchers)` (from `lib/spawn-intent.sh`), then start it as in `/bip-conductor` Step 7. `fleet_watchers` matches argv and this conductor's cwd, so it neither matches a worker's prompt nor kills another fleet's watcher.
 
 **Worktree mode** — no registration needed; worktrees are created on demand in Step 1 and named `issue-<N>`.
 
@@ -824,7 +824,7 @@ Target project repos should gitignore these files (add to `.gitignore`):
 ```
 
 `.epic-status.json` and `.epic-worklog.md` live in each clone/worktree.
-`.epic-notifications.log` and `.epic-decisions.md` live in the conductor cwd (written by `bip epic watch` and by the conductor itself).
+`.epic-notifications.log` and `.epic-decisions.md` live in the conductor cwd (written by `bip fleet watch` and by the conductor itself).
 None should be checked in.
 
 ## Conventions

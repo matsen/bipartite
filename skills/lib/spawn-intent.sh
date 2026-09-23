@@ -847,3 +847,22 @@ reclaim_slot() {
     fi
     echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}"
 }
+
+# fleet_watchers [conductor-dir]
+# Prints the pid of each `bip fleet watch` or `bip epic watch` whose cwd is
+# conductor-dir (default: the current directory), one per line. Watchers of
+# other fleets on the same host have other cwds and are not listed. Matches
+# argv, not the joined command line, so a worker whose prompt quotes the
+# command is not a watcher.
+fleet_watchers() {
+    local dir p cwd a0 a1 a2
+    dir=$(cd "${1:-.}" 2>/dev/null && pwd -P) || { echo "fleet_watchers: no directory ${1:-.}" >&2; return 2; }
+    for p in /proc/[0-9]*; do
+        cwd=$(readlink "$p/cwd" 2>/dev/null) || continue
+        [ "$cwd" = "$dir" ] || continue
+        a0=""; a1=""; a2=""
+        { IFS= read -r -d '' a0; IFS= read -r -d '' a1; IFS= read -r -d '' a2; } < "$p/cmdline" 2>/dev/null
+        [ "${a0##*/}" = bip ] && [ "$a2" = watch ] || continue
+        case "$a1" in epic|fleet) echo "${p#/proc/}" ;; esac
+    done
+}
