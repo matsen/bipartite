@@ -199,7 +199,7 @@ func ceremonyCases() []ceremonyCase {
 }
 
 // TestPostMergeCeremony covers the decision the merged-PR slot cleanup in
-// bip-conductor-poll acts on (issue #258).
+// bip-conductor's reclaim step acts on (issue #258).
 func TestPostMergeCeremony(t *testing.T) {
 	cases := ceremonyCases()
 	shells := []string{"bash"}

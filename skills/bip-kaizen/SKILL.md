@@ -80,8 +80,7 @@ Then state one of these explicitly in your proposal:
 
 Then list **every other file that restates the rule**, and update all of them or say why not. A fix that lands in one of two copies is worse than no fix: the un-updated copy is now authoritative-looking and stale.
 
-Two failures this exists to prevent, both measured 2026-09-01 in one session:
-- An addressing rule was strengthened in `bip-conductor` but not in `bip-conductor-poll` — which is *deliberately* the copy a mid-cycle conductor reads. The conductor that made the original error was mid-cycle.
+A failure this exists to prevent, measured 2026-09-01:
 - A generalized gitignore rule in `bip-conductor` never reached the concrete checklist in `bip-conductor-spawn`, so the checklist kept omitting a file that "has bitten a real fleet twice".
 
 **Budget discipline.** If you are adding a rule and deleting nothing, the question is not how many lines — it is **what does this supersede?** Answer it in the proposal, or say explicitly that nothing does and why the fact is new. That question, not any ratio, is what catches a rule being re-litigated in a second file.

@@ -83,8 +83,7 @@ clone_root_has_clones() {
 # that dropped the status file entirely whenever the worklog was
 # merely absent, and a same-day same-issue collision that silently
 # overwrote an earlier preserved copy -- all caught before this landed,
-# not after) -- four times across bip-pr-land, bip-conductor-spawn (x2),
-# and bip-conductor-poll.
+# not after) -- across bip-pr-land and bip-conductor-spawn.
 #
 # The two copies are attempted independently rather than &&-chained:
 # .epic-status.json is required (its presence is the whole precondition
@@ -689,8 +688,8 @@ mark_spawn_intent_consumed() {
 
 # post_merge_ceremony <clone-dir> <owner/repo> <pr-number>
 # For a slot whose PR has merged, says who owes the issue-lead's terminal
-# ceremony (agents/issue-lead.md Step 8), for bip-conductor-poll's "Slot
-# cleanup for merged PRs" to act on BEFORE it preserves and checks out the
+# ceremony (agents/issue-lead.md Step 8), for bip-conductor's reclaim step
+# to act on BEFORE it preserves and checks out the
 # clone (issue #258). Prints exactly one line:
 #   CEREMONY RAN #<pr>             a terminal lead comment exists -- clean up
 #   CEREMONY OWED #<pr> <clone>    none, status file present -- spawn the lead

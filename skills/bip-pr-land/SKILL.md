@@ -170,7 +170,7 @@ if PRIMARY=$(bip worktree primary 2>/dev/null); then
 fi
 ```
 
-The destination is always `<clone_root>/.preserved/`, never inside the clone. If this step printed STOP, resolve it before continuing. The PR comment is how `bip-conductor-poll` tells a preserved land from a bypassed one.
+The destination is always `<clone_root>/.preserved/`, never inside the clone. If this step printed STOP, resolve it before continuing. The PR comment is how a conductor tells a preserved land from a bypassed one.
 
 `bip worktree primary` exits 0 and prints the primary clone path **only** when the current directory is a linked worktree.
 In every other case (primary clone, non-bip checkout, non-git directory) it exits non-zero with no stdout — `$PRIMARY` remains empty and the `cd` is skipped.

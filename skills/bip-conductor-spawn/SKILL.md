@@ -722,8 +722,8 @@ beyond the instruction. **The one worker that followed it exactly was
 the one that went silent.**
 
 **The old fallback clause was false in the same way** — it claimed
-`.epic-status.json` "is written regardless, so `/bip-conductor-poll` and
-`bip epic watch` remain the fallback." After landing there is no file, so
+`.epic-status.json` "is written regardless, so `bip epic watch`
+remains the fallback." After landing there is no file, so
 the primary and the fallback were gated on the same deleted artifact: one
 point of failure wearing two hats. If the send fails or the address file
 is missing, **say so in your final output** rather than relying on a
@@ -882,8 +882,8 @@ COMPLETION: When done (or when lead says completed):
       - Push the notification and end. Do not wait for the merge.
       - The terminal ceremony (phase `completed`, follow-ups from the
         DEFERRED section, the terminal lead comment) runs AFTER the
-        merge, and you are not its owner: `/bip-conductor-poll`'s
-        "Slot cleanup for merged PRs" spawns the issue-lead for it,
+        merge, and you are not its owner: `/bip-conductor`'s
+        reclaim step spawns the issue-lead for it,
         from this clone's status file. So leave `.epic-status.json` and
         `.epic-worklog.md` in place; do not delete them on the way out.
 
@@ -1450,7 +1450,7 @@ Report to the user:
 If a persistent slot monitor is running (started by `/bip-conductor`), the conductor will receive automatic notifications when this worker changes phase.
 No additional monitoring setup is needed.
 
-If no monitor is running, suggest starting one or using `/loop 10m /bip-conductor-poll` to track progress.
+If no monitor is running, suggest starting one; workers also report back on their own.
 
 ## Creating new slots
 
