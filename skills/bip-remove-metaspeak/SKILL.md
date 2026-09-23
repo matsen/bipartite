@@ -39,7 +39,7 @@ This applies just as well to a PR body as to a file on disk: a description writt
 ### Step 0: Decide what earns its place
 
 Do this before the register pass, on the whole document, and act on it — this is a removal step, not a report.
-Four signals mark content that has stopped being load-bearing:
+Six signals mark content that has stopped being load-bearing:
 
 1. **A section raises an argument and then argues it fails.**
    Keep the conclusion as a plain statement if a reader would otherwise walk into the same argument.
@@ -53,15 +53,18 @@ Four signals mark content that has stopped being load-bearing:
    Keep only the prose that argues something the cells cannot.
 4. **A section is wholly conditional on another section's outcome.**
    Collapse it to one conditional sentence where the outcome is decided.
+5. **An "Against", "Risk" or "Limitation" attacks something the document no longer proposes.**
+   Its proposal was deleted in an earlier draft and the rebuttal stayed behind, so unlike signal 1 nothing on the page shows what it answers.
+   Check each one against what is still proposed; an "instead" or "rather than" with no antecedent is the tell.
+6. **A qualifier survives only because the author was once corrected.**
+   "reports no correlation in the main text, captions or Methods (SI unretrieved)" for "reports no correlation".
+   Restate the claim once at its correct scope.
 
 Three more that recur, all deletions with nothing kept: framing the reader already agreed to in an earlier exchange or an earlier section; a retraction of a claim never published; advice about a method nobody proposed.
 
-This step is why the pass exists at all.
-Observed twice in one session: register-only passes cut 2.7% and 8% of two documents and reported them "already dense," after which the author cut 60% and 24% of the same documents — almost all of it material matching the signals above, which the register pass had carefully tidied on its way past.
-
+This step is why the pass exists at all: a register pass tidies this material instead of removing it.
 Section-level deletions are recoverable: Step 2 takes a copy, and the deliverable requires every cut passage be quoted back.
-Cut, then let the review in Step 5 restore what mattered.
-Erring toward the cut is correct here; erring toward keeping is what produced the two failures above.
+Cut, then let the review in Step 5 restore what mattered; erring toward the cut is correct here.
 
 ### Step 1: Determine the target
 
@@ -198,8 +201,12 @@ grep -oE '`[A-Z][A-Za-z-]+[0-9]{4}-[a-z]{2}`' <file> | sort -u | diff /tmp/k_old
 grep -c '^## \|^### ' <file>
 ```
 
-Then spot-check a handful of the document's most distinctive numbers.
-A pass that silently dropped a citation or a figure is the failure mode worth catching, and it takes thirty seconds to rule out.
+Then list the numbers and issue refs that the pass dropped. Every one should be an intended cut:
+
+```bash
+comm -23 <(grep -oE '[0-9]+[.,][0-9]+|#[0-9]{3,4}' <before> | sort -u) \
+         <(grep -oE '[0-9]+[.,][0-9]+|#[0-9]{3,4}' <file>   | sort -u)
+```
 
 Then read the report, not just the diff.
 Two checks:
