@@ -461,7 +461,7 @@ Keep exactly one running per conductor, since two log every transition twice. `f
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 case "$(fleet_watchers | wc -l)" in
   0) case "$(stat -f -c %T "$CLONE_ROOT")" in nfs*|fuse*) POLL=--poll;; *) POLL=;; esac
-     nohup bip fleet watch $POLL >/dev/null 2>&1 & ;;
+     setsid nohup bip fleet watch $POLL </dev/null >/dev/null 2>&1 & ;;   # own session, so the Bash call's teardown can't reap it
   1) echo "watcher already running" ;;
   *) echo "DUPLICATE watchers: $(fleet_watchers | tr '\n' ' ')" ;;
 esac
