@@ -29,7 +29,7 @@ reach an ignored path. `command grep` also bypasses it, as do `-z`, `-Z`, `--nul
 `--filter`, which the shim detects and passes through.
 
 **Other differences from GNU grep in the same shim:** `-G` is basic-regex mode, which is the
-mechanism behind the alternation truncation pinned in `/bip-pr-land`; `-I` skips binary files
+mechanism behind the alternation truncation above; `-I` skips binary files
 silently where GNU would print "Binary file matches"; a mid-pattern `$` is an anchor, not a
 literal (see `EVIDENCE-DISCIPLINE.md`, "Name the question your check answers").
 
