@@ -33,7 +33,6 @@ Reach for a subagent when the work fits in one call and only you need the answer
   Don't hold a turn open waiting for one: end your turn and act on the notice, or on the helper's report message, when it arrives.
 - `claude --bg` prints a short id (`backgrounded · <id> · <name>`); `stop`, `rm`, `logs`, and `attach` take that id.
   `--resume` takes the full session id from `claude agents --json --all`.
-  The ref `ListAgents` shows in brackets is a third, different id.
 - A background session's scratchpad is `~/.claude/jobs/<id>/tmp/`, and `claude rm` deletes it; nothing citable belongs there.
 
 ## Rules
@@ -49,16 +48,14 @@ Reach for a subagent when the work fits in one call and only you need the answer
   Ask the epic or the conductor to start one instead.
 - **Delete with `find <path> -delete`, never `rm`.**
   A `$` in the same command as `rm` trips Claude Code's destructive-removal guard, which bypass mode does not suppress.
-- **Kill only by the recorded short id.**
-  Never `pgrep`/`pkill`, a session name, or argv — a spawn prompt is argv and quotes arbitrary text, so a pattern match can hit the wrong process, including your own shell.
-- **Tell the user** when you start or stop a helper, with its name and short id.
+- **Kill only by the recorded short id**, never `pgrep`/`pkill`, a name, or argv: a spawn prompt is argv, so a pattern can match your own shell.
 
 ## Records
 
 ```bash
 HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 # $HELPERS/<short-id>.json   written by the primary at start:
-#   {"id","session_id","name","primary","primary_cwd","home","dir","dir_kind":"home|worktree|held-clone","hold"}
+#   {"id","session_id","name","primary","home","dir","dir_kind":"home|worktree|held-clone","hold"}
 # $HELPERS/<name>/           the helper's home
 # $HELPERS/<name>/result.md  written by the helper, one appended section per round
 ```
@@ -97,14 +94,12 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
      Write the hold before anything else touches the clone, then confirm the clone is still `available`; if it is not, delete the hold and pick another.
 
 3. **Write the brief.**
-   The helper starts with no other context, so the brief must:
-   - name you as the primary and say to report by `SendMessage` to you;
-   - give its home and working directory as expanded paths;
-   - say that any extra checkout it needs (a control, a second probe) goes under its home, as a `git worktree add` there;
-   - say that anything it cites — logs, tables, outputs — is saved under its home, never in its session scratchpad;
-   - say that after each round of work it appends a section to `result.md` in its home, headed with the time and the round's question, holding the round's findings and the paths of its evidence, before reporting to you;
-   - for a held clone, say to leave the clone clean and on `main` when it finishes;
-   - list what it must not do: merge, push to main, touch other checkouts, start helpers of its own.
+   The helper starts with no other context.
+   Beyond the task, the brief gives your name (it reports to you by `SendMessage`), its home and working directory as expanded paths, and these rules:
+   - extra checkouts and anything it cites go under its home, never its scratchpad;
+   - after each round, append a timed section with findings and evidence paths to `result.md`, then report;
+   - leave a held clone clean and on `main`;
+   - no merging, no pushing to main, no other checkouts, no helpers of its own.
 
 4. **Start it** from `$DIR`, in your own permission mode, adding `--settings` only when the account file exists:
    ```bash
@@ -122,8 +117,8 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    `HOLD` is empty unless `KIND=held-clone`.
    ```bash
    jq -n --arg id "$ID" --arg sid "$SID" --arg name "<primary>-<role>" --arg primary "<primary>" \
-       --arg pcwd "$(pwd -P)" --arg home "$HOME_DIR" --arg dir "$DIR" --arg kind "$KIND" --arg hold "${HOLD:-}" \
-       '{id:$id, session_id:$sid, name:$name, primary:$primary, primary_cwd:$pcwd, home:$home, dir:$dir, dir_kind:$kind, hold:$hold}' \
+       --arg home "$HOME_DIR" --arg dir "$DIR" --arg kind "$KIND" --arg hold "${HOLD:-}" \
+       '{id:$id, session_id:$sid, name:$name, primary:$primary, home:$home, dir:$dir, dir_kind:$kind, hold:$hold}' \
        > "$HELPERS/$ID.json"
    ```
 
@@ -183,10 +178,8 @@ For each record in `$HELPERS`, look up its `id` in `claude agents --json --all` 
 
 - **stale** — id not in the listing: the session was removed; offer to finish `stop` from step 3.
 - **primary not found** — session present but no `ListAgents` row carries the recorded primary name.
-  `ListAgents` renames a session when it is resumed (`birch` becomes `birch-61`), so this is not proof the primary is gone.
-  Say whether any session in `claude agents --json` has the recorded `primary_cwd`, and offer to message the helper or stop it.
+  `ListAgents` renames a resumed session (`birch` becomes `birch-61`), so this is not proof the primary is gone; offer to message the helper or stop it.
 - **live** — both present: leave it.
 
-Also list any directory under `$HELPERS` that no record names, with its size.
 Report and ask; do not stop or remove anything in a sweep without the user's go-ahead.
 Match on the record's `id` only — never infer a helper from a name prefix in the listing.
