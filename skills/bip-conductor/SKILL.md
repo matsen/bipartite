@@ -461,7 +461,7 @@ Hold on disagreement. The ralph-loop stop hook never writes to the composer, so 
 
 **A loop is live** when `.claude/ralph-loop.local.md` exists **and** its `session_id` belongs to a running session.
 
-**If a human merged the slot's PR, run the issue-lead's terminal ceremony first** — nothing else calls it, and the reclaim removes the state files it reads:
+**If the slot's PR was merged by anything but the worker's own `/bip-pr-land` (a human, or you with a guarded `gh pr merge`), run the issue-lead's terminal ceremony first** — nothing else calls it, and the reclaim removes the state files it reads:
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"

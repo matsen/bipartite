@@ -21,7 +21,19 @@ In the common clone-mode case (no `layout:` block) every step runs as it always 
 
 ## Where to stand
 
-This skill moves `HEAD` (Steps 7 and 8). Never run it in a clone another live session is working in. The merge itself is server-side, so if you are landing someone else's PR, stand in any idle clone. Check:
+This skill moves `HEAD` (Steps 7 and 8) and preserves the state files of the directory it runs in (Step 7a). Never run it in a clone another live session is working in. To land a PR checked out in another session's clone, don't run this skill: run Step 6's guard from any checkout of the repo, against the PR head instead of `HEAD`, so nothing moves:
+
+```bash
+git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
+  && sha=$(git rev-parse refs/pr/<N>) \
+  && test "$sha" = "$(gh pr view <N> --json headRefOid -q .headRefOid)" \
+  && git merge-base --is-ancestor origin/<base> "$sha" \
+  && gh pr merge <N> --squash --match-head-commit "$sha" --body "closes #<issue>"
+```
+
+Do this only for a worker that has ended (`stop_reason: awaiting-human-merge`, session idle). A live worker holding a landing delegation lands its own PR. If that clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
+
+Check for co-tenancy:
 
 ```sh
 for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | /usr/bin/grep -cE "^$PWD(/|$)"
@@ -123,13 +135,13 @@ gh pr view <N> --json closingIssuesReferences --jq '.closingIssuesReferences[].n
 
 Empty is a defect if the PR has an issue. The field is eventually consistent, so re-read before concluding an edit to the body did not take.
 
-Merge with the guard **inside** the same command, so the base cannot move between check and merge, and always pass `--body` — without it `gh` concatenates every branch commit body into the squash message, and GitHub closes any issue a closing keyword in there names, negated or quoted or not:
+Merge with the guard **inside** the same command, so the base cannot move between check and merge (`--match-head-commit` makes GitHub refuse if the head moved), and always pass `--body` — without it `gh` concatenates every branch commit body into the squash message, and GitHub closes any issue a closing keyword in there names, negated or quoted or not:
 
 ```bash
 test "$(git rev-parse HEAD)" = "$(gh pr view <N> --json headRefOid -q .headRefOid)" \
   && git fetch -q origin <base> \
   && git merge-base --is-ancestor origin/<base> HEAD \
-  && gh pr merge --squash --body "closes #N"      # or --body "" if it closes nothing
+  && gh pr merge --squash --match-head-commit "$(git rev-parse HEAD)" --body "closes #<issue>"   # or --body "" if it closes nothing
 ```
 
 If the guard fails, the base moved or HEAD differs from the pushed head: go back to Step 4. An approval names a SHA, so a moved base voids it.
