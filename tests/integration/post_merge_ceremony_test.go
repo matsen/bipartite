@@ -62,7 +62,9 @@ const (
 	terminalLead    = "🤖 **Issue Lead** (iteration 3)\n\n**Category**: completed\n**Action**: none\n"
 	// phyz#2920 wrote its terminal Category this way.
 	terminalLeadBackticked = "🤖 **Issue Lead** (iteration 1) — terminal evaluation, post-land.\n\n**Category**: `completed`\n"
-	prLandComment          = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
+	// The label's bold can also close after the colon.
+	terminalLeadColonInBold = "🤖 **Issue Lead** (iteration 2)\n\n**Category:** completed\n"
+	prLandComment           = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
 )
 
 func prJSON(state string, comments ...string) string {
@@ -95,6 +97,11 @@ func TestPostMergeCeremony(t *testing.T) {
 		// Human merge: the worker ended at a clean gate with its state files
 		// in place, and the PR carries non-terminal lead comments only.
 		{"human merge, lead owed", true, prJSON("MERGED", nonTerminalLead, nonTerminalLead), 0, "CEREMONY OWED #7 ", 0},
+		{"colon inside the bold", false, prJSON("MERGED", terminalLeadColonInBold), 0, "CEREMONY RAN #7", 0},
+		// A /bip-pr-land that posted its marker (Step 6a) and died before
+		// deleting the state files (Step 9.5): the file wins, so the
+		// ceremony is still owed rather than handed to an ended worker.
+		{"pr-land marker but state still on disk", true, prJSON("MERGED", prLandComment), 0, "CEREMONY OWED #7 ", 0},
 		// Worker landed with /bip-pr-land, which deleted the state files;
 		// its own final lead call owns the ceremony.
 		{"pr-land ran, worker owns it", false, prJSON("MERGED", prLandComment), 0, "CEREMONY WORKER-OWNS #7", 0},

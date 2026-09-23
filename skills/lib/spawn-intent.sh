@@ -700,8 +700,9 @@ mark_spawn_intent_consumed() {
 #   CEREMONY UNKNOWN #<pr>: <why>  not merged, or gh failed
 # Returns 0 for the first three, 1 for UNRUN, 2 for UNKNOWN.
 #
-# The terminal marker is the `**Category**: completed` line, tolerant of
-# backticks/bold but with `completed` as the first word: every lead
+# The terminal marker is the `**Category**: completed` line (or
+# `**Category:** completed`), tolerant of backticks/bold but with
+# `completed` as the first word: every lead
 # iteration posts a `🤖 **Issue Lead**` comment, so the header alone would
 # read a clean-gate comment as the ceremony having run. A failed gh call
 # must not collapse into a count of 0 or of 1, so it is its own outcome.
@@ -724,8 +725,13 @@ state = d.get("state")
 if state != "MERGED":
     print(f"CEREMONY UNKNOWN #{pr}: state is {state}, not MERGED"); sys.exit(2)
 bodies = [c.get("body", "") for c in d.get("comments", [])]
-if any(re.search(r"\*\*Category\*\*:[ `*]*completed", b) for b in bodies):
+if any(re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
     print(f"CEREMONY RAN #{pr}"); sys.exit(0)
+# Load-bearing order: the status file before the pr-land marker.
+# /bip-pr-land posts the marker at Step 6a and deletes the file at Step
+# 9.5, so a land that died between the two leaves both. Checking the
+# marker first would report WORKER-OWNS for a slot whose state is still
+# on disk and whose worker may have ended, and nobody would run it.
 if os.path.isfile(os.path.join(clone, ".epic-status.json")):
     print(f"CEREMONY OWED #{pr} {clone}"); sys.exit(0)
 if any("EPIC worklog preserved" in b for b in bodies):
