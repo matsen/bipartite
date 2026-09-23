@@ -456,7 +456,8 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   lead_guidance — what the lead told you to do next (set by lead)
   lead_notes — list of lead evaluation entries (set by lead)
   completed_at — ISO 8601 timestamp set by the lead after the
-    terminal completed ceremony (idempotency signal; do not set
+    terminal completed ceremony (for dashboards; the lead's
+    idempotency guard is its terminal PR comment; do not set
     yourself). If you resume work after landing, re-create this file —
     see the landing step.
   awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours).
@@ -800,6 +801,10 @@ STOPPING POINTS — When you reach a natural stopping point:
 4. Read the lead response:
    - If it says PHASE: completed or PHASE: needs-human →
      output the completion promise ISSUE WORK COMPLETE
+   - If it says PHASE: quality-gate and `.epic-status.json` still
+     carries `stop_reason: awaiting-human-merge` (COMPLETION step 5b)
+     → the gate is clean and the merge is the user's; print the FINAL
+     RECAP and output the completion promise
    - Otherwise → copy the lead guidance to .epic-worklog.md
      as a Lead guidance entry, then continue working
 
@@ -849,15 +854,38 @@ COMPLETION: When done (or when lead says completed):
    flags this and offers a rewrite — take it, unprompted. The body should
    read as the current state (premise, results, interpretation), not as a
    log of how it got there.
-5. When both pass clean (or remaining findings are all deferred):
-   - Land the PR yourself with /bip-pr-land, but only if the work
-     obviously matches the issue and nothing needs the user's judgment
-     (step 6's test). A clean gate alone is not enough: if a result
-     reversed the issue's premise, leave the PR open and say so in the
-     recap. Announce, then land without waiting.
-   - Do NOT spawn the next slot. Handing off needs explicit permission.
-   - Invoke the issue-lead one final time — it sets phase to completed
-     and files any follow-ups from the PR body's DEFERRED section
+5. When both pass clean (or remaining findings are all deferred), take
+   the branch your LANDING DELEGATION line below selects. Either way,
+   do NOT spawn the next slot: handing off needs explicit permission.
+
+   a. A delegation is recorded (and, if JOINT LANDING GATE says YES,
+      both approvals are in):
+      - Land the PR yourself with /bip-pr-land, but only if the work
+        obviously matches the issue and nothing needs the user's
+        judgment (step 6's test). A clean gate alone is not enough: if
+        a result reversed the issue's premise, leave the PR open and
+        say so in the recap. Announce, then land without waiting.
+      - Invoke the issue-lead one final time — it
+        sets phase to completed and files any follow-ups from the PR
+        body's DEFERRED section. It refuses `completed` while the PR
+        is open, so this call comes after the land, never before.
+
+   b. `NONE RECORDED` — the user merges, so you stop with the PR open:
+      - Keep phase `quality-gate` and set
+        `stop_reason: awaiting-human-merge` in `.epic-status.json`.
+        That value is what tells the fleet this slot is waiting on a
+        human rather than still working its gate.
+      - Invoke the issue-lead once more. It leaves the value in place
+        if it agrees the gate is clean, and STOPPING POINTS step 4 then
+        ends your loop. If it changes the value, it found something:
+        keep working.
+      - Push the notification and end. Do not wait for the merge.
+      - The terminal ceremony (phase `completed`, follow-ups from the
+        DEFERRED section, the terminal lead comment) runs AFTER the
+        merge, and you are not its owner: `/bip-conductor-poll`'s
+        "Slot cleanup for merged PRs" spawns the issue-lead for it,
+        from this clone's status file. So leave `.epic-status.json` and
+        `.epic-worklog.md` in place; do not delete them on the way out.
 
    IF YOU RESUME WORK AFTER THIS POINT, RE-CREATE `.epic-status.json`
    FIRST. Landing deletes it and the worklog, and both the conductor's
@@ -873,8 +901,9 @@ COMPLETION: When done (or when lead says completed):
    this repo, with the file and date it is recorded in | NONE RECORDED>.
    **The conductor MUST fill this in at spawn time, every time**, from
    that repo's own decisions log. ⛔ **`NONE RECORDED` is the default and
-   the safe value** — with it you do NOT land: you stop at a clean gate,
-   notify, and let the conductor merge. **Do not treat a missing line as
+   the safe value** — with it you do NOT land: you stop at a clean gate
+   (step 5b), notify, and the conductor puts the merge to the user.
+   Nobody in the fleet merges it. **Do not treat a missing line as
    permission**; treat it as a defect in your prompt and ask.
 
    ⚠ **You cannot look this up yourself, which is exactly why it is
@@ -1084,8 +1113,10 @@ REVIEW TRIAGE — For each /bip-pr-review finding, apply the DEFERRAL RULE above
 
 FINAL RECAP — Print this summary just before outputting the completion
 promise so the conductor (and user) can see the full story at a glance.
-By the time this runs, the final lead invocation has set phase to
-`completed` and posted a PR comment listing any follow-ups it filed.
+After step 5a, the final lead invocation has set phase to `completed`
+and posted a PR comment listing any follow-ups it filed. After step 5b
+the PR is still open, the phase is `quality-gate`, and that ceremony
+runs after the merge; say so on the `Landed:` line.
 
 ```
 ═══ COMPLETED: #N — TITLE ═══

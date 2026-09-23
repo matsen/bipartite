@@ -35,7 +35,7 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
   If the file is missing or empty, stop and report the error — do not fall back to candidate-picking.
 
 Duplicate-detection is the caller's responsibility — if called twice with the same focus, two issues will be filed.
-The issue-lead guards against this via `completed_at` (which makes the terminal ceremony run at most once per session).
+The issue-lead guards against this by checking the PR for its terminal comment (the `**Category**: completed` line, `agents/issue-lead.md` Step 8), so the terminal ceremony runs at most once per PR.
 
 Then resolve the source, in this order:
 - If a PR URL or number was given, use it (`gh pr view <arg> --json number,title,body,comments,reviews,baseRefName,headRefName`)

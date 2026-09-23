@@ -686,3 +686,72 @@ mark_spawn_intent_consumed() {
     mkdir -p "$consumed_dir"
     mv "$intent_path" "$consumed_dir/"
 }
+
+# post_merge_ceremony <clone-dir> <owner/repo> <pr-number>
+# For a slot whose PR has merged, says who owes the issue-lead's terminal
+# ceremony (agents/issue-lead.md Step 8), for bip-conductor-poll's "Slot
+# cleanup for merged PRs" to act on BEFORE it preserves and checks out the
+# clone (issue #258). Prints exactly one line:
+#   CEREMONY RAN #<pr>             a terminal lead comment exists -- clean up
+#   CEREMONY OWED #<pr> <clone>    none, status file present -- spawn the lead
+#   CEREMONY WORKER-OWNS #<pr>     none, /bip-pr-land ran -- the worker's own
+#                                  final lead call owns it
+#   ceremony UNRUN for #<issue> (PR #<pr>)   none, and the state is gone
+#   CEREMONY UNKNOWN #<pr>: <why>  not merged, or gh failed
+# Returns 0 for the first three, 1 for UNRUN, 2 for UNKNOWN.
+#
+# The terminal marker is the `**Category**: completed` line (or
+# `**Category:** completed`), tolerant of backticks/bold but with
+# `completed` as the first word, in a comment that also carries the
+# `🤖 **Issue Lead**` header. The header alone would read a clean-gate
+# comment as the ceremony having run; the Category line alone would read
+# any comment quoting it (a review of this very helper) the same way. The
+# pr-land marker is matched as the exact prefix /bip-pr-land posts, since
+# a hand-posted "EPIC worklog preserved" note can say the skill did NOT
+# run (phyz#2817). agents/issue-lead.md Step 8 carries the same pattern as
+# a jq test(); TestTerminalMarkerPatternsAgree keeps the two identical.
+# A failed gh call
+# must not collapse into a count of 0 or of 1, so it is its own outcome.
+# Whether the slot's session is `busy` (its own lead mid-run) is a
+# ListAgents question the conductor answers before acting on OWED.
+post_merge_ceremony() {
+    local clone_dir="$1" repo="$2" pr="$3" json err
+    err=$(mktemp)
+    # stderr kept out of $json: a warning on a successful call would
+    # otherwise read as "not JSON".
+    if ! json=$(gh pr view "$pr" -R "$repo" --json state,comments,closingIssuesReferences 2>"$err"); then
+        echo "CEREMONY UNKNOWN #$pr: gh pr view failed: $(cat "$err")"
+        rm -f "$err"
+        return 2
+    fi
+    rm -f "$err"
+    # Piped on stdin, unlike audit_status_files' file argument: the input
+    # here is command output, not a file.
+    printf '%s' "$json" | python3 -c '
+import json, os, re, sys
+clone, pr = sys.argv[1], sys.argv[2]
+try:
+    d = json.load(sys.stdin)
+except ValueError as e:
+    print(f"CEREMONY UNKNOWN #{pr}: gh output is not JSON: {e}"); sys.exit(2)
+state = d.get("state")
+if state != "MERGED":
+    print(f"CEREMONY UNKNOWN #{pr}: state is {state}, not MERGED"); sys.exit(2)
+bodies = [c.get("body", "") for c in d.get("comments", [])]
+if any("**Issue Lead**" in b and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
+    print(f"CEREMONY RAN #{pr}"); sys.exit(0)
+# Load-bearing order: the status file before the pr-land marker.
+# /bip-pr-land posts the marker at Step 6a and deletes the file at Step
+# 9.5, so a land that died between the two leaves both. Checking the
+# marker first would report WORKER-OWNS for a slot whose state is still
+# on disk and whose worker may have ended, and nobody would run it.
+if os.path.isfile(os.path.join(clone, ".epic-status.json")):
+    print(f"CEREMONY OWED #{pr} {clone}"); sys.exit(0)
+# The exact text /bip-pr-land Step 6a posts (skills/bip-pr-land/SKILL.md).
+if any(b.startswith("🤖 EPIC worklog preserved to ") for b in bodies):
+    print(f"CEREMONY WORKER-OWNS #{pr}"); sys.exit(0)
+# Lowercase on purpose: #258 names this exact string as the report line.
+issues = ",".join("#" + str(i["number"]) for i in d.get("closingIssuesReferences", [])) or "?"
+print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
+' "$clone_dir" "$pr"
+}
