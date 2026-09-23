@@ -710,26 +710,10 @@ Concrete shape from the run that motivated this: an issue whose stated prerequis
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-# NOT OPTIONAL. `ROOT="${1:-$HOME/re/pz}"` substitutes on unset OR EMPTY, so an
-# empty argument is indistinguishable from no argument and silently restores the
-# phyz-pool default. Verified both ways; see below.
-[ -n "$CLONE_ROOT" ] || { echo "ABORT: could not resolve clone_root -- an empty argument falls back to \$HOME/re/pz, i.e. the phyz pool" >&2; exit 1; }
 "$(dirname "<this-skill's-base-directory>")/lib/fleet-collisions.sh" "$CLONE_ROOT"   # exit 0 = clear, 1 = found, 2 = could not check
 ```
 
-⛔ **PASS `$CLONE_ROOT` EXPLICITLY. THE SCRIPT DEFAULTS TO `$HOME/re/pz` AND NEVER READS `.epic-config.json`** — `ROOT="${1:-$HOME/re/pz}"` at `fleet-collisions.sh:59`, and `grep -n 'CLONE_ROOT\|clone_root\|epic-config'` over the whole script returns nothing. On any repo whose pool is not `~/re/pz`, the argument-less form every earlier version of this skill prescribed silently answered **the phyz fleet's** question.
-
-⚠ **This is the wrong-universe failure, and it is worse than every probe failure catalogued above, because it CANNOT FAIL TOWARD "NOTHING TO DO."** Those return an empty or reassuring result. This one returns a **populated, well-formed, entirely plausible report about somebody else's clones** — both pools exist, so there is no error, no `exit 2`, and no empty-denominator tell.
-
-⭐ **Measured 2026-09-17 on `matsengrp/superfamily-pcp`, by a conductor following this skill's own instruction literally.** No-argument run: `birch`/`cedar`, `COLLISION src/ml/stochastic_search.zig`. Re-run with the explicit root, same minute: `cobalt`/`copper`/`silver`, `COLLISION CLAUDE.md`. **Every clone name, branch, file, and the collision itself were wrong — and nothing in the first output looks wrong.** A conductor that trusted it would have sequenced that repo's spawns against another project's branches, and **missed a real three-way collision on `CLAUDE.md` that went on to produce two genuinely conflicting PRs.**
-
-⚠ **The script's own header says so, and that is exactly why the defect survived: the caveat was in the wrong document.** It reads *"Scope: written for and exercised only against matsengrp/phyz's `~/re/pz` pool. The clone-root argument makes it portable in principle; that is untested."* — true, accurate, and **in the file the caller does not open.** ⭐ Note what that caveat becomes: **following the instruction above IS that test, and it passed** — on `matsengrp/superfamily-pcp`, 2026-09-17. Say so, or the next reader inherits an untested-ness claim this instruction now contradicts.
-
-➡ **Corollary, worth more than the fix: when a shared helper takes a scoping argument and the instruction omits it, the default IS the bug.** An omitted scope argument does not produce "no scope"; it produces *somebody's* scope, silently.
-
-⛔ **THE NULL-CHECK ABOVE IS LOAD-BEARING, AND THE FIRST DRAFT OF THIS VERY FIX OMITTED IT AND REINSTATED THE BUG.** `:-` substitutes on unset **or empty**, so an unparseable `.epic-config.json` makes the explicit argument evaporate. ⚠ **And it does not merely fall back — it returns the REASSURING answer.** Measured, passing an explicit empty string: `files touched by MORE THAN ONE live clone ... none`. **A clean bill of health, about the wrong fleet, on the step whose output authorises a spawn.**
-
-⭐ **Two instances of this family in one afternoon were written INTO A FIX FOR IT, by authors holding the rule in mind as they typed** (this one, and the `EXPECTED` null-check in `/bip-epic`'s push snippet). **That is the strongest evidence available that this needs a mechanical check rather than care** — care demonstrably does not survive the act of writing the remedy.
+The root is required: an omitted or empty one exits 2. It used to default to `~/re/pz`, and on 2026-09-17 that reported the phyz pool to a superfamily-pcp conductor with nothing in the output looking wrong.
 
 ⛔ **AND THE HEADER'S OTHER PRESCRIPTION IS ITSELF FAIL-OPEN IN THIS FLEET'S DEFAULT SHELL.** `fleet-collisions.sh:37` correctly warns not to read `$?` after a pipe and prescribes `"${PIPESTATUS[0]}"`. **`PIPESTATUS` is a bash array. `zsh` — `/usr/bin/zsh`, the login shell on `pax` — spells it `$pipestatus[1]`, lowercase and 1-indexed, and evaluates `${PIPESTATUS[0]}` to the EMPTY STRING rather than erroring.** So the remedy for a fail-open reads as blank, not as a failure — `exit=` with nothing after it, which a reader scanning for a non-zero code passes straight over.
 
