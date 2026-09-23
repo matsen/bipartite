@@ -122,8 +122,8 @@ preserve_epic_state() {
     # Never silently overwrite an existing preserved copy. Same issue,
     # same clone, same day can legitimately happen twice -- e.g. this
     # function's own issue #2216 landed as PR #224 then, the same day,
-    # PR #225 -- and Step 9.5 deletes the source worklog after every
-    # land, so a second call's source is a NEW file, not a superset of
+    # PR #225 -- and /bip-pr-land Step 7a deletes the source worklog
+    # after every land, so a second call's source is a NEW file, not a superset of
     # the first. A bare filename collision would cp right over the
     # earlier one with no warning: measured, rc=0 both times, the first
     # worklog unrecoverable after the second call. Pick the first unused
@@ -173,9 +173,10 @@ preserve_epic_state() {
 #
 # WHY THIS EXISTS, AND WHY IT IS NOT preserve_epic_state's JOB.
 # A worklog lives ONLY in a pooled clone until its PR lands. /bip-pr-land's
-# Step 6a preserves it at land time -- but only for landings that GO THROUGH
-# /bip-pr-land. A direct `gh pr merge` bypasses Step 6a, Step 9.5, and the
-# `EPIC worklog preserved` PR comment in one move, and nothing notices.
+# Step 7a preserves it at land time -- but only for landings that GO THROUGH
+# /bip-pr-land. A direct `gh pr merge` bypasses all of Step 7a -- the
+# preserve, the delete, and the `EPIC worklog preserved` PR comment -- in
+# one move, and nothing notices.
 # Measured 2026-09-14 (matsengrp/phyz): PR #2648 landed that way and left a
 # 35,432-byte worklog live in a pooled clone, where the next spawn's prep
 # would have deleted it. The decisive tell was a contrast -- the PR that used
@@ -209,10 +210,10 @@ preserve_epic_state() {
 # SHRANK RETURNS 0, NOT 1, AND HERE IS THE ACTUAL SET IT FIRES ON -- read this
 # before flipping it. `dst` is scoped by ISSUE and CLONE, and the comparison
 # only runs `if [ -f "$dst" ]`, so the ordinary reclaim path CANNOT trip it:
-# after a land, Step 9.5 deletes both state files, the clone is reclaimed, and
-# the next spawn carries a DIFFERENT `.issue`, hence a different `dst`, hence
-# a fresh copy with the old entry untouched. What trips it is same issue,
-# same clone, smaller file:
+# after a land, /bip-pr-land Step 7a deletes both state files, the clone is
+# reclaimed, and the next spawn carries a DIFFERENT `.issue`, hence a
+# different `dst`, hence a fresh copy with the old entry untouched. What
+# trips it is same issue, same clone, smaller file:
 #   1. genuine truncation                                     <- want to know
 #   2. a worker rewriting or compacting its own worklog mid-issue  <- routine
 #   3. a re-spawn onto the SAME issue after a reset                <- routine
@@ -532,8 +533,8 @@ audit_durability() {
     # SLOT-NESS COMES FROM THE CONFIG'S CLONE LIST, NOT FROM A STATUS FILE.
     #
     # The obvious gate -- "has .epic-status.json" -- conflates two different
-    # things and skips a real loss channel. `/bip-pr-land`'s Step 9.5 does
-    # `rm -f .epic-status.json .epic-worklog.md` and DOES NOT clean the working
+    # things and skips a real loss channel. `/bip-pr-land`'s Step 7a deletes
+    # .epic-status.json and .epic-worklog.md and DOES NOT clean the working
     # tree, so a slot that lands with uncommitted scratch (an un-added test, an
     # experiment output, a half-finished file) ends up with leftovers and NO
     # status file. It then reads as idle to every mechanism, and the next
@@ -742,13 +743,14 @@ bodies = [c.get("body", "") for c in d.get("comments", [])]
 if any(b.lstrip().startswith("🤖 **Issue Lead**") and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
     print(f"CEREMONY RAN #{pr}"); sys.exit(0)
 # Load-bearing order: the status file before the pr-land marker.
-# /bip-pr-land posts the marker at Step 6a and deletes the file at Step
-# 9.5, so a land that died between the two leaves both. Checking the
-# marker first would report WORKER-OWNS for a slot whose state is still
-# on disk and whose worker may have ended, and nobody would run it.
+# /bip-pr-land Step 7a deletes the file before posting the marker, so
+# both present means the delete failed or someone posted the marker by
+# hand. Checking the marker first would report WORKER-OWNS for a slot
+# whose state is still on disk and whose worker may have ended, and
+# nobody would run it.
 if os.path.isfile(os.path.join(clone, ".epic-status.json")):
     print(f"CEREMONY OWED #{pr} {clone}"); sys.exit(0)
-# The exact text /bip-pr-land Step 6a posts (skills/bip-pr-land/SKILL.md).
+# The exact text /bip-pr-land Step 7a posts (skills/bip-pr-land/SKILL.md).
 if any(b.startswith("🤖 EPIC worklog preserved to ") for b in bodies):
     print(f"CEREMONY WORKER-OWNS #{pr}"); sys.exit(0)
 # Lowercase on purpose: #258 names this exact string as the report line.
