@@ -430,7 +430,7 @@ It holds unless the terminal ceremony has run, the PR closes at least one issue 
 
 - `RECLAIMED` → spawn pending intent (below).
 - `HOLD` → nothing changed. Fix the cause, or leave the slot.
-- `NOT FREE` (exit 2) → the window is gone but something still runs in the clone. Find it before re-running. The check cannot see a process writing in from outside (`git -C`, `rsync`).
+- `NOT FREE` (exit 2) → the window is gone but the clone is not reset. If processes are still in it, re-run later with `none`: a detached build or IQ-TREE run outlasts the 30 s poll. If the checkout or pull failed, fix that first. The check cannot see a process writing in from outside (`git -C`, `rsync`).
 - `CEREMONY OWED #<pr> <slot-dir>` → spawn an `issue-lead` subagent: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."* Then re-run `reclaim_slot`.
 - `ceremony UNRUN` → tell the user; the worklog is gone.
 - `CEREMONY UNKNOWN` → leave the slot alone.
