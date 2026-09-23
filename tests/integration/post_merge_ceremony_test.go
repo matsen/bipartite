@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -30,9 +31,7 @@ func runPostMergeCeremony(t *testing.T, shell, cloneDir, ghOutput string, ghExit
 	if err := os.WriteFile(filepath.Join(binDir, "gh"), []byte(fake), 0755); err != nil {
 		t.Fatal(err)
 	}
-	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
-		"post_merge_ceremony " + shellQuote(cloneDir) + " owner/repo 7"
-	cmd := exec.Command(shell, "-c", script)
+	cmd := exec.Command(shell, "-c", spawnIntentCall(t, "post_merge_ceremony", cloneDir, "owner/repo", "7"))
 	cmd.Env = append(os.Environ(), "PATH="+binDir+":"+os.Getenv("PATH"))
 	out, err := cmd.Output()
 	code := 0
@@ -199,5 +198,41 @@ func TestPostMergeCeremony(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestTerminalMarkerPatternsAgree pins the terminal-comment pattern in
+// agents/issue-lead.md's Step 8 guard (a jq test() the lead runs) to the one
+// post_merge_ceremony uses (a Python regex the poll runs). The lead is an
+// agent, not a skill, so it cannot source the helper; two copies in two
+// languages is the price, and this test is what keeps them from drifting.
+func TestTerminalMarkerPatternsAgree(t *testing.T) {
+	root := moduleRoot(t)
+	lead, err := os.ReadFile(filepath.Join(root, "agents", "issue-lead.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	helper, err := os.ReadFile(filepath.Join(root, "skills", "lib", "spawn-intent.sh"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// jq string literal: test("...Category...") with \\ for each regex backslash.
+	jq := regexp.MustCompile(`test\("(\\\\\*\\\\\*Category[^"]*)"\)`).FindSubmatch(lead)
+	if jq == nil {
+		t.Fatal("no Category test() found in agents/issue-lead.md")
+	}
+	py := regexp.MustCompile(`re\.search\(r"(\\\*\\\*Category[^"]*)"`).FindSubmatch(helper)
+	if py == nil {
+		t.Fatal("no Category re.search found in skills/lib/spawn-intent.sh")
+	}
+	jqPattern := strings.ReplaceAll(string(jq[1]), `\\`, `\`)
+	if jqPattern != string(py[1]) {
+		t.Errorf("patterns differ:\n  issue-lead.md jq: %s\n  spawn-intent.sh:  %s", jqPattern, py[1])
+	}
+	if !strings.Contains(string(lead), `test("\\*\\*Issue Lead\\*\\*")`) {
+		t.Error("issue-lead.md guard no longer requires the Issue Lead header")
+	}
+	if !strings.Contains(string(helper), `"**Issue Lead**" in b`) {
+		t.Error("post_merge_ceremony no longer requires the Issue Lead header")
 	}
 }

@@ -708,7 +708,9 @@ mark_spawn_intent_consumed() {
 # any comment quoting it (a review of this very helper) the same way. The
 # pr-land marker is matched as the exact prefix /bip-pr-land posts, since
 # a hand-posted "EPIC worklog preserved" note can say the skill did NOT
-# run (phyz#2817). A failed gh call
+# run (phyz#2817). agents/issue-lead.md Step 8 carries the same pattern as
+# a jq test(); TestTerminalMarkerPatternsAgree keeps the two identical.
+# A failed gh call
 # must not collapse into a count of 0 or of 1, so it is its own outcome.
 # Whether the slot's session is `busy` (its own lead mid-run) is a
 # ListAgents question the conductor answers before acting on OWED.
@@ -723,6 +725,8 @@ post_merge_ceremony() {
         return 2
     fi
     rm -f "$err"
+    # Piped on stdin, unlike audit_status_files' file argument: the input
+    # here is command output, not a file.
     printf '%s' "$json" | python3 -c '
 import json, os, re, sys
 clone, pr = sys.argv[1], sys.argv[2]
@@ -743,8 +747,10 @@ if any("**Issue Lead**" in b and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*comp
 # on disk and whose worker may have ended, and nobody would run it.
 if os.path.isfile(os.path.join(clone, ".epic-status.json")):
     print(f"CEREMONY OWED #{pr} {clone}"); sys.exit(0)
+# The exact text /bip-pr-land Step 6a posts (skills/bip-pr-land/SKILL.md).
 if any(b.startswith("🤖 EPIC worklog preserved to ") for b in bodies):
     print(f"CEREMONY WORKER-OWNS #{pr}"); sys.exit(0)
+# Lowercase on purpose: #258 names this exact string as the report line.
 issues = ",".join("#" + str(i["number"]) for i in d.get("closingIssuesReferences", [])) or "?"
 print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 ' "$clone_dir" "$pr"

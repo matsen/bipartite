@@ -21,16 +21,23 @@ func shellQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
 }
 
-// callSpawnIntentFunc sources spawn-intent.sh and calls fn with the given
-// arguments, returning trimmed stdout.
-func callSpawnIntentFunc(t *testing.T, fn string, args ...string) string {
+// spawnIntentCall returns a shell script that sources spawn-intent.sh and
+// calls fn with the given arguments, each single-quoted.
+func spawnIntentCall(t *testing.T, fn string, args ...string) string {
 	t.Helper()
 	quoted := make([]string, len(args))
 	for i, a := range args {
 		quoted[i] = shellQuote(a)
 	}
-	script := "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
+	return "source " + shellQuote(spawnIntentScriptPath(t)) + "\n" +
 		fn + " " + strings.Join(quoted, " ")
+}
+
+// callSpawnIntentFunc sources spawn-intent.sh and calls fn with the given
+// arguments, returning trimmed stdout.
+func callSpawnIntentFunc(t *testing.T, fn string, args ...string) string {
+	t.Helper()
+	script := spawnIntentCall(t, fn, args...)
 	cmd := exec.Command("bash", "-c", script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
