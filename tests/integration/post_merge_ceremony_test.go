@@ -230,18 +230,25 @@ func TestPostMergeCeremony(t *testing.T) {
 	}
 }
 
+// readIssueLead returns agents/issue-lead.md, whose Step 8 guard is the
+// lead's copy of post_merge_ceremony's terminal-comment check.
+func readIssueLead(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(moduleRoot(t), "agents", "issue-lead.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 // TestTerminalMarkerPatternsAgree pins the terminal-comment pattern in
 // agents/issue-lead.md's Step 8 guard (a jq test() the lead runs) to the one
 // post_merge_ceremony uses (a Python regex the poll runs). The lead is an
 // agent, not a skill, so it cannot source the helper; two copies in two
 // languages is the price, and this test is what keeps them from drifting.
 func TestTerminalMarkerPatternsAgree(t *testing.T) {
-	root := moduleRoot(t)
-	lead, err := os.ReadFile(filepath.Join(root, "agents", "issue-lead.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	helper, err := os.ReadFile(filepath.Join(root, "skills", "lib", "spawn-intent.sh"))
+	lead := readIssueLead(t)
+	helper, err := os.ReadFile(spawnIntentScriptPath(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,10 +283,7 @@ func TestLeadGuardAgreesWithHelper(t *testing.T) {
 	if _, err := exec.LookPath("jq"); err != nil {
 		t.Skip("jq not on PATH")
 	}
-	lead, err := os.ReadFile(filepath.Join(moduleRoot(t), "agents", "issue-lead.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	lead := readIssueLead(t)
 	m := regexp.MustCompile(`-q '(\[\.comments\[\]\.body \| select\([^']*\)\] \| length)'`).FindSubmatch(lead)
 	if m == nil {
 		t.Fatal("no Step 8 guard expression found in agents/issue-lead.md")
