@@ -26,6 +26,10 @@ func TestHoldReason(t *testing.T) {
 	if got, _ := HoldReason(slot); got != "cedar #2943 reads .preserved/asr-2939" {
 		t.Errorf("held: got %q", got)
 	}
+	// Tab completion adds a trailing slash; it names the same hold.
+	if got, _ := HoldReason(slot + "/"); got == "" {
+		t.Error("trailing slash: hold not found")
+	}
 	// A symlinked path to the slot names the same hold.
 	link := filepath.Join(t.TempDir(), "link")
 	if err := os.Symlink(slot, link); err != nil {
