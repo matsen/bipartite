@@ -78,15 +78,14 @@ Only if inlining would be unreasonable (many pages of content, binary artifacts,
 
 2. **Column names / API contracts**: If the issue references specific data formats (CSV columns, API fields, config keys), verify them against the actual source (read the relevant code or data files).
 
-2b. **Flag and `--param` liveness — existence is not liveness.** For every CLI flag or `--param` key an issue *arms*, check all four:
-   - **(a) it parses.** Run it. A key can be a struct field, a preset entry, or a YAML-only setting and still not be a CLI flag — `--per-accept-bl` is declared in `cli.zig` and has zero rows in the flag table, so `phyz ml --per-accept-bl` is `error: unknown flag`.
-   - **(b) it reaches the code path the issue targets.** Trace it to its *consumer*, not its declaration. `spec.stale_uppers` is real and documented and never reached on the default quartet + virtual-NNI path.
-   - **(c) it is not already the default.** `hc.accept_radius=1` parses, is honored, and requests exactly what the default branch hardcodes — so the arm changes nothing.
-   - **(d) for a DISABLE arm, no sibling path implements the same behaviour and survives the disable.** `bb.strike_box=0` is a complete off-switch only because `recordPitch`'s other stop condition (`bb_max_pitches`) is hardcoded unlimited. Had it been tunable, the disable would have been partial — **and a partial disable produces a refutation that looks exactly like a real one.** This clause bites hardest on the arms that retire other people's findings.
+2b. **Flag and `--param` liveness**: For every CLI flag or `--param` key the issue arms, check that:
+   - **(a)** it parses. Run it: a struct field, preset entry, or YAML-only setting is not necessarily a CLI flag.
+   - **(b)** it reaches the code path the issue targets. Trace it to its consumer, not its declaration.
+   - **(c)** it is not already the default.
+   - **(d)** for a disable arm, no sibling path implements the same behaviour and survives the disable (a partial disable produces a refutation that looks like a real one).
 
-   Flag as **HIGH** if any clause fails. **An arm that comes back byte-identical to baseline is a dead knob, not a null result** — the failure mode is that it gets written up as "no effect, channel closed."
-
-   *Measured 2026-09-08: five arms across two drafts failed (a), (b), or (c); all five passed an existence check and were caught only by a post-hoc source read.* **Falsification and sunset: if this step flags nothing across a month of unrelated issue reviews, delete it.**
+   Flag as **HIGH** if any clause fails.
+   An arm whose output is byte-identical to baseline is a dead knob, not a null result.
 
 3. **Algorithm specification**: Is the core algorithm described with enough detail to implement?
    Check for:
@@ -113,7 +112,6 @@ Suggest a concrete module path following the existing package naming conventions
 #### Infrastructure reuse
 
 8. **Existing infrastructure reuse**: Before accepting that the issue should build new infrastructure (Snakefiles, pipelines, experiment directories, scripts, configs), search for existing work that could be extended.
-   This is one of the most common and costly mistakes in issue design — building from scratch when 80% of the pipeline already exists.
 
 **How to check:**
    - Search merged PRs for related keywords (dataset names, method names, tool names):
@@ -138,7 +136,6 @@ Name the specific existing file/directory and explain what can be reused.
 
 8b.
 **Existing code pattern conformance**: Read the source files most relevant to the proposed work (the directory where new code would land, plus 2-3 sibling modules) and check that the issue's design fits the patterns already established in the codebase.
-This catches drift that DESIGN.md and CONSTITUTION.md cannot — emergent conventions that live only in the code.
 
 **How to check:**
    - Identify where the proposed code would live (package, directory, module).
@@ -177,7 +174,6 @@ Pass it the issue's proposed interfaces/design and the specific existing files i
 
 8d.
 **Duplicate or overlapping issues**: Search open GitHub issues to check whether the proposed work duplicates or substantially overlaps with an existing issue.
-This prevents wasted effort and conflicting implementations.
 
 **How to check:**
    - Extract 3-5 key terms from the issue title and body (feature names, tool names, data types, package names).
@@ -234,67 +230,31 @@ Every placeholder must be resolved with concrete content before the issue is sub
 #### Staleness of a pre-existing draft
 
 10d.
-**If the issue file predates this session — a draft carried in a clone, a deferral written days ago, a body being re-filed — revalidate its MEASUREMENTS and its GATES, not only its line numbers.**
-Line pins are the cheap part and the part everyone checks.
-The expensive part is that a draft's load-bearing *number* was taken on a binary that has since moved, or its success criterion gates on an artifact that turns out not to exist.
-Both look fine to a reference-checking pass and both invalidate the issue.
-
-**How to check:**
-- For every quoted measurement, identify the commit or binary it was taken on (the draft usually names a PR or issue).
-  Then `git log --oneline <that-commit>..HEAD -- <the-source-files-it-depends-on>` and ask whether anything in that range could move the number.
-  If it could, **re-run the measurement** rather than re-pinning the citation.
-- For every success criterion or test-plan gate that names a file, confirm the file is git-tracked (`git ls-files --error-unmatch <path>`).
-  A gate on "byte-identity of committed results" is not a gate if the named results are gitignored.
+**If the issue file predates this session** (a draft carried in a clone, a deferral, a body being re-filed), revalidate its measurements and gates, not only its line numbers:
+- For every quoted measurement, identify the commit or binary it was taken on, then run `git log --oneline <that-commit>..HEAD -- <source-files-it-depends-on>`.
+  If anything in that range could move the number, re-run the measurement rather than re-pinning the citation.
+- For every success criterion or test-plan gate that names a file, confirm the file is tracked (`git ls-files --error-unmatch <path>`).
+  A gate on byte-identity of results that are gitignored is not a gate.
 
 **Flag as HIGH** when a quoted measurement's source files changed in the interval, or when a gate names an untracked artifact.
-
-**Worked examples, both from 2026-09-08 and both from drafts whose line pins were current:**
-- A draft's decisive claim — that two CLI arms give identical `final_lnl` — was taken before a PR rewrote 173 lines of `stochastic_search.zig` underneath it.
-  Re-measured and it survived, but nothing about re-pinning the line numbers would have established that.
-- Another draft's test plan gated on byte-identity of five committed artifacts; **two of them were outside the experiment's `.gitignore` allowlist** and could never have been diffed.
-  The gate would have passed or failed for reasons unrelated to the change.
 
 #### Point at an artifact, do not transcribe it
 
 10e.
-⛔ **A body that QUOTES a document it expects to change is stale the moment that change lands. A body that POINTS AT the PR changing it stays true.** This is the drafting-side counterpart of 10d: that one is about revalidating a draft the world has moved under, this one is about writing a draft the world *cannot* move under.
+When the draft refers to content that an in-flight PR or issue is changing, name the PR and the obligation ("PR #N is already in it — confirm it needs nothing further"), not the content.
+The test: would the sentence still be true after every open PR it names has landed?
+Content at rest (a symbol, a committed measurement, code nothing is touching) still gets quoted; 10d covers revalidating it.
 
-⚠ **Measured on `matsengrp/phyz`, 2026-09-17.** Issue #2750's job was to classify sites against a `knob-correspondence.md` row, and **its body was written ten minutes before PR #2749 rewrote that very row.** It survived intact, because the relevant line read:
-
-> `docs/ml/knob-correspondence.md` | PR #2749 is already in it — confirm it needs nothing further.
-
-**Had it instead quoted the row's then-current verdict — as the obvious way to "be specific" — its worker would have spent a pass classifying against text that no longer existed**, and the error would have looked like a disagreement with the code rather than a stale citation.
-
-➡ **So when a draft needs to refer to content that another in-flight PR or issue is changing, name the PR and the obligation, not the content.** *"PR #N is already in it — confirm it needs nothing further"* is checkable, survives the landing, and tells the worker what to do. The quoted paragraph is none of those things once #N merges.
-
-⭐ **The test is whether the sentence would still be TRUE after every open PR it names has landed.** If it would not, replace the transcription with a pointer.
-
-⚠ **But a draft's References list is a LOWER BOUND on what is in flight, not the whole of it.** #2750 happened to name #2749; **the dangerous draft is the one quoting a file that someone else's PR is rewriting without the drafter knowing that PR exists.** Same asymmetry as the rest of this family — the copy nobody knows is contended is the one that goes stale. So before quoting from a file, check what open work touches it, rather than only what your own References list mentions.
-
-⛔ **`gh pr list --search "<path>"` DOES NOT DO THIS, and it fails in the reassuring direction — it returns a non-empty, plausible list.** `--search` queries PR *text*, not changed files. Measured on `matsengrp/phyz` 2026-09-17: `gh pr list --search "docs/ml/knob-correspondence.md"` returned `2571 2581 2667 2653 2559`, while the eight most recent PRs that actually modified that file were `2749 2640 2746 2744 2739 2738 2727 2731` — **zero overlap.** (Some returned PRs do touch the file, found by text coincidence, which is what makes the output look like it worked.)
-
-➡ **Ask for the changed-file list directly. `gh pr list` accepts `--json files`, so this is one call:**
+The References list is a lower bound on what is in flight, so before accepting a quote from a file, check which open PRs modify it:
 
 ```bash
 gh pr list --state open --limit 200 --json number,files \
   -q '.[] | select(any(.files[]; .path == "<path>")) | "PR #\(.number) touches <path>"'
 ```
 
-⚠ **`--limit 200` is not decoration: `gh pr list` defaults to a 30-PR page** (measured — bare returns 30 rows, `--limit 200` returns 200). Past 30 open PRs the query **silently truncates and reports clean** for everything older.
+(Not `gh pr list --search "<path>"`: it matches PR text, not changed files, and returns a plausible but wrong list. `--limit 200` because the default page is 30 and truncates silently. On a repo with no open PRs the command is empty whether or not it works, so prove it once against `--state all`.)
 
-⛔ **And you cannot verify this command against `--state open` on a repo with no open PRs — it returns empty whether it works or not, which is the reassuring-empty trap in a different costume.** Prove it against `--state all`, where ground truth exists, then run it with `--state open`. Measured on `matsengrp/phyz` 2026-09-17:
-
-```
-gh pr list --state all --limit 12 --json number,files \
-  -q '.[] | select(any(.files[]; .path == "docs/ml/knob-correspondence.md")) | "\(.number)"'
--> 2749 2746 2744 2739 2738 2731 2728
-```
-
-Every one genuinely modifies that file, and **#2749 — the instance this rule is built on — is the first hit**, against `--search`'s zero.
-
-**Flag as MEDIUM** when a draft quotes content from a file that any open PR modifies — whether or not the draft's References list mentions it.
-
-⚠ **This does not license vagueness.** Quoting a *stable* artifact — a symbol, a committed measurement, a source line in code nothing is touching — is still right, and 10d already covers revalidating those. The rule is narrow: **content under active change gets a pointer; content at rest gets a quote.**
+**Flag as MEDIUM** when a draft quotes content from a file that any open PR modifies.
 
 #### Prose discipline
 
@@ -308,7 +268,6 @@ Name the offending location and propose the trimmed version; for paragraph-form 
 
 10b.
 **Cross-section agreement**: An issue is a specification.
-When two sections disagree, the worker has to guess which is authoritative, and whichever they pick will be wrong for someone.
 
 **Common failure modes:**
    - Numbers stated in one section don't match another (counts, sums, line deltas).
@@ -344,8 +303,6 @@ Not vague ("should improve") but specific ("held-out lnL improves by >1 nat per 
 
 #### Correctness validation brainstorm (REQUIRED)
 
-This is one of the most important parts of the review.
-Scientific code must be validated beyond basic smoke tests.
 The subagent MUST actively brainstorm additional validations that would be convincing evidence the math and implementation are correct, then check whether the issue already includes them.
 If not, flag as **HIGH**.
 
