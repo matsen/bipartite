@@ -42,8 +42,9 @@ and comparing recent commits against it.
 ## V. Quality Gates Over Manual Review
 
 Automated checks (`/bip-pr-check`, `/bip-pr-review`) run in a loop until clean.
-Fix everything they flag — don't skip, don't `--no-verify`. But the
-checks themselves MUST be fast and actionable, not ceremonial.
+Fix every defect they flag — don't skip, don't `--no-verify`. But the
+checks themselves MUST be fast and actionable, not ceremonial. A
+suggested addition is not a defect; Article VII governs it.
 
 ## VI. Fail Fast, Explain Clearly
 
@@ -51,3 +52,20 @@ Misconfiguration, missing data, and unbuilt indexes MUST produce
 immediate, actionable errors. Never silently return empty results when
 the real problem is misconfiguration. Error messages MUST say what was
 expected and what was received.
+
+## VII. Lean by Default
+
+Agents decide and land changes to this tooling themselves; the pressure
+on them is downward. Every line of a skill, CLAUDE.md, or spawn prompt
+is paid for in context by every session that loads it, and that context
+belongs to the actual work.
+
+Reviewing agents, peers included, will propose additions: another mode,
+another check, another caveat. Each looks cheap on its own, and together
+they stack into a wedding cake. Add something only when it fixes a
+failure someone actually hit or serves a need someone has now. Prefer
+deleting and simplifying to adding.
+
+Better models need less guidance. Text that compensated for a weaker
+model's mistakes costs context long after the mistakes stop; when an
+instruction no longer changes behaviour, delete it.

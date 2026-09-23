@@ -49,6 +49,7 @@ new schema silently won't take.
 
 ## Repo facts
 
+- Agents decide and land changes here without asking the user, under downward pressure on size: a peer's suggested addition is a proposal to weigh, not a fix to apply, and deleting beats adding (`CONSTITUTION.md` Article VII).
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE.md` (gitignored); never commit.
 - Secrets: `config.GetGitHubToken()` / `config.GetSlackBotToken()` consult env vars before
