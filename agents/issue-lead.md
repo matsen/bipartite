@@ -227,7 +227,7 @@ gh pr view <N> --json state,mergedAt   # state must be MERGED
 
 If the work is done and the PR is open, the phase is `quality-gate`. (A `completed` phase invites the conductor to reclaim the slot.)
 
-**Who calls you.** Where the worker lands its own PR, it calls you after `/bip-pr-land`. Where a human merges (`stop_reason: awaiting-human-merge`), the conductor spawns you from `/bip-conductor`'s reclaim step with the clone's absolute path. Read the state files by that path, and pass `-R <owner/repo>` to `gh`.
+**Who calls you.** Where the worker lands its own PR, it calls you after `/bip-pr-land`. Where a human merges (`stop_reason: awaiting-human-merge`), the conductor spawns you from `/bip-conductor`'s reclaim step with the clone's absolute path. Read the state files by that path, run git as `git -C <path>`, and pass `-R <owner/repo>` to `gh`. In either case the clone is on `main` after the merge, so Step 1's `main..HEAD` is empty: read the change from `gh pr view <N> -R <owner/repo> --json commits,files` instead.
 
 **Idempotency guard: check the PR, not the status file** (`/bip-pr-land` deletes the status file). The ceremony has run if some comment *begins* with the `🤖 **Issue Lead**` header and has `completed` as the first word after its `**Category**` label:
 
@@ -252,7 +252,6 @@ Otherwise:
    FOCUS=/tmp/issue-next-focus-<issueN>-<idx>.txt
    printf '%s\n\n%s\n' "<item>" "<rationale>" > "$FOCUS"
    /bip-issue-next <PR-URL> --focus-file "$FOCUS"
-   rm -f "$FOCUS"
    ```
 
    Using a file (not a CLI string) avoids shell-quoting hazards.
