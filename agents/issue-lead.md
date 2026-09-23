@@ -310,9 +310,9 @@ return "PHASE: completed" immediately without posting or filing. The
 marker is the `**Category**: completed` line. Every lead iteration
 posts a `🤖 **Issue Lead** (iteration N)` comment, so that header alone
 is not the marker. A PR that sat at a clean gate before a human merged
-it already carries several. It must be in a comment that also carries the `🤖 **Issue Lead**`
-header, so a review comment quoting the line is not read as the
-ceremony. The pattern tolerates `**Category:**` as well as `**Category**:`,
+it already carries several. It must be in a comment that begins with the `🤖 **Issue Lead**`
+header, so a review comment quoting the line, or quoting both the line
+and the header, is not read as the ceremony. The pattern tolerates `**Category:**` as well as `**Category**:`,
 and backticks or bold around `completed`, but requires `completed` to
 be the first word after the label. Measured 2026-09-23 over the 60 most recent merged
 `matsengrp/phyz` PRs: of the 29 that carry a terminal comment, a plain
@@ -325,8 +325,9 @@ did not treat the first comment as the ceremony having run.
 
 ```bash
 gh pr view <N> --json comments \
-  -q '[.comments[].body | select(test("\\*\\*Issue Lead\\*\\*") and test("\\*\\*Category(\\*\\*:|:\\*\\*)[ `*]*completed"))] | length'
+  -q '[.comments[].body | select(test("^\\s*🤖 \\*\\*Issue Lead\\*\\*") and test("\\*\\*Category(\\*\\*:|:\\*\\*)[ `*]*completed"))] | length'
 # 0 → run the ceremony; 1 or more → it already ran
+# jq's ^ anchors to the start of the string, not of a line.
 ```
 
 ⛔ **Why not `.epic-status.json#completed_at`, which this guard used to

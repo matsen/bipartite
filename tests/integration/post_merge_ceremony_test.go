@@ -76,7 +76,18 @@ const (
 	quotesMarker = "Nit: the guard keys on `**Category**: completed`, see spawn-intent.sh."
 	// phyz#2817: a conductor's hand-posted note saying /bip-pr-land did NOT run.
 	handPostedPreserved = "🤖 **EPIC worklog preserved** — `/x/.preserved/2816/`\n\nPosted by the conductor, not by `/bip-pr-land`."
-	prLandComment       = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
+	// The shape of #259's skills-steward approval (2026-09-23T00:39:30Z),
+	// trimmed: prose quoting the header, and a fenced table whose rows are
+	// Category lines. Neither is at the start, so it is not a lead comment
+	// (issue #260).
+	stewardApproval = "🤖 **Skills-steward approval for `8383219`.** Re-reviewed.\n\n```\n**Category**: completed      -> True\n**Category:** completed      -> True\nCategory: completed          -> False\n```\n\n- Requiring `**Issue Lead**` in the same comment as the `Category` line means a quoted marker no longer counts.\n"
+	// The lead's template quoted in a code block: header and Category line
+	// both present, header at the start of a LINE but not of the comment.
+	// Fails if the anchor is ever made multiline.
+	templateInCodeBlock = "Template:\n```\n🤖 **Issue Lead** (iteration N)\n\n**Category**: completed\n```"
+	// A real terminal comment with leading whitespace, which pins lstrip/\s*.
+	terminalLeadIndented = "\n  " + terminalLead
+	prLandComment        = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
 )
 
 type ghComment struct {
@@ -111,19 +122,22 @@ func prJSON(t *testing.T, state string, closes []int, comments ...string) string
 	return string(b)
 }
 
-// TestPostMergeCeremony covers the decision the merged-PR slot cleanup in
-// bip-conductor-poll acts on (issue #258).
-func TestPostMergeCeremony(t *testing.T) {
+// ceremonyCase is one row of the post_merge_ceremony decision table.
+type ceremonyCase struct {
+	name       string
+	withStatus bool
+	gh         func(t *testing.T) string
+	ghExit     int
+	want       string // exact output; "<dir>" is replaced by the clone dir
+	wantPrefix bool   // match want as a prefix only
+	wantCode   int
+}
+
+// ceremonyCases is shared by TestPostMergeCeremony (the helper) and
+// TestLeadGuardAgreesWithHelper (the lead's jq copy of the same guard).
+func ceremonyCases() []ceremonyCase {
 	closes3 := []int{3}
-	cases := []struct {
-		name       string
-		withStatus bool
-		gh         func(t *testing.T) string
-		ghExit     int
-		want       string // exact output; "<dir>" is replaced by the clone dir
-		wantPrefix bool   // match want as a prefix only
-		wantCode   int
-	}{
+	return []ceremonyCase{
 		{"terminal comment present", true, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, nonTerminalLead, nonTerminalLead, terminalLead)
 		}, 0, "CEREMONY RAN #7", false, 0},
@@ -139,6 +153,15 @@ func TestPostMergeCeremony(t *testing.T) {
 		{"review comment quoting the marker", true, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, nonTerminalLead, quotesMarker)
 		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
+		{"#259 steward approval quoting both markers", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, nonTerminalLead, stewardApproval)
+		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
+		{"lead template quoted in a code block", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, templateInCodeBlock)
+		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
+		{"terminal comment with leading whitespace", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, terminalLeadIndented)
+		}, 0, "CEREMONY RAN #7", false, 0},
 		{"hand-posted preserved note is not pr-land's", false, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, handPostedPreserved)
 		}, 0, "ceremony UNRUN for #3 (PR #7)", false, 1},
@@ -173,6 +196,12 @@ func TestPostMergeCeremony(t *testing.T) {
 		{"gh prints non-JSON", true, func(*testing.T) string { return "HTTP 502" }, 0,
 			"CEREMONY UNKNOWN #7: gh output is not JSON", true, 2},
 	}
+}
+
+// TestPostMergeCeremony covers the decision the merged-PR slot cleanup in
+// bip-conductor-poll acts on (issue #258).
+func TestPostMergeCeremony(t *testing.T) {
+	cases := ceremonyCases()
 	shells := []string{"bash"}
 	if _, err := exec.LookPath("zsh"); err == nil {
 		shells = append(shells, "zsh")
@@ -201,18 +230,25 @@ func TestPostMergeCeremony(t *testing.T) {
 	}
 }
 
+// readIssueLead returns agents/issue-lead.md, whose Step 8 guard is the
+// lead's copy of post_merge_ceremony's terminal-comment check.
+func readIssueLead(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join(moduleRoot(t), "agents", "issue-lead.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 // TestTerminalMarkerPatternsAgree pins the terminal-comment pattern in
 // agents/issue-lead.md's Step 8 guard (a jq test() the lead runs) to the one
 // post_merge_ceremony uses (a Python regex the poll runs). The lead is an
 // agent, not a skill, so it cannot source the helper; two copies in two
 // languages is the price, and this test is what keeps them from drifting.
 func TestTerminalMarkerPatternsAgree(t *testing.T) {
-	root := moduleRoot(t)
-	lead, err := os.ReadFile(filepath.Join(root, "agents", "issue-lead.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	helper, err := os.ReadFile(filepath.Join(root, "skills", "lib", "spawn-intent.sh"))
+	lead := readIssueLead(t)
+	helper, err := os.ReadFile(spawnIntentScriptPath(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,10 +265,55 @@ func TestTerminalMarkerPatternsAgree(t *testing.T) {
 	if jqPattern != string(py[1]) {
 		t.Errorf("patterns differ:\n  issue-lead.md jq: %s\n  spawn-intent.sh:  %s", jqPattern, py[1])
 	}
-	if !strings.Contains(string(lead), `test("\\*\\*Issue Lead\\*\\*")`) {
-		t.Error("issue-lead.md guard no longer requires the Issue Lead header")
+	if !strings.Contains(string(lead), `test("^\\s*🤖 \\*\\*Issue Lead\\*\\*")`) {
+		t.Error("issue-lead.md guard no longer requires the comment to begin with the Issue Lead header")
 	}
-	if !strings.Contains(string(helper), `"**Issue Lead**" in b`) {
-		t.Error("post_merge_ceremony no longer requires the Issue Lead header")
+	if !strings.Contains(string(helper), `b.lstrip().startswith("🤖 **Issue Lead**")`) {
+		t.Error("post_merge_ceremony no longer requires the comment to begin with the Issue Lead header")
+	}
+}
+
+// TestLeadGuardAgreesWithHelper runs the jq expression from
+// agents/issue-lead.md's Step 8 guard over every MERGED fixture and checks it
+// says "the ceremony ran" exactly where post_merge_ceremony prints RAN.
+// TestTerminalMarkerPatternsAgree only compares pattern strings, so a change
+// made the same wrong way in both copies passes it; this one does not
+// (issue #260).
+func TestLeadGuardAgreesWithHelper(t *testing.T) {
+	if _, err := exec.LookPath("jq"); err != nil {
+		t.Skip("jq not on PATH")
+	}
+	lead := readIssueLead(t)
+	m := regexp.MustCompile(`-q '(\[\.comments\[\]\.body \| select\([^']*\)\] \| length)'`).FindSubmatch(lead)
+	if m == nil {
+		t.Fatal("no Step 8 guard expression found in agents/issue-lead.md")
+	}
+	expr := string(m[1])
+	checked := 0
+	for _, tc := range ceremonyCases() {
+		payload := tc.gh(t)
+		var pr ghPR
+		if json.Unmarshal([]byte(payload), &pr) != nil || pr.State != "MERGED" {
+			continue
+		}
+		checked++
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := exec.Command("jq", "-r", expr)
+			cmd.Stdin = strings.NewReader(payload)
+			out, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("jq: %v", err)
+			}
+			n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+			if err != nil {
+				t.Fatalf("jq printed %q, not a count", out)
+			}
+			if ran := strings.HasPrefix(tc.want, "CEREMONY RAN"); (n > 0) != ran {
+				t.Errorf("lead guard count = %d, but the helper's expected output is %q", n, tc.want)
+			}
+		})
+	}
+	if checked == 0 {
+		t.Fatal("no MERGED fixtures reached the jq control")
 	}
 }
