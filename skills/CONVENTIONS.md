@@ -1,6 +1,6 @@
 # Formatting conventions for skill files
 
-This governs `skills/*/SKILL.md` only. It does not apply to GitHub issue, PR, or comment bodies — those follow `PROSE-DISCIPLINE.md` instead, which hard-wraps prose into one line per paragraph so GitHub's renderer controls wrapping.
+This governs `skills/*/SKILL.md` only. It does not apply to GitHub issue, PR, or comment bodies — those follow `PROSE-DISCIPLINE.md` instead.
 
 ## One sentence per line
 
