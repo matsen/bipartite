@@ -97,6 +97,19 @@ Fetch the PR body and evaluate whether it reads as a **clean summary** or as **h
 **Also apply `PROSE-DISCIPLINE.md`** (bipartite repo root) to the body, and **`EVIDENCE-DISCIPLINE.md`** to every number in it.
 Flag violations and offer to rewrite.
 
+**A clean, squashed body can still fail to say what the PR does** — well-written prose that names defects and never states the change.
+Two checks catch that:
+- Read the first sentence of each section in sequence; that sequence must describe the diff.
+  A heading that names a *defect* rather than the *change* is the tell:
+
+  | says the change | names only the defect |
+  |---|---|
+  | `alt_2x2_plot now asks where the cache is instead of guessing` | `alt_2x2_plot read a directory nothing writes` |
+  | `The sonnia evaluation now takes a process count` | `The pgen pool could not be capped` |
+- A correction or a deviation from the issue is content, not noise.
+  Where the branch departs from the issue it implements — the spec was wrong, or the fix differs from what the issue proposed — that gets its own sentence.
+  A reviewer approves the diff against the issue, so a silent deviation makes them approve against a spec the code no longer follows.
+
 If the body looks like historical commit noise, revision-history accumulation, or is empty:
 1. Read the actual diff to understand the changes: `git diff origin/$(gh pr view --json baseRefName -q .baseRefName)...HEAD`.
    For a revision-history body specifically, also read the current body in full — later sections usually contain results/conclusions (recomputed numbers, resolved bugs, reconciled findings) that supersede earlier ones and must carry over into the rewrite; only the per-round framing gets dropped, not the substance.

@@ -400,7 +400,7 @@ STOPPING POINTS — When you reach a natural stopping point:
 
 COMPLETION: When done (or when lead says completed):
 1. Commit all work and push the branch
-2. Create a PR with gh pr create, title matches issue, body says Closes #N
+2. Create a PR with gh pr create (--body-file), title matches issue, body says Closes #N; each section's first sentence names the change, not the defect (/bip-pr-check Step 6)
 3. Update .epic-status.json phase to quality-gate
 4. QUALITY GATE LOOP — repeat until both pass clean:
    a. Run /bip-pr-check — fix everything it flags, commit and push
