@@ -61,6 +61,7 @@ set -uo pipefail
 ROOT="${1:-}"
 [ -n "$ROOT" ] || { echo "usage: fleet-collisions.sh <clone-root> -- NOT a clean check" >&2; exit 2; }
 [ -d "$ROOT" ] || { echo "no clone root at $ROOT" >&2; exit 2; }
+echo "scope: $ROOT"
 # A clone root that EXISTS but is EMPTY has to be handled before the three
 # `for d in "$ROOT"/*/` loops below, because that idiom behaves differently and
 # badly in both shells when nothing matches. Measured 2026-09-14 on an empty
