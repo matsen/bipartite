@@ -31,7 +31,7 @@ reach an ignored path. `command grep` also bypasses it, as do `-z`, `-Z`, `--nul
 **Other differences from GNU grep in the same shim:** `-G` is basic-regex mode, which is the
 mechanism behind the alternation truncation pinned in `/bip-pr-land`; `-I` skips binary files
 silently where GNU would print "Binary file matches"; a mid-pattern `$` is an anchor, not a
-literal (see `EVIDENCE-DISCIPLINE.md`, fourth costume).
+literal (see `EVIDENCE-DISCIPLINE.md`, "Name the question your check answers").
 
 **`find` is shadowed too, but faithfully** — `bfs` with `-S dfs -regextype findutils-default`.
 Measured: identical output to `/usr/bin/find`, gitignored files included. It is a speed
