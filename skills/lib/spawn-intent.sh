@@ -702,18 +702,27 @@ mark_spawn_intent_consumed() {
 #
 # The terminal marker is the `**Category**: completed` line (or
 # `**Category:** completed`), tolerant of backticks/bold but with
-# `completed` as the first word: every lead
-# iteration posts a `🤖 **Issue Lead**` comment, so the header alone would
-# read a clean-gate comment as the ceremony having run. A failed gh call
+# `completed` as the first word, in a comment that also carries the
+# `🤖 **Issue Lead**` header. The header alone would read a clean-gate
+# comment as the ceremony having run; the Category line alone would read
+# any comment quoting it (a review of this very helper) the same way. The
+# pr-land marker is matched as the exact prefix /bip-pr-land posts, since
+# a hand-posted "EPIC worklog preserved" note can say the skill did NOT
+# run (phyz#2817). A failed gh call
 # must not collapse into a count of 0 or of 1, so it is its own outcome.
 # Whether the slot's session is `busy` (its own lead mid-run) is a
 # ListAgents question the conductor answers before acting on OWED.
 post_merge_ceremony() {
-    local clone_dir="$1" repo="$2" pr="$3" json
-    if ! json=$(gh pr view "$pr" -R "$repo" --json state,comments,closingIssuesReferences 2>&1); then
-        echo "CEREMONY UNKNOWN #$pr: gh pr view failed: $json"
+    local clone_dir="$1" repo="$2" pr="$3" json err
+    err=$(mktemp)
+    # stderr kept out of $json: a warning on a successful call would
+    # otherwise read as "not JSON".
+    if ! json=$(gh pr view "$pr" -R "$repo" --json state,comments,closingIssuesReferences 2>"$err"); then
+        echo "CEREMONY UNKNOWN #$pr: gh pr view failed: $(cat "$err")"
+        rm -f "$err"
         return 2
     fi
+    rm -f "$err"
     printf '%s' "$json" | python3 -c '
 import json, os, re, sys
 clone, pr = sys.argv[1], sys.argv[2]
@@ -725,7 +734,7 @@ state = d.get("state")
 if state != "MERGED":
     print(f"CEREMONY UNKNOWN #{pr}: state is {state}, not MERGED"); sys.exit(2)
 bodies = [c.get("body", "") for c in d.get("comments", [])]
-if any(re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
+if any("**Issue Lead**" in b and re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies):
     print(f"CEREMONY RAN #{pr}"); sys.exit(0)
 # Load-bearing order: the status file before the pr-land marker.
 # /bip-pr-land posts the marker at Step 6a and deletes the file at Step
@@ -734,7 +743,7 @@ if any(re.search(r"\*\*Category(\*\*:|:\*\*)[ `*]*completed", b) for b in bodies
 # on disk and whose worker may have ended, and nobody would run it.
 if os.path.isfile(os.path.join(clone, ".epic-status.json")):
     print(f"CEREMONY OWED #{pr} {clone}"); sys.exit(0)
-if any("EPIC worklog preserved" in b for b in bodies):
+if any(b.startswith("🤖 EPIC worklog preserved to ") for b in bodies):
     print(f"CEREMONY WORKER-OWNS #{pr}"); sys.exit(0)
 issues = ",".join("#" + str(i["number"]) for i in d.get("closingIssuesReferences", [])) or "?"
 print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)

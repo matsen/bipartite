@@ -24,7 +24,9 @@ func runPostMergeCeremony(t *testing.T, shell, cloneDir, ghOutput string, ghExit
 		t.Fatal(err)
 	}
 	argsFile := filepath.Join(binDir, "args")
-	fake := "#!/bin/sh\necho \"$@\" > " + shellQuote(argsFile) + "\ncat " + shellQuote(payload) + "\nexit " + strconv.Itoa(ghExit) + "\n"
+	// The stderr line stands in for gh's upgrade and auth notices, which
+	// must not reach the JSON parser on a successful call.
+	fake := "#!/bin/sh\necho \"$@\" > " + shellQuote(argsFile) + "\necho 'A new release of gh is available' >&2\ncat " + shellQuote(payload) + "\nexit " + strconv.Itoa(ghExit) + "\n"
 	if err := os.WriteFile(filepath.Join(binDir, "gh"), []byte(fake), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +73,11 @@ const (
 	terminalLeadTrailing = "🤖 **Issue Lead** (iteration 1)\n\n**Category**: completed — post-landing review.\n"
 	// The label's bold can also close after the colon.
 	terminalLeadColonInBold = "🤖 **Issue Lead** (iteration 2)\n\n**Category:** completed\n"
-	prLandComment           = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
+	// A review comment quoting the marker is not a lead comment.
+	quotesMarker = "Nit: the guard keys on `**Category**: completed`, see spawn-intent.sh."
+	// phyz#2817: a conductor's hand-posted note saying /bip-pr-land did NOT run.
+	handPostedPreserved = "🤖 **EPIC worklog preserved** — `/x/.preserved/2816/`\n\nPosted by the conductor, not by `/bip-pr-land`."
+	prLandComment       = "🤖 EPIC worklog preserved to `/x/.preserved/3-2026-09-22` (issue #2216)."
 )
 
 type ghComment struct {
@@ -131,6 +137,12 @@ func TestPostMergeCeremony(t *testing.T) {
 		{"colon inside the bold", false, func(t *testing.T) string {
 			return prJSON(t, "MERGED", closes3, terminalLeadColonInBold)
 		}, 0, "CEREMONY RAN #7", false, 0},
+		{"review comment quoting the marker", true, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, nonTerminalLead, quotesMarker)
+		}, 0, "CEREMONY OWED #7 <dir>", false, 0},
+		{"hand-posted preserved note is not pr-land's", false, func(t *testing.T) string {
+			return prJSON(t, "MERGED", closes3, handPostedPreserved)
+		}, 0, "ceremony UNRUN for #3 (PR #7)", false, 1},
 		// Human merge: the worker ended at a clean gate with its state files
 		// in place, and the PR carries non-terminal lead comments only.
 		{"human merge, lead owed", true, func(t *testing.T) string {
@@ -158,7 +170,7 @@ func TestPostMergeCeremony(t *testing.T) {
 			return prJSON(t, "OPEN", closes3)
 		}, 0, "CEREMONY UNKNOWN #7: state is OPEN, not MERGED", false, 2},
 		{"gh fails", true, func(*testing.T) string { return "HTTP 502" }, 1,
-			"CEREMONY UNKNOWN #7: gh pr view failed", true, 2},
+			"CEREMONY UNKNOWN #7: gh pr view failed: A new release of gh is available", true, 2},
 		{"gh prints non-JSON", true, func(*testing.T) string { return "HTTP 502" }, 0,
 			"CEREMONY UNKNOWN #7: gh output is not JSON", true, 2},
 	}

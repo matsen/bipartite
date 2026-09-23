@@ -360,13 +360,13 @@ post_merge_ceremony "$CLONE_ROOT/<slot>" <owner/repo> <PR number>
 
 `<slot>` is the clone name, or `issue-<N>` in worktree mode. It prints one line:
 
-- **`CEREMONY RAN #<pr>`** → a terminal lead comment is on the PR. Go on to the cleanup.
+- **`CEREMONY RAN #<pr>`** → a terminal lead comment (an `🤖 **Issue Lead**` comment whose Category is `completed`) is on the PR. Go on to the cleanup.
 - **`CEREMONY OWED #<pr> <slot-dir>`** → no terminal comment, and the status file is still there. `/bip-pr-land` deletes that file, so it did not run, and no worker lead is going to run the ceremony. If the slot's session is `busy` in `ListAgents`, its own lead may be mid-run: skip this slot for this cycle. Otherwise spawn the lead:
 
   > Agent tool, `subagent_type: issue-lead`: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."*
 
-  Leave this slot's cleanup until the lead returns. Then re-run `post_merge_ceremony` yourself, because a subagent's report is a snapshot. It must print `CEREMONY RAN`; then do the cleanup. The lead writes `phase: completed` into the status file before the cleanup preserves it, so the `.preserved/` copy records the ceremony.
-- **`CEREMONY WORKER-OWNS #<pr>`** → `/bip-pr-land` ran (its `🤖 EPIC worklog preserved` comment is on the PR), so the worker's own final lead call owns the ceremony. Go on to the cleanup; the reclaim gate in `/bip-conductor` Step 6 is what keeps a mid-ceremony worker alive.
+  Leave this slot's cleanup until the lead returns. Then re-run `post_merge_ceremony` yourself, because a subagent's report is a snapshot. It must print `CEREMONY RAN`; then do the cleanup. If it prints anything else, the lead's terminal comment did not land: leave the slot uncleaned and put the line in this poll's report. The lead writes `phase: completed` into the status file before the cleanup preserves it, so the `.preserved/` copy records the ceremony.
+- **`CEREMONY WORKER-OWNS #<pr>`** → `/bip-pr-land` ran (the PR carries its `🤖 EPIC worklog preserved to …` comment; a hand-posted note in other words does not count), so the worker's own final lead call owns the ceremony. Go on to the cleanup; the reclaim gate in `/bip-conductor` Step 6 is what keeps a mid-ceremony worker alive.
 - **`ceremony UNRUN for #<issue> (PR #<pr>)`**, exit 1 → no terminal comment, and the state is already gone. Put the line in this poll's report; do not skip it silently. A lead that filed nothing and a lead that never ran look the same from outside. The user decides whether a lead run from the PR alone is worth it. Its guard and its follow-up source (the PR body's DEFERRED section) are both on the PR, but the worklog it would have read is gone.
 - **`CEREMONY UNKNOWN #<pr>: …`**, exit 2 → the PR is not `MERGED`, or `gh` failed. Clean up nothing for this slot this cycle.
 
