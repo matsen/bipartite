@@ -29,8 +29,8 @@ Reach for a subagent when the work fits in one call and only you need the answer
 - A stopped helper disappears from `ListAgents`, so `SendMessage` cannot reach it; resume it first.
 - Idle background sessions nobody is attached to are stopped automatically after roughly an hour.
   A helper that has finished and is waiting for you will therefore often be missing from `ListAgents`; that is the expected state, not a failure.
-- `notify_when_idle` is not a reliable signal for a helper: a subscription can end with no notice, including when the helper goes idle or is stopped.
-  Wait for its report message instead, and when that is overdue, read its state from `claude agents --json --all` and its `result.md`.
+- A `notify_when_idle` notice reaches you only once your own turn ends, so it can arrive long after the helper went idle, and a subscription made while the helper is already idle reports that earlier idle.
+  Don't hold a turn open waiting for one: end your turn and act on the notice, or on the helper's report message, when it arrives.
 - `claude --bg` prints a short id (`backgrounded · <id> · <name>`); `stop`, `rm`, `logs`, and `attach` take that id.
   `--resume` takes the full session id from `claude agents --json --all`.
   The ref `ListAgents` shows in brackets is a third, different id.
