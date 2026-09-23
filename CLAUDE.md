@@ -73,6 +73,7 @@ topic search with no local hit. Add via `./bip s2 add DOI:...` when rate limits 
 
 ## Docs conventions
 
+- A skill or agent file carries procedure an agent must follow and facts it can't get by looking — no incident stories, dated measurements, or ⛔/⭐ markers; a check whose correct form looks wrong keeps a one-clause why (#262).
 - `README.md` stays short (overview, install, env vars). Detailed guides live in
   `docs/guides/`. Skills live in `./skills/` (not `./.claude/skills/`).
 - When a change adds or alters a command, run `./bip <cmd> --help` and make the skill docs
