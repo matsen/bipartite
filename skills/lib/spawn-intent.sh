@@ -756,3 +756,83 @@ issues = ",".join("#" + str(i["number"]) for i in d.get("closingIssuesReferences
 print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 ' "$clone_dir" "$pr"
 }
+
+# reclaim_slot <clone-dir> <owner/repo> <pr-number>
+# Returns a clone-mode slot whose PR has merged to the pool, in the order
+# bip-conductor's reclaim requires: ceremony gate, closed issues, clean
+# tree, empty composer, preserve, kill the window, wait for the clone to
+# go quiet, then reset. The caller first checks that ListAgents reports
+# the slot's session exactly `idle` (or that it has none); nothing here
+# can see that. Deletes use `find -delete` so the calling command carries
+# no removal word for Claude Code's guard. Prints exactly one line:
+#   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>]
+#   HOLD <clone>: <why>          nothing changed
+#   <post_merge_ceremony line>   ceremony not settled; nothing changed
+#   NOT FREE <clone>: <why>      window killed, clone NOT reset
+# Returns 0, 1, 1 and 2 respectively.
+reclaim_slot() {
+    local clone repo="$2" pr="$3" cer meta base head issue state panes pane cx root dest n live pid cwd
+    clone=$(cd "$1" 2>/dev/null && pwd -P) || { echo "HOLD $1: no such directory"; return 1; }
+    case "$(pwd -P)" in "$clone"|"$clone"/*) echo "HOLD $clone: run this from outside the clone"; return 1 ;; esac
+    [ -d "$clone/.git" ] || { echo "HOLD $clone: not a clone-mode slot (worktree mode reclaims with git worktree remove)"; return 1; }
+    cer=$(post_merge_ceremony "$clone" "$repo" "$pr")
+    case "$cer" in
+        "CEREMONY RAN"*|"CEREMONY WORKER-OWNS"*) ;;
+        *) echo "$cer"; return 1 ;;
+    esac
+    meta=$(gh pr view "$pr" -R "$repo" --json baseRefName,headRefName,headRefOid,closingIssuesReferences) \
+        || { echo "HOLD $clone: gh pr view failed"; return 1; }
+    base=$(printf '%s' "$meta" | jq -r .baseRefName)
+    head=$(printf '%s' "$meta" | jq -r .headRefName)
+    for issue in $(printf '%s' "$meta" | jq -r '.closingIssuesReferences[].url'); do
+        state=$(gh issue view "$issue" --json state -q .state) || { echo "HOLD $clone: gh issue view $issue failed"; return 1; }
+        [ "$state" = CLOSED ] || { echo "HOLD $clone: $issue is $state"; return 1; }
+    done
+    [ -z "$(git -C "$clone" status --porcelain)" ] || { echo "HOLD $clone: uncommitted changes"; return 1; }
+    # branch -D below would drop commits the merge never saw.
+    if git -C "$clone" rev-parse -q --verify "refs/heads/$head" >/dev/null; then
+        [ "$(git -C "$clone" rev-parse "refs/heads/$head")" = "$(printf '%s' "$meta" | jq -r .headRefOid)" ] \
+            || { echo "HOLD $clone: local $head is not the merged head"; return 1; }
+    fi
+    panes=$(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' 2>/dev/null | awk -v d="$clone" '$2==d {print $1}')
+    case "$panes" in *"
+"*) echo "HOLD $clone: more than one tmux pane"; return 1 ;; esac
+    pane=$panes
+    if [ -n "$pane" ]; then
+        # 2 is an empty composer; autosuggest text leaves it at 2 too.
+        cx=$(tmux display-message -p -t "$pane" '#{cursor_x}')
+        [ "$cx" = 2 ] || { echo "HOLD $clone: composer cursor at $cx, typed input?"; return 1; }
+    fi
+    if [ -f "$clone/.epic-config.json" ]; then
+        root=$(resolve_clone_root "$clone/.epic-config.json") || { echo "HOLD $clone: clone_root unresolvable"; return 1; }
+    else
+        root=$(dirname "$clone")
+    fi
+    dest=$(preserve_epic_state "$clone" "$root" "at reclaim after PR #$pr ($cer).")
+    [ $? -eq 2 ] && { echo "HOLD $clone: preservation failed"; return 1; }
+    [ -n "$pane" ] && tmux kill-window -t "$pane"
+    # After the kill: a run_in_background build outlives the window.
+    n=0
+    while :; do
+        live=""
+        for pid in /proc/[0-9]*; do
+            # Unreadable means another user's process, which cannot be in a clone under our home.
+            cwd=$(readlink "$pid/cwd" 2>/dev/null) || continue
+            case "$cwd" in "$clone"|"$clone"/*) live="$live ${pid#/proc/}" ;; esac
+        done
+        [ -z "$live" ] && break
+        n=$((n + 1))
+        [ "$n" -ge 10 ] && { echo "NOT FREE $clone: processes still in it:$live"; return 2; }
+        sleep 3
+    done
+    git -C "$clone" checkout -q "$base" && git -C "$clone" pull -q --ff-only \
+        || { echo "NOT FREE $clone: checkout/pull of $base failed"; return 2; }
+    find "$clone" -maxdepth 1 \( -name '.epic-status.json' -o -name '.epic-worklog.md' \) -delete
+    find "$clone/.claude" -maxdepth 1 -name 'ralph-loop.local.md' -delete 2>/dev/null
+    if [ "$head" != "$base" ]; then
+        git -C "$clone" branch -q -D "$head" 2>/dev/null
+        git -C "$clone" ls-remote --exit-code --heads origin "$head" >/dev/null 2>&1 \
+            && git -C "$clone" push -q origin --delete "$head"
+    fi
+    echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}"
+}
