@@ -20,6 +20,7 @@ var Version = "dev"
 var humanOutput bool
 
 func main() {
+	rejectUnknownSubcommands(rootCmd)
 	if err := rootCmd.Execute(); err != nil {
 		// Print the error since we have SilenceErrors: true
 		// This ensures Cobra errors (like missing required flags) are visible
@@ -44,6 +45,20 @@ Data is stored in git-versionable JSONL with ephemeral SQLite for queries.
 All commands output JSON by default for AI agent integration.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+}
+
+// rejectUnknownSubcommands makes every command group below root fail on an
+// unknown subcommand. Cobra only does this at root; a group like `bip epic`
+// otherwise prints its help and exits 0, so a script calling a removed
+// subcommand reads success. Run it after every init has registered commands.
+func rejectUnknownSubcommands(cmd *cobra.Command) {
+	for _, c := range cmd.Commands() {
+		if c.HasSubCommands() && !c.Runnable() {
+			c.Args = cobra.NoArgs
+			c.RunE = func(cmd *cobra.Command, args []string) error { return cmd.Help() }
+		}
+		rejectUnknownSubcommands(c)
+	}
 }
 
 func init() {
