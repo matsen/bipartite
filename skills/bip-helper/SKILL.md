@@ -97,7 +97,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    The helper starts with no other context.
    Beyond the task, the brief gives your name (it reports to you by `SendMessage`), its home and working directory as expanded paths, and these rules:
    - extra checkouts and anything it cites go under its home, never its scratchpad;
-   - after each round, append a timed section with findings and evidence paths to `result.md`, then report;
+   - after each round, append a timed section with findings and evidence paths to `result.md` (the durable record), then report to the primary; if that send fails, the primary was likely renamed on a restart — re-resolve it from `ListAgents` by name prefix and resend;
    - leave a held clone clean and on `main`;
    - no merging, no pushing to main, no other checkouts, no helpers of its own.
 
@@ -123,7 +123,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    ```
 
 6. **Confirm messages flow both ways.**
-   Wait for its first report, then `SendMessage` it a one-line ping and wait for the answer.
+   Wait for its first report, then send it something and wait for the answer — a real first task serves as the ping, so reserve a content-free one for when you have nothing to send yet.
    If either is missing after a few minutes, read `claude logs <id>` and report to the user.
    A `failed` state in `claude agents --json --all` most often means the wrong account; a silent helper, a held message.
 
