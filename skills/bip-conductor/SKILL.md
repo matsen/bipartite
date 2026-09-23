@@ -307,7 +307,7 @@ In worktree mode (`local_worktrees: true`), the slots are `find "$CLONE_ROOT" -m
 
 Classify each slot:
 - `occupied`: has a tmux window, whatever the agent's status (the user may be doing follow-up work).
-- `stale`: no tmux window, but has `.epic-status.json` or is on a non-main branch. Clean up only if there is no tmux window; never kill a window.
+- `stale`: no tmux window, but has `.epic-status.json` or is on a non-main branch. Clean up only through `reclaim_slot` (Step 6), never by deleting the status file by hand: a conductor can hold a slot with a status file and no pane, against work no local check can see.
 - `available`: (clone mode) no tmux window, on `main`, clean, and current with `origin/main`.
 
 Also note phase migrations (`blocked`/`pr-review`), missing status files, and contradictions.
