@@ -290,30 +290,28 @@ find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 
 The conductor clone sits outside `clone_root`, so its own drafts (and the epic's) are not swept, deliberately: the epic owns its draft list and tells the conductor, and the conductor reports what it is told. Do not widen the `find`.
 
-### Step 4: Fan out the clone/tmux scanner
+### Step 4: Scan clones and tmux
 
-Dispatch one `general-purpose` subagent — single call, following the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
-Brief:
+No subagent: this is a handful of shell calls, run from the conductor clone.
 
-> Inventory clones/worktrees.
-> Read `clone_root` and `local_worktrees` from `.epic-config.json`.
->
-> Clone mode (`local_worktrees` absent or false): iterate `clone_names`; for each, capture branch, last commit, dirty files (max 5), and `.epic-status.json` contents.
->
-> Worktree mode (`local_worktrees: true`): `find $CLONE_ROOT -maxdepth 1 -name 'issue-*' -type d`; for each, capture last commit, dirty files, and `.epic-status.json`.
->
-> Also: `tmux list-windows -F "#W"`.
-> And, for pending spawn intent from the epic: `find $CLONE_ROOT/.spawn-prompts -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)` — both patterns are live conventions, and `-maxdepth 1` keeps it out of `consumed/`, where `/bip-conductor-spawn` moves launched intent files.
->
-> Classify each slot:
-> - `occupied`: has tmux window (regardless of agent status — user may be doing follow-up work)
-> - `stale`: no tmux window, but has `.epic-status.json` or is on non-main branch
-> - `available`: (clone mode) no tmux window, on `main`, clean, and current with `origin/main` (per `clone-currency.sh` below)
->
-> Return under 400 words:
-> - `active_items`: per slot: name, phase, summary, scope, stop_reason, lead_guidance (from `.epic-status.json`), classification
-> - `action_candidates`: stale slots ready for cleanup (clean up ONLY if no tmux window — never kill tmux windows); pending spawn-intent files (either naming pattern) with an idle clone to run them
-> - `surprises`: phase migrations (`blocked`/`pr-review`), missing status files, contradictions
+```bash
+L="$(dirname "<this-skill's-base-directory>")/lib"
+"$L/clone-currency.sh"                   # per slot: branch, dirty, behind, head
+"$L/fleet-collisions.sh" "$CLONE_ROOT"   # live branches, missing or stale status files
+tmux list-windows -a -F '#W'
+find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)
+find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
+  -exec jq -c --arg f {} '{f: $f, issue, phase, summary, scope, stop_reason, lead_guidance}' {} \;
+```
+
+In worktree mode (`local_worktrees: true`), the slots are `find "$CLONE_ROOT" -maxdepth 1 -name 'issue-*' -type d`; `clone-currency.sh` covers clone mode only.
+
+Classify each slot:
+- `occupied`: has a tmux window, whatever the agent's status (the user may be doing follow-up work).
+- `stale`: no tmux window, but has `.epic-status.json` or is on a non-main branch. Clean up only if there is no tmux window; never kill a window.
+- `available`: (clone mode) no tmux window, on `main`, clean, and current with `origin/main`.
+
+Also note phase migrations (`blocked`/`pr-review`), missing status files, and contradictions.
 
 **Clean is not current.** Run `lib/clone-currency.sh` before every spawn, from the conductor clone, with no arguments:
 
@@ -501,11 +499,16 @@ If a live worker's scope needs correcting before its next stopping point: the ep
 After the dashboard is built and any spawns are launched, start the **persistent slot monitor** — `bip epic watch` — which observes every slot's `.epic-status.json` and writes phase-transition events to `.epic-notifications.log` (JSONL) in the conductor cwd.
 The log survives watcher restarts and conductor compaction.
 
-```bash
-nohup bip epic watch >/dev/null 2>&1 &
-```
+Start one only if none is running, since two watchers log every transition twice. Add `--poll` (2 s stat loop) only when the clone root is on NFS or sshfs, where inotify misses remote writes:
 
-On NFS-mounted clone roots where inotify does not fire on remote writes, add `--poll` (2 s stat loop).
+```bash
+if ps -eo pid,args | /usr/bin/grep -qE '^\s*[0-9]+ bip epic watch'; then
+  echo "watcher already running"
+else
+  case "$(stat -f -c %T "$CLONE_ROOT")" in nfs*|fuse*) POLL=--poll;; *) POLL=;; esac
+  nohup bip epic watch $POLL >/dev/null 2>&1 &
+fi
+```
 The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`).
 
 It is not liveness detection. It is silent when:
@@ -514,7 +517,7 @@ It is not liveness detection. It is silent when:
 - a slot was already in its phase when the watcher first read it. Restarting the watcher re-baselines the whole fleet, so re-run `/bip-conductor` after a restart; a clone added to `clone_names` after launch is never enumerated;
 - **a slot lands**: `/bip-pr-land` deletes the status file, so `completed` is never observed. Run a second Monitor polling `gh pr list --state merged`; for landings it is a correctness requirement.
 
-To also receive events as notifications, start a Monitor with `command: tail -F .epic-notifications.log` and `persistent: true`.
+To also receive events as notifications, start a Monitor with `command: tail -F .epic-notifications.log`. Monitors expire: set `timeout_ms: 1800000` (the cap) on both, and re-arm each on expiry.
 
 When a `needs-human` or `completed` transition arrives, react immediately: read the slot's status and lead guidance, refresh `$CLONE_ROOT/.conductor-session`, then read `$CLONE_ROOT/.epic-session` and `SendMessage` that address the issue number and phase (skip silently if absent or the send fails), and propose the next action or flag it for the user.
 
@@ -522,8 +525,6 @@ When a `needs-human` or `completed` transition arrives, react immediately: read 
 > Re-run `/bip-conductor` for a full reconciliation sweep when needed."
 
 **When several slots go quiet at once, ask what they share before investigating any one** — a host, a token or rate budget, a mount, a freshly landed commit. Never read push silence or a quiet log as "still running".
-
-**Checking whether the watcher is running:** `ps -eo pid,args | /usr/bin/grep -E '^\s*[0-9]+ bip epic watch'`.
 
 #### Process checks
 
