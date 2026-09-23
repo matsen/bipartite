@@ -78,6 +78,10 @@ If it's a few commits into early exploration, leave it as a branch — don't for
 - Branch: <name> (pushed)
 - Uncommitted changes: none | committed as <sha>
 - PR: #<N> body synced | #<N> comment added | none yet (branch only)
-
-Safe to reset context.
 ```
+
+### Step 5: Continuation prompt
+
+Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+For this session: start in the clone/worktree, run `/bip-spawn-resume`, and the durable state is the PR (its body and comments) or, if none exists yet, the pushed branch.
+Then: safe to reset context.

@@ -56,15 +56,9 @@ Only what survives both gates gets a destination:
 - **What is in flight**, per worker, and what each one's next decision point is.
 - **Housekeeping**: EPIC body headroom, known recurring conflicts, skill changes landed this session.
 
-**The prompt** is what you print for the user, and it stays under roughly fifteen lines: the `/bip-epic <N>` invocation, a one-line pointer to the file, **the two or three traps that would cost the most if rediscovered**, one sentence on the working method, and the fleet's current state.
-
-**Put the traps in the prompt itself, not only in the file.** They are precisely what a fresh session gets wrong *before* it has read anything.
-
-**Every action item must carry its own falsifier inline.** Not "file X" with a general warning elsewhere in the file, but:
-
-> **FILE NEXT: X. FIRST RUN: `grep -rn '<the number>' experiments/*/README.md` — if it hits, X is dead and this line is the retraction.**
-
-**An imperative at the top gets executed before a warning in the middle gets applied.** Measured 2026-09-11: a continuation file's single highest-priority item — "the one thing to file next" — pointed at a question three landed PRs had already settled, and the file *contained* the check that would have killed it, as a trap roughly 200 lines below. A resuming session is the reader least able to notice that tension, because it is trusting the file to have already resolved it. Only a peer message arriving mid-read prevented the filing. **Anything that could invalidate an action item has to live inside that item, or it will not fire.**
+**The prompt** is what you write to `_ignore/CONTINUE.md` and print for the user.
+Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; a `SessionStart` hook auto-loads it on the next reset.
+On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
 
 **Record approvals as `approved at <SHA>`, never as a state.** "Approved by both" is true when written and becomes misleading the moment anyone pushes. Same class of defect: a fact that expires silently.
 
@@ -78,7 +72,7 @@ Print a summary:
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
 - Topic-level findings: <none survived the filter | routed to CLAUDE.md/skill/EPIC body as listed>
-- Continuation artifact: CONTINUATION-<N>.md written; short prompt printed below
+- Continuation: CONTINUATION-<N>.md (long) + _ignore/CONTINUE.md (prompt) written; prompt printed below
 
 Safe to reset context. Fleet-side state (clones, slots) is unaffected
 by this — run /bip-conductor-tuckin if that session is resetting too.

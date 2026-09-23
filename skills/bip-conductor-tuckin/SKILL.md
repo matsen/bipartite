@@ -148,6 +148,12 @@ Print a summary:
 - Consumed spawn intent: i298 (already launched, moved to consumed/)
 - Fleet-level findings: <none survived the filter | routed to CLAUDE.md/skill/issue as listed>
 
-Safe to reset context. Topic-side state (EPIC bodies) is unaffected by
-this — run /bip-epic-tuckin if that session is resetting too.
+Topic-side state (EPIC bodies) is unaffected by this — run
+/bip-epic-tuckin if that session is resetting too.
 ```
+
+### Step 6: Continuation prompt
+
+Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+For this session: start in the fleet working directory, run `/bip-conductor`, and the durable state is the slot files and queued spawn intents this tuckin wrote under the clone pool.
+Then: safe to reset context.
