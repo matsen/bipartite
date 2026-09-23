@@ -314,8 +314,9 @@ it already carries several. The pattern tolerates backticks and bold
 around `completed` but requires it to be the first word after the
 label. Measured 2026-09-23 over the 60 most recent merged
 `matsengrp/phyz` PRs: of the 29 that carry a terminal comment, a plain
-`: completed` match finds 24. The other five wrote `` `completed` ``. A looser "completed anywhere on the line" match
-false-hit `superfamily-pcp#477`, whose line reads `` `quality-gate` … Not
+`: completed` match finds 24. The other five wrote `` `completed` ``.
+A looser "completed anywhere on the line" match false-hit
+`superfamily-pcp#477`, whose line reads `` `quality-gate` … Not
 `completed` ``. phyz#2909 carries two terminal comments, posted 14
 minutes apart by two lead runs under the older guard. The second run
 did not treat the first comment as the ceremony having run.

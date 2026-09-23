@@ -456,7 +456,8 @@ EPIC STATUS PROTOCOL — You MUST follow this:
   lead_guidance — what the lead told you to do next (set by lead)
   lead_notes — list of lead evaluation entries (set by lead)
   completed_at — ISO 8601 timestamp set by the lead after the
-    terminal completed ceremony (idempotency signal; do not set
+    terminal completed ceremony (for dashboards; the lead's
+    idempotency guard is its terminal PR comment; do not set
     yourself). If you resume work after landing, re-create this file —
     see the landing step.
   awaiting — set when waiting for experiment results (description, check_cmd, check_files, started_at, timeout_hours).
@@ -1112,8 +1113,10 @@ REVIEW TRIAGE — For each /bip-pr-review finding, apply the DEFERRAL RULE above
 
 FINAL RECAP — Print this summary just before outputting the completion
 promise so the conductor (and user) can see the full story at a glance.
-By the time this runs, the final lead invocation has set phase to
-`completed` and posted a PR comment listing any follow-ups it filed.
+After step 5a, the final lead invocation has set phase to `completed`
+and posted a PR comment listing any follow-ups it filed. After step 5b
+the PR is still open, the phase is `quality-gate`, and that ceremony
+runs after the merge; say so on the `Landed:` line.
 
 ```
 ═══ COMPLETED: #N — TITLE ═══
