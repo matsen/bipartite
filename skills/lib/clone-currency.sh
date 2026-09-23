@@ -107,6 +107,7 @@ ready=0; notready=0
 for name in "${SLOTS[@]}"; do
   d="$CLONE_ROOT/$name"
   [ -e "$d/.git" ] || { printf '  %-12s MISSING\n' "$name"; notready=$((notready+1)); continue; }
+  [ -f "$CLONE_ROOT/.holds/$name" ] && { printf '  %-12s HELD (%s)\n' "$name" "$(r=$(head -n1 "$CLONE_ROOT/.holds/$name"); echo "${r:-no reason given}")"; notready=$((notready+1)); continue; }
   br=$(git -C "$d" rev-parse --abbrev-ref HEAD)
   head=$(git -C "$d" rev-parse HEAD)
   # Read status BEFORE counting. `git ... | wc -l` cannot tell "clean tree" from

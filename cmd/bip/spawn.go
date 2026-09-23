@@ -44,7 +44,10 @@ var spawnDir string
 var spawnName string
 var spawnModel string
 var spawnAgent string
-var spawnForce bool
+var (
+	spawnForce      bool
+	spawnIgnoreHold bool
+)
 
 func init() {
 	rootCmd.AddCommand(spawnCmd)
@@ -55,6 +58,7 @@ func init() {
 	spawnCmd.Flags().StringVar(&spawnModel, "model", "", "Model to pass to the agent launcher (default: unspecified)")
 	spawnCmd.Flags().StringVar(&spawnAgent, "agent", "", "Agent runner for spawned session: claude, agy (default: claude)")
 	spawnCmd.Flags().BoolVar(&spawnForce, "force", false, "Spawn even if a live tmux pane already occupies the target directory")
+	spawnCmd.Flags().BoolVar(&spawnIgnoreHold, "ignore-hold", false, "Spawn even if a conductor holds the slot (<clone root>/.holds/<slot>)")
 }
 
 func resolvePrompt() string {
@@ -312,6 +316,20 @@ func spawnWindow(windowName, workDir, prompt, url, model, agent string) {
 		}
 		if occupied != "" {
 			fmt.Fprintf(os.Stderr, "refusing: a tmux pane is already live in %s (use --force to override)\n", workDir)
+			os.Exit(1)
+		}
+	}
+
+	// Separate from --force: a hold guards a dependency the spawner may not
+	// know about, so forcing past a live pane must not also clear it.
+	if !spawnIgnoreHold {
+		reason, err := spawn.HoldReason(workDir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: checking for a slot hold: %v\n", err)
+			os.Exit(1)
+		}
+		if reason != "" {
+			fmt.Fprintf(os.Stderr, "refusing: %s is held: %s (use --ignore-hold to override)\n", workDir, reason)
 			os.Exit(1)
 		}
 	}

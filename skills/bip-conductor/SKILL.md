@@ -307,10 +307,13 @@ In worktree mode (`local_worktrees: true`), the slots are `find "$CLONE_ROOT" -m
 
 Classify each slot:
 - `occupied`: has a tmux window, whatever the agent's status (the user may be doing follow-up work).
-- `stale`: no tmux window, but has `.epic-status.json` or is on a non-main branch. Clean up only if there is no tmux window; never kill a window.
+- `held`: named in `$CLONE_ROOT/.holds/`. Don't spawn into it.
+- `stale`: no tmux window, but has `.epic-status.json` or is on a non-main branch. Clean up only through `reclaim_slot` (Step 6), never by deleting the status file by hand.
 - `available`: (clone mode) no tmux window, on `main`, clean, and current with `origin/main`.
 
 Also note phase migrations (`blocked`/`pr-review`), missing status files, and contradictions.
+
+**Hold a slot** when something outside it still depends on its contents: another live slot reads files inside the clone, or remote jobs run from it. Write the reason to `$CLONE_ROOT/.holds/<slot>` (`mkdir -p "$CLONE_ROOT/.holds" && echo "<reason>" > "$CLONE_ROOT/.holds/<slot>"`), and delete that file when the dependency ends. It lives outside the clone, so reclaim leaves it and a clean-tree check never sees it. While it exists, `bip spawn` refuses the slot (`--ignore-hold` overrides; `--force` does not), `bip fleet currency` reports it `HELD`, and spawn selection skips it.
 
 **Clean is not current.** Run `bip fleet currency` from the conductor clone before every spawn. It derives `clone_root` and `clone_names` from `.epic-config.json`, fetches once in the conductor, counts in the conductor's object DB, reports `DIVERGED` rather than a count when ancestry fails, and lists non-pool directories as `(unmanaged)`. Read its `scope:` line before the table. Fast-forward an idle slot that is behind.
 
