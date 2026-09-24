@@ -20,9 +20,8 @@ Reach for a subagent when the work fits in one call and only you need the answer
 
 ## Facts this skill depends on
 
-- `claude --bg` sessions authenticate with the stored login, not the shell's `CLAUDE_CODE_OAUTH_TOKEN`.
-  To run one on the shell's account, pass `--settings <file>` where the file holds `{"env":{"CLAUDE_CODE_OAUTH_TOKEN":"..."}}`.
-  A `--resume` keeps none of the original flags, so every resume passes them again.
+- `claude --bg` sessions ignore the shell's `CLAUDE_CODE_OAUTH_TOKEN` and authenticate from the `env` token in `~/.claude/settings.json`, which the account switch in matsen/setup writes.
+- A `--resume` keeps none of the original flags, so every resume passes them again.
 - A cross-session message to a session in a different permission mode is held for that session's user to approve.
   Nobody is watching a background helper, so a held message sits there silently.
   Start the helper in your own permission mode with `--permission-mode`; `bypassPermissions` starts without a confirmation prompt.
@@ -101,11 +100,9 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    - leave a held clone clean and on `main`;
    - no merging, no pushing to main, no other checkouts, no helpers of its own.
 
-4. **Start it** from `$DIR`, in your own permission mode, adding `--settings` only when the account file exists:
+4. **Start it** from `$DIR`, in your own permission mode:
    ```bash
-   SETTINGS="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/claude-account-settings.json"
    ARGS=(-n "<primary>-<role>" --permission-mode <your-mode>)
-   [ -f "$SETTINGS" ] && ARGS=(--settings "$SETTINGS" "${ARGS[@]}")
    OUT=$(cd "$DIR" && claude --bg "${ARGS[@]}" "<brief>" 2>&1)
    ID=$(printf '%s\n' "$OUT" | sed -n 's/^backgrounded · \([0-9a-f]\{1,\}\) · .*/\1/p')
    SID=$(claude agents --json --all | jq -r --arg id "$ID" '.[] | select(.id==$id) | .sessionId')
@@ -149,7 +146,7 @@ Read `id`, `session_id`, `home`, `dir`, `dir_kind`, and `hold` from `$R` with `j
   ```bash
   OUT=$(cd "$DIR" && claude --bg --resume "$SID" "${ARGS[@]}" "<message>" 2>&1)
   ```
-  Without `--settings` it runs on the stored login, without `--permission-mode` its messages are held, and without `-n` it is renamed from the prompt.
+  Without `--permission-mode` its messages are held, and without `-n` it is renamed from the prompt.
   The resume is a new job with a new short id and session id: parse `ID` and `SID` from `$OUT` as in start step 4, write a new record (start step 5), and delete the old one.
   `jq .respawnFlags ~/.claude/jobs/<id>/state.json` shows the flags a job actually runs with.
 - The user can watch or type to it with `claude attach <id>` (`←` returns to agent view, `Ctrl+Z` to the shell; the helper keeps running either way).
