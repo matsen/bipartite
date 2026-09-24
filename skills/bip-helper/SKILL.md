@@ -22,7 +22,7 @@ Reach for a subagent when the work fits in one call and only you need the answer
 
 - `claude --bg` sessions authenticate with the stored login, not the shell's `CLAUDE_CODE_OAUTH_TOKEN`.
   To run one on the shell's account, pass `--settings <file>` where the file holds `{"env":{"CLAUDE_CODE_OAUTH_TOKEN":"..."}}`.
-  Claude Code stores only the path, and re-reads it whenever the session is resumed, so the file must still exist then.
+  A `--resume` keeps none of the original flags, so every resume passes them again.
 - A cross-session message to a session in a different permission mode is held for that session's user to approve.
   Nobody is watching a background helper, so a held message sits there silently.
   Start the helper in your own permission mode with `--permission-mode`; `bypassPermissions` starts without a confirmation prompt.
@@ -145,12 +145,13 @@ Read `id`, `session_id`, `home`, `dir`, `dir_kind`, and `hold` from `$R` with `j
 - Read `result.md` in its home first; each round it finished has a section there.
   Resume it only for a new round or a question the file does not answer.
 - If it is missing from `ListAgents`, it has stopped.
-  Resume it with the message as the prompt:
+  Resume it with the message as the prompt, rebuilding `ARGS` exactly as in start step 4:
   ```bash
-  cd "$DIR" && claude --bg --resume "$SID" -n "<primary>-<role>" "<message>"
+  OUT=$(cd "$DIR" && claude --bg --resume "$SID" "${ARGS[@]}" "<message>" 2>&1)
   ```
-  Without `-n` the resumed session is renamed from the prompt, and peers addressing the old name lose it.
-  The resume reuses its saved `--settings` path and permission mode; if the settings file is gone, the resume fails — recreate the file (a new login shell does) and retry.
+  Without `--settings` it runs on the stored login, without `--permission-mode` its messages are held, and without `-n` it is renamed from the prompt.
+  The resume is a new job with a new short id and session id: parse `ID` and `SID` from `$OUT` as in start step 4, write a new record (start step 5), and delete the old one.
+  `jq .respawnFlags ~/.claude/jobs/<id>/state.json` shows the flags a job actually runs with.
 - The user can watch or type to it with `claude attach <id>` (`←` returns to agent view, `Ctrl+Z` to the shell; the helper keeps running either way).
 
 ## stop
