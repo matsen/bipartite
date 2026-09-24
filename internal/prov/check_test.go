@@ -286,6 +286,33 @@ func TestChangedSentenceIsReview(t *testing.T) {
 	}
 }
 
+func TestTagRenameDoesNotSpread(t *testing.T) {
+	code, shas := codeRepo(t)
+	paper := paperDir(t, shas)
+	ledger := filepath.Join(paper, "provenance.yaml")
+	data, _ := os.ReadFile(ledger)
+	head := git(t, paper, "rev-parse", "HEAD")
+	// pipe's entry is renamed to pipe2, and its tag follows; the prose is unchanged.
+	renamed := strings.Replace(string(data), "  pipe:\n", "  pipe2:\n", 1)
+	if err := os.WriteFile(ledger, []byte("audited_through: "+head+"\n"+renamed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	methods := filepath.Join(paper, "sections", "methods.tex")
+	data, _ = os.ReadFile(methods)
+	if err := os.WriteFile(methods, []byte(strings.Replace(string(data), "%PROV[pipe]", "%PROV[pipe2]", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var reviews []string
+	for _, f := range runCheck(t, paper, code) {
+		if f.Level == LevelReview && strings.Contains(f.Message, "since") {
+			reviews = append(reviews, f.ID)
+		}
+	}
+	if len(reviews) != 1 || reviews[0] != "pipe2" {
+		t.Errorf("want review for pipe2 only, got %v", reviews)
+	}
+}
+
 func TestLedgerEditIsReview(t *testing.T) {
 	code, shas := codeRepo(t)
 	paper := paperDir(t, shas)

@@ -15,7 +15,7 @@ type Tag struct {
 	Line     int
 	Sentence string   // the line's text before its comment
 	Text     string   // the whole line
-	Para     []string // the other prose lines of its paragraph
+	Para     []string // the prose (text before the comment) of the other lines in its paragraph
 }
 
 // Paper is what the scanner extracts from main.tex and its \input files.
@@ -91,8 +91,8 @@ func (p *Paper) scan(dir, rel string, seen map[string]bool) error {
 	return nil
 }
 
-// paragraph returns the prose lines around lines[i], up to the nearest blank
-// line on each side, excluding lines[i] and comment-only lines.
+// paragraph returns the prose of the lines around lines[i], up to the
+// nearest blank line on each side, excluding lines[i] and comment-only lines.
 func paragraph(lines []string, i int) []string {
 	blank := func(j int) bool { return strings.TrimSpace(lines[j]) == "" }
 	lo, hi := i, i
@@ -104,8 +104,9 @@ func paragraph(lines []string, i int) []string {
 	}
 	var para []string
 	for j := lo; j <= hi; j++ {
-		if j != i && strings.TrimSpace(lines[j][:commentStart(lines[j])]) != "" {
-			para = append(para, lines[j])
+		body := lines[j][:commentStart(lines[j])]
+		if j != i && strings.TrimSpace(body) != "" {
+			para = append(para, body)
 		}
 	}
 	return para
