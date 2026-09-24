@@ -1,0 +1,57 @@
+runs:
+  "pipe":
+    facts: {repo: org/code, sha: "@C3@", path: facts_pipeline.json}
+  "multi":
+    facts: {repo: org/code, sha: "@C3@", path: facts_launches.json}
+    launches: ["@D@"]   # adds a third launch, one no ref contains
+entries:
+  same1:
+    repo: org/code
+    sha: "@C1@"
+    path: results.json
+    key: corpus.pcps_changed
+    value: 0.020769
+    token: "2.1\\%"
+    scope: "tree edges of the sample"
+  same2:   # re-rendered file, same value
+    repo: org/code
+    sha: "@C2@"
+    path: results.json
+    key: corpus.pcps_changed
+    value: 0.020769
+    token: "2.1\\%"
+    scope: "tree edges of the sample"
+  changed:
+    repo: org/code
+    sha: "@C3@"
+    path: results.json
+    key: corpus.pcps_changed
+    value: 0.020769
+    scope: "tree edges of the sample"
+  crlf:
+    repo: org/code
+    sha: "@C1@"
+    path: nextflow.config
+    pattern: |-
+      joint = true
+      other = 1
+  multi:
+    run: "multi"
+    path: nextflow.config
+    pattern: "joint = true"
+  pipe:
+    run: "pipe"
+    path: nextflow.config
+    pattern: "other = 1"
+  renamed:   # old.txt was renamed to new.txt at C2
+    repo: org/code
+    sha: "@C2@"
+    path: old.txt
+    pattern: "so"
+  unreach:
+    repo: org/code
+    sha: "@D@"
+    path: nextflow.config
+    pattern: "joint"
+  spare:
+    unsourced: "no committed source"

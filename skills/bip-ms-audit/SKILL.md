@@ -55,6 +55,21 @@ Determine:
 
 If `.ms-config.json` is missing, ask the user for the paper path and code repo path(s) and offer to create the config (see `/bip-ms`).
 
+### Step 1b: Provenance check (when `provenance.yaml` sits beside the paper)
+
+```bash
+bip prov check --human --main <paper-file>
+```
+
+It runs every mechanical check against git objects of the ledger's repos and exits nonzero on any `error`.
+The audit scope is then only its `error` and `review` findings, not the whole paper: each finding names a tag id, its `file:line` and the entry's `scope`.
+Give each subagent the sentence, the entry, and its `scope`, and have it judge whether the sentence says what the source shows for that population and stage.
+`info` findings (`unsourced` entries, unused entries, runs whose producing commit is HEAD at collection) go to the report without a subagent.
+If the check reports nothing at `error` or `review`, there is nothing to audit; skip to the report.
+
+The check cannot see a change in a neighbouring sentence that alters a number's meaning, a flag overridden elsewhere (`params/*.yml` over `nextflow.config`), or a superseded result file still present.
+A periodic full audit, run without the check's scope limit, covers those.
+
 ### Step 2: Partition the scope and fan out
 
 The primary partitions the audit scope into independent chunks, then dispatches one `general-purpose` subagent per chunk **in parallel** — single message, multiple `Agent` tool calls.
@@ -191,6 +206,7 @@ Offer:
 2. For each `MISMATCH` finding, ask whether to draft a paper edit, file a code issue (via `/bip-issue-check` → `/bip-issue-file`), or both.
 3. Do not auto-edit the paper or auto-file issues.
    The user decides.
+4. With a `provenance.yaml`, once every finding is resolved, set its `audited_through` to the paper commit the audit read and commit it; the next check then marks only sentences changed since.
 
 ## Guidelines
 
@@ -238,7 +254,7 @@ Offer:
   A bad finding propagated as a paper edit is much more expensive than the same finding in a markdown report.
   The user reads, decides, and dispatches.
 - **No state directory.**
-  Unlike `/bip-decay-audit`, this skill does not maintain a per-repo baseline — papers and code change together, so a "regression since last audit" framing isn't useful here.
+  Unlike `/bip-decay-audit`, this skill keeps no baseline of its own; the only state is a ledger's `audited_through`, committed in the paper repo.
   Re-run as needed; the report is the artifact.
 
 ## References
