@@ -140,7 +140,8 @@ func hasNo(t *testing.T, m map[string][]string, id, level string) {
 
 func TestCheck(t *testing.T) {
 	code, shas := codeRepo(t)
-	m := byID(runCheck(t, paperDir(t, shas), code))
+	fs := runCheck(t, paperDir(t, shas), code)
+	m := byID(fs)
 
 	// A JSON file re-rendered with the same value passes; a changed value errors.
 	hasNo(t, m, "same1", LevelError)
@@ -154,14 +155,23 @@ func TestCheck(t *testing.T) {
 		}
 	}
 
-	// A path renamed at the pin errors, and an unreachable pin errors.
+	// A path renamed at the pin errors.
 	has(t, m, "renamed", LevelError, "old.txt missing")
-	has(t, m, "unreach", LevelError, "unreachable")
 
-	// Three launches: holds at C1, absent at C2, D unreachable.
+	// D is unreachable, pinned by unreach and a launch of run multi: one error.
+	var unreachable []Finding
+	for _, f := range fs {
+		if strings.Contains(f.Message, "unreachable") {
+			unreachable = append(unreachable, f)
+		}
+	}
+	if len(unreachable) != 1 || unreachable[0].ID != "run:multi" || !strings.Contains(unreachable[0].Message, "used by 2 entries") {
+		t.Errorf("want one unreachable error for run:multi used by 2 entries, got %v", unreachable)
+	}
+
+	// Three launches: holds at C1, absent at C2, D skipped (reported above).
 	has(t, m, "multi", LevelError, "pattern absent from nextflow.config at "+shas["C2"][:8])
 	has(t, m, "multi", LevelError, "holds at "+shas["C1"][:8])
-	has(t, m, "multi", LevelError, "unreachable")
 
 	// A CRLF file matches an LF pattern.
 	hasNo(t, m, "crlf", LevelError)
@@ -172,9 +182,7 @@ func TestCheck(t *testing.T) {
 	}
 	has(t, m, "run:pipe", LevelInfo, "HEAD at collection")
 	hasNo(t, m, "pipe", LevelError)
-	if len(m["run:multi"]) != 0 {
-		t.Errorf("run:multi reads launches[], want no finding, got %q", m["run:multi"])
-	}
+	hasNo(t, m, "run:multi", LevelInfo) // reads launches[], not pipeline_sha
 
 	// Tags: no entry, no leading space, the \input file is scanned.
 	has(t, m, "nosuch", LevelError, "no ledger entry")

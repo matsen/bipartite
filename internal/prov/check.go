@@ -47,6 +47,17 @@ type checker struct {
 	findings []Finding
 	repos    map[string]*repoState
 	launches map[string][]string
+	commits  map[string]*commitState // by repo + " " + sha
+	bad      []*commitState          // unresolvable commits, in first-use order
+}
+
+// commitState memoises one commit's resolution, so an unreachable commit is
+// one finding however many entries use it.
+type commitState struct {
+	full  string
+	err   error
+	id    string // first user: the entry, or run:<name> for a launch
+	users int
 }
 
 type repoState struct {
@@ -66,7 +77,7 @@ func Check(opts Options) ([]Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &checker{opts: opts, ledger: l, paper: p, repos: map[string]*repoState{}, launches: map[string][]string{}}
+	c := &checker{opts: opts, ledger: l, paper: p, repos: map[string]*repoState{}, launches: map[string][]string{}, commits: map[string]*commitState{}}
 	c.checkTags()
 	ids := make([]string, 0, len(l.Entries))
 	for id := range l.Entries {
@@ -77,6 +88,9 @@ func Check(opts Options) ([]Finding, error) {
 		c.checkEntry(id, l.Entries[id])
 	}
 	c.checkRenderPin()
+	for _, b := range c.bad {
+		c.add(LevelError, b.id, "%v (used by %d entries)", b.err, b.users)
+	}
 	rank := map[string]int{LevelError: 0, LevelReview: 1, LevelInfo: 2}
 	sort.SliceStable(c.findings, func(i, j int) bool {
 		return rank[c.findings[i].Level] < rank[c.findings[j].Level]
@@ -236,6 +250,23 @@ func (c *checker) factsLaunches(name string, pin *Pin) ([]string, error) {
 	return commits, nil
 }
 
+// commit resolves sha in repo once. An unresolvable commit is reported at
+// the end of Check; callers skip it silently.
+func (c *checker) commit(repo string, g gitRepo, sha, id string) (string, bool) {
+	key := repo + " " + sha
+	st, ok := c.commits[key]
+	if !ok {
+		st = &commitState{id: id}
+		st.full, st.err = g.commit(sha)
+		c.commits[key] = st
+		if st.err != nil {
+			c.bad = append(c.bad, st)
+		}
+	}
+	st.users++
+	return st.full, st.err == nil
+}
+
 func containsPrefix(commits []string, sha string) bool {
 	for _, c := range commits {
 		if strings.HasPrefix(c, sha) || strings.HasPrefix(sha, c) {
@@ -300,8 +331,9 @@ func (c *checker) checkEntry(id string, e Entry) {
 		c.add(LevelError, id, "%v", err)
 		return
 	}
-	commits := []string{e.SHA}
+	commits, user := []string{e.SHA}, id
 	if e.SHA == "" {
+		user = "run:" + e.Run
 		if e.Run == "" {
 			c.add(LevelError, id, "entry has neither sha nor run")
 			return
@@ -319,9 +351,8 @@ func (c *checker) checkEntry(id string, e Entry) {
 
 	var holds, fails []string
 	for _, sha := range commits {
-		full, err := g.commit(sha)
-		if err != nil {
-			c.add(LevelError, id, "%v", err)
+		full, ok := c.commit(repoName, g, sha, user)
+		if !ok {
 			continue
 		}
 		switch {

@@ -33,7 +33,7 @@ func (g gitRepo) fetch() error {
 func (g gitRepo) commit(sha string) (string, error) {
 	out, err := g.run("rev-parse", "--verify", "--quiet", sha+"^{commit}")
 	if err != nil {
-		return "", fmt.Errorf("commit %s not found", sha)
+		return "", fmt.Errorf("commit %s not found", short(sha))
 	}
 	full := strings.TrimSpace(string(out))
 	refs, err := g.run("for-each-ref", "--count=1", "--contains", full, "refs/remotes", "refs/tags")
@@ -41,7 +41,7 @@ func (g gitRepo) commit(sha string) (string, error) {
 		return "", err
 	}
 	if len(bytes.TrimSpace(refs)) == 0 {
-		return "", fmt.Errorf("commit %s is unreachable from any remote branch or tag", sha)
+		return "", fmt.Errorf("commit %s is unreachable from any remote branch or tag", short(sha))
 	}
 	return full, nil
 }
