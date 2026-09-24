@@ -416,6 +416,8 @@ func (c *checker) checkEntry(id string, e Entry) {
 			msg += fmt.Sprintf(" (holds at %s; name the launch in the prose and pin its sha)", strings.Join(holds, ", "))
 		}
 		c.add(LevelError, id, "%s", msg)
+	} else if len(holds) > 0 {
+		c.checkMainPattern(id, e, g)
 	}
 	if e.Key != "" || e.Blob != "" {
 		c.checkMain(id, e, g)
@@ -528,6 +530,20 @@ func toFloat(v any) (float64, bool) {
 		return x, true
 	}
 	return 0, false
+}
+
+// checkMainPattern notes a code claim that holds where it is checked but no
+// longer holds at origin/main: the paper describes the run, and main has
+// moved on. It is info, since that is expected until a rerun supersedes it.
+func (c *checker) checkMainPattern(id string, e Entry, g gitRepo) {
+	data, err := g.show("origin/main", e.Path)
+	if err != nil {
+		c.add(LevelInfo, id, "%s is gone at origin/main", e.Path)
+		return
+	}
+	if containsNormalized(data, e.Pattern+e.Absent) != (e.Pattern != "") {
+		c.add(LevelInfo, id, "no longer holds at origin/main in %s; main has moved on from what the paper describes", e.Path)
+	}
 }
 
 // checkMain flags a result file that origin/main holds in a different

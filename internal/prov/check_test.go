@@ -52,7 +52,7 @@ func codeRepo(t *testing.T) (string, map[string]string) {
 		"old.txt":         "",
 		"new.txt":         "so it says\n",
 	})
-	shas["C4"] = commitFiles(t, dir, map[string]string{"nextflow.config": "nothing here\n"})
+	shas["C4"] = commitFiles(t, dir, map[string]string{"nextflow.config": "nothing here\nother = 1\n"})
 	shas["C3"] = commitFiles(t, dir, map[string]string{
 		"results.json":        `{"corpus": {"pcps_changed": 0.021}}`,
 		"facts_pipeline.json": `{"pipeline_sha": "` + shas["C1"] + `"}`,
@@ -184,6 +184,13 @@ func TestCheck(t *testing.T) {
 
 	// A CRLF file matches an LF pattern.
 	hasNo(t, m, "crlf", LevelError)
+	// It holds at its pin but not at origin/main: one info, not an error.
+	has(t, m, "crlf", LevelInfo, "no longer holds at origin/main")
+	for _, s := range m["pipe"] {
+		if strings.Contains(s, "origin/main") {
+			t.Errorf("pipe still holds at origin/main: %s", s)
+		}
+	}
 
 	// pipeline_sha fallback: one info for the run, and the claim still checks.
 	if got := len(m["run:pipe"]); got != 1 {
