@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/matsen/bipartite/internal/config"
-	"github.com/matsen/bipartite/internal/flow"
 	"github.com/matsen/bipartite/internal/prov"
 	"github.com/spf13/cobra"
 )
@@ -25,8 +25,9 @@ var provCheckCmd = &cobra.Command{
 	Short: "Check %PROV tags and provenance.yaml against the code repos",
 	Long: `Check every %PROV[id] tag in the main TeX file (and every file it \inputs)
 against provenance.yaml, and every ledger entry against git objects of the
-repos it names. Repos resolve to local clones through sources.yml; each is
-fetched first, and only git objects are read, never a working tree.
+repos it names. Each repo is read from a bare clone bip keeps under
+$NEXUS_PATH/.bipartite/cache/prov/, created on first use and fetched first;
+no other checkout is read or fetched.
 
 Findings are error, review, or info. The exit code is nonzero on any error.
 paper-dir holds provenance.yaml and the main TeX file; it defaults to the
@@ -37,7 +38,7 @@ current directory and must be a git work tree.`,
 
 func init() {
 	provCheckCmd.Flags().StringVar(&provMain, "main", "main.tex", "main TeX file, relative to paper-dir")
-	provCheckCmd.Flags().BoolVar(&provNoFetch, "no-fetch", false, "skip git fetch of each repo")
+	provCheckCmd.Flags().BoolVar(&provNoFetch, "no-fetch", false, "skip git fetch of each cached repo")
 	provCmd.AddCommand(provCheckCmd)
 	rootCmd.AddCommand(provCmd)
 }
@@ -54,8 +55,7 @@ func runProvCheck(cmd *cobra.Command, args []string) error {
 		Ledger:   "provenance.yaml",
 		Fetch:    !provNoFetch,
 		Resolve: func(repo string) (string, error) {
-			rp, err := flow.ResolveRepoPath(nexus, repo, flow.ResolveContext{})
-			return rp.Path, err
+			return prov.CacheClone(filepath.Join(config.CachePath(nexus), "prov"), repo)
 		},
 	})
 	if err != nil {

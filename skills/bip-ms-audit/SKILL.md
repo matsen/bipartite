@@ -64,7 +64,7 @@ bip prov check --human --main <paper-file>
 It runs every mechanical check against git objects of the ledger's repos and exits nonzero on any `error`.
 The audit scope is then only its `error` and `review` findings, not the whole paper: each finding names a tag id, its `file:line` and the entry's `scope`.
 Give each subagent the sentence, the entry, and its `scope`, and have it judge whether the sentence says what the source shows for that population and stage.
-`info` findings (`unsourced` entries, unused entries, runs whose producing commit is HEAD at collection) go to the report without a subagent.
+`info` findings (`unsourced` entries, unused entries, runs whose producing commit is HEAD at collection, code claims that no longer hold at origin/main) go to the report without a subagent.
 If the check reports nothing at `error` or `review`, there is nothing to audit; skip to the report.
 
 The check cannot see a change in a neighbouring sentence that alters a number's meaning, a flag overridden elsewhere (`params/*.yml` over `nextflow.config`), or a superseded result file still present.

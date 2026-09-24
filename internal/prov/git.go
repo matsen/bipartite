@@ -3,7 +3,9 @@ package prov
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -24,8 +26,33 @@ func (g gitRepo) run(args ...string) ([]byte, error) {
 }
 
 func (g gitRepo) fetch() error {
-	_, err := g.run("fetch", "--quiet", "origin")
+	_, err := g.run("fetch", "--quiet", "--prune", "--tags", "origin", "+refs/heads/*:refs/remotes/origin/*")
 	return err
+}
+
+// CacheClone returns a bare clone of repo (org/name) under dir, creating it
+// on first use. The check reads and fetches only this clone, never a
+// checkout another session works in.
+func CacheClone(dir, repo string) (string, error) {
+	path := filepath.Join(dir, repo+".git")
+	if _, err := os.Stat(path); err == nil {
+		return path, nil
+	}
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return "", err
+	}
+	g := gitRepo{dir: path}
+	if _, err := g.run("init", "--quiet", "--bare"); err != nil {
+		return "", err
+	}
+	if _, err := g.run("remote", "add", "origin", "git@github.com:"+repo+".git"); err != nil {
+		return "", err
+	}
+	if err := g.fetch(); err != nil {
+		os.RemoveAll(path)
+		return "", fmt.Errorf("cloning %s: %w", repo, err)
+	}
+	return path, nil
 }
 
 // commit resolves sha to a full commit SHA and errors unless some remote
