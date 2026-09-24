@@ -49,6 +49,7 @@ type checker struct {
 	launches map[string][]string
 	commits  map[string]*commitState // by repo + " " + sha
 	bad      []*commitState          // unresolvable commits, in first-use order
+	dirty    map[string]bool         // entries with a source error or review, or an unresolvable commit
 }
 
 // commitState memoises one commit's resolution, so an unreachable commit is
@@ -77,7 +78,7 @@ func Check(opts Options) ([]Finding, error) {
 	if err != nil {
 		return nil, err
 	}
-	c := &checker{opts: opts, ledger: l, paper: p, repos: map[string]*repoState{}, launches: map[string][]string{}, commits: map[string]*commitState{}}
+	c := &checker{opts: opts, ledger: l, paper: p, repos: map[string]*repoState{}, launches: map[string][]string{}, commits: map[string]*commitState{}, dirty: map[string]bool{}}
 	c.checkTags()
 	ids := make([]string, 0, len(l.Entries))
 	for id := range l.Entries {
@@ -85,8 +86,15 @@ func Check(opts Options) ([]Finding, error) {
 	}
 	sort.Strings(ids)
 	for _, id := range ids {
+		before := len(c.findings)
 		c.checkEntry(id, l.Entries[id])
+		for _, f := range c.findings[before:] {
+			if f.Level != LevelInfo {
+				c.dirty[id] = true
+			}
+		}
 	}
+	c.checkDerived(ids)
 	c.checkRenderPin()
 	for _, b := range c.bad {
 		c.add(LevelError, b.id, "%v (used by %d entries)", b.err, b.users)
@@ -293,9 +301,18 @@ func (c *checker) checkEntry(id string, e Entry) {
 			n++
 		}
 	}
+	if len(e.From) > 0 {
+		n++
+	}
 	if n != 1 {
-		c.add(LevelError, id, "entry has %d extractors; want exactly one of key, pattern, absent, blob, unsourced", n)
+		c.add(LevelError, id, "entry has %d extractors; want exactly one of key, pattern, absent, blob, from, unsourced", n)
 		return
+	}
+	if len(e.From) > 0 {
+		if e.Scope == "" {
+			c.add(LevelError, id, "derived entry needs a scope")
+		}
+		return // checked by checkDerived once every input is checked
 	}
 	if e.Unsourced != "" {
 		c.add(LevelInfo, id, "unsourced: %s", e.Unsourced)
@@ -353,6 +370,7 @@ func (c *checker) checkEntry(id string, e Entry) {
 	for _, sha := range commits {
 		full, ok := c.commit(repoName, g, sha, user)
 		if !ok {
+			c.dirty[id] = true
 			continue
 		}
 		switch {
@@ -392,6 +410,49 @@ func (c *checker) checkEntry(id string, e Entry) {
 	}
 	if e.Key != "" || e.Blob != "" {
 		c.checkMain(id, e, g)
+	}
+}
+
+// checkDerived sends a from: entry to review when any input, transitively,
+// has a source error or review. The arithmetic itself stays in the prose.
+func (c *checker) checkDerived(ids []string) {
+	state := map[string]int{} // 0 unvisited, 1 visiting, 2 done
+	var visit func(id string)
+	visit = func(id string) {
+		if state[id] == 1 {
+			c.add(LevelError, id, "from: cycle through this entry")
+			return
+		}
+		if state[id] == 2 {
+			return
+		}
+		state[id] = 1
+		for _, in := range c.ledger.Entries[id].From {
+			if _, ok := c.ledger.Entries[in]; !ok {
+				c.add(LevelError, id, "from: %q is not a ledger entry", in)
+				continue
+			}
+			visit(in)
+			if c.dirty[in] {
+				c.dirty[id] = true
+			}
+		}
+		state[id] = 2
+	}
+	for _, id := range ids {
+		visit(id)
+	}
+	for _, id := range ids {
+		e := c.ledger.Entries[id]
+		var why []string
+		for _, in := range e.From {
+			if c.dirty[in] {
+				why = append(why, in)
+			}
+		}
+		if len(why) > 0 {
+			c.add(LevelReview, id, "input changed: %s; recompute from the prose", strings.Join(why, ", ")).Scope = e.Scope
+		}
 	}
 }
 

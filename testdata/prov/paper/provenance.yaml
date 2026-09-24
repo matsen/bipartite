@@ -55,3 +55,24 @@ entries:
     pattern: "joint"
   spare:
     unsourced: "no committed source"
+  d_changed:   # computed from an input whose value changed
+    from: [crlf, changed]
+    scope: "derived"
+  d_clean:
+    from: [crlf]
+    scope: "derived"
+  d_trans:     # changed only through d_changed
+    from: [d_clean, d_changed]
+    scope: "derived"
+  d_unreach:   # its input's commit is unreachable
+    from: [unreach]
+    scope: "derived"
+  d_missing:
+    from: [nosuch_entry]
+    scope: "derived"
+  cyc_a:
+    from: [cyc_b]
+    scope: "derived"
+  cyc_b:
+    from: [cyc_a]
+    scope: "derived"

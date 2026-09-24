@@ -196,6 +196,28 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+func TestDerived(t *testing.T) {
+	code, shas := codeRepo(t)
+	m := byID(runCheck(t, paperDir(t, shas), code))
+
+	has(t, m, "d_changed", LevelReview, "input changed: changed")
+	hasNo(t, m, "d_clean", LevelReview)
+	has(t, m, "d_trans", LevelReview, "input changed: d_changed")
+	has(t, m, "d_unreach", LevelReview, "input changed: unreach")
+	has(t, m, "d_missing", LevelError, `"nosuch_entry" is not a ledger entry`)
+	cycles := 0
+	for _, id := range []string{"cyc_a", "cyc_b"} {
+		for _, s := range m[id] {
+			if strings.Contains(s, "cycle") {
+				cycles++
+			}
+		}
+	}
+	if cycles != 1 {
+		t.Errorf("want one cycle error, got %d: %q %q", cycles, m["cyc_a"], m["cyc_b"])
+	}
+}
+
 func TestChangedSentenceIsReview(t *testing.T) {
 	code, shas := codeRepo(t)
 	paper := paperDir(t, shas)

@@ -33,20 +33,21 @@ type Pin struct {
 }
 
 // Entry is one sourced claim. It has exactly one extractor: Key, Pattern,
-// Absent, Blob, or Unsourced.
+// Absent, Blob, From, or Unsourced.
 type Entry struct {
-	Run       string `yaml:"run"`
-	Repo      string `yaml:"repo"`
-	SHA       string `yaml:"sha"`
-	Path      string `yaml:"path"`
-	Key       string `yaml:"key"`
-	Value     any    `yaml:"value"`
-	Pattern   string `yaml:"pattern"`
-	Absent    string `yaml:"absent"`
-	Blob      string `yaml:"blob"`
-	Unsourced string `yaml:"unsourced"`
-	Token     string `yaml:"token"`
-	Scope     string `yaml:"scope"`
+	Run       string   `yaml:"run"`
+	Repo      string   `yaml:"repo"`
+	SHA       string   `yaml:"sha"`
+	Path      string   `yaml:"path"`
+	Key       string   `yaml:"key"`
+	Value     any      `yaml:"value"`
+	Pattern   string   `yaml:"pattern"`
+	Absent    string   `yaml:"absent"`
+	Blob      string   `yaml:"blob"`
+	Unsourced string   `yaml:"unsourced"`
+	From      []string `yaml:"from"` // ids this derived value is computed from
+	Token     string   `yaml:"token"`
+	Scope     string   `yaml:"scope"`
 }
 
 // LoadLedger reads a ledger, rejecting unknown fields and duplicate ids.
