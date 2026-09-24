@@ -48,9 +48,7 @@ If new result paths were discovered but not added to `fetch_cmds`, note them for
 
 ### Step 4: Update the durable session state
 
-**Do not write memory files** under `~/.claude/projects/*/memory/` — they are keyed by
-working directory, so they are invisible to other clones and to Erick.
-Everything below lives in the repo instead.
+Everything below lives in the repo.
 
 1. **`misc/session-onboarding.md`** (create it if the repo has none — see the copies in
    `protein-dasm-tex` and `superfamily-pcp-tex` for the shape).

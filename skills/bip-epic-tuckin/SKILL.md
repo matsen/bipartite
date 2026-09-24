@@ -42,7 +42,6 @@ Only what survives both gates gets a destination:
 - A workflow rule → a skill.
 - A cross-EPIC pattern or key decision not yet captured anywhere → the EPIC body it's most relevant to, or the Step 3 report below if none fits.
 - Nothing else fits → the Step 3 report.
-  This is where a user who has opted out of auto-memory files will actually see it — don't treat a MEMORY.md write as the only or required destination.
 
 ### Step 2b: Write the continuation artifact — a long file plus a short prompt
 

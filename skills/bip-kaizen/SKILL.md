@@ -57,7 +57,6 @@ Determine where the fix belongs:
 | **CLAUDE.md** (current project) | Agent lacked project-specific context | Missing build command, file path, convention |
 | **CLAUDE.md** (global `~/.claude/CLAUDE.md`) | Agent lacked cross-project context | Personal workflow preference, tool config |
 | **Skill file** (bipartite `skills/`) | A `/skill` gave wrong or incomplete guidance | Missing flag, outdated workflow, bad example |
-| **Auto-memory** (`~/.claude/projects/*/memory/`) | Pattern worth remembering but not suitable for CLAUDE.md | Debugging insight, one-off workaround |
 | **Code/docs in current repo** | Missing README, help text, or inline docs | CLI `--help` text doesn't match behavior |
 | **Code in bipartite repo** | Bug or missing feature in a bip command or skill | Skill needs new step, CLI needs better error message |
 | **New skill** | Repeated workflow that should be a `/command` | Multi-step process done manually every time |
@@ -135,7 +134,7 @@ Present options:
 
 Based on user choice:
 
-**Apply now** (CLAUDE.md, skill, or memory edits):
+**Apply now** (CLAUDE.md or skill edits):
 - Edit the target file directly
 - For bipartite skill changes, the working tree is at `~/re/bipartite`
 

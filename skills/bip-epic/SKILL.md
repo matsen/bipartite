@@ -64,7 +64,7 @@ It owns the clone/worktree layout questions (clone mode vs. worktree mode, clone
 
 ## Workflow
 
-### Step 1: Load config and memory
+### Step 1: Load config
 
 ```bash
 git pull --ff-only origin main || echo "PULL FAILED — you are on a stale tree; fix this before reading anything"
@@ -81,8 +81,6 @@ git ls-files | /usr/bin/grep 'CLAUDE\.md$'
 ```
 
 Use `git ls-files`, not `find`: vendored copies and stale nested clones also contain files named `CLAUDE.md`. Before claiming a measured number is new, grep the experiment's own README for it.
-
-If this project uses the auto-memory directory, also read its MEMORY.md for topic-level context from previous sessions — some setups deliberately don't use it, in which case rely on EPIC bodies and issue history instead.
 
 **Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.epic-session` — this is how the conductor finds the epic to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows.
 See `/bip-conductor`'s Conventions section ("Completion pushes").

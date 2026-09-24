@@ -123,7 +123,7 @@ cat .ms-config.json
 ```
 
 Read `misc/session-onboarding.md` and `CLAUDE.md`.
-Durable session state lives in the repo, not in `~/.claude/*/memory/` files — `/bip-ms-tuckin` Step 4 is the contract for what goes where.
+Durable session state lives in the repo; `/bip-ms-tuckin` Step 4 is the contract for what goes where.
 The onboarding doc carries what the paper is and is not, the peer sessions and their remits, the working disciplines, and the open threads; take it as the baseline for what is done vs. in flight.
 
 It never records open/merged/closed status, so cross-check every open thread against live GitHub before acting: where the doc and `gh pr view`/`gh issue view` disagree on where a thread stands, trust GitHub.
