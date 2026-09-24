@@ -16,7 +16,7 @@ It is an orientation for what to do next, pointing at the durable state rather t
 
 ## Canonical location
 
-`_ignore/CONTINUE.md`, in the working directory's repo root.
+`_ignore/CONTINUE.md`, in the directory the next session will start in (the hook reads it relative to that session's cwd).
 It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks it).
 One fixed path, so the `SessionStart` hook below can load it and the next session always knows where to look.
 
@@ -43,5 +43,6 @@ Point at the check, not the answer.
 
 ## Auto-loading it
 
-A `SessionStart` hook (matcher `clear|compact`) running `cat _ignore/CONTINUE.md 2>/dev/null || true` injects the prompt into the next session's context after a `/clear` or `/compact`, with no paste.
-The hook lives in the user's `~/.claude/settings.json`.
+A `SessionStart` hook on matcher `clear` reads `_ignore/CONTINUE.md` and moves it aside to `.used`, so a `/clear` loads the prompt into the next session with no paste and it is consumed once.
+The matcher is `clear` only, not `compact`: automatic compaction fires mid-task, where injecting a stale prompt would be wrong.
+The hook lives in the user's `~/.claude/settings.json`; a tuckin just overwrites `_ignore/CONTINUE.md` each run and can ignore the `.used` file the hook leaves.
