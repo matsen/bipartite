@@ -154,6 +154,6 @@ Topic-side state (EPIC bodies) is unaffected by this — run
 
 ### Step 6: Continuation prompt
 
-Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+Write the continuation prompt to `_ignore/CONTINUE-conductor.md` and echo it, per `docs/guides/continuation-prompt.md`.
 For this session: start in the fleet working directory, run `/bip-conductor`, and the durable state is the slot files and queued spawn intents this tuckin wrote under the clone pool.
 Then: safe to reset context.

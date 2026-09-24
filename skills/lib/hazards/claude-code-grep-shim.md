@@ -19,7 +19,7 @@ grep -rl NEEDLE .            ->  (nothing)
 ```
 
 **Why it matters here specifically, and the conjunction is the whole failure:** this project's
-convention puts continuation notes in `_ignore/CONTINUE.md`, and the three `CONTINUATION*.md`
+convention puts continuation notes in `_ignore/CONTINUE-<role>.md`, and the three `CONTINUATION*.md`
 files holding the fleet's highest-firing guidance are gitignored. A gitignored home for
 load-bearing notes plus a grep that skips gitignored paths means **searching them returns empty
 and reads as "absent."** Neither half is remarkable alone.

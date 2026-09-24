@@ -82,6 +82,6 @@ If it's a few commits into early exploration, leave it as a branch — don't for
 
 ### Step 5: Continuation prompt
 
-Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+Write the continuation prompt to `_ignore/CONTINUE-spawn.md` and echo it, per `docs/guides/continuation-prompt.md`.
 For this session: start in the clone/worktree, run `/bip-spawn-resume`, and the durable state is the PR (its body and comments) or, if none exists yet, the pushed branch.
 Then: safe to reset context.
