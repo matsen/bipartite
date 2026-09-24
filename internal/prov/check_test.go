@@ -257,14 +257,21 @@ func TestChangedSentenceIsReview(t *testing.T) {
 	}
 	after := runCheck(t, paper, code)
 
-	var reviews []string
+	reviews := map[string]string{}
 	for _, f := range after {
-		if f.Level == LevelReview && strings.Contains(f.Message, "sentence") {
-			reviews = append(reviews, f.ID)
+		if f.Level == LevelReview && strings.Contains(f.Message, "since") {
+			reviews[f.ID] = f.Message
 		}
 	}
-	if len(reviews) != 1 || reviews[0] != "multi" {
-		t.Errorf("want one sentence review for multi, got %v", reviews)
+	// The edited line's tag, then the other tags of its paragraph.
+	want := map[string]string{"multi": "tagged sentence changed", "renamed": "in its paragraph", "unreach": "in its paragraph", "pipe": "in its paragraph"}
+	if len(reviews) != len(want) {
+		t.Errorf("want reviews for %v, got %v", want, reviews)
+	}
+	for id, sub := range want {
+		if !strings.Contains(reviews[id], sub) {
+			t.Errorf("%s: want review containing %q, got %q", id, sub, reviews[id])
+		}
 	}
 	count := func(fs []Finding) (n int) {
 		for _, f := range fs {
@@ -277,6 +284,39 @@ func TestChangedSentenceIsReview(t *testing.T) {
 	if count(before) != count(after) {
 		t.Errorf("editing a sentence changed the error count: %d → %d", count(before), count(after))
 	}
+}
+
+func TestLedgerEditIsReview(t *testing.T) {
+	code, shas := codeRepo(t)
+	paper := paperDir(t, shas)
+	ledger := filepath.Join(paper, "provenance.yaml")
+	data, _ := os.ReadFile(ledger)
+	head := git(t, paper, "rev-parse", "HEAD")
+	edited := strings.Replace(string(data), `scope: "tree edges of the sample"`, `scope: "tree edges of the pilot"`, 1)
+	if err := os.WriteFile(ledger, []byte("audited_through: "+head+"\n"+edited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	m := byID(runCheck(t, paper, code))
+	has(t, m, "same1", LevelReview, "ledger entry changed")
+	for _, id := range []string{"same2", "crlf"} {
+		for _, s := range m[id] {
+			if strings.Contains(s, "since") {
+				t.Errorf("%s reviewed with no change: %s", id, s)
+			}
+		}
+	}
+}
+
+func TestFromCountsAsUse(t *testing.T) {
+	code, shas := codeRepo(t)
+	m := byID(runCheck(t, paperDir(t, shas), code))
+	// cyc_a is untagged, but cyc_b uses it as an input.
+	for _, s := range m["cyc_a"] {
+		if strings.Contains(s, "no tag uses") {
+			t.Errorf("cyc_a used by from: but reported unused: %s", s)
+		}
+	}
+	has(t, m, "d_trans", LevelInfo, "no tag uses") // nothing tags or uses it
 }
 
 func TestDuplicateID(t *testing.T) {
