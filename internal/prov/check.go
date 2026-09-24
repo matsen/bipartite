@@ -240,7 +240,9 @@ func (c *checker) factsLaunches(name string, pin *Pin) ([]string, error) {
 	}
 	var facts struct {
 		Launches []struct {
-			Commit string `json:"commit"`
+			RunName string    `json:"run_name"`
+			Commit  string    `json:"commit"`
+			Stages  *[]string `json:"stages"`
 		} `json:"launches"`
 		PipelineSHA string `json:"pipeline_sha"`
 	}
@@ -249,6 +251,13 @@ func (c *checker) factsLaunches(name string, pin *Pin) ([]string, error) {
 	}
 	var commits []string
 	for _, l := range facts.Launches {
+		if l.Stages != nil && len(*l.Stages) == 0 {
+			continue // submitted no tasks, so no claim describes it
+		}
+		if l.Commit == "" {
+			c.add(LevelInfo, "run:"+name, "launch %s has no attested commit; its code claims are unchecked", l.RunName)
+			continue
+		}
 		commits = append(commits, l.Commit)
 	}
 	if facts.Launches == nil && facts.PipelineSHA != "" {
