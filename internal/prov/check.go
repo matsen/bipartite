@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Finding levels.
@@ -137,6 +140,7 @@ func (c *checker) checkTags() {
 		f.File, f.Line = t.File, t.Line
 	}
 	old, oldErr := c.auditedLines()
+	oldEntries := c.auditedEntries(oldErr)
 	for _, t := range c.paper.Tags {
 		e, ok := c.ledger.Entries[t.ID]
 		if !ok {
@@ -156,11 +160,47 @@ func (c *checker) checkTags() {
 			continue // reported once by auditedLines
 		case !old[t.File][t.Text]:
 			f = c.add(LevelReview, t.ID, "tagged sentence changed since %s", c.ledger.AuditedThrough)
+		case !reflect.DeepEqual(oldEntries[t.ID], e):
+			c.dirty[t.ID] = true
+			f = c.add(LevelReview, t.ID, "ledger entry changed since %s", c.ledger.AuditedThrough)
+		case !allIn(t.Para, old[t.File]):
+			f = c.add(LevelReview, t.ID, "a sentence in its paragraph changed since %s", c.ledger.AuditedThrough)
 		default:
 			continue
 		}
 		f.File, f.Line, f.Scope = t.File, t.Line, e.Scope
 	}
+}
+
+func allIn(lines []string, set map[string]bool) bool {
+	for _, l := range lines {
+		if !set[l] {
+			return false
+		}
+	}
+	return true
+}
+
+// auditedEntries returns the ledger's entries as committed at
+// audited_through, or nil if there is none to compare against.
+func (c *checker) auditedEntries(oldErr error) map[string]Entry {
+	if c.ledger.AuditedThrough == "" || oldErr != nil {
+		return nil
+	}
+	g := gitRepo{dir: c.opts.PaperDir}
+	prefix, err := g.run("rev-parse", "--show-prefix")
+	if err != nil {
+		return nil
+	}
+	data, err := g.show(c.ledger.AuditedThrough, filepath.ToSlash(filepath.Join(strings.TrimSpace(string(prefix)), c.opts.Ledger)))
+	if err != nil {
+		return nil // no ledger then: every entry counts as changed
+	}
+	var l Ledger
+	if err := yaml.Unmarshal(data, &l); err != nil {
+		return nil
+	}
+	return l.Entries
 }
 
 // auditedLines returns, per scanned file, the set of its lines at
@@ -299,6 +339,11 @@ func (c *checker) checkEntry(id string, e Entry) {
 		if t.ID == id {
 			used = true
 			break
+		}
+	}
+	for _, other := range c.ledger.Entries {
+		for _, in := range other.From {
+			used = used || in == id
 		}
 	}
 	if !used {
