@@ -158,7 +158,7 @@ func (c *checker) checkTags() {
 			f = c.add(LevelReview, t.ID, "tagged sentence not yet audited (no audited_through)")
 		case oldErr != nil:
 			continue // reported once by auditedLines
-		case !old[t.File][t.Text]:
+		case !old[t.File]["T:"+t.Sentence+"\x00"+t.ID]:
 			f = c.add(LevelReview, t.ID, "tagged sentence changed since %s", c.ledger.AuditedThrough)
 		case !reflect.DeepEqual(oldEntries[t.ID], e):
 			c.dirty[t.ID] = true
@@ -172,9 +172,9 @@ func (c *checker) checkTags() {
 	}
 }
 
-func allIn(lines []string, set map[string]bool) bool {
-	for _, l := range lines {
-		if !set[l] {
+func allIn(bodies []string, set map[string]bool) bool {
+	for _, b := range bodies {
+		if !set["B:"+b] {
 			return false
 		}
 	}
@@ -203,8 +203,11 @@ func (c *checker) auditedEntries(oldErr error) map[string]Entry {
 	return l.Entries
 }
 
-// auditedLines returns, per scanned file, the set of its lines at
-// audited_through. A tagged line absent from that set has changed.
+// auditedLines returns, per scanned file, what its lines held at
+// audited_through: "B:"+prose for each line's prose (the text before its
+// comment), and "T:"+prose+"\x00"+id for each tag on it. Comparing prose,
+// not whole lines, means renaming a tag does not spread review over its
+// paragraph; the renamed tag itself still differs.
 func (c *checker) auditedLines() (map[string]map[string]bool, error) {
 	at := c.ledger.AuditedThrough
 	if at == "" {
@@ -228,7 +231,12 @@ func (c *checker) auditedLines() (map[string]map[string]bool, error) {
 		// A file absent at audited_through leaves an empty set: every tag in it changed.
 		if data, err := g.show(at, filepath.ToSlash(filepath.Join(strings.TrimSpace(string(prefix)), rel))); err == nil {
 			for _, line := range strings.Split(string(data), "\n") {
-				set[strings.TrimRight(line, "\r")] = true
+				line = strings.TrimRight(line, "\r")
+				body := line[:commentStart(line)]
+				set["B:"+body] = true
+				for _, m := range tagRe.FindAllStringSubmatch(line, -1) {
+					set["T:"+body+"\x00"+m[1]] = true
+				}
 			}
 		}
 		sets[rel] = set
