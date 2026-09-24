@@ -52,10 +52,11 @@ func codeRepo(t *testing.T) (string, map[string]string) {
 		"old.txt":         "",
 		"new.txt":         "so it says\n",
 	})
+	shas["C4"] = commitFiles(t, dir, map[string]string{"nextflow.config": "nothing here\n"})
 	shas["C3"] = commitFiles(t, dir, map[string]string{
 		"results.json":        `{"corpus": {"pcps_changed": 0.021}}`,
 		"facts_pipeline.json": `{"pipeline_sha": "` + shas["C1"] + `"}`,
-		"facts_launches.json": `{"launches": [{"commit": "` + shas["C1"] + `"}, {"commit": "` + shas["C2"][:7] + `"}]}`,
+		"facts_launches.json": `{"launches": [{"commit": "` + shas["C1"] + `", "stages": ["ASR"]}, {"commit": "` + shas["C2"][:7] + `"}, {"commit": "` + shas["C4"] + `", "stages": []}]}`,
 	})
 	shas["D"] = commitFiles(t, dir, map[string]string{"nextflow.config": "joint = true\n"})
 	git(t, dir, "reset", "-q", "--hard", shas["C3"])
@@ -172,6 +173,12 @@ func TestCheck(t *testing.T) {
 	// Three launches: holds at C1, absent at C2, D skipped (reported above).
 	has(t, m, "multi", LevelError, "pattern absent from nextflow.config at "+shas["C2"][:8])
 	has(t, m, "multi", LevelError, "holds at "+shas["C1"][:8])
+	// A launch that submitted no tasks (stages: []) is not checked.
+	for _, s := range m["multi"] {
+		if strings.Contains(s, shas["C4"][:8]) {
+			t.Errorf("multi checked at the no-task launch C4: %s", s)
+		}
+	}
 
 	// A CRLF file matches an LF pattern.
 	hasNo(t, m, "crlf", LevelError)
