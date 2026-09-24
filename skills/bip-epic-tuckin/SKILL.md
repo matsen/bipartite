@@ -56,8 +56,8 @@ Only what survives both gates gets a destination:
 - **What is in flight**, per worker, and what each one's next decision point is.
 - **Housekeeping**: EPIC body headroom, known recurring conflicts, skill changes landed this session.
 
-**The prompt** is what you write to `_ignore/CONTINUE.md` and print for the user.
-Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; a `SessionStart` hook auto-loads it on the next reset.
+**The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user.
+Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; the next session loads it with `/bip-continue`.
 On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
 
 **Record approvals as `approved at <SHA>`, never as a state.** "Approved by both" is true when written and becomes misleading the moment anyone pushes. Same class of defect: a fact that expires silently.
@@ -72,7 +72,7 @@ Print a summary:
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
 - Topic-level findings: <none survived the filter | routed to CLAUDE.md/skill/EPIC body as listed>
-- Continuation: CONTINUATION-<N>.md (long) + _ignore/CONTINUE.md (prompt) written; prompt printed below
+- Continuation: CONTINUATION-<N>.md (long) + _ignore/CONTINUE-epic-<N>.md (prompt) written; prompt printed below
 
 Safe to reset context. Fleet-side state (clones, slots) is unaffected
 by this — run /bip-conductor-tuckin if that session is resetting too.

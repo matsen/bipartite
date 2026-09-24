@@ -126,6 +126,6 @@ Print a summary:
 
 ### Step 7: Continuation prompt
 
-Write the continuation prompt to `_ignore/CONTINUE.md` and echo it, per `docs/guides/continuation-prompt.md`.
+Write the continuation prompt to `_ignore/CONTINUE-ms.md` and echo it, per `docs/guides/continuation-prompt.md`.
 For this session: start in the tex repo, run `/bip-ms`, and the durable state is `misc/session-onboarding.md` plus the manuscript's `%PROV`/`%TODO` markers.
 Then: safe to reset context.
