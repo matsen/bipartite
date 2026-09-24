@@ -162,7 +162,7 @@ rm -f '%s' '%s'
 	}
 
 	// Create tmux window
-	cmd := exec.Command("tmux", "new-window", "-n", windowName, "-c", repoPath, "-P")
+	cmd := exec.Command("tmux", "new-window", "-d", "-n", windowName, "-c", repoPath, "-P")
 	output, err := cmd.Output()
 	if err != nil {
 		os.Remove(promptPath)
