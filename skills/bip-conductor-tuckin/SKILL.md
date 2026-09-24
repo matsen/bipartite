@@ -118,7 +118,7 @@ Before recording anything anywhere, run each candidate fleet-level finding throu
 
 1. **Is it derived?**
    Recomputable from `git`, `tmux`, `gh`, or the filesystem — record nothing, whatever the destination would have been.
-   Which remote host had a warm cache, which host was mid-build, local cache sizes, open-issue counts, which worker was blocked: all of these are re-measurable on demand and go stale within hours, so don't write them down anywhere, including MEMORY.md.
+   Which remote host had a warm cache, which host was mid-build, local cache sizes, open-issue counts, which worker was blocked: all of these are re-measurable on demand and go stale within hours, so don't write them down anywhere.
 2. **Is it already recorded?**
    A finding that produced an issue, PR, test, or doc needs no second copy.
 
@@ -127,7 +127,6 @@ Only what survives both gates gets a destination:
 - A workflow rule → a skill.
 - A finding → the test, doc, or issue it came from.
 - Nothing else fits → the Step 5 report below.
-  This is where a user who has opted out of auto-memory files will actually see it — don't treat a MEMORY.md write as the only or required destination.
 
 ### Step 4b: Record approvals as `approved at <SHA>`, never as a state
 

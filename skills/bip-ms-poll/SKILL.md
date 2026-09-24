@@ -35,7 +35,7 @@ Brief for each subagent:
 > Local path: `<local_path>`.
 > EPIC numbers: `<epics>`.
 > Fetch commands: `<fetch_cmds>`.
-> Last-seen EPIC `updatedAt`: `<timestamps>` (from primary's memory; if unknown, compare against the last 24h).
+> Last-seen EPIC `updatedAt`: `<timestamps>` (from the primary's previous poll; if unknown, compare against the last 24h).
 >
 > Tasks:
 > 1. For each EPIC, `gh issue view <N> --repo <org/repo> --json body,updatedAt`.
