@@ -147,8 +147,9 @@ Read `id`, `session_id`, `home`, `dir`, `dir_kind`, and `hold` from `$R` with `j
 - If it is missing from `ListAgents`, it has stopped.
   Resume it with the message as the prompt:
   ```bash
-  cd "$DIR" && claude --bg --resume "$SID" "<message>"
+  cd "$DIR" && claude --bg --resume "$SID" -n "<primary>-<role>" "<message>"
   ```
+  Without `-n` the resumed session is renamed from the prompt, and peers addressing the old name lose it.
   The resume reuses its saved `--settings` path and permission mode; if the settings file is gone, the resume fails — recreate the file (a new login shell does) and retry.
 - The user can watch or type to it with `claude attach <id>` (`←` returns to agent view, `Ctrl+Z` to the shell; the helper keeps running either way).
 
