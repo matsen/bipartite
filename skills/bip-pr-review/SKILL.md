@@ -137,10 +137,10 @@ Do not wait for it to complete before proceeding.
 
 ### Step 4.6: Cold read of a rendered notebook (conditional)
 
-When the diff adds or changes a notebook's committed render (`.html`), launch one `general-purpose` agent in parallel with Step 4. Give it the render's path and nothing else: no issue, PR, or thread, because every session that wrote or reviewed the PR already knows what the notebook was meant to say.
+When the diff adds or changes a committed notebook render, launch one `general-purpose` agent per render in parallel with Step 4. Key on the changed `.html` files themselves, since a render need not share its notebook's stem. Give the agent the render's path, plus the intended audience if the issue names one, and nothing else: no issue, PR, or thread, because every session that wrote or reviewed the PR already knows what the notebook was meant to say.
 
 ```
-Read <path to .html> as its intended reader would, knowing nothing else.
+Read <path to .html> as its intended reader (<audience, if named>) would, knowing nothing else.
 1. In two sentences: what question does it answer, and what is the answer?
    Say whether you could state both from the first screen.
 2. List every term used before it is defined, every forward reference,
