@@ -135,6 +135,20 @@ Do not wait for it to complete before proceeding.
 
 **If no scientific conclusion is detected**, skip this step and note "No scientific claims detected — skeptic review skipped" in the final report.
 
+### Step 4.6: Cold read of a rendered notebook (conditional)
+
+When the diff adds or changes a notebook's committed render (`.html`), launch one `general-purpose` agent in parallel with Step 4. Give it the render's path and nothing else: no issue, PR, or thread, because every session that wrote or reviewed the PR already knows what the notebook was meant to say.
+
+```
+Read <path to .html> as its intended reader would, knowing nothing else.
+1. In two sentences: what question does it answer, and what is the answer?
+   Say whether you could state both from the first screen.
+2. List every term used before it is defined, every forward reference,
+   and every result whose statement is interrupted by caveats.
+```
+
+A reader who cannot state the answer from the first screen is the finding. If the diff touches a notebook but commits no render, note "no render committed — cold read skipped".
+
 ### Step 5: Run Automated Checks
 
 Detect and run available quality tools:
@@ -240,6 +254,9 @@ Present a checklist summary:
 
 ### Scientific Conclusion Skeptic
 - [ ] Skeptic review: [verdict or "No scientific claims detected — skipped"]
+
+### Notebook Cold Read
+- [ ] Cold read: [stated question and answer, plus findings, or "no render in diff — skipped"]
 
 ### Large Files / Cruft
 - [x] No suspicious files found
