@@ -37,7 +37,7 @@ func writeFile(t *testing.T, path, body string, mode os.FileMode) {
 // fake tmux. gh answers the ceremony query with ceremony, the metadata query
 // with a PR from feat to main closing one issue, and issue view with
 // issueState. tmux reports one pane in the clone whose cursor is at cursor
-// ("" for no pane) and records kill-window calls.
+// ("" for no pane) and records kill-pane calls.
 func newReclaimFixture(t *testing.T, ceremony, issueState, cursor string) reclaimFixture {
 	t.Helper()
 	f := reclaimFixture{root: t.TempDir(), bin: t.TempDir()}
@@ -74,7 +74,7 @@ func newReclaimFixture(t *testing.T, ceremony, issueState, cursor string) reclai
 	tmux := "#!/bin/sh\ncase \"$1\" in\n" +
 		"list-panes) " + pane + " ;;\n" +
 		"display-message) echo " + shellQuote(cursor) + " ;;\n" +
-		"kill-window) echo \"$*\" >> " + shellQuote(filepath.Join(f.bin, "killed")) + " ;;\n" +
+		"kill-pane) echo \"$*\" >> " + shellQuote(filepath.Join(f.bin, "killed")) + " ;;\n" +
 		"esac\n"
 	writeFile(t, filepath.Join(f.bin, "tmux"), tmux, 0755)
 	return f
@@ -134,8 +134,8 @@ func TestReclaimSlot(t *testing.T) {
 			if code != 0 || !strings.HasPrefix(got, "RECLAIMED "+f.clone+" (feat -> main ") {
 				t.Fatalf("got %q (exit %d)", got, code)
 			}
-			if k := f.killed(); k != "kill-window -t %9" {
-				t.Errorf("kill-window calls = %q", k)
+			if k := f.killed(); k != "kill-pane -t %9" {
+				t.Errorf("kill-pane calls = %q", k)
 			}
 			if br := runGit(t, f.clone, "branch", "--show-current"); br != "main" {
 				t.Errorf("branch = %q, want main", br)
