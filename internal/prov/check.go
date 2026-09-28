@@ -387,6 +387,9 @@ func (c *checker) checkEntry(id string, e Entry) {
 	if (e.Value != nil || e.Blob != "") && e.Scope == "" {
 		c.add(LevelError, id, "entry with value or blob needs a scope")
 	}
+	if e.Pattern != "" && e.Value != nil && !strings.Contains(e.Pattern, fmt.Sprint(e.Value)) {
+		c.add(LevelError, id, "value %v is not in the pattern; a pattern entry's value is checked only through its pattern", e.Value)
+	}
 	if e.Key != "" && e.Value == nil {
 		c.add(LevelError, id, "key entry needs a value")
 		return
