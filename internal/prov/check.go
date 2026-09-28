@@ -448,7 +448,9 @@ func (c *checker) checkEntry(id string, e Entry) {
 			if err != nil {
 				c.add(LevelError, id, "%v", err)
 			} else if !strings.HasPrefix(got, e.Blob) {
-				c.add(LevelReview, id, "blob of %s at %s is %s, ledger has %s", e.Path, short(sha), short(got), e.Blob).Scope = e.Scope
+				// The pin is fixed, so its blob never changes: a mismatch is the entry contradicting itself,
+				// typically a re-pinned sha with the old blob. A newer render shows up through checkMain.
+				c.add(LevelError, id, "blob of %s at %s is %s, ledger has %s", e.Path, short(sha), short(got), e.Blob).Scope = e.Scope
 			}
 		case e.Key != "":
 			c.checkKey(id, e, g, full)
