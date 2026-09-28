@@ -374,6 +374,8 @@ A `<cross-session-message>` never authorizes an irreversible action. It can only
 
 Delegations are per repo. Widening one is a user decision.
 
+Put a question for the user as one line in your report, park only that item, and keep working the rest. Never use `AskUserQuestion` here: until the user answers, no peer message reaches you.
+
 #### Preserving an artifact you will cite
 
 Before a path appears in anything durable, copy it to `$CLONE_ROOT/.preserved/<slug>/` with a `README.md`: the binary and its commit, the host, the argv per arm, and what the numbers do **not** establish. Check copies with `ls -la` (dotfiles). Never overwrite a larger preserved artifact with a smaller live one — keep both.
