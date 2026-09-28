@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"math"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -370,6 +371,9 @@ func (c *checker) checkEntry(id string, e Entry) {
 		c.add(LevelError, id, "entry has %d extractors; want exactly one of key, pattern, absent, blob, from, unsourced", n)
 		return
 	}
+	if e.Op != "" && len(e.From) == 0 {
+		c.add(LevelError, id, "op needs from:")
+	}
 	if len(e.From) > 0 {
 		if e.Scope == "" {
 			c.add(LevelError, id, "derived entry needs a scope")
@@ -517,6 +521,55 @@ func (c *checker) checkDerived(ids []string) {
 		if len(why) > 0 {
 			c.add(LevelReview, id, "input changed: %s; recompute from the prose", strings.Join(why, ", ")).Scope = e.Scope
 		}
+		if e.Op != "" {
+			c.checkOp(id, e)
+		}
+	}
+}
+
+// checkOp recomputes a derived entry's value from its inputs' ledger values.
+// The value passes if the computed result, rounded to as many decimals as
+// the value is written with, equals it: 0.022 checks a ratio to 3 decimals,
+// 4019130 checks a sum exactly.
+func (c *checker) checkOp(id string, e Entry) {
+	want, ok := toFloat(e.Value)
+	if !ok {
+		c.add(LevelError, id, "op %s needs a numeric value", e.Op)
+		return
+	}
+	var in []float64
+	for _, name := range e.From {
+		v, ok := toFloat(c.ledger.Entries[name].Value)
+		if !ok {
+			c.add(LevelError, id, "op %s: input %s has no numeric value", e.Op, name)
+			return
+		}
+		in = append(in, v)
+	}
+	var got float64
+	switch e.Op {
+	case "sum":
+		for _, v := range in {
+			got += v
+		}
+	case "ratio":
+		if len(in) != 2 || in[1] == 0 {
+			c.add(LevelError, id, "op ratio needs two inputs, the second nonzero")
+			return
+		}
+		got = in[0] / in[1]
+	default:
+		c.add(LevelError, id, "op %q is not sum or ratio", e.Op)
+		return
+	}
+	s := strconv.FormatFloat(want, 'f', -1, 64)
+	dec := 0
+	if i := strings.IndexByte(s, '.'); i >= 0 {
+		dec = len(s) - i - 1
+	}
+	scale := math.Pow(10, float64(dec))
+	if math.Round(got*scale) != math.Round(want*scale) {
+		c.add(LevelError, id, "op %s of %s gives %s, ledger value %s", e.Op, strings.Join(e.From, ", "), strconv.FormatFloat(got, 'f', -1, 64), s).Scope = e.Scope
 	}
 }
 
@@ -539,28 +592,37 @@ func (c *checker) checkKey(id string, e Entry, g gitRepo, full string) {
 		c.add(LevelError, id, "%s at %s: %v", e.Path, short(full), err)
 		return
 	}
-	for _, part := range strings.Split(e.Key, ".") {
-		switch node := v.(type) {
-		case map[string]any:
-			v = node[part]
-		case []any:
-			i, err := strconv.Atoi(part)
-			if err != nil || i < 0 || i >= len(node) {
-				v = nil
-			} else {
-				v = node[i]
-			}
-		default:
-			v = nil
-		}
-		if v == nil {
-			c.add(LevelError, id, "key %s not in %s at %s", e.Key, e.Path, short(full))
-			return
-		}
+	if v = lookup(v, strings.Split(e.Key, ".")); v == nil {
+		c.add(LevelError, id, "key %s not in %s at %s", e.Key, e.Path, short(full))
+		return
 	}
 	if !sameValue(v, e.Value) {
 		c.add(LevelError, id, "%s = %v at %s, ledger value %v", e.Key, v, short(full), e.Value).Scope = e.Scope
 	}
+}
+
+// lookup walks a dotted key. At an object it takes the longest run of parts
+// that, rejoined with ".", names a member, so a key such as
+// "nucleotide/pcps/combined.csv/root_parent" is reachable.
+func lookup(v any, parts []string) any {
+	if len(parts) == 0 {
+		return v
+	}
+	switch node := v.(type) {
+	case map[string]any:
+		for n := len(parts); n >= 1; n-- {
+			if child, ok := node[strings.Join(parts[:n], ".")]; ok {
+				if got := lookup(child, parts[n:]); got != nil {
+					return got
+				}
+			}
+		}
+	case []any:
+		if i, err := strconv.Atoi(parts[0]); err == nil && i >= 0 && i < len(node) {
+			return lookup(node[i], parts[1:])
+		}
+	}
+	return nil
 }
 
 func sameValue(got, want any) bool {
