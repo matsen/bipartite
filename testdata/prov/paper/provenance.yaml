@@ -123,3 +123,15 @@ entries:
     pattern: "other = 1"
     value: 2
     scope: "fixture"
+  blob_ok:
+    repo: org/code
+    sha: "@C1@"
+    path: results.json
+    blob: "@B1@"
+    scope: "fixture"
+  blob_repinned:   # sha moved to C2, blob left at C1's
+    repo: org/code
+    sha: "@C2@"
+    path: results.json
+    blob: "@B1@"
+    scope: "fixture"

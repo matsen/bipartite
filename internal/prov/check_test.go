@@ -59,6 +59,7 @@ func codeRepo(t *testing.T) (string, map[string]string) {
 		"facts_launches.json": `{"launches": [{"commit": "` + shas["C1"] + `", "stages": ["ASR"]}, {"commit": "` + shas["C2"][:7] + `"}, {"commit": "` + shas["C4"] + `", "stages": []}, {"run_name": "lost_launch", "commit": null, "stages": ["ASR"]}]}`,
 	})
 	shas["D"] = commitFiles(t, dir, map[string]string{"nextflow.config": "joint = true\n"})
+	shas["B1"] = git(t, dir, "rev-parse", shas["C1"]+":results.json")
 	git(t, dir, "reset", "-q", "--hard", shas["C3"])
 	git(t, dir, "update-ref", "refs/remotes/origin/main", shas["C3"])
 	return dir, shas
@@ -245,6 +246,9 @@ func TestOp(t *testing.T) {
 	has(t, m, "op_sum_bad", LevelError, "op sum of op_a, op_b gives 7, ledger value 8")
 	hasNo(t, m, "op_ratio_ok", LevelError)
 	has(t, m, "op_ratio_bad", LevelError, "op ratio of op_a, op_b gives 0.75, ledger value 0.7")
+	// A blob that is not the file's blob at the entry's own sha is an error.
+	hasNo(t, m, "blob_ok", LevelError)
+	has(t, m, "blob_repinned", LevelError, "blob of results.json at")
 	// A pattern entry's value must appear in its pattern.
 	hasNo(t, m, "pv_ok", LevelError)
 	has(t, m, "pv_bad", LevelError, "value 2 is not in the pattern")
