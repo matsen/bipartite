@@ -762,7 +762,7 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 # reclaim_slot <clone-dir> <owner/repo> <pr-number> <agent-state>
 # Returns a clone-mode slot whose PR has merged to the pool, in the order
 # bip-conductor's reclaim requires: ceremony gate, closed issues, clean
-# tree, empty composer, preserve, kill the window, wait for the clone to
+# tree, empty composer, preserve, kill the worker's pane, wait for the clone to
 # go quiet, then reset. <agent-state> is what ListAgents reported for the
 # slot's session just before the call, or `none` if it has none; anything
 # but `idle`/`none` holds (a busy session also shows an empty composer,
@@ -771,7 +771,7 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 #   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>][; ssh ControlMaster <pids> left in place]
 #   HOLD <clone>: <why>          nothing changed
 #   <post_merge_ceremony line>   ceremony not settled; nothing changed
-#   NOT FREE <clone>: <why>      window killed, clone NOT reset
+#   NOT FREE <clone>: <why>      pane killed, clone NOT reset
 # Returns 0, 1, 1 and 2 respectively.
 reclaim_slot() {
     local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live mux pid cwd
@@ -823,8 +823,10 @@ reclaim_slot() {
     fi
     dest=$(preserve_epic_state "$clone" "$root" "at reclaim after PR #$pr ($cer).")
     [ $? -eq 2 ] && { echo "HOLD $clone: preservation failed"; return 1; }
-    [ -n "$pane" ] && tmux kill-window -t "$pane"
-    # After the kill: a run_in_background build outlives the window.
+    # The pane, not its window: another session's pane can share the window, and a
+    # window closes by itself when its last pane goes.
+    [ -n "$pane" ] && tmux kill-pane -t "$pane"
+    # After the kill: a run_in_background build outlives the pane.
     n=0
     while :; do
         live="" mux=""

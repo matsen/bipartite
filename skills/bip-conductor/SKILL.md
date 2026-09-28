@@ -422,7 +422,7 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 ```
 
-It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty. It then preserves the worklog into the clone root's `.preserved/`, kills the slot's window, waits until no process has its cwd in the clone, checks out the base, and deletes the three state files and the merged branch. Its one output line:
+It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty. It then preserves the worklog into the clone root's `.preserved/`, kills the worker's pane (never the window, which another session's pane can share — the same goes for a reclaim by hand), waits until no process has its cwd in the clone, checks out the base, and deletes the three state files and the merged branch. Its one output line:
 
 - `RECLAIMED` → spawn pending intent (below).
 - `HOLD` → nothing changed. Fix the cause, or leave the slot.
