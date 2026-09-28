@@ -109,3 +109,17 @@ entries:
     key: pcps/combined.csv/root_parent
     value: 3311128
     scope: "fixture"
+  pv_ok:      # a pattern entry whose value is part of the matched text
+    repo: org/code
+    sha: "@C1@"
+    path: nextflow.config
+    pattern: "other = 1"
+    value: 1
+    scope: "fixture"
+  pv_bad:
+    repo: org/code
+    sha: "@C1@"
+    path: nextflow.config
+    pattern: "other = 1"
+    value: 2
+    scope: "fixture"
