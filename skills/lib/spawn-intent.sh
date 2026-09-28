@@ -774,7 +774,7 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 #   NOT FREE <clone>: <why>      pane killed, clone NOT reset
 # Returns 0, 1, 1 and 2 respectively.
 reclaim_slot() {
-    local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live mux pid cwd argv
+    local clone repo="$2" pr="$3" agent="$4" cer meta base head issue state dirty panes pane cx root dest n live mux pid cwd cmdl
     clone=$(cd "$1" 2>/dev/null && pwd -P) || { echo "HOLD $1: no such directory"; return 1; }
     case "$agent" in idle|none) ;; *) echo "HOLD $clone: session state is '$agent', not idle"; return 1 ;; esac
     case "$(pwd -P)" in "$clone"|"$clone"/*) echo "HOLD $clone: run this from outside the clone"; return 1 ;; esac
@@ -837,12 +837,12 @@ reclaim_slot() {
             # An ssh ControlMaster keeps the cwd its first client ran in and never touches the clone.
             # Its title is written over argv with NUL padding, so strip the trailing blanks before matching.
             if [ "$(cat "$pid/comm" 2>/dev/null)" = ssh ]; then
-                argv=$(tr '\0' ' ' < "$pid/cmdline" 2>/dev/null | sed 's/ *$//')
-                case "$argv" in "ssh: "*" [mux]") mux="$mux ${pid#/proc/}"; continue ;; esac
+                cmdl=$(tr '\0' ' ' < "$pid/cmdline" 2>/dev/null | sed 's/ *$//')
+                case "$cmdl" in "ssh: "*" [mux]") mux="$mux ${pid#/proc/}"; continue ;; esac
                 # Its ProxyJump helper (`ssh -W host:port jump`) is orphaned to init when the first client
                 # exits; a worker's own `ssh -W` still has a live parent, so ppid 1 keeps this from hiding one.
                 if [ "$(awk '{print $4}' "$pid/stat" 2>/dev/null)" = 1 ]; then
-                    case "$argv" in "ssh -W "*) echo "skipped ssh helper ${pid#/proc/}"; mux="$mux ${pid#/proc/}"; continue ;; esac
+                    case "$cmdl" in "ssh -W "*) echo "skipped ssh helper ${pid#/proc/}"; mux="$mux ${pid#/proc/}"; continue ;; esac
                 fi
             fi
             live="$live ${pid#/proc/}"

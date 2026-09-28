@@ -224,7 +224,9 @@ func TestReclaimSlot(t *testing.T) {
 		})
 		t.Run(shell+"/ssh ControlMaster in the clone", func(t *testing.T) {
 			f := newReclaimFixture(t, ran, "CLOSED", "")
-			mux := exec.Command("perl", "-e", `$0 = "ssh: /sock/host:22 [mux]"; sleep 60`)
+			// A real mux keeps comm "ssh"; setting $0 also renames comm, so put it back
+			// with prctl(PR_SET_NAME) (syscall 157 on x86_64).
+			mux := exec.Command("perl", "-e", `my $n = "ssh"; $0 = "ssh: /sock/host:22 [mux]"; syscall(157, 15, $n); sleep 60`)
 			mux.Dir = f.clone
 			if err := mux.Start(); err != nil {
 				t.Fatal(err)
@@ -234,6 +236,23 @@ func TestReclaimSlot(t *testing.T) {
 			got, code := f.run(t, shell)
 			if code != 0 || !strings.HasPrefix(got, "RECLAIMED ") || !strings.HasSuffix(got, want) {
 				t.Errorf("got %q (exit %d), want RECLAIMED ending %q", got, code, want)
+			}
+		})
+		// The ProxyJump-helper skip needs ppid 1; a worker's own live `ssh -W`
+		// (parent: this test) must still count. The orphaned half is not tested
+		// here: an orphan can reparent to a subreaper rather than pid 1.
+		t.Run(shell+"/live ssh -W with a parent still counts", func(t *testing.T) {
+			f := newReclaimFixture(t, ran, "CLOSED", "")
+			fwd := exec.Command("perl", "-e", `my $n = "ssh"; $0 = "ssh -W [h]:22 jump"; syscall(157, 15, $n); sleep 60`)
+			fwd.Dir = f.clone
+			if err := fwd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			defer func() { _ = fwd.Process.Kill(); _ = fwd.Wait() }()
+			got, code := f.run(t, shell)
+			want := "NOT FREE " + f.clone + ": processes still in it: " + strconv.Itoa(fwd.Process.Pid)
+			if code != 2 || got != want {
+				t.Errorf("got %q (exit %d), want %q", got, code, want)
 			}
 		})
 		t.Run(shell+"/PR closes no issue", func(t *testing.T) {
