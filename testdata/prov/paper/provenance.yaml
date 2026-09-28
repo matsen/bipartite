@@ -76,3 +76,36 @@ entries:
   cyc_b:
     from: [cyc_a]
     scope: "derived"
+  op_a:
+    unsourced: "fixture input"
+    value: 3
+  op_b:
+    unsourced: "fixture input"
+    value: 4
+  op_sum_ok:
+    from: [op_a, op_b]
+    op: sum
+    value: 7
+    scope: "derived"
+  op_sum_bad:   # the 4,019,129-for-4,019,130 case
+    from: [op_a, op_b]
+    op: sum
+    value: 8
+    scope: "derived"
+  op_ratio_ok:  # 0.75 rounds to 0.8 at one decimal
+    from: [op_a, op_b]
+    op: ratio
+    value: 0.8
+    scope: "derived"
+  op_ratio_bad:
+    from: [op_a, op_b]
+    op: ratio
+    value: 0.7
+    scope: "derived"
+  dotted:     # a JSON key that itself contains "."
+    repo: org/code
+    sha: "@C3@"
+    path: results.json
+    key: pcps/combined.csv/root_parent
+    value: 3311128
+    scope: "fixture"

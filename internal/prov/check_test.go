@@ -54,7 +54,7 @@ func codeRepo(t *testing.T) (string, map[string]string) {
 	})
 	shas["C4"] = commitFiles(t, dir, map[string]string{"nextflow.config": "nothing here\nother = 1\n"})
 	shas["C3"] = commitFiles(t, dir, map[string]string{
-		"results.json":        `{"corpus": {"pcps_changed": 0.021}}`,
+		"results.json":        `{"corpus": {"pcps_changed": 0.021}, "pcps/combined.csv/root_parent": 3311128}`,
 		"facts_pipeline.json": `{"pipeline_sha": "` + shas["C1"] + `"}`,
 		"facts_launches.json": `{"launches": [{"commit": "` + shas["C1"] + `", "stages": ["ASR"]}, {"commit": "` + shas["C2"][:7] + `"}, {"commit": "` + shas["C4"] + `", "stages": []}, {"run_name": "lost_launch", "commit": null, "stages": ["ASR"]}]}`,
 	})
@@ -236,6 +236,17 @@ func TestDerived(t *testing.T) {
 	if cycles != 1 {
 		t.Errorf("want one cycle error, got %d: %q %q", cycles, m["cyc_a"], m["cyc_b"])
 	}
+}
+
+func TestOp(t *testing.T) {
+	code, shas := codeRepo(t)
+	m := byID(runCheck(t, paperDir(t, shas), code))
+	hasNo(t, m, "op_sum_ok", LevelError)
+	has(t, m, "op_sum_bad", LevelError, "op sum of op_a, op_b gives 7, ledger value 8")
+	hasNo(t, m, "op_ratio_ok", LevelError)
+	has(t, m, "op_ratio_bad", LevelError, "op ratio of op_a, op_b gives 0.75, ledger value 0.7")
+	// A JSON key containing "." is reachable by key.
+	hasNo(t, m, "dotted", LevelError)
 }
 
 func TestChangedSentenceIsReview(t *testing.T) {

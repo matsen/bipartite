@@ -46,6 +46,7 @@ type Entry struct {
 	Blob      string   `yaml:"blob"`
 	Unsourced string   `yaml:"unsourced"`
 	From      []string `yaml:"from"` // ids this derived value is computed from
+	Op        string   `yaml:"op"`   // sum or ratio: checks value against the inputs' values
 	Token     string   `yaml:"token"`
 	Scope     string   `yaml:"scope"`
 }
