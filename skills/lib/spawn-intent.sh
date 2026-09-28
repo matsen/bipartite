@@ -768,7 +768,7 @@ print(f"ceremony UNRUN for {issues} (PR #{pr})"); sys.exit(1)
 # but `idle`/`none` holds (a busy session also shows an empty composer,
 # and a WORKER-OWNS worker may still be running its final lead). Deletes use `find -delete` so the calling command carries
 # no removal word for Claude Code's guard. Prints exactly one line:
-#   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>][; ssh ControlMaster <pids> left in place]
+#   RECLAIMED <clone> (<branch> -> <base> <sha>)[; preserved to <dir>][; ssh ControlMaster/ProxyJump <pids> left in place]
 #   HOLD <clone>: <why>          nothing changed
 #   <post_merge_ceremony line>   ceremony not settled; nothing changed
 #   NOT FREE <clone>: <why>      pane killed, clone NOT reset
@@ -842,7 +842,7 @@ reclaim_slot() {
                 # Its ProxyJump helper (`ssh -W host:port jump`) is orphaned to init when the first client
                 # exits; a worker's own `ssh -W` still has a live parent, so ppid 1 keeps this from hiding one.
                 if [ "$(awk '{print $4}' "$pid/stat" 2>/dev/null)" = 1 ]; then
-                    case "$cmdl" in "ssh -W "*) echo "skipped ssh helper ${pid#/proc/}"; mux="$mux ${pid#/proc/}"; continue ;; esac
+                    case "$cmdl" in "ssh -W "*) mux="$mux ${pid#/proc/}"; continue ;; esac
                 fi
             fi
             live="$live ${pid#/proc/}"
@@ -861,7 +861,7 @@ reclaim_slot() {
         git -C "$clone" ls-remote --exit-code --heads origin "$head" >/dev/null 2>&1 \
             && git -C "$clone" push -q origin --delete "$head"
     fi
-    echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}${mux:+; ssh ControlMaster$mux left in place}"
+    echo "RECLAIMED $clone ($head -> $base $(git -C "$clone" rev-parse --short HEAD))${dest:+; preserved to $dest}${mux:+; ssh ControlMaster/ProxyJump$mux left in place}"
 }
 
 # fleet_watchers [conductor-dir]

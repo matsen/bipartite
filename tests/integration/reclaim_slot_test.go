@@ -232,7 +232,7 @@ func TestReclaimSlot(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer func() { _ = mux.Process.Kill(); _ = mux.Wait() }()
-			want := "; ssh ControlMaster " + strconv.Itoa(mux.Process.Pid) + " left in place"
+			want := "; ssh ControlMaster/ProxyJump " + strconv.Itoa(mux.Process.Pid) + " left in place"
 			got, code := f.run(t, shell)
 			if code != 0 || !strings.HasPrefix(got, "RECLAIMED ") || !strings.HasSuffix(got, want) {
 				t.Errorf("got %q (exit %d), want RECLAIMED ending %q", got, code, want)
