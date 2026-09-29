@@ -102,11 +102,20 @@ func mustFindRepository() string {
 
 // mustOpenDatabase opens the SQLite database, exits on error.
 // The caller is responsible for calling Close() on the returned DB.
+// A database older than its JSONL is rebuilt first, so a query never
+// silently misses refs that a pull brought in.
 func mustOpenDatabase(repoRoot string) *storage.DB {
+	stale := dbStale(repoRoot)
 	dbPath := config.DBPath(repoRoot)
 	db, err := storage.OpenDB(dbPath)
 	if err != nil {
 		exitWithError(ExitError, "opening database: %v", err)
+	}
+	if stale {
+		fmt.Fprintln(os.Stderr, "query database is older than its JSONL; rebuilding")
+		if _, _, _, err := rebuildAll(db, repoRoot); err != nil {
+			exitWithError(ExitDataError, "%v", err)
+		}
 	}
 	return db
 }
