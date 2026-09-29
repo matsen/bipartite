@@ -111,8 +111,9 @@ func mustOpenDatabase(repoRoot string) *storage.DB {
 	if err != nil {
 		exitWithError(ExitError, "opening database: %v", err)
 	}
+	// Silent: callers parse stdout and stderr together, and commands that write
+	// a JSONL and then open the database land here on every edit.
 	if stale {
-		fmt.Fprintln(os.Stderr, "query database is older than its JSONL; rebuilding")
 		if _, _, _, err := rebuildAll(db, repoRoot); err != nil {
 			exitWithError(ExitDataError, "%v", err)
 		}
