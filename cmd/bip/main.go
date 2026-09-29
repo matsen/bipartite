@@ -2,13 +2,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
 	"github.com/matsen/bipartite/internal/config"
-	"github.com/matsen/bipartite/internal/embedding"
-	"github.com/matsen/bipartite/internal/semantic"
 	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +33,6 @@ var rootCmd = &cobra.Command{
 
 Core features:
   - Academic reference library (papers, projects, repos)
-  - Semantic search via embeddings
   - GitHub project tracking (issues, PRs, boards, activity digests)
   - Slack integration for team updates
   - Remote server availability checking
@@ -128,34 +124,4 @@ func mustLoadConfig(repoRoot string) *config.Config {
 		exitWithError(ExitConfigError, "loading config: %v", err)
 	}
 	return cfg
-}
-
-// mustLoadSemanticIndex loads the semantic index, exits on error.
-func mustLoadSemanticIndex(repoRoot string) *semantic.SemanticIndex {
-	idx, err := semantic.Load(repoRoot)
-	if err != nil {
-		if err == semantic.ErrIndexNotFound {
-			exitWithError(ExitConfigError, "Semantic index not found\n\nRun 'bip index build' to create the index.")
-		}
-		exitWithError(ExitError, "loading index: %v", err)
-	}
-	return idx
-}
-
-// mustValidateOllama checks that Ollama is running and optionally validates the model.
-// If checkModel is true, also verifies the required embedding model is available.
-func mustValidateOllama(ctx context.Context, provider *embedding.OllamaProvider, checkModel bool) {
-	if err := provider.IsAvailable(ctx); err != nil {
-		exitWithError(ExitDataError, "Ollama is not running\n\nStart Ollama with 'ollama serve' or install from https://ollama.ai")
-	}
-
-	if checkModel {
-		hasModel, err := provider.HasModel(ctx)
-		if err != nil {
-			exitWithError(ExitError, "checking model availability: %v", err)
-		}
-		if !hasModel {
-			exitWithError(ExitModelNotFound, "embedding model %q not found\n\nRun 'ollama pull %s' to download it.", provider.ModelName(), provider.ModelName())
-		}
-	}
 }

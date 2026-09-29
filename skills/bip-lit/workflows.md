@@ -21,12 +21,7 @@ Parse user queries to identify:
    bip search "<constructed query>" --human
    ```
 
-2. **For topic-heavy queries**, also try semantic search:
-   ```bash
-   bip semantic "<topic>"
-   ```
-
-3. **Filter results** by author/year criteria from the query.
+2. **Filter results** by author/year criteria from the query.
 
 ### Present Results
 
@@ -51,7 +46,7 @@ Combine:
 
 - "Schmidler" -> list all Schmidler papers, user picks subset
 - "importance sampling 2025" -> papers matching both criteria
-- "recent MCMC papers" -> semantic search, filtered to last 2 years
+- "recent MCMC papers" -> keyword search, filtered to last 2 years
 
 ---
 

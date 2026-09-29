@@ -36,18 +36,6 @@ bip search "title:influenza" --limit 10
 
 Keyword search queries title, abstract, authors, and notes. Use `author:` or `title:` prefixes to narrow scope.
 
-### Semantic Search
-
-For conceptual queries that go beyond keyword matching:
-
-```bash
-bip index build                  # Build the semantic index (requires Ollama)
-bip semantic "methods for tree inference"
-bip similar Zhang2018-vi         # Find papers similar to a specific paper
-```
-
-Semantic search uses local embeddings via Ollama to find related papers even without exact word matches.
-
 ## Working with Papers
 
 ```bash
