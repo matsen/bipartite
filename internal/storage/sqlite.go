@@ -55,7 +55,8 @@ var ftsRankJoin = "JOIN (SELECT id AS mid, bm25(refs_fts, " + bm25Weights + ") A
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
-	db, err := sql.Open("sqlite", path)
+	// Wait for a lock held by another session instead of failing with SQLITE_BUSY.
+	db, err := sql.Open("sqlite", path+"?_pragma=busy_timeout(30000)")
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
@@ -77,8 +78,13 @@ func (d *DB) Close() error {
 	return d.db.Close()
 }
 
+// execer is satisfied by both *sql.DB and *sql.Tx.
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
 // createSchema creates the database schema if it doesn't exist.
-func createSchema(db *sql.DB) error {
+func createSchema(db execer) error {
 	schema := `
 		-- Main references table
 		CREATE TABLE IF NOT EXISTS refs (
@@ -142,21 +148,29 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading JSONL: %w", err)
 	}
 
+	// One transaction: a failed or concurrent rebuild leaves the previous
+	// tables whole, and readers never see a half-filled one.
+	tx, err := d.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("beginning rebuild: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Drop and recreate the refs/refs_fts tables rather than DELETE-ing rows,
 	// so a rebuild also picks up schema changes (new columns) rather than
 	// failing against a stale table created by an older binary.
-	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs"); err != nil {
+	if _, err := tx.Exec("DROP TABLE IF EXISTS refs"); err != nil {
 		return 0, fmt.Errorf("dropping refs table: %w", err)
 	}
-	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
+	if _, err := tx.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
 		return 0, fmt.Errorf("dropping refs_fts table: %w", err)
 	}
-	if err := createSchema(d.db); err != nil {
+	if err := createSchema(tx); err != nil {
 		return 0, fmt.Errorf("recreating schema: %w", err)
 	}
 
 	// Prepare statements
-	refsStmt, err := d.db.Prepare(`
+	refsStmt, err := tx.Prepare(`
 		INSERT INTO refs (
 			id, doi, title, abstract, venue,
 			pub_year, pub_month, pub_day,
@@ -171,7 +185,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 	}
 	defer refsStmt.Close()
 
-	ftsStmt, err := d.db.Prepare(`
+	ftsStmt, err := tx.Prepare(`
 		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year, notes, tags_text)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
@@ -229,6 +243,9 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		}
 	}
 
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing rebuild: %w", err)
+	}
 	return len(refs), nil
 }
 

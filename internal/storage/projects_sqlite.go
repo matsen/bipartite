@@ -37,13 +37,20 @@ func (d *DB) RebuildProjectsFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading projects JSONL: %w", err)
 	}
 
+	// One transaction, so a failed rebuild leaves the previous rows whole.
+	tx, err := d.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("beginning projects rebuild: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Clear existing data
-	if _, err := d.db.Exec("DELETE FROM projects"); err != nil {
+	if _, err := tx.Exec("DELETE FROM projects"); err != nil {
 		return 0, fmt.Errorf("clearing projects table: %w", err)
 	}
 
 	// Prepare insert statement
-	stmt, err := d.db.Prepare(`
+	stmt, err := tx.Prepare(`
 		INSERT INTO projects (id, name, description, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?)
 	`)
@@ -59,6 +66,9 @@ func (d *DB) RebuildProjectsFromJSONL(jsonlPath string) (int, error) {
 		}
 	}
 
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing projects rebuild: %w", err)
+	}
 	return len(projects), nil
 }
 

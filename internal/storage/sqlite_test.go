@@ -176,6 +176,38 @@ func TestDB_RebuildFromJSONL(t *testing.T) {
 	}
 }
 
+// TestDB_RebuildFromJSONL_FailureKeepsOldTables: a rebuild that fails partway
+// (here a duplicate id; in use, SQLITE_BUSY from a concurrent session) must
+// leave the previous tables whole, not a half-filled one that reads as success.
+func TestDB_RebuildFromJSONL_FailureKeepsOldTables(t *testing.T) {
+	db, tmpDir, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	jsonlPath := filepath.Join(tmpDir, "refs.jsonl")
+	ref := func(id string) reference.Reference {
+		return reference.Reference{
+			ID:        id,
+			Title:     "T",
+			Authors:   []reference.Author{{Last: "A"}},
+			Published: reference.PublicationDate{Year: 2026},
+			Source:    reference.ImportSource{Type: "manual"},
+		}
+	}
+	if err := WriteAll(jsonlPath, []reference.Reference{ref("A1"), ref("B1"), ref("B1")}); err != nil {
+		t.Fatalf("WriteAll() error = %v", err)
+	}
+	if _, err := db.RebuildFromJSONL(jsonlPath); err == nil {
+		t.Fatal("RebuildFromJSONL() with a duplicate id succeeded")
+	}
+	count, err := db.Count()
+	if err != nil {
+		t.Fatalf("Count() error = %v", err)
+	}
+	if count != 3 {
+		t.Errorf("after a failed rebuild, Count() = %d, want the previous 3", count)
+	}
+}
+
 // TestDB_RebuildFromJSONL_SchemaDrift reproduces the case where a cache file
 // was created by an older binary whose refs table lacks columns the current
 // code expects (e.g. before volume/issue/pages were added). RebuildFromJSONL

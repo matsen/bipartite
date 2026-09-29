@@ -47,13 +47,20 @@ func (d *DB) RebuildReposFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading repos JSONL: %w", err)
 	}
 
+	// One transaction, so a failed rebuild leaves the previous rows whole.
+	tx, err := d.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("beginning repos rebuild: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Clear existing data
-	if _, err := d.db.Exec("DELETE FROM repos"); err != nil {
+	if _, err := tx.Exec("DELETE FROM repos"); err != nil {
 		return 0, fmt.Errorf("clearing repos table: %w", err)
 	}
 
 	// Prepare insert statement
-	stmt, err := d.db.Prepare(`
+	stmt, err := tx.Prepare(`
 		INSERT INTO repos (id, project, type, name, github_url, description, topics_json, language, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
@@ -86,6 +93,9 @@ func (d *DB) RebuildReposFromJSONL(jsonlPath string) (int, error) {
 		}
 	}
 
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing repos rebuild: %w", err)
+	}
 	return len(repos), nil
 }
 
