@@ -75,10 +75,10 @@ cat .epic-config.json
 Check that the pull succeeded and never suppress its stderr. In a pooled clone it commonly fails because an untracked leftover collides with a path a later PR landed as tracked; move the blocker aside (it may be unpreserved work), pull again, and confirm `git rev-list --count HEAD..origin/main` is `0`.
 **Re-run the pull at the top of every fresh scan cycle**, not just at cold start: every `gh` read is correct regardless of the tree's age, so nothing else forces it, and a stale file written back is how an EPIC body or a skill acquires a reverted diff. `git fetch` alone does not update the working tree.
 
-Read every **tracked** subdirectory `CLAUDE.md` — only the repo-root one is auto-loaded, and this role works from the root:
+Read every **tracked** subdirectory `CLAUDE.md` or `AGENTS.md` — only the repo-root one is auto-loaded, and this role works from the root:
 
 ```sh
-git ls-files | /usr/bin/grep 'CLAUDE\.md$'
+git ls-files | /usr/bin/grep -E '(CLAUDE|AGENTS)\.md$'
 ```
 
 Use `git ls-files`, not `find`: vendored copies and stale nested clones also contain files named `CLAUDE.md`. Before claiming a measured number is new, grep the experiment's own README for it.

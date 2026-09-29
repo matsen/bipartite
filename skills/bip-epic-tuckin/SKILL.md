@@ -38,7 +38,7 @@ Before recording anything anywhere, run each candidate topic-level finding throu
    A finding that already produced an issue, PR, or EPIC body update needs no second copy either.
 
 Only what survives both gates gets a destination:
-- A durable repo-level fact → a `CLAUDE.md`.
+- A durable repo-level fact → the repo's `CLAUDE.md` or `AGENTS.md`.
 - A workflow rule → a skill.
 - A cross-EPIC pattern or key decision not yet captured anywhere → the EPIC body it's most relevant to, or the Step 3 report below if none fits.
 - Nothing else fits → the Step 3 report.

@@ -123,7 +123,7 @@ Before recording anything anywhere, run each candidate fleet-level finding throu
    A finding that produced an issue, PR, test, or doc needs no second copy.
 
 Only what survives both gates gets a destination:
-- A durable repo-level fact → a `CLAUDE.md`.
+- A durable repo-level fact → the repo's `CLAUDE.md` or `AGENTS.md`.
 - A workflow rule → a skill.
 - A finding → the test, doc, or issue it came from.
 - Nothing else fits → the Step 5 report below.

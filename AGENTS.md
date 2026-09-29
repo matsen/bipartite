@@ -1,4 +1,4 @@
-# bipartite — Claude guidance
+# bipartite — agent guidance
 
 ## What this file is
 
