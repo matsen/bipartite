@@ -73,7 +73,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 
 2. **Pick its working directory `DIR`.**
    - Research, review, messaging, or code changes: a detached worktree of your own repo off `origin/main`, inside the home, `KIND=worktree`; tell a research-only helper the checkout is read-only.
-     Not the bare home: `claude --bg` refuses a directory Claude Code has never trusted ("Workspace not trusted"), and a fresh home is one, while a worktree of a trusted repo starts (2026-09-29, `prot-dasm-ms-lit`).
+     Not the bare home: `claude --bg` refuses a directory Claude Code has never trusted ("Workspace not trusted"), and a fresh home is one, while a worktree of a trusted repo starts.
      ```bash
      git -C <repo> fetch -q origin
      DIR="$HOME_DIR/$(basename "$(git -C <repo> rev-parse --show-toplevel)")"
