@@ -14,13 +14,13 @@ The workflow runs as two coupled loops, **ideas** and **experiments**, with GitH
 
 For a PI, the paper is the unit that ties a team's work together. Manuscript sessions (`/bip-ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive. High-level discussion of findings, grounded in the literature via `/bip-lit`, becomes new issues, which are validated against project conventions before being filed.
 
-Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issue-check`, `/bip-issue-next`, `/bip-issue-iterate`
+Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issue-check`, `/bip-issue-next`, `/bip-issue-iterate`, `/bip-ms-sweep` (pre-submission polish), `/bip-lit-import` (Paperpile import)
 
 ### Agent Orchestration (the experiments side, EPIC workflow)
 
 The experiments side is the **EPIC orchestration system** — split across two roles. A topic-scoped `/bip-epic` session tracks program strategy, triages issues/PRs, and flags dependency/collision conflicts between them; a topic-agnostic `/bip-conductor` session owns the clone pool, spawns workers in dedicated `tmux` windows, and runs mechanical checks (staleness, occupancy) neither role could catch alone. The two coordinate over `SendMessage` and a shared `.spawn-prompts/` directory. Workers implement, test, and create PRs autonomously. Two subagents keep the loop honest: an `issue-lead` evaluates progress from file-based state and escalates only when human judgment is needed, and a `surprising-conclusion-skeptic` interrogates strong or negative claims before they propagate. Quality gates and PR landing close the loop, with follow-up issues flowing back to the ideas side.
 
-Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conductor-handoff`, `/bip-pr-review`, `/bip-pr-land`
+Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conductor-handoff`, `/bip-pr-review`, `/bip-pr-land`, `/bip-epic-check`, `/bip-conductor-prepare-reboot` and `/bip-conductor-recover` (host reboots)
 
 The [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/) guide gives the order in which to run the issue and PR skills, from draft to landed PR.
 
@@ -29,6 +29,8 @@ The [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/
 Cross-cutting tools that span both sides of the workflow: themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows for review, Slack integration, and server resource scouting via SSH.
 
 Key skills: `/bip-checkin`, `/bip-digest`, `/bip-narrative`, `/bip-scout`
+
+Standalone: `/bip-helper` (a long-lived background session for side work), `/bip-decay-audit` (whole-repo decay check), `/bip-marimo` (marimo notebooks), `/bip-tuckin` and `/bip-continue` (carry a session across a context reset)
 
 ### Reference Management
 
