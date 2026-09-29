@@ -39,6 +39,7 @@ It carries only:
 - **The skill to run**: the cold-start or resume skill for this role.
 - **A pointer to the durable state**, one line — the file(s) the tuckin committed (for an epic, the EPIC body), not their contents.
 - **One to three things in flight**, each with its **falsifier inline**: a `FIRST CHECK:` command or condition that would show the item already done or moot.
+  A background task can outlive `/clear`, so an item that says to restart something checks first that it isn't still running (`pgrep -af '<cmd>'`).
   Not a general warning elsewhere — a resuming session runs the top imperative before it reads a caveat below it, so the check must sit on the item's own line.
 - **Anything still pending with the user** — an open question the session was waiting on; a resume that drops these loses them silently.
 
