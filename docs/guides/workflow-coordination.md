@@ -104,7 +104,6 @@ Requires a Slack bot token with `channels:history`, `channels:read`, and `users:
 | `/bip-checkin` | Interactive activity check-in |
 | `/bip-narrative <channel>` | Generate themed prose digest |
 | `/bip-digest` | Generate and post Slack digest |
-| `bip spawn` | Launch Claude session with context |
 | `/bip-board` | Project board operations |
 
 `make install` symlinks the skills into `~/.claude/skills/` ([Getting Started](getting-started.md)).
