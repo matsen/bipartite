@@ -54,7 +54,7 @@ Reach for a subagent when the work fits in one call and only you need the answer
 ```bash
 HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 # $HELPERS/<short-id>.json   written by the primary at start:
-#   {"id","session_id","name","primary","home","dir","dir_kind":"home|worktree|held-clone","hold"}
+#   {"id","session_id","name","primary","home","dir","dir_kind":"worktree|held-clone","hold"}
 # $HELPERS/<name>/           the helper's home
 # $HELPERS/<name>/result.md  written by the helper, one appended section per round
 ```
@@ -72,8 +72,8 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    ```
 
 2. **Pick its working directory `DIR`.**
-   - Research, review, or messaging only: the home itself, `DIR="$HOME_DIR"`, `KIND=home`.
-   - Code changes: a detached worktree off `origin/main`, inside the home, `KIND=worktree`:
+   - Research, review, messaging, or code changes: a detached worktree of your own repo off `origin/main`, inside the home, `KIND=worktree`; tell a research-only helper the checkout is read-only.
+     Not the bare home: `claude --bg` refuses a directory Claude Code has never trusted ("Workspace not trusted"), and a fresh home is one, while a worktree of a trusted repo starts.
      ```bash
      git -C <repo> fetch -q origin
      DIR="$HOME_DIR/$(basename "$(git -C <repo> rev-parse --show-toplevel)")"
