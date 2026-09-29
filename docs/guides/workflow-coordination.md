@@ -107,11 +107,7 @@ Requires a Slack bot token with `channels:history`, `channels:read`, and `users:
 | `bip spawn` | Launch Claude session with context |
 | `/bip-board` | Project board operations |
 
-Skills are installed by symlinking from the bipartite repo:
-
-```bash
-ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
-```
+`make install` symlinks the skills into `~/.claude/skills/` ([Getting Started](getting-started.md)).
 
 ## Configuration
 

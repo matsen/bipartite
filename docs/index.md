@@ -9,9 +9,13 @@ A context layer for research groups: connecting your internal world (projects, r
 ## Guides
 
 - **[Getting Started](guides/getting-started.md)** — Installation, configuration, and first steps
+- **[Configuration](guides/configuration.md)** — Every config option, tokens, and environment variables
+- **[Issue Lifecycle](guides/issue-lifecycle.md)** — Which skill to run at each step from draft issue to landed PR
 - **[Reference Management](guides/reference-management.md)** — Search, import, cite, and collaborate on a git-backed paper library
 - **[Projects, Repos, and Stores](guides/projects-and-stores.md)** — Track projects and repositories, and keep custom records in generic stores
 - **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, boards, and Slack integration across repos
+- **[Worktree Layout](guides/layout.md)** — Opt-in per-issue git worktrees for `bip spawn`
+- **[Continuation Prompt](guides/continuation-prompt.md)** — Carrying a session across a context reset with `/bip-tuckin` and `/bip-continue`
 - **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
 - **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code integration explained
 

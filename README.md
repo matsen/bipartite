@@ -22,6 +22,8 @@ The experiments side is the **EPIC orchestration system** — split across two r
 
 Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conductor-handoff`, `/bip-pr-review`, `/bip-pr-land`
 
+The [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/) guide gives the order in which to run the issue and PR skills, from draft to landed PR.
+
 ### Workflow Coordination
 
 Cross-cutting tools that span both sides of the workflow: themed narrative digests, cross-repo check-ins that spawn dedicated `tmux` windows for review, Slack integration, and server resource scouting via SSH.
@@ -87,6 +89,21 @@ bip s2 add DOI:10.1038/s41586-021-03819-2
 
 See the [Getting Started guide](https://matsen.github.io/bipartite/guides/getting-started/) for full setup instructions.
 
+## Documentation
+
+- [Getting Started](https://matsen.github.io/bipartite/guides/getting-started/): full setup
+- [Configuration](https://matsen.github.io/bipartite/guides/configuration/): every config option and token
+- [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/): which skill to run at each step, from draft issue to landed PR
+- [Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/): check-ins, digests, boards, Slack, `bip spawn`
+- [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/): the paper library behind `/bip-lit`
+- [Projects, Repos, and Stores](https://matsen.github.io/bipartite/guides/projects-and-stores/)
+- [Worktree Layout](https://matsen.github.io/bipartite/guides/layout/): opt-in per-issue git worktrees
+- [Continuation Prompt](https://matsen.github.io/bipartite/guides/continuation-prompt/): `/bip-tuckin` and `/bip-continue` across context resets
+- [Server Scout](https://matsen.github.io/bipartite/guides/server-scout/)
+- [How It Works](https://matsen.github.io/bipartite/guides/architecture/): the nexus, the CLI, and Claude Code
+
+Every skill lives in [`skills/`](skills/); the `description:` line at the top of each `SKILL.md` says what it does.
+
 ## Configuration
 
 For full functionality, add API keys ([ASTA/Semantic Scholar](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) to your config:
@@ -116,7 +133,7 @@ what you want `bip` to use.
 See the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/) for all options.
 
 To opt into per-issue git worktrees for `bip spawn` (instead of one
-shared clone per repo), see [docs/guides/layout.md](docs/guides/layout.md).
+shared clone per repo), see [Worktree Layout](https://matsen.github.io/bipartite/guides/layout/).
 
 ## Who Is This For?
 
