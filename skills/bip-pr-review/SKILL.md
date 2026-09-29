@@ -20,7 +20,7 @@ Automatically detects project type and runs appropriate checks.
 
 First, check for a project-specific checklist:
 1. Look for `PRE-MERGE-CHECKLIST.md` in the repo root
-2. If not found, read the project's `CLAUDE.md` and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
+2. If not found, read the project's `CLAUDE.md` (or `AGENTS.md`) and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
 
 **If a project-specific checklist is found, follow those steps exactly** instead of the generic workflow below.
 

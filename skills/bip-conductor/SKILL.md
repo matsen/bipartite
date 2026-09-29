@@ -262,7 +262,7 @@ All subsequent steps use values from this config — never hardcode paths or clo
 
 **Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.conductor-session`.
 
-**Read every tracked subdirectory `CLAUDE.md` in the project repo** — only the root one is auto-loaded, and the conductor reads artifacts by path from the root. Enumerate with `git ls-files | /usr/bin/grep 'CLAUDE\.md$'`, not `find`.
+**Read every tracked subdirectory `CLAUDE.md` or `AGENTS.md` in the project repo** — only the root one is auto-loaded, and the conductor reads artifacts by path from the root. Enumerate with `git ls-files | /usr/bin/grep -E '(CLAUDE|AGENTS)\.md$'`, not `find`.
 
 ### Step 2: Pull main
 
