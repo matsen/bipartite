@@ -19,11 +19,9 @@ facts no skill carries.
 ## Stack & layout
 
 - Go (min version in `go.mod`). CLI: spf13/cobra. Storage: modernc.org/sqlite (pure Go, no
-  CGO). Embeddings: Ollama (local), pure-Go vector storage. External refs: Semantic Scholar
-  (`internal/s2`).
-- Data model: JSONL is the source of truth → ephemeral SQLite, rebuilt on `bip rebuild`. The
-  vector index is GOB-serialized, ephemeral, gitignored.
-- `cmd/` CLI commands · `internal/` packages (s2, store, index, flow, …) · `testdata/`
+  CGO). External refs: Semantic Scholar (`internal/s2`).
+- Data model: JSONL is the source of truth → ephemeral SQLite, rebuilt on `bip rebuild`.
+- `cmd/` CLI commands · `internal/` packages (s2, store, flow, …) · `testdata/`
   fixtures · `tests/` integration tests.
 
 ## Build & style

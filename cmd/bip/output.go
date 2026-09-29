@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/matsen/bipartite/internal/reference"
-	"github.com/matsen/bipartite/internal/semantic"
-	"github.com/matsen/bipartite/internal/storage"
 )
 
 // Constants for output formatting.
@@ -80,54 +78,6 @@ type UpdateResponse struct {
 // ErrorResponse is a JSON error response.
 type ErrorResponse struct {
 	Error string `json:"error"`
-}
-
-// PaperSearchResult represents a paper in search results (semantic search and similar papers).
-type PaperSearchResult struct {
-	ID         string             `json:"id"`
-	Title      string             `json:"title"`
-	Authors    []reference.Author `json:"authors"`
-	Year       int                `json:"year"`
-	Similarity float32            `json:"similarity"`
-	Abstract   string             `json:"abstract,omitempty"`
-}
-
-// printSearchResultsHuman prints search results in human-readable format.
-// This is used by both semantic search and similar papers commands.
-func printSearchResultsHuman(results []PaperSearchResult) {
-	for i, r := range results {
-		fmt.Printf("%d. [%.2f] %s\n", i+1, r.Similarity, r.ID)
-		fmt.Printf("   %s\n", truncateString(r.Title, SearchTitleMaxLen))
-		fmt.Printf("   %s (%d)\n\n", formatAuthorsShort(r.Authors, 3), r.Year)
-	}
-}
-
-// buildSearchResults converts semantic search results to PaperSearchResult slice.
-// Set includeAbstract to true to populate the Abstract field.
-//
-// Papers that exist in the semantic index but are not found in the database
-// (e.g., deleted after indexing) are silently skipped. This graceful degradation
-// allows search to return partial results rather than failing entirely.
-func buildSearchResults(results []semantic.SearchResult, db *storage.DB, includeAbstract bool) []PaperSearchResult {
-	paperResults := make([]PaperSearchResult, 0, len(results))
-	for _, r := range results {
-		ref, err := db.GetByID(r.PaperID)
-		if err != nil || ref == nil {
-			continue // Skip papers deleted from DB after indexing
-		}
-		result := PaperSearchResult{
-			ID:         ref.ID,
-			Title:      ref.Title,
-			Authors:    ref.Authors,
-			Year:       ref.Published.Year,
-			Similarity: r.Similarity,
-		}
-		if includeAbstract {
-			result.Abstract = ref.Abstract
-		}
-		paperResults = append(paperResults, result)
-	}
-	return paperResults
 }
 
 // truncateString truncates a string to maxLen, adding "..." if truncated.

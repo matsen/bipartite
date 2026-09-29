@@ -88,7 +88,6 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 | Combined search | `bip search "topic" -a "Author" --year 2020: --human` |
 | Limit results | `bip search "topic" --limit 100 --human` (default 50, ranked by relevance) |
 | Unlimited results | `bip search "topic" --limit 0 --human` (`-1` also works) |
-| Semantic search | `bip semantic "query"` |
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
 | Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
@@ -155,7 +154,6 @@ For finding a specific paper or result:
 
    # Or plain keyword search (use -a for authors when possible)
    bip search "distinctive title words" --human
-   bip semantic "conceptual description"  # for topic-heavy queries
    ```
 
 2. **If found, read the paper** to get authoritative answers:
@@ -220,8 +218,6 @@ See [api-guide.md](api-guide.md) for detailed comparison.
 1. **Search local library first**:
    ```bash
    bip search "Schmidler phylogenetics" --human
-   # or for topic-heavy queries:
-   bip semantic "importance sampling MCMC"
    ```
 
 2. **Get PDF path** for a result:
@@ -348,7 +344,6 @@ If searches return nothing relevant:
 3. **Try both local and external**:
    ```bash
    bip search "topic" --human # local
-   bip semantic "topic"      # local semantic
    bip asta search "topic"   # external
    ```
 4. **Check date filters** - paper may be too old/new for range
