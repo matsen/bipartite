@@ -60,6 +60,7 @@ Point at the check, not the answer.
 ## Resuming from it
 
 In the next session, after `/clear`, run `/bip-continue`.
+`/bip-tuckin cycle` does both steps itself, in tmux: it types `/clear`, and then `/bip-continue` into the fresh session.
 It determines the role (above), reads the matching `_ignore/CONTINUE-<role>.md`, reports how stale the file is (its stamp against `git log -1` and the newest PR/issue activity), runs each in-flight item's inline check before acting, and hands off to the cold-start or resume skill the prompt names — which owns the role-specific work (re-registering `.epic-session`/`.conductor-session`, live-run and pooled-slot handling, surfacing standing traps).
 
 `/bip-tuckin` is the matching entry point on the way out: it delegates to the right `/bip-*-tuckin` (or a generic fallback), each of which writes this prompt.

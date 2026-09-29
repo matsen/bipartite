@@ -1,0 +1,50 @@
+#!/bin/bash
+# Reset the calling Claude session and resume it: type `/clear` into its own
+# tmux pane, wait for the fresh session, then type `/bip-continue`.
+#
+# Usage:  self-cycle            # from a Bash tool call, as the last act of a turn
+#
+# It detaches immediately and returns. The `/clear` is typed while the turn is
+# still running, so Claude Code queues it and runs it once the turn ends.
+# Text keystrokes go in with `send-keys -l`, then a separate Enter after a pause:
+# sent in one call, the Enter lands inside the paste and nothing submits.
+# It types only these two fixed strings: keystrokes in a pane read as the
+# user's own turn, so nothing derived from session output may ever be sent.
+set -u
+
+if [ "${1:-}" != --detached ]; then
+	if [ -z "${TMUX_PANE:-}" ]; then
+		echo "self-cycle: not in tmux; run /clear then /bip-continue yourself" >&2
+		exit 1
+	fi
+	log=${TMPDIR:-/tmp}/self-cycle-${TMUX_PANE#%}.log
+	setsid nohup "$0" --detached "$TMUX_PANE" "$PWD" >"$log" 2>&1 </dev/null &
+	echo "self-cycle: /clear queued for when this turn ends; /bip-continue follows (log: $log)"
+	exit 0
+fi
+
+pane=$2 cwd=$3
+marker=$(mktemp)
+type_line() {
+	tmux send-keys -t "$pane" -l "$1" && sleep 1 && tmux send-keys -t "$pane" Enter
+}
+
+type_line /clear
+
+# The fresh session's transcript starts with the /clear command record.
+for _ in $(seq 1 600); do
+	sleep 2
+	new=$(find ~/.claude/projects -maxdepth 2 -name '*.jsonl' -newer "$marker" 2>/dev/null |
+		xargs -r grep -l -F '<command-name>/clear</command-name>' 2>/dev/null |
+		xargs -r grep -l -F "\"cwd\":\"$cwd\"" 2>/dev/null | head -1)
+	if [ -n "$new" ]; then
+		sleep 3
+		type_line /bip-continue
+		echo "self-cycle: cleared ($new); sent /bip-continue"
+		rm -f "$marker"
+		exit 0
+	fi
+done
+rm -f "$marker"
+echo "self-cycle: no /clear seen after 20 min; nothing sent" >&2
+exit 1
