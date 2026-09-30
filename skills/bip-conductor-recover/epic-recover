@@ -90,18 +90,18 @@ manifest_status() {
 # TSV of every window in the manifest, for the skill to present.
 manifest_list() {
   manifest_status >/dev/null || { manifest_status >&2; exit 1; }
-  printf 'session\tindex\twindow\tcwd\tsession_id\tmethod\tconfidence\tissue\tcandidates\n'
+  printf 'session\tindex\twindow\tcwd\tsession_id\tmethod\tconfidence\tissue\tcandidates\tpane\n'
   jq -r '.sessions[] as $s | $s.windows[] |
     [$s.name, (.index|tostring), .name, .cwd, (.session_id // "-"),
      .method, .confidence, (.issue|tostring),
-     ((.candidates // [])|join("|"))] | @tsv' "$MANIFEST"
+     ((.candidates // [])|join("|")), ((.pane // 0)|tostring)] | @tsv' "$MANIFEST"
 }
 
 # Rebuild every session from the manifest. PICK args override ambiguous windows.
 manifest_resume() {
   manifest_status >/dev/null || { manifest_status >&2; exit 1; }
 
-  declare -A PICK   # "session:index" -> id | "skip"
+  declare -A PICK   # "session:index" or "session:index.pane" -> id | "skip"
   shift  # drop --manifest-resume
   for p in "$@"; do
     case "$p" in *=*) PICK["${p%%=*}"]="${p#*=}" ;; *) echo "epic-recover: bad pick '$p' (want session:index=id|skip)" >&2; exit 1 ;; esac
@@ -110,26 +110,36 @@ manifest_resume() {
   local nsess; nsess=$(jq '.sessions|length' "$MANIFEST")
   echo "Replaying $MANIFEST ($(jq -r .host "$MANIFEST"), parked $(jq -r .parked_at "$MANIFEST")):"
 
+  # A manifest row is one pane; consecutive rows sharing a window index are
+  # splits of one window, rebuilt with split-window and then the saved layout.
   local s w
+  declare -A LAYOUT   # window_id -> saved layout, for windows with >1 pane
   for s in $(seq 0 $((nsess-1))); do
     local sname nwin
     sname=$(jq -r ".sessions[$s].name" "$MANIFEST")
     nwin=$(jq ".sessions[$s].windows|length" "$MANIFEST")
     local fresh_session=0
-    tmux has-session -t "$sname" 2>/dev/null || fresh_session=1
-    echo "  session '$sname' ($nwin windows):"
+    # "=name:" targets the session by exact name; a bare numeric name like "2"
+    # would otherwise be read as a window index.
+    tmux has-session -t "=$sname" 2>/dev/null || fresh_session=1
+    echo "  session '$sname' ($nwin panes):"
+    local prev_idx="" win=""
     for w in $(seq 0 $((nwin-1))); do
-      local wname cwd sid conf idx key eff cmd
+      local wname cwd sid conf idx key eff cmd pidx layout target
       wname=$(jq -r ".sessions[$s].windows[$w].name" "$MANIFEST")
       cwd=$(jq -r ".sessions[$s].windows[$w].cwd" "$MANIFEST")
       sid=$(jq -r ".sessions[$s].windows[$w].session_id // \"-\"" "$MANIFEST")
       conf=$(jq -r ".sessions[$s].windows[$w].confidence" "$MANIFEST")
       idx=$(jq -r ".sessions[$s].windows[$w].index" "$MANIFEST")
+      pidx=$(jq -r ".sessions[$s].windows[$w].pane // 0" "$MANIFEST")
+      layout=$(jq -r ".sessions[$s].windows[$w].layout // empty" "$MANIFEST")
       key="$sname:$idx"
 
-      # Resolve which id (if any) to resume this window with.
+      # Resolve which id (if any) to resume this pane with.
       eff="$sid"
-      if [ -n "${PICK[$key]:-}" ]; then
+      if [ -n "${PICK[$key.$pidx]:-}" ]; then
+        eff="${PICK[$key.$pidx]}"
+      elif [ -n "${PICK[$key]:-}" ]; then
         eff="${PICK[$key]}"
       elif [ "$conf" = ambiguous ]; then
         eff="skip"   # ambiguous and not explicitly picked → leave a plain shell
@@ -141,19 +151,31 @@ manifest_resume() {
         cmd="$CLAUDE --resume $eff"
       fi
 
-      if [ "$fresh_session" = 1 ] && [ "$w" = 0 ]; then
-        tmux new-session -d -s "$sname" -n "$wname" -c "$cwd"
+      if [ "$idx" = "$prev_idx" ]; then
+        # Another pane of the same window; re-tile so the split always has room.
+        target=$(tmux split-window -t "$win" -c "$cwd" -P -F '#{pane_id}')
+        tmux select-layout -t "$win" tiled >/dev/null
+        [ -n "$layout" ] && LAYOUT[$win]=$layout
+      elif [ "$fresh_session" = 1 ] && [ "$w" = 0 ]; then
+        target=$(tmux new-session -d -s "$sname" -n "$wname" -c "$cwd" -P -F '#{pane_id}')
       else
-        tmux new-window -t "$sname" -n "$wname" -c "$cwd"
+        target=$(tmux new-window -t "=$sname:" -n "$wname" -c "$cwd" -P -F '#{pane_id}')
       fi
+      [ "$idx" = "$prev_idx" ] || win=$(tmux display-message -p -t "$target" '#{window_id}')
+      prev_idx=$idx
       if [ -n "$cmd" ]; then
-        tmux send-keys -t "$sname:$wname" "$cmd" Enter
-        echo "    + [$idx] $wname  →  resume ${eff:0:8}"
+        tmux send-keys -t "$target" "$cmd" Enter
+        echo "    + [$idx.$pidx] $wname  →  resume ${eff:0:8}"
       else
         local note="shell"; [ "$conf" = ambiguous ] && note="shell (ambiguous — pick to resume)"
-        echo "    + [$idx] $wname  →  $note  $cwd"
+        echo "    + [$idx.$pidx] $wname  →  $note  $cwd"
       fi
     done
+  done
+  local wid
+  for wid in "${!LAYOUT[@]}"; do
+    tmux select-layout -t "$wid" "${LAYOUT[$wid]}" >/dev/null 2>&1 ||
+      echo "    ! could not restore the layout of window $wid; left tiled" >&2
   done
 
   # Stamp consumed so a later unplanned reboot doesn't replay this stale park.

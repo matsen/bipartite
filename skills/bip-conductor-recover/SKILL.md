@@ -57,7 +57,7 @@ Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot
 ### Step M: Replay the manifest
 
 ```bash
-"$HELPER" --manifest-list      # TSV: session, index, window, cwd, session_id, method, confidence, issue, candidates
+"$HELPER" --manifest-list      # TSV: session, index, window, cwd, session_id, method, confidence, issue, candidates, pane
 ```
 
 Present the plan grouped by session (real names, windows in order).
@@ -67,11 +67,11 @@ Then replay:
 
 ```bash
 "$HELPER" --manifest-resume \
-  ["<session>:<index>=<chosen-id>" ...] \    # one per ambiguous window the user resolved
+  ["<session>:<index>[.<pane>]=<chosen-id>" ...] \    # one per ambiguous pane the user resolved
   ["<session>:<index>=skip" ...]             # leave that window a plain shell
 ```
 
-This rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their ids, shell windows as bare shells — and reports "(from manifest)".
+This rebuilds **every** session by its real name with windows in order, split windows with their saved pane layout — Claude panes `--resume`'d to their ids, shell panes as bare shells — and reports "(from manifest)".
 Ambiguous windows not given an explicit pick are left as plain shells.
 On success it stamps the manifest consumed (renames it `manifest.<boot>.done`) so a later *unplanned* reboot does not replay a stale park.
 Then nudge resumed workers per **Step 5**.
