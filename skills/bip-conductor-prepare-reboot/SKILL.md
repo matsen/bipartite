@@ -71,7 +71,7 @@ This is the moment to catch a misresolved window before it goes in the manifest.
 
 `SendMessage` every `ListAgents` peer (not this session) the same message, filling in the reboot time:
 
-> Planned reboot of <host> at <time>; your conversation will be resumed afterwards. Start no new long local work. Run `/bip-tuckin` (not `cycle`, and don't `/clear`). Then reply `READY`, or `NOT READY: <what would be lost> | <when it will be safe>`.
+> Planned reboot of <host> at <time>; your conversation will be resumed afterwards. Start no new long local work. Run `/bip-tuckin` (not `/bip-cycle`, and don't `/clear`). Then reply `READY`, or `NOT READY: <what would be lost> | <when it will be safe>`.
 
 What a reboot loses is local: background shells, monitors, and session-scoped crons; builds or runs on this host; a half-done rebase or land.
 Jobs on other hosts survive, so a session waiting on a remote job is `READY`.
