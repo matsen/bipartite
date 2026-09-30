@@ -88,7 +88,7 @@ Without `--shutdown` it stops after writing the manifest, leaving tmux running s
 ```
 
 The manifest lands at `~/.epic-recover/manifest.json` (override the dir with `EPIC_RECOVER_DIR`).
-It preserves your real session names, window names, order, and cwds, with a `session_id`, `method`, and `confidence` per Claude window — a **host-level** file so recover finds it without knowing the project list.
+It preserves your real session names, window names, order, cwds, and each split window's pane layout, with a `session_id`, `method`, and `confidence` per Claude pane — a **host-level** file so recover finds it without knowing the project list.
 
 ### Step 4: Shut down (optional)
 
@@ -114,8 +114,9 @@ After a successful replay it stamps the manifest consumed so a later *unplanned*
   "parked_at": "2026-05-29T06:00:00Z",
   "sessions": [
     {"name": "phyz", "windows": [
-      {"index": 0, "name": "claude",     "cwd": "/home/matsen/re/phyz",     "session_id": "30ebe63e-…", "method": "starttime", "confidence": "medium", "issue": null},
-      {"index": 1, "name": "1483-alder", "cwd": "/home/matsen/re/pz/alder", "session_id": "ee906cc5-…", "method": "cmdline",   "confidence": "high",   "issue": 1483}
+      {"index": 0, "name": "claude",     "cwd": "/home/matsen/re/phyz",     "session_id": "30ebe63e-…", "method": "registry", "confidence": "high", "issue": null, "pane": 0, "layout": "f511,188x53,0,0{…}"},
+      {"index": 0, "name": "claude",     "cwd": "/home/matsen/re/phyz",     "session_id": "93533da0-…", "method": "registry", "confidence": "high", "issue": null, "pane": 1, "layout": "f511,188x53,0,0{…}"},
+      {"index": 1, "name": "1483-alder", "cwd": "/home/matsen/re/pz/alder", "session_id": "ee906cc5-…", "method": "cmdline",  "confidence": "high", "issue": 1483, "pane": 0, "layout": "…"}
     ]}
   ]
 }
@@ -124,6 +125,7 @@ After a successful replay it stamps the manifest consumed so a later *unplanned*
 `confidence` ∈ `high` (cmdline) · `medium` (starttime) · `low` (newest) · `ambiguous` · `none` (shell).
 An `ambiguous` window also carries a `candidates: [id, id]` array.
 `session_id` is `null` for shell windows.
+Each entry is one pane: entries sharing an `index` are splits of one window, which recover rebuilds and then sets to the saved `layout`.
 
 ## Manual verification
 

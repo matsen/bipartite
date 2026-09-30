@@ -143,35 +143,35 @@ issue_for() {
 }
 
 # ---- Pass 1: enumerate panes, resolve cmdline ids, note which jsonls are claimed ----
-# ROW fields (tab-separated): session index name cwd pane_pid claude_pid sid method conf issue candidates socket pane_id
+# ROW fields (tab-separated): session index name cwd pane_pid claude_pid sid method conf issue candidates socket pane_id pane_index layout
 ROWS=()
 declare -A CLAIMED            # jsonl-id -> 1 once a cmdline resume locks it
 declare -A FRESH_IDX          # index into ROWS for windows needing start-time resolution
 
 PANES=()
 for sock in "${SOCKETS[@]}"; do
-  readarray -t -O "${#PANES[@]}" PANES < <(tmux -S "$sock" list-panes -a -F "#{session_name}	#{window_index}	#{window_name}	#{pane_current_path}	#{pane_pid}	$sock	#{pane_id}")
+  readarray -t -O "${#PANES[@]}" PANES < <(tmux -S "$sock" list-panes -a -F "#{session_name}	#{window_index}	#{window_name}	#{pane_current_path}	#{pane_pid}	$sock	#{pane_id}	#{pane_index}	#{window_layout}")
 done
 
 i=0
 for line in "${PANES[@]}"; do
-  IFS=$'\t' read -r sess widx wname cwd ppid sock pane <<<"$line"
+  IFS=$'\t' read -r sess widx wname cwd ppid sock pane pidx layout <<<"$line"
   cpid=$(claude_pid_under "$ppid" || true)
   issue=$(issue_for "$cwd")
   if [ -z "$cpid" ]; then
-    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	-	-	shell	none	$issue	-	$sock	$pane")
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	-	-	shell	none	$issue	-	$sock	$pane	$pidx	$layout")
     i=$((i+1)); continue
   fi
   gid=$(registry_id_for "$cpid")
   rid=$(resume_id_from "$cpid" || true)
   if [ -n "$gid" ]; then
     CLAIMED["$gid"]=1
-    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	$gid	registry	high	$issue	-	$sock	$pane")
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	$gid	registry	high	$issue	-	$sock	$pane	$pidx	$layout")
   elif [ -n "$rid" ]; then
     CLAIMED["$rid"]=1
-    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	$rid	cmdline	high	$issue	-	$sock	$pane")
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	$rid	cmdline	high	$issue	-	$sock	$pane	$pidx	$layout")
   else
-    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	-	pending	pending	$issue	-	$sock	$pane")
+    ROWS+=("$sess	$widx	$wname	$cwd	$ppid	$cpid	-	pending	pending	$issue	-	$sock	$pane	$pidx	$layout")
     FRESH_IDX["$i"]=1
   fi
   i=$((i+1))
@@ -179,7 +179,7 @@ done
 
 # ---- Pass 2: start-time correlation for fresh windows (skipping cmdline-claimed jsonls) ----
 for idx in "${!FRESH_IDX[@]}"; do
-  IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand sock pane <<<"${ROWS[$idx]}"
+  IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand sock pane pidx layout <<<"${ROWS[$idx]}"
   pstart=$(proc_start_epoch "$cpid" || true)
   d=$PROJ/$(enc "$cwd")
   best=""; bestdiff=""; second_diff=""; second_id=""; newest=""; newest_mt=""
@@ -213,7 +213,7 @@ for idx in "${!FRESH_IDX[@]}"; do
   else
     sid="-"; method=none; conf=none; cand=-
   fi
-  ROWS[$idx]="$sess	$widx	$wname	$cwd	$ppid	$cpid	$sid	$method	$conf	$issue	$cand	$sock	$pane"
+  ROWS[$idx]="$sess	$widx	$wname	$cwd	$ppid	$cpid	$sid	$method	$conf	$issue	$cand	$sock	$pane	$pidx	$layout"
 done
 
 # ---- Report ----
@@ -221,13 +221,13 @@ nwin=${#ROWS[@]}; nclaude=0; namb=0
 print_table() {
   printf '%-14s %-3s %-16s %-9s %-10s %s\n' SESSION IDX WINDOW METHOD CONF SESSION_ID/CWD
   for r in "${ROWS[@]}"; do
-    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand _ _ <<<"$r"
+    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand _ _ _ _ <<<"$r"
     local shown="$sid"; [ "$sid" = "-" ] && shown="(shell) $cwd"
     printf '%-14s %-3s %-16s %-9s %-10s %s\n' "$sess" "$widx" "${wname:0:16}" "$method" "$conf" "$shown"
   done
 }
 for r in "${ROWS[@]}"; do
-  IFS=$'\t' read -r _ _ _ _ _ cpid sid method conf _ _ _ _ <<<"$r"
+  IFS=$'\t' read -r _ _ _ _ _ cpid sid method conf _ _ _ _ _ _ <<<"$r"
   [ "$method" = shell ] || nclaude=$((nclaude+1))
   [ "$conf" = ambiguous ] && namb=$((namb+1))
 done
@@ -238,7 +238,7 @@ echo "Host: $(hostname)   tmux servers: ${#SOCKETS[@]}   panes: $nwin   claude: 
 
 # Live claude sessions no reachable pane accounts for: not in the manifest.
 declare -A IN_PANE
-for r in "${ROWS[@]}"; do IFS=$'\t' read -r _ _ _ _ _ cpid _ _ _ _ _ _ _ <<<"$r"; IN_PANE[$cpid]=1; done
+for r in "${ROWS[@]}"; do IFS=$'\t' read -r _ _ _ _ _ cpid _ _ _ _ _ _ _ _ _ <<<"$r"; IN_PANE[$cpid]=1; done
 orphans=()
 for f in "$REGISTRY"/*.json; do
   [ -e "$f" ] || continue
@@ -262,7 +262,7 @@ if [ "$CHECKPOINT" = 1 ]; then
   msg="Planned host reboot imminent. Checkpoint now: commit any WIP, then flush .epic-status.json and .epic-worklog.md. You do not need to finish the task — just persist state."
   sent=0
   for r in "${ROWS[@]}"; do
-    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand sock pane <<<"$r"
+    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand sock pane _ _ <<<"$r"
     [ "$method" = shell ] && continue
     [ -f "$cwd/.epic-status.json" ] || continue
     # Literal text, a pause, then Enter on its own: sent together, the Enter lands in the paste.
@@ -295,7 +295,9 @@ printf '%s\n' "${ROWS[@]}" | jq -R -s --arg host "$host" --arg parked "$parked_a
       session_id: (if $f[6]=="-" then null else $f[6] end),
       method:     $f[7],
       confidence: $f[8],
-      issue:      (if $f[9]=="-" then null else ($f[9]|tonumber) end)
+      issue:      (if $f[9]=="-" then null else ($f[9]|tonumber) end),
+      pane:       ($f[13]|tonumber),
+      layout:     $f[14]
     } | if (($f[10]? // "-") != "-") then .candidates = ($f[10]|split("|")) else . end)
   }) |
   reduce .[] as $r ([];
