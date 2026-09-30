@@ -10,7 +10,7 @@ allowed-tools: Bash, Read
 That inference is lossy: mtime is last *activity*, not "window was open", and it cannot tell which of several concurrent sessions in one cwd were on screen.
 
 When the reboot is **planned**, we can do better: capture ground truth *while tmux is still alive*.
-This skill walks every pane on the host in one run, resolves each Claude window's exact `session_id` from the live process (its `--resume` cmdline, or start-time correlation for fresh sessions), optionally checkpoints epic workers, and writes a host-wide manifest.
+This skill walks every pane on every tmux server on the host in one run, resolves each Claude window's current `session_id` from the live process, optionally checkpoints epic workers, and writes a host-wide manifest.
 `bip-conductor-recover` then replays that manifest after the reboot — rebuilding every session by its real name, windows in order, each Claude window resumed to the right id — instead of guessing.
 
 The deterministic engine is the bundled `epic-prepare-reboot` shell helper; this skill is the brain that runs it, sanity-checks the resolved table with the user, and triggers the manifest write / shutdown.
@@ -52,8 +52,9 @@ Always look before you write.
 Each row shows `SESSION  IDX  WINDOW  METHOD  CONF  SESSION_ID/CWD`.
 The resolution `method` per Claude window, in priority order:
 
+- **registry** (`high`) — `~/.claude/sessions/<pid>.json`, which Claude Code keeps current for each live process.
+  The only method that follows `/clear`: after one, the cmdline and start time still point at the pre-clear conversation.
 - **cmdline** (`high`) — `--resume <id>` was in the Claude process args.
-  Exact; covers any resumed session in any cwd.
 - **starttime** (`medium`) — a *fresh* session (launched without `--resume`) carries no id in its cmdline, so the helper correlates the Claude process start time with the cwd's jsonl that *began* closest.
   Handles fresh windows, including two fresh windows in one cwd.
 - **newest** (`low`) — last resort: the newest jsonl for the cwd.
@@ -63,6 +64,7 @@ The resolution `method` per Claude window, in priority order:
 When start-time correlation finds two jsonls that fit a fresh process nearly equally (within a few seconds), the window is flagged **`ambiguous`** and both candidate ids are recorded — recover will ask rather than guess.
 
 Present a short summary to the user: how many sessions/windows, how many Claude windows resolved by each method, and call out any `ambiguous` rows by name.
+Also relay the closing list of live Claude sessions that no reachable pane holds — `claude --bg` sessions, or panes on a tmux server whose socket was unlinked. They are not in the manifest; their ids are, so the user can `--resume` them by hand.
 This is the moment to catch a misresolved window before it goes in the manifest.
 
 ### Step 2: Decide on checkpointing
@@ -128,11 +130,11 @@ An `ambiguous` window also carries a `candidates: [id, id]` array.
 These helpers introspect live tmux and the process tree, so they are verified by exercising them, not by a unit-test suite (the same convention as `epic-recover`).
 To check a change, against any host with a few tmux windows open:
 
-1. **Fidelity** — `"$HELPER" --dry-run`; confirm the table's sessions/windows match `tmux list-panes -a` exactly (names, order, cwds), with a resolved `session_id` per Claude window.
-2. **Resolution** — a resumed window (started with `--resume`) shows `method=cmdline`; a fresh window shows `starttime`; two fresh windows in one cwd with near-identical start times show `ambiguous` (with two candidates in the manifest).
+1. **Fidelity** — `"$HELPER" --dry-run`; confirm the table's panes match `tmux -S <sock> list-panes -a` on every server socket, and that the Claude rows' ids equal the `sessionId`s in `~/.claude/sessions/<pid>.json` for live pids with a `tmux` pane.
+2. **Resolution** — with a registry entry, every Claude window shows `method=registry`, including one that ran `/clear`. Move a registry file aside to exercise the fallbacks: a resumed window shows `cmdline`, a fresh one `starttime`, and two fresh windows in one cwd with near-identical start times show `ambiguous`.
 3. **Roundtrip** — run for real, then on the same host `epic-recover --manifest-status` reports VALID and `--manifest-resume` rebuilds the sessions by real name with windows in order.
    (See `bip-conductor-recover`'s own verification notes for staleness/consumed/fallback.)
-4. **Guards** — `--no-checkpoint` skips the worker nudges; `--shutdown` kills tmux only after the manifest exists.
+4. **Guards** — `--no-checkpoint` skips the worker nudges; `--shutdown` kills every tmux server only after the manifest exists.
 
 ## Notes
 
