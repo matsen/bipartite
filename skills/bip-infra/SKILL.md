@@ -14,9 +14,10 @@ Other sessions reach it by name, so ask the user to `/rename infra` if it is not
 This skill carries no site facts. The session learns the site from:
 
 - **`servers.yml`** (`$NEXUS_PATH/servers.yml`): the hosts and the jump host. `bip scout` reads it (`bip scout --help`).
-- **The site doc**: the page in this repo that describes those hosts. Find it with `git grep -l -w <host>` over a few host names from `servers.yml`, and read it fully before answering anything.
+- **The site doc**: the page in this repo that describes those hosts. Rank pages by how many distinct `servers.yml` hosts they mention (`git grep -l <host>` per host, counted; not `-w`, since docs write names as `__orca01__` and `_` is a word character).
+  Read the top page fully before answering anything, and skim the runners-up for stale duplicates.
   If none exists, say so and offer to start one.
-- **Live probes**: `bip scout`, plus the checks below. Hardware, load and memory are measured, never copied into docs.
+- **Live probes**: `bip scout`, plus the checks below. Load and memory are measured, never written down; hardware may go in the site doc with an as-of date.
 
 ## Checking a report
 
@@ -26,7 +27,7 @@ Other sessions report outages; confirm each one independently before relaying it
    `bip scout` reports a jump-host throttle as `OFFLINE`, so never report an outage from scout alone (`/bip-scout`).
 2. **Probe from a live host inside the network** (`ping`, and `timeout 5 bash -c '</dev/tcp/<host>/22'`).
    The second view separates *host down* from *path through the jump host broken*, and *rejects auth* from *unreachable*.
-3. A host that answers but is missing from `servers.yml` gets added there; a host in `servers.yml` that no longer exists is reported to the user.
+3. A host the user or the site doc names that is missing from `servers.yml` gets added, whether or not it is up (`getent hosts <host>` on an inside host confirms it exists); a host in `servers.yml` that no longer exists is reported to the user.
 
 ## Telling the fleet
 
@@ -44,7 +45,6 @@ Conductors report what they run where. Spot-check the target host's load and mem
 ## Rechecking
 
 While a host is down, recheck it on a schedule (`/loop`, a few hours apart). Stop once the cause and a return estimate are known, and say so.
-A session-scoped schedule dies with the session; a restart re-arms it from the conversation.
 
 ## Finding other capacity
 
