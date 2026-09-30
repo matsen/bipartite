@@ -24,27 +24,30 @@ if [ "${1:-}" != --detached ]; then
 fi
 
 pane=$2 cwd=$3
-marker=$(mktemp)
+# Transcripts that exist now. The fresh session's is a new file; the current
+# one may already hold a /clear record from an earlier reset, so it can't count.
+before=$(mktemp)
+find ~/.claude/projects -maxdepth 2 -name '*.jsonl' 2>/dev/null | sort >"$before"
 type_line() {
 	tmux send-keys -t "$pane" -l "$1" && sleep 1 && tmux send-keys -t "$pane" Enter
 }
 
 type_line /clear
 
-# The fresh session's transcript starts with the /clear command record.
+# The fresh session's transcript is a new file that starts with the /clear record.
 for _ in $(seq 1 600); do
 	sleep 2
-	new=$(find ~/.claude/projects -maxdepth 2 -name '*.jsonl' -newer "$marker" 2>/dev/null |
+	new=$(find ~/.claude/projects -maxdepth 2 -name '*.jsonl' 2>/dev/null | sort | comm -13 "$before" - |
 		xargs -r grep -l -F '<command-name>/clear</command-name>' 2>/dev/null |
 		xargs -r grep -l -F "\"cwd\":\"$cwd\"" 2>/dev/null | head -1)
 	if [ -n "$new" ]; then
 		sleep 3
 		type_line /bip-continue
 		echo "self-cycle: cleared ($new); sent /bip-continue"
-		rm -f "$marker"
+		rm -f "$before"
 		exit 0
 	fi
 done
-rm -f "$marker"
+rm -f "$before"
 echo "self-cycle: no /clear seen after 20 min; nothing sent" >&2
 exit 1
