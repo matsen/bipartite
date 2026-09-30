@@ -47,6 +47,8 @@ Other agents are actively running experiments there.
 SSH is fine for read-only inspection (`ls`, `cat`, `head`, `grep`, checking file dates/sizes), but never run anything that modifies files, locks, or builds.
 Report what you observe and let the user or the responsible agent handle modifications.
 
+**A question that is the user's to answer** follows `/bip-conductor`'s "Paging the user".
+
 **Issue quality gate:** When the user asks to file an issue during a manuscript session, always run `/bip-issue-check` on the draft before submitting via `/bip-issue-file`.
 Do not shortcut to `gh issue create` directly, regardless of perceived simplicity.
 

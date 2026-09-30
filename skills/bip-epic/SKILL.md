@@ -51,7 +51,7 @@ Cross-session messages are nudges, not transcripts: lead with the decision or th
 - **Run a skeptic subagent on your own artifacts**: before claiming a question answered, and before filing an issue you wrote yourself.
 - **Before repeating who found something**, check the attribution against the log or the PR; it is the part of a claim nobody tests.
 - **Before escalating a question to the user, ask whether its answers lead to different actions.** If both lead to the same action, do not escalate.
-  Put a question for the user as one line in your report, park only that item, and keep working the rest. Never use `AskUserQuestion` here: until the user answers, no peer message reaches you.
+  Put a question for the user as one line in your report, page them per `/bip-conductor`'s "Paging the user", park only that item, and keep working the rest. Never use `AskUserQuestion` here: until the user answers, no peer message reaches you.
 
 ## Configuration
 
