@@ -98,7 +98,7 @@ It orchestrates: scans, spawns clones, cleans up.
 Topic content — what the work means, what's ready and why — belongs to `/bip-epic`.
 
 ### Reboots: parking and recovery
-For a **planned** reboot, run `/bip-conductor-prepare-reboot` first (host-wide, while tmux is alive): it resolves each Claude window's exact session id, optionally checkpoints workers, and writes a manifest so the workspace returns deterministically.
+For a **planned** reboot, run `/bip-conductor-prepare-reboot` first (host-wide, while tmux is alive): it asks every session by message to tuck in and report whether it can be paused, then writes a manifest of each pane's exact session id so the workspace returns deterministically.
 For an **unplanned** reboot (or if no manifest was written), use `/bip-conductor-recover` from a project's main clone to find the killed Claude sessions and resume each into a tmux window (`claude --resume`).
 
 **Numbered issues → spawn**: If work is tied to a GitHub issue (`iN`), always use `/bip-conductor-spawn` to assign it to a clone — even if the fix seems trivial.

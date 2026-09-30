@@ -3,15 +3,15 @@
 #
 # Run ONCE, host-wide, while tmux is still alive. It walks every pane on the
 # host, on every tmux server socket, resolves each claude window's exact session
-# id from ground truth, optionally checkpoints epic
-# workers, and writes a manifest that bip-epic-recover replays after the reboot
+# id from ground truth, and writes a manifest that bip-epic-recover replays after the reboot
 # to rebuild the workspace deterministically — preserving your real session
 # names, window names, order, and cwds.
 #
-#   epic-prepare-reboot                  checkpoint workers, write the manifest
+#   epic-prepare-reboot                  write the manifest
 #   epic-prepare-reboot --dry-run        print the resolved table, write nothing
-#   epic-prepare-reboot --no-checkpoint  skip quiescing workers
 #   epic-prepare-reboot --shutdown       after the manifest is on disk, tmux kill-server
+#
+# Quiescing the sessions is the skill's job, by message, before this runs.
 #
 # Resolution priority per claude window:
 #   1. registry  — ~/.claude/sessions/<pid>.json, which Claude Code keeps current
@@ -34,7 +34,6 @@ MANIFEST="$RECOVER_DIR/manifest.json"
 PROJ=$HOME/.claude/projects
 REGISTRY=$HOME/.claude/sessions
 AMBIG_GAP=${EPIC_PREPARE_AMBIG_GAP:-5}          # 2nd-closest jsonl within Ns of closest -> ambiguous
-CHECKPOINT_WAIT=${EPIC_PREPARE_CHECKPOINT_WAIT:-20}
 
 UUID_RE='[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
 
@@ -67,11 +66,10 @@ command -v mapfile >/dev/null 2>&1 || {
   exit 2
 }
 
-DRY=0; CHECKPOINT=1; SHUTDOWN=0
+DRY=0; SHUTDOWN=0
 for a in "$@"; do
   case "$a" in
     --dry-run)       DRY=1 ;;
-    --no-checkpoint) CHECKPOINT=0 ;;
     --shutdown)      SHUTDOWN=1 ;;
     -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "epic-prepare-reboot: unknown arg '$a'" >&2; exit 1 ;;
@@ -253,30 +251,8 @@ if [ ${#orphans[@]} -gt 0 ]; then
 fi
 
 if [ "$DRY" = 1 ]; then
-  echo "(--dry-run: no checkpoint, no manifest, no shutdown.)"
+  echo "(--dry-run: no manifest, no shutdown.)"
   exit 0
-fi
-
-# ---- Optionally checkpoint epic workers (claude windows whose cwd has .epic-status.json) ----
-if [ "$CHECKPOINT" = 1 ]; then
-  msg="Planned host reboot imminent. Checkpoint now: commit any WIP, then flush .epic-status.json and .epic-worklog.md. You do not need to finish the task — just persist state."
-  sent=0
-  for r in "${ROWS[@]}"; do
-    IFS=$'\t' read -r sess widx wname cwd ppid cpid sid method conf issue cand sock pane _ _ <<<"$r"
-    [ "$method" = shell ] && continue
-    [ -f "$cwd/.epic-status.json" ] || continue
-    # Literal text, a pause, then Enter on its own: sent together, the Enter lands in the paste.
-    tmux -S "$sock" send-keys -t "$pane" -l "$msg" 2>/dev/null && sleep 1 &&
-      tmux -S "$sock" send-keys -t "$pane" Enter 2>/dev/null && sent=$((sent+1))
-  done
-  if [ "$sent" -gt 0 ]; then
-    echo "Checkpoint sent to $sent worker window(s); waiting ${CHECKPOINT_WAIT}s for flush..."
-    sleep "$CHECKPOINT_WAIT"
-  else
-    echo "No epic workers to checkpoint."
-  fi
-else
-  echo "(--no-checkpoint: workers not quiesced.)"
 fi
 
 # ---- Write the manifest ----
