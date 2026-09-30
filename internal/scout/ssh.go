@@ -2,6 +2,7 @@ package scout
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -222,8 +223,12 @@ func (c *RealSSHClient) dialViaProxy(target string, config *ssh.ClientConfig, ti
 		return nil, nil, fmt.Errorf("cannot reach proxy %s: %w", c.sshConfig.ProxyJump, err)
 	}
 
-	// Dial target through the proxy
-	targetConn, err := jumpClient.Dial("tcp", target+":22")
+	// Dial target through the proxy. Bound it: the proxy's own TCP connect to a
+	// powered-off host waits out its kernel timeout (~2 min), and config.Timeout
+	// only covers ssh.Dial.
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	targetConn, err := jumpClient.DialContext(ctx, "tcp", target+":22")
 	if err != nil {
 		jumpClient.Close()
 		return nil, nil, fmt.Errorf("cannot reach %s through proxy %s: %w", target, c.sshConfig.ProxyJump, err)
@@ -249,8 +254,12 @@ func (c *RealSSHClient) wrapSSHError(err error, server, username string) error {
 		return fmt.Errorf("SSH authentication failed for %s (as user %q). "+
 			"If your remote username differs from %q, set \"User\" in ~/.ssh/config",
 			server, username, username)
-	case strings.Contains(errStr, "i/o timeout") || strings.Contains(errStr, "connection timed out"):
-		if c.sshConfig.ProxyJump != "" && strings.Contains(errStr, c.sshConfig.ProxyJump) {
+	case strings.Contains(errStr, "i/o timeout") || strings.Contains(errStr, "connection timed out") ||
+		strings.Contains(errStr, "context deadline exceeded"):
+		// "cannot reach <target> through proxy <proxy>" names the proxy too, but
+		// means the proxy answered and the target did not.
+		if c.sshConfig.ProxyJump != "" && strings.Contains(errStr, c.sshConfig.ProxyJump) &&
+			!strings.Contains(errStr, "through proxy") {
 			return fmt.Errorf("cannot reach proxy %s: connection timed out", c.sshConfig.ProxyJump)
 		}
 		return fmt.Errorf("connection to %s timed out", server)

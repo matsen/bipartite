@@ -56,6 +56,21 @@ func TestWrapSSHError_ProxyTimeout(t *testing.T) {
 	}
 }
 
+func TestWrapSSHError_TargetTimeoutThroughProxy(t *testing.T) {
+	client := &RealSSHClient{
+		sshConfig: SSHConfig{ProxyJump: "jump.example.com"},
+	}
+
+	err := client.wrapSSHError(
+		fmt.Errorf("cannot reach server01 through proxy jump.example.com: context deadline exceeded"),
+		"server01", "testuser",
+	)
+	expected := "connection to server01 timed out"
+	if err.Error() != expected {
+		t.Errorf("expected %q, got %q", expected, err.Error())
+	}
+}
+
 func TestWrapSSHError_ConnectionRefused(t *testing.T) {
 	client := &RealSSHClient{
 		sshConfig: SSHConfig{},
