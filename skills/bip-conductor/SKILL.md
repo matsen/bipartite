@@ -80,6 +80,15 @@ When two things want the same clone, cache, or host, or when the epic's spawn in
 
 The test: **does the answer change what anyone does?** Escalate only when resolving it either way risks an actual problem — data loss, a clobbered remote checkout, two slots owning one deliverable, or whether work is worth doing. Merge and rebase friction is not that, and a question nothing operational reads is not either, even when a peer has framed it as the user's to rule.
 
+### Paging the user
+
+When a question clears that bar and is the user's to answer, ring once: `bip page --from <your ListAgents name> --link <issue/PR/comment URL> "<one-line ask>"`.
+The push is a doorbell pointing at this window, not the message.
+
+- **The owner rings**: the session that will act on the answer. Any other session that spots the question sends it to the owner instead.
+- **One ring per wait.** Hold every item for the user under it; if a question changes while you wait, update what you will show, and do not ring again.
+- **The user's next turn here is the clear.** Re-verify each item first (PR state, the owner's latest), then lead with the ask and your recommendation; context follows.
+
 ## Conventions
 
 ### Issue/PR naming

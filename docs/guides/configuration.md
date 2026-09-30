@@ -41,6 +41,7 @@ EOF
 | `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |
 | `spawn_agent` | Default agent runner for `bip spawn` (`claude` or `agy`, default: `claude`). Also accepts env var: `BIP_SPAWN_AGENT`. |
+| `ntfy_topic` | ntfy.sh topic `bip page` pushes to; subscribe to it in the ntfy app. Also accepts env var: `BIP_NTFY_TOPIC`. |
 
 > **Note:** Environment variables, when set, take precedence over the
 > corresponding `config.yml` field. This lets you keep secrets out of

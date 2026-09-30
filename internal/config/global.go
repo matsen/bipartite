@@ -18,6 +18,7 @@ type GlobalConfig struct {
 	GitHubToken   string            `yaml:"github_token,omitempty"`
 	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
 	SpawnAgent    string            `yaml:"spawn_agent,omitempty"`
+	NtfyTopic     string            `yaml:"ntfy_topic,omitempty"`
 
 	// Layout, when set, is the per-machine default for repo working-directory
 	// resolution. Read by flow.ResolveRepoPath. Optional; an absent block
@@ -191,6 +192,26 @@ func GetSpawnAgent() string {
 		configValue = cfg.SpawnAgent
 	}
 	return firstEnvOrConfig(SpawnAgentEnvVars, configValue)
+}
+
+// NtfyTopicEnvVars lists the environment variables consulted by
+// GetNtfyTopic, in precedence order.
+var NtfyTopicEnvVars = []string{"BIP_NTFY_TOPIC"}
+
+// GetNtfyTopic returns the ntfy.sh topic that `bip page` posts to.
+//
+// Precedence:
+//  1. $BIP_NTFY_TOPIC
+//  2. ntfy_topic in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
+func GetNtfyTopic() string {
+	cfg, _ := LoadGlobalConfig()
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.NtfyTopic
+	}
+	return firstEnvOrConfig(NtfyTopicEnvVars, configValue)
 }
 
 // GetSlackWebhook returns the Slack webhook URL for a channel from global config.
