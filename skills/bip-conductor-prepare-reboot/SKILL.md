@@ -1,6 +1,6 @@
 ---
 name: bip-conductor-prepare-reboot
-description: Quiesce the whole tmux host before a PLANNED reboot — walk every session, resolve each Claude window's exact session id, optionally checkpoint workers, and write a manifest so bip-conductor-recover can rebuild the workspace deterministically. Use when you know a reboot is coming and want a clean, lossless restart.
+description: Quiesce the whole tmux host before a PLANNED reboot — ask every Claude session by message to tuck in and report whether it can be paused, resolve each Claude pane's exact session id, and write a manifest so bip-conductor-recover can rebuild the workspace deterministically. Use when you know a reboot is coming and want a clean, lossless restart.
 allowed-tools: Bash, Read
 ---
 
@@ -10,7 +10,7 @@ allowed-tools: Bash, Read
 That inference is lossy: mtime is last *activity*, not "window was open", and it cannot tell which of several concurrent sessions in one cwd were on screen.
 
 When the reboot is **planned**, we can do better: capture ground truth *while tmux is still alive*.
-This skill walks every pane on every tmux server on the host in one run, resolves each Claude window's current `session_id` from the live process, optionally checkpoints epic workers, and writes a host-wide manifest.
+This skill walks every pane on every tmux server on the host in one run, resolves each Claude window's current `session_id` from the live process, and writes a host-wide manifest. Before the manifest, the skill asks every Claude session by message to persist its state and say whether it can be paused.
 `bip-conductor-recover` then replays that manifest after the reboot — rebuilding every session by its real name, windows in order, each Claude window resumed to the right id — instead of guessing.
 
 The deterministic engine is the bundled `epic-prepare-reboot` shell helper; this skill is the brain that runs it, sanity-checks the resolved table with the user, and triggers the manifest write / shutdown.
@@ -19,7 +19,7 @@ Run it **on the box about to reboot** — that is where tmux, the jsonl files, a
 ## Usage
 
 ```
-/bip-conductor-prepare-reboot [--no-checkpoint] [--shutdown]
+/bip-conductor-prepare-reboot [--shutdown]
 ```
 
 Run it once, host-wide, *before* the reboot.
@@ -43,7 +43,7 @@ It exits 2 with guidance if a prerequisite is missing.
 ### Step 1: Dry-run and review the resolved table
 
 Always look before you write.
-`--dry-run` walks every pane, resolves each window, and prints the table **without** checkpointing, writing, or shutting anything down:
+`--dry-run` walks every pane, resolves each window, and prints the table **without** writing or shutting anything down:
 
 ```bash
 "$HELPER" --dry-run
@@ -67,24 +67,27 @@ Present a short summary to the user: how many sessions/windows, how many Claude 
 Also relay the closing list of live Claude sessions that no reachable pane holds — `claude --bg` sessions, or panes on a tmux server whose socket was unlinked. They are not in the manifest; their ids are, so the user can `--resume` them by hand.
 This is the moment to catch a misresolved window before it goes in the manifest.
 
-### Step 2: Decide on checkpointing
+### Step 2: Ask every session to pause
 
-By default the helper sends every epic **worker** (a Claude window whose cwd has `.epic-status.json`) a one-line checkpoint instruction — commit WIP, flush `.epic-status.json` + `.epic-worklog.md` — and waits briefly (`EPIC_PREPARE_CHECKPOINT_WAIT`, default 20s) for the flush.
-This **persists state; it does not wait for tasks to finish.**
+`SendMessage` every `ListAgents` peer (not this session) the same message, filling in the reboot time:
 
-- Default (checkpoint): use when workers are mid-task and you want their latest state captured.
-- `--no-checkpoint`: skip it when the fleet is already quiet, or when interrupting in-flight tool calls would do more harm than good.
+> Planned reboot of <host> at <time>; your conversation will be resumed afterwards. Start no new long local work. Run `/bip-tuckin` (not `cycle`, and don't `/clear`). Then reply `READY`, or `NOT READY: <what would be lost> | <when it will be safe>`.
 
-Confirm the choice with the user before the real run.
+What a reboot loses is local: background shells, monitors, and session-scoped crons; builds or runs on this host; a half-done rebase or land.
+Jobs on other hosts survive, so a session waiting on a remote job is `READY`.
+
+Replies arrive as messages. Keep a table of every peer, marked `READY`, `NOT READY` (with its reason), or silent.
+A silent session is not ready: a session in another permission mode holds peer messages until its user approves them.
+Show the user the table, and re-ask a `NOT READY` session once its stated time passes.
+The user decides when to go ahead; a session's `NOT READY` is information for that decision, not a veto.
 
 ### Step 3: Write the manifest
 
-Run the helper for real.
+Run the helper for real, after the replies are in: a session that clears changes its id, and the manifest records ids as they are when it runs.
 Without `--shutdown` it stops after writing the manifest, leaving tmux running so you can verify:
 
 ```bash
-"$HELPER"                 # checkpoint workers, then write the manifest
-"$HELPER" --no-checkpoint # write the manifest without quiescing workers
+"$HELPER"
 ```
 
 The manifest lands at `~/.epic-recover/manifest.json` (override the dir with `EPIC_RECOVER_DIR`).
@@ -136,12 +139,12 @@ To check a change, against any host with a few tmux windows open:
 2. **Resolution** — with a registry entry, every Claude window shows `method=registry`, including one that ran `/clear`. Move a registry file aside to exercise the fallbacks: a resumed window shows `cmdline`, a fresh one `starttime`, and two fresh windows in one cwd with near-identical start times show `ambiguous`.
 3. **Roundtrip** — run for real, then on the same host `epic-recover --manifest-status` reports VALID and `--manifest-resume` rebuilds the sessions by real name with windows in order.
    (See `bip-conductor-recover`'s own verification notes for staleness/consumed/fallback.)
-4. **Guards** — `--no-checkpoint` skips the worker nudges; `--shutdown` kills every tmux server only after the manifest exists.
+4. **Guards** — `--shutdown` kills every tmux server only after the manifest exists.
 
 ## Notes
 
 - `--dry-run` mutates nothing.
-  Only a real run writes the manifest, sends checkpoints, or (with `--shutdown`) kills tmux.
+  Only a real run writes the manifest, or (with `--shutdown`) kills tmux.
 - The skill is **host-wide and project-agnostic** — it does *not* require `.epic-config.json` and records every session on the host, not just epic clones.
 - Naming pairs it with `bip-conductor-recover`, though it operates beyond epic clones.
   Related: `bip-conductor-tuckin` persists *fleet* state for a context reset — distinct from parking the *whole host* for a reboot.

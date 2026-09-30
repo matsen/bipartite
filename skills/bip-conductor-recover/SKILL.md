@@ -128,12 +128,12 @@ Each becomes a window named `<issue>-<clone>` (workers) or the clone basename (m
 ### Step 5: Nudge resumed workers
 
 A resumed worker reloads its context but sits idle — the ralph-loop wakeup that would have driven the next iteration died with the process.
-After each worker window finishes loading, send a one-line nudge so it resumes forward motion:
+Once the resumed sessions appear in `ListAgents`, `SendMessage` each worker a one-line nudge so it resumes forward motion:
 
 > Host rebooted and this session was interrupted.
 > Re-read `.epic-status.json` and `.epic-worklog.md`, then continue from where you left off.
 
-Auto-`send-keys` timing against claude's resume-load is unreliable, so prompt the user to paste it (or do it interactively once the window is ready).
+An idle session acts on a message, so no keystrokes are needed. A worker not yet listed is still loading; message it once it is.
 Conductor/planning/discussion sessions usually need no nudge.
 
 ## Notes
