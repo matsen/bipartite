@@ -38,6 +38,7 @@ bip scout
   Cause confirmed 2026-09-03, having been inferred in the 08-31 case: scout reported orca01, orca03, orca04 and quokka `offline` with `handshake failed ... connection reset by peer` against `snail.fhcrc.org`; direct `ssh` seven minutes later found **orca01 at load 0.59 and orca03 at load 0.06 — the two idlest machines reachable**, and both were immediately given real jobs.
   So the failure is not merely "scout is sometimes wrong": it is **biased toward reporting exactly the hosts you most want**, because a scout sweep hits them in the same burst that triggers the throttle. Taking it at its word cost nothing only because someone checked.
   Only report an outage once a direct `ssh` also fails; a genuine one will fail that too, so the check costs a second and the alternative is standing down a fleet that is up.
+  Once confirmed, if `ListAgents` has a session named `infra` (`/bip-infra`), send it the report too.
 
 ### Step 2: Parse JSON Output
 
