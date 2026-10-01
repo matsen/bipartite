@@ -214,6 +214,8 @@ Put a fact that invalidates an instruction *inside* that instruction (claim, why
 
 Re-read every issue-specific *sentence* when reusing a previous prompt, not just every issue number — a substitution on the number cannot reach a sentence that describes the other issue's work without naming it.
 
+Replace every `<CLONE_ROOT>` in the template with the literal absolute path. Workers' clones have no `.epic-config.json`, so a worker cannot resolve it.
+
 Fill in two lines in COMPLETION every time:
 
 - **`LANDING DELEGATION:`** — quote the recorded standing user delegation for this repo from the conductor's decisions log (file and date), or `NONE RECORDED`. `NONE RECORDED` is the default and means the worker stops at a clean gate and the user merges. Workers cannot read the decisions log, so it travels in the brief or not at all.
@@ -352,7 +354,7 @@ unrelated `$(...)`, `$?` or `$HOME` into a separate command.
 REMOTE RUN OUTPUTS DO NOT SURVIVE YOUR OWN MERGE. Gitignored outputs on a
 remote host live only in a pooled clone that is reset after your PR lands.
 Before you request landing, copy anything a follow-up might need to
-`$CLONE_ROOT/.preserved/<slug>/` with a README (what it is, source host and
+`<CLONE_ROOT>/.preserved/<slug>/` with a README (what it is, source host and
 path, which issue), and say in the PR body where it went — or commit it if
 small and it belongs in the repo, or state explicitly that it is
 regenerable and at what cost.
@@ -361,7 +363,7 @@ PUSH NOTIFICATION — on the EVENT, not a file write. When you finish, stand
 down, hand off, or get blocked, `SendMessage` the conductor a one-line
 notification (issue number, state, one-line summary), whether or not
 .epic-status.json exists — /bip-pr-land deletes it. Read the address from
-`$CLONE_ROOT/.conductor-session` (resolve CLONE_ROOT from .epic-config.json).
+`<CLONE_ROOT>/.conductor-session`.
 Do NOT `ListAgents` and pick a plausible row: workers sharing a clone root
 share a name prefix. If the file is missing or the send fails, do not retry
 and do not guess — record the failure in your FINAL RECAP. Send at the
@@ -460,8 +462,8 @@ COMPLETION: When done (or when lead says completed):
 
    IF JOINT LANDING GATE IS YES, request it yourself. Set phase to
    quality-gate and SendMessage BOTH, reading each address at send time:
-       the conductor -> $CLONE_ROOT/.conductor-session
-       the epic      -> $CLONE_ROOT/.epic-session
+       the conductor -> <CLONE_ROOT>/.conductor-session
+       the epic      -> <CLONE_ROOT>/.epic-session
    Say the PR is quality-gate clean, give the headline result and SHA,
    and flag anything either should weigh. Then set awaiting-results with
    a real check_cmd and keep looping.
