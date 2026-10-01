@@ -31,7 +31,7 @@ This skill complements `/bip-issue-check` (which reviews implementation- ready i
 
 Read the EPIC file.
 Also check for:
-- `CLAUDE.md` in the repo root (project conventions)
+- `AGENTS.md` or `CLAUDE.md` in the repo root (project conventions)
 - Any existing EPICs in the target repo (for style consistency):
   ```bash
   # If the EPIC targets a specific repo, check its existing EPICs

@@ -87,7 +87,7 @@ Use dedicated tools:
 
 **Also read project documentation** that may explain design decisions:
 - `docs/` directory for mathematical foundations or design docs
-- `CLAUDE.md` or `README.md` for project conventions
+- `AGENTS.md`/`CLAUDE.md` or `README.md` for project conventions
 - Docstrings and comments in the code itself
 - Test files that exercise the disputed code
 
