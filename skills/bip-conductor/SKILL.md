@@ -87,6 +87,7 @@ The push is a doorbell pointing at this window, not the message.
 
 - **The owner rings**: the session that will act on the answer. Any other session that spots the question sends it to the owner instead.
 - **One ring per wait.** Hold every item for the user under it; if a question changes while you wait, update what you will show, and do not ring again.
+- **If the question resolves before the user answers**, send `bip page --cancel --from <name> "<why>"`, so the ring doesn't bring them to a settled question.
 - **The user's next turn here is the clear.** Re-verify each item first (PR state, the owner's latest), then lead with the ask and your recommendation; context follows.
 
 ## Conventions

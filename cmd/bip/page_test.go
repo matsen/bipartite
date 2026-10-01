@@ -42,3 +42,22 @@ func TestPostNtfyErrorStatus(t *testing.T) {
 		t.Error("want error on 429")
 	}
 }
+
+func TestPageMessage(t *testing.T) {
+	cases := []struct {
+		text, tmux       string
+		cancel           bool
+		wantTitle, wantB string
+	}{
+		{"merge #1?", "dasm2:conductor", false, "s needs you", "merge #1?\ntmux: dasm2:conductor"},
+		{"merge #1?", "", false, "s needs you", "merge #1?"},
+		{"orca01 GPUs were idle", "dasm2:conductor", true, "s: page not needed", "orca01 GPUs were idle"},
+		{"", "", true, "s: page not needed", "resolved without you"},
+	}
+	for _, c := range cases {
+		title, body := pageMessage("s", c.text, c.cancel, c.tmux)
+		if title != c.wantTitle || body != c.wantB {
+			t.Errorf("pageMessage(%q, cancel=%v) = %q, %q; want %q, %q", c.text, c.cancel, title, body, c.wantTitle, c.wantB)
+		}
+	}
+}
