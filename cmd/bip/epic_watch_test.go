@@ -969,3 +969,62 @@ func TestFormatEventLineCollapsesWhitespace(t *testing.T) {
 
 // Ensure io.Writer interface compliance for syncBuffer at compile time.
 var _ io.Writer = (*syncBuffer)(nil)
+
+func TestCheckStallsFlagsUnloopedAwaitingOnce(t *testing.T) {
+	root := t.TempDir()
+	slot := func(name, phase string, loop bool) slotInfo {
+		p := filepath.Join(root, name, epicStatusName)
+		writeStatus(t, p, 7, phase, name)
+		if loop {
+			lp := filepath.Join(root, name, ralphLoopName)
+			if err := os.MkdirAll(filepath.Dir(lp), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(lp, nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return slotInfo{name: name, statusPath: p}
+	}
+	slots := []slotInfo{
+		slot("stuck", "awaiting-results", false),
+		slot("looped", "awaiting-results", true),
+		slot("coding", "coding", false),
+	}
+	old := time.Now().Add(-time.Hour)
+	for _, s := range slots {
+		if err := os.Chtimes(s.statusPath, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logPath := filepath.Join(root, epicNotificationsName)
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logFile.Close()
+	var out bytes.Buffer
+	cfg := watchConfig{slots: slots, stdout: &out, stderr: io.Discard}
+	flagged := map[string]time.Time{}
+
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	evs := readLogEvents(t, logPath)
+	if len(evs) != 1 || evs[0].Slot != "stuck" || evs[0].Stalled == "" || evs[0].NewPhase != "awaiting-results" {
+		t.Fatalf("want one stall event for stuck, got %+v", evs)
+	}
+	if !strings.Contains(out.String(), "STALLED in awaiting-results") {
+		t.Errorf("stdout = %q", out.String())
+	}
+
+	// A fresh worklog write ends the quiet stretch; a later one re-arms it.
+	wl := filepath.Join(root, "stuck", ".epic-worklog.md")
+	if err := os.WriteFile(wl, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	checkStalls(cfg, flagged, time.Now().Add(2*stallQuiet), logFile)
+	if n := len(readLogEvents(t, logPath)); n != 2 {
+		t.Fatalf("want a second event after a new quiet stretch, got %d", n)
+	}
+}
