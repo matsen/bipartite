@@ -54,7 +54,7 @@ Determine where the fix belongs:
 
 | Target | When | Example |
 |--------|------|---------|
-| **CLAUDE.md or AGENTS.md** (current project — edit whichever exists; never add a CLAUDE.md beside an AGENTS.md, which then stops loading) | Agent lacked project-specific context | Missing build command, file path, convention |
+| **CLAUDE.md or AGENTS.md** (current project — edit whichever exists; a CLAUDE.md anywhere between the working directory and an AGENTS.md stops that AGENTS.md loading, so mixed trees symlink `CLAUDE.md -> AGENTS.md`) | Agent lacked project-specific context | Missing build command, file path, convention |
 | **CLAUDE.md** (global `~/.claude/CLAUDE.md`) | Agent lacked cross-project context | Personal workflow preference, tool config |
 | **Skill file** (bipartite `skills/`) | A `/skill` gave wrong or incomplete guidance | Missing flag, outdated workflow, bad example |
 | **Code/docs in current repo** | Missing README, help text, or inline docs | CLI `--help` text doesn't match behavior |
