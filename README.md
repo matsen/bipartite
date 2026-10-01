@@ -14,7 +14,7 @@ The workflow runs as two coupled loops, **ideas** and **experiments**, with GitH
 
 For a PI, the paper is the unit that ties a team's work together. Manuscript sessions (`/bip-ms`) operate at that level: they track EPIC issues across code repositories and react when new results arrive. High-level discussion of findings, grounded in the literature via `/bip-lit`, becomes new issues, which are validated against project conventions before being filed.
 
-Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issue-check`, `/bip-issue-next`, `/bip-issue-iterate`, `/bip-ms-sweep` (pre-submission polish), `/bip-lit-import` (Paperpile import)
+Key skills: `/bip-ms`, `/bip-ms-poll`, `/bip-lit`, `/bip-issue-file`, `/bip-issue-check`, `/bip-issue-next`, `/bip-issue-iterate`, `/bip-ms-sweep` (pre-submission polish), `/bip-ms-math` (revise a manuscript's mathematics in reviewable commits), `/bip-lit-import` (Paperpile import)
 
 ### Agent Orchestration (the experiments side, EPIC workflow)
 
