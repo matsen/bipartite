@@ -84,6 +84,7 @@ The test: **does the answer change what anyone does?** Escalate only when resolv
 
 When a question clears that bar and is the user's to answer, ring once: `bip page --from <your ListAgents name> --link <issue/PR/comment URL> "<one-line ask>"`.
 The push is a doorbell pointing at this window, not the message.
+Ring even when the user typed here a moment ago: a recent turn is not presence, and an unrung ask sits unseen in the scroll.
 
 - **The owner rings**: the session that will act on the answer. Any other session that spots the question sends it to the owner instead.
 - **One ring per wait.** Hold every item for the user under it; if a question changes while you wait, update what you will show, and do not ring again.
