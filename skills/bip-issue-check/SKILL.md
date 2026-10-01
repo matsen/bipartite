@@ -98,7 +98,7 @@ Only if inlining would be unreasonable (many pages of content, binary artifacts,
    Are version constraints noted where they matter?
 
 5. **Directory structure**: Does the proposed structure follow project conventions?
-   (Check CLAUDE.md or experiments/CLAUDE.md for patterns.)
+   (Check the repo's and `experiments/`'s AGENTS.md or CLAUDE.md for patterns.)
 
 6. **Code organization — library vs scripts**: If the repo has a Python package (look for `__init__.py` under a top-level directory, or `pyproject.toml` with `[project]`), and the issue proposes new `.py` files in `scripts/`, `workflow/scripts/`, or `bin/`, check whether the core logic should instead live in the library package as a reusable module, with only a thin CLI wrapper in the scripts directory.
    Flag as **HIGH** if:

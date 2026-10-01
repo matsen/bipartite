@@ -74,7 +74,7 @@ The eight scans:
 
 #### Scan 1 — Writing review (`scientific-tex-editor`)
 
-Brief the agent on the manuscript path(s), whether `--since <ref>` was passed, and any project-specific style rules (semantic line breaks, citation style, etc. — read from the project's `CLAUDE.md` if one exists).
+Brief the agent on the manuscript path(s), whether `--since <ref>` was passed, and any project-specific style rules (semantic line breaks, citation style, etc. — read from the project's `AGENTS.md` or `CLAUDE.md` if one exists).
 Cap output around 400 words.
 Ask for **real problems only** (factual or logical inconsistencies, broken sentences, undefined terms, awkward phrasings introduced by recent edits) — explicitly tell it not to propose stylistic reshaping or reorganization.
 Group findings as **Must-fix / Should-fix / Optional**.

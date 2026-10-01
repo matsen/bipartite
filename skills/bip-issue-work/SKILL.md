@@ -55,7 +55,7 @@ Use the issue number as a branch prefix for traceability.
 ### Step 4: Implement
 
 - Use code from the issue as a starting point when provided
-- Follow CLAUDE.md guidelines for the project
+- Follow the project's AGENTS.md/CLAUDE.md guidelines
 - If you start deviating significantly from the issue, **STOP and discuss**
 - Continue until the issue is done and all tests pass
 
