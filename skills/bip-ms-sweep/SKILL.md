@@ -111,7 +111,7 @@ Output: one line per checked quantity: ✓ consistent (with line numbers) or ✗
 
 Combined because all three are grep-driven with simple classification.
 
-- **Editorial markers**: list every `%EM`, `%HH`, `%TODO`, `%XXX`, `%FIXME`, `% note`, `% NOTE` with `file:line` and truncated text.
+- **Editorial markers**: list every `%EM`, `%HH`, `%CC`, `%TODO`, `%XXX`, `%FIXME`, `% note`, `% NOTE` with `file:line` and truncated text.
   Classify by whether the comment looks **still in flight** (a question to a co-author, a suggestion not yet acted on) vs. **stale** (refers to deleted code, or to changes that have since been made).
   Do not call live in-flight comments "warts" — they're communication.
 - **URL consistency**: extract every URL (`\url{…}` and bare `http(s)://`); group by host/path prefix; flag any inconsistencies in trailing slashes, repo names, or subpath conventions.
