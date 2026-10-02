@@ -42,6 +42,9 @@ It carries only:
   A background task can outlive `/clear`, so an item that says to restart something checks first that it isn't still running (`pgrep -af '<cmd>'`).
   Not a general warning elsewhere — a resuming session runs the top imperative before it reads a caveat below it, so the check must sit on the item's own line.
 - **Anything still pending with the user** — an open question the session was waiting on; a resume that drops these loses them silently.
+  Write each user decision and open question from the user's latest words on it in this session, quoted, not from a note or comment written earlier: a later direction that answers an item, even with an option that was not offered, makes it a decision taken.
+  Write the session's own plan as the session's, never under the user's quote.
+  A durable note the tuckin finds behind the conversation gets corrected too.
 
 ```
 # written at <sha> <iso-time>
