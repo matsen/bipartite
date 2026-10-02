@@ -63,6 +63,18 @@ If no PR exists:
 - Tell the user and ask if they want to create one now
 - Stop here if no PR
 
+### Step 4b: Scan added code for personal home paths
+
+A reviewer reading for meaning skims past a hardcoded `/home/<user>/` default, and once one lands it is copied into the next file.
+
+```bash
+git diff "origin/$BASE...HEAD" -U0 -- '*.py' '*.go' '*.sh' '*.smk' '*.yaml' '*.yml' '*.toml' '*Snakefile' '*Makefile' \
+  | grep -E '^\+.*(/home/[a-z][a-z0-9_-]*/|/Users/[A-Za-z][A-Za-z0-9_-]*/)'
+```
+
+Added lines only, so existing debt does not block a PR; docs, logs, and reports that quote a past run's paths are outside the file list.
+Flag each hit: it belongs in a config file, an environment variable, or a required argument, unless the PR body says why it must be literal.
+
 ### Step 5: Evaluate PR title
 
 Check the PR title for quality:
@@ -152,6 +164,7 @@ Print a compact checklist:
 - [x] On feature branch: `branch-name`
 - [x] Worktree clean
 - [x] PR exists: #123
+- [x] No personal home paths added to code or config
 - [x] Title: descriptive and concise
 - [x] Body: clean summary (not commit history)
 - [x] All commits pushed
@@ -164,6 +177,6 @@ Or flag what needs attention before proceeding.
 
 ## Notes
 
-- This is intentionally lightweight — no code review, no tests, no linting
+- This is intentionally lightweight — no code review, no tests, no linting beyond the home-path grep
 - Run `/bip-pr-review` after this passes for the full quality sweep
 - The body check is the most valuable part: it prevents the common mistake of merging with GitHub's default concatenated-commits body
