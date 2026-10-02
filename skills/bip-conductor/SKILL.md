@@ -97,6 +97,7 @@ Ring even when the user typed here a moment ago: a recent turn is not presence, 
 Same as `/bip-epic`: `i281` = issue #281, `p275` = PR #275.
 Never bare `#N`.
 First mention in bullet lists: full URL inline.
+When a live slot holds the work, add its tmux window, `p1344 (1343-peach)`, so the user can jump there with tmux's `find-window`.
 
 ### Tmux windows
 - Named `NNN-YYY` where NNN is the issue number and YYY is the clone/slot name
