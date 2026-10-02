@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -73,9 +75,10 @@ warning. A transition into a phase that is not legal always alerts,
 whatever --phases says.
 
 Once a minute it also emits a STALLED event, once per quiet stretch, for a
-slot in awaiting-results with no .claude/ralph-loop.local.md whose status
-file and worklog have both gone 45 minutes without a write: nothing will
-wake that slot when its jobs end, and it never changes phase.
+slot in awaiting-results with no .claude/ralph-loop.local.md, no
+background shell or monitor still running in its tmux pane, and a status
+file and worklog that have both gone 45 minutes without a write: nothing
+will wake that slot when its jobs end, and it never changes phase.
 
 Reads .epic-config.json from the current working directory to discover
 slots. Watches each slot's parent directory using fsnotify, or falls back
@@ -157,6 +160,9 @@ type watchConfig struct {
 	ready chan<- struct{}
 	// stallEvery is how often to check for stalled slots; 0 disables it.
 	stallEvery time.Duration
+	// waiting reports whether a session in clone dir has a background
+	// shell or monitor that will wake it; nil means paneWaiting.
+	waiting func(dir string) bool
 }
 
 func runEpicWatch(cmd *cobra.Command, args []string) error {
@@ -633,8 +639,8 @@ func stallTicker(cfg watchConfig) (<-chan time.Time, func()) {
 }
 
 // checkStalls emits one stall event for each slot in awaiting-results that
-// has no ralph loop and whose status file and worklog have both been quiet
-// for stallQuiet. flagged records the newest write seen at each emission, so
+// has no ralph loop, no background shell or monitor to wake it, and whose
+// status file and worklog have both been quiet for stallQuiet. flagged records the newest write seen at each emission, so
 // a slot is reported once per quiet stretch and again only after it writes.
 func checkStalls(cfg watchConfig, flagged map[string]time.Time, now time.Time, logFile *os.File) {
 	for _, s := range cfg.slots {
@@ -656,6 +662,13 @@ func checkStalls(cfg watchConfig, flagged map[string]time.Time, now time.Time, l
 		if quiet < stallQuiet || flagged[s.name].Equal(last) {
 			continue
 		}
+		waiting := cfg.waiting
+		if waiting == nil {
+			waiting = paneWaiting
+		}
+		if waiting(dir) {
+			continue
+		}
 		flagged[s.name] = last
 		phase := status.Phase
 		emitEvent(epicEvent{
@@ -668,4 +681,39 @@ func checkStalls(cfg watchConfig, flagged map[string]time.Time, now time.Time, l
 			Stalled:  fmt.Sprintf("no ralph loop, status and worklog quiet %dm", int(quiet.Minutes())),
 		}, logFile, cfg.stdout, cfg.stderr)
 	}
+}
+
+// turnDone matches the line Claude Code prints when a turn ends, e.g.
+// "✻ Brewed for 3s · done 9:03 PM · 2 monitors still running".
+var turnDone = regexp.MustCompile(` · done .*`)
+
+// paneWaiting reports whether the newest turn-end line in any tmux pane
+// under dir says a shell or monitor is still running. Those re-invoke the
+// session when they exit, so the slot is waiting, not stalled. Any failure
+// reads as not waiting, so the stall is reported rather than hidden.
+func paneWaiting(dir string) bool {
+	out, err := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_id}\t#{pane_current_path}").Output()
+	if err != nil {
+		return false
+	}
+	for _, row := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		id, path, ok := strings.Cut(row, "\t")
+		if !ok || (path != dir && !strings.HasPrefix(path, dir+"/")) {
+			continue
+		}
+		screen, err := exec.Command("tmux", "capture-pane", "-p", "-t", id).Output()
+		if err != nil {
+			continue
+		}
+		last := ""
+		for _, line := range strings.Split(string(screen), "\n") {
+			if turnDone.MatchString(line) {
+				last = line
+			}
+		}
+		if strings.Contains(last, "still running") {
+			return true
+		}
+	}
+	return false
 }
