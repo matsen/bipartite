@@ -485,7 +485,7 @@ esac
 The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`). A transition into a phase that is not one of the seven legal values always emits, so `--phases` only ever lists legal phases.
 
 It is not liveness detection. It is silent when:
-- a slot never transitions — only the staleness checks in the spec below catch that. The one exception it reports is a `STALLED` event: `awaiting-results`, no ralph loop, no shell or monitor still running in its pane, status and worklog quiet 45 minutes, so nothing will wake it when its jobs end;
+- a slot never transitions — only the staleness checks in the spec below catch that. The one exception it reports is a `STALLED` event: `awaiting-results`, no ralph loop, its pane neither mid-turn nor showing a shell or monitor still running, status and worklog quiet 45 minutes, so nothing will wake it when its jobs end;
 - a slot was already in its phase when the watcher first read it. Restarting the watcher re-baselines the whole fleet, so re-run `/bip-conductor` after a restart; a clone added to `clone_names` after launch is never enumerated;
 - **a slot lands**: `/bip-pr-land` deletes the status file, so `completed` is never observed. Run a second Monitor polling `gh pr list --state merged`; for landings it is a correctness requirement.
 
