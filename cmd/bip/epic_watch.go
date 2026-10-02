@@ -75,8 +75,8 @@ warning. A transition into a phase that is not legal always alerts,
 whatever --phases says.
 
 Once a minute it also emits a STALLED event, once per quiet stretch, for a
-slot in awaiting-results with no .claude/ralph-loop.local.md, no
-background shell or monitor still running in its tmux pane, and a status
+slot in awaiting-results with no .claude/ralph-loop.local.md, a tmux pane
+neither mid-turn nor showing a shell or monitor still running, and a status
 file and worklog that have both gone 45 minutes without a write: nothing
 will wake that slot when its jobs end, and it never changes phase.
 
@@ -160,8 +160,8 @@ type watchConfig struct {
 	ready chan<- struct{}
 	// stallEvery is how often to check for stalled slots; 0 disables it.
 	stallEvery time.Duration
-	// waiting reports whether a session in clone dir has a background
-	// shell or monitor that will wake it; nil means paneWaiting.
+	// waiting reports whether a session in clone dir is mid-turn or has a
+	// background shell or monitor that will wake it; nil means paneWaiting.
 	waiting func(dir string) bool
 }
 
@@ -687,9 +687,13 @@ func checkStalls(cfg watchConfig, flagged map[string]time.Time, now time.Time, l
 // "✻ Brewed for 3s · done 9:03 PM · 2 monitors still running".
 var turnDone = regexp.MustCompile(` · done .*`)
 
-// paneWaiting reports whether the newest turn-end line in any tmux pane
-// under dir says a shell or monitor is still running. Those re-invoke the
-// session when they exit, so the slot is waiting, not stalled. Any failure
+// turnActive matches the spinner line of a turn in progress, e.g.
+// "· Improvising… (11s · ↓ 513 tokens)".
+var turnActive = regexp.MustCompile(`^\S \S+… \(\d+[hms]`)
+
+// paneWaiting reports whether any tmux pane under dir is mid-turn, or its
+// newest turn-end line says a shell or monitor is still running. Those
+// re-invoke the session when they exit, so the slot is waiting, not stalled. Any failure
 // reads as not waiting, so the stall is reported rather than hidden.
 func paneWaiting(dir string) bool {
 	out, err := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_id}\t#{pane_current_path}").Output()
@@ -707,6 +711,9 @@ func paneWaiting(dir string) bool {
 		}
 		last := ""
 		for _, line := range strings.Split(string(screen), "\n") {
+			if turnActive.MatchString(line) {
+				return true
+			}
 			if turnDone.MatchString(line) {
 				last = line
 			}

@@ -1038,3 +1038,16 @@ func TestCheckStallsFlagsUnloopedAwaitingOnce(t *testing.T) {
 		t.Fatalf("want a second event after a new quiet stretch, got %d", n)
 	}
 }
+
+func TestTurnLinePatterns(t *testing.T) {
+	for line, want := range map[string]bool{
+		"· Improvising… (11s · ↓ 513 tokens)":                         true,
+		"✻ Brewed… (1m 3s · esc to interrupt)":                        true,
+		"✻ Brewed for 35s · done 10:17 PM":                            false,
+		"     grep -n foo docs/x.md; zig build -… (4m 27s · 2 lines)": false,
+	} {
+		if got := turnActive.MatchString(line); got != want {
+			t.Errorf("turnActive(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
