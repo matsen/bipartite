@@ -23,13 +23,25 @@ The config file follows the XDG Base Directory specification:
 mkdir -p ~/.config/bip
 cat > ~/.config/bip/config.yml << 'EOF'
 nexus_path: ~/re/nexus
-asta_api_key: your-asta-key
-github_token: ghp_your-github-token
-slack_bot_token: xoxb-your-slack-bot-token
 slack_webhooks:
   channel-name: https://hooks.slack.com/services/...
 EOF
 ```
+
+Keep the tokens out of `config.yml`: agents read it routinely, so a secret in it ends up in a session transcript.
+Put them in a file of their own that every shell loads:
+
+```bash
+( umask 077; cat > ~/.config/bip/secrets.env << 'EOF'
+export BIP_ASTA_API_KEY=your-asta-key
+export BIP_GITHUB_TOKEN=ghp_your-github-token
+export BIP_SLACK_TOKEN=xoxb-your-slack-bot-token
+EOF
+)
+echo '[ -r "$HOME/.config/bip/secrets.env" ] && . "$HOME/.config/bip/secrets.env"' >> ~/.zshenv
+```
+
+Use `~/.zshenv`, not `~/.zshrc`: non-interactive shells, such as an agent's Bash tool or `ssh host cmd`, read only the former.
 
 ### Configuration Options
 
@@ -86,9 +98,9 @@ Verify your authentication:
 gh auth status
 ```
 
-### Step 2: Add a Personal Access Token to bip config
+### Step 2: Give bip a Personal Access Token
 
-bip's Go HTTP client uses a separate token from its config file for repository metadata fetching and higher rate limits. To create one:
+bip's Go HTTP client uses a separate token of its own for repository metadata fetching and higher rate limits. To create one:
 
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) (Profile photo → Settings → Developer settings → Personal access tokens)
 2. Choose **Fine-grained tokens** (recommended) or **Tokens (classic)**
@@ -121,20 +133,9 @@ If you prefer classic tokens or need compatibility with older GitHub Enterprise 
    - **`project`** — Read/write GitHub project boards
 4. Click **Generate token** and copy the value
 
-#### Add the token to config
+#### Supply the token via an environment variable
 
-```yaml
-# ~/.config/bip/config.yml
-github_token: ghp_your-token-here   # classic token
-# or
-github_token: github_pat_your-token-here  # fine-grained token
-```
-
-#### Or supply the token via an environment variable
-
-Environment variables take precedence over `config.yml`, which lets you keep
-the token out of plaintext on disk (e.g., when sourced from a secrets manager
-like 1Password `op run`). bip consults, in order:
+Set `BIP_GITHUB_TOKEN` in `~/.config/bip/secrets.env` (see [Creating the Config File](#creating-the-config-file)), or source it from a secrets manager like 1Password `op run`. bip consults, in order:
 
 1. `BIP_GITHUB_TOKEN` (recommended)
 2. `GITHUB_TOKEN`
@@ -216,8 +217,8 @@ Tip: Create ~/.config/bip/config.yml to set a default nexus:
 To verify your config is being read correctly:
 
 ```bash
-# Check if config file exists
-cat ~/.config/bip/config.yml
+# Show the non-secret settings bip read
+bip config
 
 # Test by running a simple command
 bip --version
