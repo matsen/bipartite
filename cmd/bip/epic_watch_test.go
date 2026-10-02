@@ -1004,8 +1004,18 @@ func TestCheckStallsFlagsUnloopedAwaitingOnce(t *testing.T) {
 	}
 	defer logFile.Close()
 	var out bytes.Buffer
-	cfg := watchConfig{slots: slots, stdout: &out, stderr: io.Discard}
+	waitingDirs := map[string]bool{}
+	cfg := watchConfig{slots: slots, stdout: &out, stderr: io.Discard,
+		waiting: func(dir string) bool { return waitingDirs[dir] }}
 	flagged := map[string]time.Time{}
+
+	// A background shell or monitor that will wake the slot is not a stall.
+	waitingDirs[filepath.Join(root, "stuck")] = true
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	if n := len(readLogEvents(t, logPath)); n != 0 {
+		t.Fatalf("a waiting slot was flagged: %d events", n)
+	}
+	waitingDirs = map[string]bool{}
 
 	checkStalls(cfg, flagged, time.Now(), logFile)
 	checkStalls(cfg, flagged, time.Now(), logFile)
