@@ -371,7 +371,7 @@ Check this by what you are about to **do**:
 | **close or reopen an issue** | verify the criterion against `main`, not against the PR that claims it |
 | **land a PR** | `/bip-pr-land`, never a hand-rolled `gh pr merge`. Never send a worker a runnable `gh pr merge` recipe either — it bypasses the skill's preservation and cleanup. Say *"`/bip-pr-land`"* |
 | **approve a PR** | the worker's gate report names every routed target and its exit status **at the SHA you are approving**; `git merge-base --is-ancestor origin/main <head>` (not `MERGEABLE`, which is about conflicts). An approval names a SHA, so a new head voids it. "No doc ack needed" is not "no approval needed" — say both |
-| **merge a worker's PR yourself** | a recorded delegation for **this repo** exists (below); the epic's 🤖 approval is on the PR per `gh`, before the merge; the worker's head SHA equals the PR head; `origin/main` is an ancestor |
+| **merge a worker's PR yourself** | a recorded delegation for **this repo** exists (below); the epic's 🤖 approval is on the PR per `gh`, before the merge, and no 🤖 comment posted after it withdraws it or places a hold (read every one, not just the latest; p702 merged 11 s after a withdrawal); the worker's head SHA equals the PR head; `origin/main` is an ancestor |
 | **cite an artifact by path** | if it is in a pooled clone or a scratchpad, copy it to `$CLONE_ROOT/.preserved/<slug>/` with a README first, and cite the copy |
 | **fill a brief's `LANDING DELEGATION:` line** | quote the delegation from **this repo's** `.epic-decisions.md` with its date, or write `NONE RECORDED`. Workers cannot read that log |
 
