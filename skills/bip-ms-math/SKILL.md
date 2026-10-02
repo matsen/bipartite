@@ -13,8 +13,8 @@ This skill does them in a fixed order, one commit per kind of change, so a revie
 ## Usage
 
 ```
-/bip-ms-math main.tex                 # whole manuscript
 /bip-ms-math main.tex "Appendix"      # one section, by heading
+/bip-ms-math main.tex                 # whole manuscript, only when asked for
 ```
 
 Target one section unless the user asks for the whole paper: every commit gets its own checking agent, so a whole-manuscript run is expensive.
