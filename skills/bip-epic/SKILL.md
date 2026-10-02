@@ -38,6 +38,7 @@ The epic session does strategy, not fleet ops:
 - `i281` = issue #281, `p275` = PR #275.
   Never bare `#N`.
 - First mention in bullet lists: full URL inline.
+- When a live slot holds the work, add its tmux window, `p1344 (1343-peach)`, so the user can jump there with tmux's `find-window`.
 
 Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns — see that skill's Conventions section.
 
