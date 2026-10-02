@@ -17,6 +17,8 @@ This skill does them in a fixed order, one commit per kind of change, so a revie
 /bip-ms-math main.tex "Appendix"      # one section, by heading
 ```
 
+Target one section unless the user asks for the whole paper: every commit gets its own checking agent, so a whole-manuscript run is expensive.
+
 ## Two kinds of source
 
 - **Agent-drafted** (the author is the user and an agent): no markers, no Slack note.
@@ -27,7 +29,7 @@ Ask which one it is if the git history does not say.
 ## Step 0: Orient
 
 Read the target whole with `Read`, not `grep`.
-Read the repo's `CLAUDE.md` for house style (for a Matsen-group paper: one sentence per line, `\Cref` for references).
+Read the repo's `AGENTS.md` or `CLAUDE.md` for house style (for a Matsen-group paper: one sentence per line, `\Cref` for references).
 Run the build first so later warnings are attributable to your edits.
 List the `\newtheorem` environments and the preamble macros.
 Inventory every formal claim: where it is stated, where it is proved, and which hypotheses the proof uses.
@@ -42,20 +44,19 @@ Earlier commits may set up things a later commit has to fix (a theorem labeled b
 2. **Typos, markup slips, `\Cref`, labels and titles on theorems.** Mechanical.
    No statement changes.
 3. **Mathematical corrections.** Marked.
-   Inequality directions, definitions used more strongly than stated, missing hypotheses (for example "every production has at least two children" for an induction on size), unjustified existence steps (well-foundedness), a lemma proved for two sets but applied to a family, base cases that do not match the statement, displays that assert an identity with no proof.
+   Inequality directions, definitions used more strongly than stated, a hypothesis an induction needs but the statement omits, unjustified existence steps (well-foundedness), a lemma proved for two sets but applied to a family, base cases that do not match the statement, displays that assert an identity with no proof.
 4. **Cut proofs that an appendix now proves.** Marked.
    Replace the prose proof with a pointer; keep examples and intuition.
-   Check that the cited result covers the body's generality, and flag any gap (for example symmetric versus ordered costs).
+   Check that the cited result covers the body's generality, and flag any gap.
 5. **Formalize prose-only claims.** Marked.
    Each "routine", "by the same induction", or "by stages" becomes a proposition or lemma with a proof block and a label, and the body points to it.
    Facts used by several proofs become lemmas stated first.
 6. **Break long paragraphs.**
    One idea per paragraph.
-   Move remarks (ordered-pair reading, degenerate cases, implementation caveats) out of definitions into short paragraphs after them.
+   Move remarks (alternative readings, degenerate cases, implementation caveats) out of definitions into short paragraphs after them.
    Keep the definition complete without them.
-   Do not write a count of an adjacent list.
 7. **Notation: one symbol, one role.** Marked.
-   A symbol serving two roles is renamed; an index letter is assigned one role (sites, patterns, children of a production) paper-wide.
+   A symbol serving two roles is renamed; each index letter gets one role paper-wide.
    Count occurrences first and choose the letter that changes the fewest lines, even when it is a third letter rather than a swap.
 8. **Generality trim.** Ask first.
    State the special form the results use and move the general form to a remark.
@@ -97,7 +98,7 @@ Note open questions for the collaborator.
 
 ## Step 4: Slack note (human-written source only)
 
-Write it to `_ignore/` (gitignored) and open it for the user with `zed`.
+Write it to `_ignore/` (gitignored) and give the user its path.
 Address the collaborator.
 Open with thanks and the count of commits, then one short entry per commit with its hash.
 Say why the commits are split: the mechanical ones need a skim and the mathematical ones need review.
