@@ -167,7 +167,7 @@ func runRepoAdd(cmd *cobra.Command, args []string) error {
 			case github.ErrRateLimited:
 				exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN)")
 			case github.ErrUnauthorized:
-				exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN, or github_token in ~/.config/bip/config.yml)")
+				exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (in the environment or ~/.config/bip/secrets.env)")
 			default:
 				exitWithError(ExitRepoGitHubError, "GitHub API error: %v", err)
 			}
@@ -570,7 +570,7 @@ func runRepoRefresh(cmd *cobra.Command, args []string) error {
 		case github.ErrRateLimited:
 			exitWithError(ExitRepoGitHubError, "GitHub API rate limit exceeded; try again later or set BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN)")
 		case github.ErrUnauthorized:
-			exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (or GITHUB_TOKEN / GH_TOKEN, or github_token in ~/.config/bip/config.yml)")
+			exitWithError(ExitRepoGitHubError, "GitHub API authentication failed; check BIP_GITHUB_TOKEN (in the environment or ~/.config/bip/secrets.env)")
 		default:
 			exitWithError(ExitRepoGitHubError, "GitHub API error: %v", err)
 		}

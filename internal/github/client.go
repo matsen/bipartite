@@ -43,7 +43,8 @@ var (
 
 // NewClient creates a new GitHub API client.
 // The token is sourced from (in order): $BIP_GITHUB_TOKEN, $GITHUB_TOKEN,
-// $GH_TOKEN, then github_token in the global config file.
+// $GH_TOKEN, the same names in ~/.config/bip/secrets.env, then github_token
+// in the global config file.
 func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{

@@ -48,17 +48,17 @@ Lines may start with `export ` and values may be quoted.
 | Field | Description |
 |-------|-------------|
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
-| `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Also accepts env vars: `BIP_ASTA_API_KEY`, `ASTA_API_KEY` (in that order). |
-| `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Also accepts env vars: `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` (in that order). |
-| `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
+| `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Prefer `BIP_ASTA_API_KEY` in `secrets.env`; looked up as `BIP_ASTA_API_KEY`, then `ASTA_API_KEY`. |
+| `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Prefer `BIP_GITHUB_TOKEN` in `secrets.env`; looked up as `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, then `GH_TOKEN`. |
+| `slack_bot_token` | Slack bot token for reading channel history. Prefer `BIP_SLACK_TOKEN` in `secrets.env`; looked up as `BIP_SLACK_TOKEN`, then `SLACK_BOT_TOKEN`. |
 | `slack_webhooks` | Slack webhook URLs keyed by channel name |
 | `spawn_agent` | Default agent runner for `bip spawn` (`claude` or `agy`, default: `claude`). Also accepts env var: `BIP_SPAWN_AGENT`. |
 | `ntfy_topic` | ntfy.sh topic `bip page` pushes to; subscribe to it in the ntfy app. Also accepts env var: `BIP_NTFY_TOPIC`. |
 
-> **Note:** Environment variables, when set, take precedence over the
-> corresponding `config.yml` field. This lets you keep secrets out of
-> plaintext on disk by sourcing them from a secrets manager (e.g.
-> 1Password `op run`). Empty env vars are treated as unset.
+> **Note:** For the three tokens, each name is looked up in the environment,
+> then in `secrets.env`, and only then is the `config.yml` field used.
+> For other fields, an environment variable overrides the field.
+> Empty values are treated as unset.
 
 ### Example: Running bip from Anywhere
 
@@ -161,7 +161,7 @@ op run --env-file=<(echo 'BIP_GITHUB_TOKEN=op://Private/bip-github-pat/token') -
 | `bip board list/add/move/remove` | `gh` CLI | Reads/writes GitHub project boards (needs `project` scope) |
 | `bip spawn` | `gh` CLI | Fetches issue/PR details for tmux sessions |
 | `bip digest` | `gh` CLI | Generates activity summaries |
-| `bip repo add/refresh` | `github_token` | Fetches repository metadata |
+| `bip repo add/refresh` | `BIP_GITHUB_TOKEN` | Fetches repository metadata |
 
 ### Troubleshooting
 
