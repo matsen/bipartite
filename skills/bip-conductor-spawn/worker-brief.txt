@@ -92,7 +92,8 @@ source host and path, which issue) and say in the PR body where it went —
 or commit it if small, or state that it is regenerable and at what cost.
 
 PUSH NOTIFICATION — when you finish, stand down, hand off, or get blocked,
-`SendMessage` the conductor one line (issue number, state, summary). Read
+`SendMessage` the conductor one line (issue number, state, summary),
+whether or not .epic-status.json exists — /bip-pr-land deletes it. Read
 the address from `{{CLONE_ROOT}}/.conductor-session`; never pick a
 `ListAgents` row. If the file is missing or the send fails, don't retry or
 guess — note it in your FINAL RECAP. Send when you decide to land, and
