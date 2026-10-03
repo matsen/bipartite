@@ -74,7 +74,10 @@ WAITING: poll a PID you captured at launch (`$!`), never a pattern — this
 prompt is your argv, so `pgrep -f` or `ps | grep` matches your own session
 and never exits. Better: background the command and let the harness
 re-invoke you. A long foreground command makes you unreachable to
-SendMessage.
+SendMessage. Ending a turn does not idle under the ralph loop: its stop
+hook re-feeds you at once and spends an iteration. When a background task
+or agent will re-invoke you, cancel the loop (/ralph-loop:cancel-ralph)
+and restart it with the command at the top of this prompt when you resume.
 
 GIT: write any multi-line commit message to a file and use `git commit -F`.
 After pushing, confirm `git ls-remote origin <branch>` matches
