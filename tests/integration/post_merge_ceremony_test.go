@@ -230,7 +230,7 @@ func TestPostMergeCeremony(t *testing.T) {
 	}
 }
 
-// readIssueLead returns agents/issue-lead.md, whose Step 8 guard is the
+// readIssueLead returns agents/issue-lead.md, whose Step 4 guard is the
 // lead's copy of post_merge_ceremony's terminal-comment check.
 func readIssueLead(t *testing.T) []byte {
 	t.Helper()
@@ -242,7 +242,7 @@ func readIssueLead(t *testing.T) []byte {
 }
 
 // TestTerminalMarkerPatternsAgree pins the terminal-comment pattern in
-// agents/issue-lead.md's Step 8 guard (a jq test() the lead runs) to the one
+// agents/issue-lead.md's Step 4 guard (a jq test() the lead runs) to the one
 // post_merge_ceremony uses (a Python regex the poll runs). The lead is an
 // agent, not a skill, so it cannot source the helper; two copies in two
 // languages is the price, and this test is what keeps them from drifting.
@@ -274,7 +274,7 @@ func TestTerminalMarkerPatternsAgree(t *testing.T) {
 }
 
 // TestLeadGuardAgreesWithHelper runs the jq expression from
-// agents/issue-lead.md's Step 8 guard over every MERGED fixture and checks it
+// agents/issue-lead.md's Step 4 guard over every MERGED fixture and checks it
 // says "the ceremony ran" exactly where post_merge_ceremony prints RAN.
 // TestTerminalMarkerPatternsAgree only compares pattern strings, so a change
 // made the same wrong way in both copies passes it; this one does not
@@ -286,7 +286,7 @@ func TestLeadGuardAgreesWithHelper(t *testing.T) {
 	lead := readIssueLead(t)
 	m := regexp.MustCompile(`-q '(\[\.comments\[\]\.body \| select\([^']*\)\] \| length)'`).FindSubmatch(lead)
 	if m == nil {
-		t.Fatal("no Step 8 guard expression found in agents/issue-lead.md")
+		t.Fatal("no Step 4 guard expression found in agents/issue-lead.md")
 	}
 	expr := string(m[1])
 	checked := 0
