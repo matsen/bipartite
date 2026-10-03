@@ -114,17 +114,17 @@ Set `nexus_path` in `~/.config/bip/config.yml`:
 nexus_path: ~/re/nexus
 ```
 
-For full functionality, supply API keys ([ASTA/Semantic Scholar](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) as environment variables. Keep them in a mode-600 file your shell sources, not in `config.yml`, which agents read routinely; the [Configuration Guide](https://matsen.github.io/bipartite/guides/configuration/#creating-the-config-file) shows the setup.
+For full functionality, put API keys ([ASTA/Semantic Scholar](https://allenai.org/asta/resources/mcp), [GitHub](https://matsen.github.io/bipartite/guides/configuration/#github-authentication), [Slack](https://api.slack.com/apps)) in `~/.config/bip/secrets.env` (mode 600), not in `config.yml`, which agents read routinely:
 
 ```bash
-export BIP_ASTA_API_KEY=your-key
-export BIP_GITHUB_TOKEN=ghp_...
-export BIP_SLACK_TOKEN=xoxb-...
+BIP_ASTA_API_KEY=your-key
+BIP_GITHUB_TOKEN=ghp_...
+BIP_SLACK_TOKEN=xoxb-...
 ```
 
 `asta_api_key` covers both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues a single key for both.
 
-Environment variables take precedence over the matching `config.yml` field (`asta_api_key`, `github_token`, `slack_bot_token`), which still works as a fallback:
+bip looks each token up in the environment, then under the same names in `secrets.env`, then in the matching `config.yml` field (`asta_api_key`, `github_token`, `slack_bot_token`):
 
 | Token  | Env vars consulted (in order)                             |
 |--------|-----------------------------------------------------------|
