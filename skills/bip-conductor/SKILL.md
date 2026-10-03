@@ -354,7 +354,7 @@ EPIC #369: 5 slots    user/bip-ms: 2 slots    (no header): 1 slot
 
 **Negative list**: surface decisions already taken *against* an action, with reasons — sequencing already applied, an issue already stood down for a reason that would otherwise look resolved.
 This is the one category of fleet fact nobody can re-derive from `git`/`tmux`/`gh`.
-Read `.epic-decisions.md` for prior entries and append any new one in the same step you surface it.
+Read only the prior `NEGATIVE` entries (`grep -n -A3 -- '— NEGATIVE' .epic-decisions.md`), skipping any whose issue has since closed, not the whole log, which is append-only and mostly retired. Append any new entry in the same step you surface it.
 
 **Not everything you know is a fleet fact.** Slot occupancy, host load, build state, file collisions, who landed what: fleet facts. A synthesis across arms, a prediction about what an arm will find, or a mechanism one arm inferred that another is independently testing: **never** goes in a prompt, a fleet-facts block, or a nudge. The epic decides what is embargoed; the conductor is the delivery path.
 

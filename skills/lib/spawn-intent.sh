@@ -337,7 +337,7 @@ mirror_worklogs() {
 # ⭐ WHY THESE ARE CHECKS AND NOT BETTER DOCUMENTATION. Both fields audited
 # here ALREADY HAVE an explicit stated rule in the worker-facing spawn prompt,
 # and both rules were broken anyway on 2026-09-14:
-#   - `bip-conductor-spawn/SKILL.md` lists the seven phases in the
+#   - `bip-conductor-spawn/worker-brief.txt` lists the seven phases in the
 #     second-person `.epic-status.json fields:` block, and THREE distinct
 #     off-spec values still appeared in one day.
 #   - Two lines below it, `updated_at` says "Never a placeholder, and never
