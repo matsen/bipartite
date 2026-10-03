@@ -29,19 +29,19 @@ EOF
 ```
 
 Keep the tokens out of `config.yml`: agents read it routinely, so a secret in it ends up in a session transcript.
-Put them in a file of their own that every shell loads:
+Put them in `~/.config/bip/secrets.env` beside it, which bip reads itself, so they never enter a shell's environment:
 
 ```bash
 ( umask 077; cat > ~/.config/bip/secrets.env << 'EOF'
-export BIP_ASTA_API_KEY=your-asta-key
-export BIP_GITHUB_TOKEN=ghp_your-github-token
-export BIP_SLACK_TOKEN=xoxb-your-slack-bot-token
+BIP_ASTA_API_KEY=your-asta-key
+BIP_GITHUB_TOKEN=ghp_your-github-token
+BIP_SLACK_TOKEN=xoxb-your-slack-bot-token
 EOF
 )
-echo '[ -r "$HOME/.config/bip/secrets.env" ] && . "$HOME/.config/bip/secrets.env"' >> ~/.zshenv
 ```
 
-Use `~/.zshenv`, not `~/.zshrc`: non-interactive shells, such as an agent's Bash tool or `ssh host cmd`, read only the former.
+Each token is looked up as an environment variable first, then under the same name in `secrets.env`, then in `config.yml`.
+Lines may start with `export ` and values may be quoted.
 
 ### Configuration Options
 
@@ -135,12 +135,13 @@ If you prefer classic tokens or need compatibility with older GitHub Enterprise 
 
 #### Supply the token via an environment variable
 
-Set `BIP_GITHUB_TOKEN` in `~/.config/bip/secrets.env` (see [Creating the Config File](#creating-the-config-file)), or source it from a secrets manager like 1Password `op run`. bip consults, in order:
+Set `BIP_GITHUB_TOKEN` in `~/.config/bip/secrets.env` (see [Creating the Config File](#creating-the-config-file)), or in the environment from a secrets manager like 1Password `op run`. bip consults, in order:
 
 1. `BIP_GITHUB_TOKEN` (recommended)
 2. `GITHUB_TOKEN`
 3. `GH_TOKEN`
-4. `github_token` in `~/.config/bip/config.yml`
+4. the same names in `~/.config/bip/secrets.env`
+5. `github_token` in `~/.config/bip/config.yml`
 
 The `BIP_`-prefixed name is recommended when a globally-exported `GITHUB_TOKEN`
 (e.g., for the `gh` CLI) might have different scopes than what you want bip

@@ -50,10 +50,7 @@ new schema silently won't take.
 - Agents decide and land changes here without asking the user, under downward pressure on size: a peer's suggested addition is a proposal to weigh, not a fix to apply, and deleting beats adding (`CONSTITUTION.md` Article VII).
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE-<role>.md` (gitignored); never commit. Written by `/bip-tuckin`, read by `/bip-continue`; see `docs/guides/continuation-prompt.md`.
-- Secrets: `config.GetGitHubToken()` / `config.GetSlackBotToken()` consult env vars before
-  `~/.config/bip/config.yml`. Order — GitHub: `BIP_GITHUB_TOKEN` → `GITHUB_TOKEN` → `GH_TOKEN`
-  → config; Slack: `BIP_SLACK_TOKEN` → `SLACK_BOT_TOKEN` → config. Prefer the `BIP_*` names,
-  sourced from a secrets manager (e.g. 1Password `op run` / `op read`).
+- Secrets: the token getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`; `config.yml` holds no secrets, so reading it is safe.
 - Per-issue git worktrees are opt-in via a `layout:` block in `~/.config/bip/config.yml`
   (per-repo overrides in `sources.yml`). Absent block = today's clone-per-repo behavior.
   Schema and precedence: `docs/guides/layout.md`. The resolver is `flow.ResolveRepoPath`.

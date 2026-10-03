@@ -626,3 +626,40 @@ func TestValidateNexusPath_Valid(t *testing.T) {
 		t.Errorf("ValidateNexusPath() = %q, want %q", path, nexusDir)
 	}
 }
+
+func TestSecretsFileBetweenEnvAndConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	for _, name := range GitHubTokenEnvVars {
+		t.Setenv(name, "")
+	}
+	ResetGlobalConfigCache()
+	defer ResetGlobalConfigCache()
+	bipDir := filepath.Join(dir, GlobalConfigDir)
+	if err := os.MkdirAll(bipDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bipDir, GlobalConfigFile), []byte("github_token: from-config\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if got := GetGitHubToken(); got != "from-config" {
+		t.Fatalf("no secrets file: got %q, want from-config", got)
+	}
+
+	secrets := "# comment\nexport BIP_GITHUB_TOKEN='from-secrets'\nBIP_SLACK_TOKEN=\"slack\"\n"
+	if err := os.WriteFile(filepath.Join(bipDir, SecretsFile), []byte(secrets), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ResetGlobalConfigCache()
+	if got := GetGitHubToken(); got != "from-secrets" {
+		t.Errorf("secrets file: got %q, want from-secrets", got)
+	}
+	if got := GetSlackBotToken(); got != "slack" {
+		t.Errorf("double-quoted value: got %q, want slack", got)
+	}
+
+	t.Setenv("BIP_GITHUB_TOKEN", "from-env")
+	if got := GetGitHubToken(); got != "from-env" {
+		t.Errorf("env: got %q, want from-env", got)
+	}
+}
