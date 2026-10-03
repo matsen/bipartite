@@ -775,7 +775,7 @@ func TestEpicPhasesMatchDocs(t *testing.T) {
 			}
 			return out
 		}},
-		{"skills/bip-conductor-spawn/SKILL.md", "phase — one of:", func(rest string) []string {
+		{"skills/bip-conductor-spawn/worker-brief.txt", "phase — one of:", func(rest string) []string {
 			return strings.Split(rest, ",")
 		}},
 		{"skills/bip-conductor/SKILL.md", `"phase": "`, func(rest string) []string {
