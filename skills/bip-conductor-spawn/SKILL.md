@@ -313,4 +313,4 @@ Then all of:
 
 ## Cleaning up slots after work
 
-Reclaim through `reclaim_slot` in `/bip-conductor` Step 6, never by hand: it runs the terminal ceremony and preserves the worklog first.
+Reclaim per `/bip-conductor` Step 6 (`reclaim_slot` in clone mode), never by hand: it preserves the worklog first, and in clone mode runs the terminal ceremony.
