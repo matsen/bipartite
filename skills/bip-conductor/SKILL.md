@@ -150,7 +150,9 @@ Append forwarded findings to `.epic-decisions.md` alongside decision relays.
 
 This applies to *worker* findings only. A finding from the epic has its own voice and channel: log it as a one-line pointer plus its fleet consequence and forward nothing onward.
 
-### Settled-work prohibitions in briefs
+### Resolving a citation before acting on it
+
+Resolve a cited file, line range or symbol against the repo before acting on it (scheduling around it, cleaning up a path, spawning against it), and never reconstruct a missing path component from context — ask the sender which copy they meant. Logging or relaying a finding is not acting: forward it attributed and unresolved.
 
 **A "do not re-run X, it is settled" in a brief must quote the archive line that settles it and name the file** — a worker obeys a prohibition without testing it. When the epic strikes a RULED OUT entry, `grep -ril` every in-flight brief and `.spawn-prompts/` (including `consumed/`) for citations to it.
 
