@@ -101,6 +101,7 @@ Flag anything suspicious for user confirmation before proceeding.
 - Launch `clean-code-reviewer` agent on modified source files (not tests)
 - **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions.
   The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
+- Point both at experiment and script code too, and ask what the PR could drop: modes, arms, and scripts its final result no longer uses, and helpers copied rather than imported.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 
