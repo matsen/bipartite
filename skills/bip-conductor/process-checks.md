@@ -12,7 +12,7 @@ done
 - `pgrep -x` is not fleet-scoped; filter on the cwd being under `$CLONE_ROOT`.
 - To ask "what is running in my pool", don't hand-list names: take `/proc/<pid>/comm` for every pid whose cwd is under `$CLONE_ROOT`, `sort | uniq -c` (test runners are named neither `zig` nor after the product).
 - On shared hosts, scope with `-u $(id -u)`. You cannot read another user's `/proc/<pid>/cwd`; treat an unreadable cwd as foreign and report own and foreign counts separately.
-- To wait on something you launched, poll its `$!`, never a pattern — or background it and let the harness re-invoke you.
+- To wait on something you launched, poll its `$!`, never a pattern — or background it and let the harness re-invoke you. In a wait loop call `/usr/bin/grep`: bare `grep` may be ugrep, which rejects some regexes, so the loop never exits.
 - Load average answers "is this host contended", not "is my job still running": enumerate processes for occupancy.
 
 **A slot blocked on a foreground shell wait** reports `shell`, never `idle`, and cannot drain a `SendMessage`. Sweep whenever a slot reads `shell`, and on any full reconciliation:

@@ -28,7 +28,7 @@ Process findings stay out of the user report: measurement discipline goes to `EV
 
 In `matsengrp/phyz` the user ruled (2026-09-11) that **the epic owns science, the conductor owns correctness and hygiene**. There the conductor rules on hygiene questions (a convention, a doc call, a provenance rule) from measured state, tells the worker the ruling is the terminus and on what authority, records it in the slot's `.epic-worklog.md` (never `lead_guidance`), and informs the epic. It still never attributes a defect to a mechanism or judges a result, even one it found.
 
-Skill changes are drafted by the conductor and agreed with the epic before pushing to bipartite (user, 2026-09-11); one encoding a scientific judgement is the epic's call.
+**Skill changes** (user, 2026-09-11): *"I want you and the EPIC agent to agree on any changes before you actually push them to bipartite."* The conductor drafts; a change encoding a scientific judgement is the epic's call.
 
 ### Mark what a message is
 
@@ -141,11 +141,12 @@ A synthesis across arms, a prediction of what an arm will find, or a mechanism a
 | about to… | check |
 |---|---|
 | **spawn** | `bip fleet currency` and `bip fleet collisions`; the issue body is unchanged since its brief was written; ask the epic what moves its EPIC's top line (Step 6); `systemctl --user list-timers --all` (it shows LAST and NEXT; `is-active` doesn't) and `uptime` — also before telling a slot to run a full suite |
+| **clear runs to share a host** | their summed thread counts fit the host's free cores |
 | **file an issue** | a success criterion naming a denominator, population or "a default run" names its dispatch path |
 | **correct a worker** | worklog entry first |
 | **reclaim a slot** | `reclaim_slot` (Step 6) |
 | **close or reopen an issue** | the criterion holds on `main`, not just in the PR claiming it |
-| **land a PR** | `/bip-pr-land`, never `gh pr merge` — and never send a worker a runnable `gh pr merge` |
+| **land a PR** | `/bip-pr-land`, never `gh pr merge` — and never send a worker a runnable `gh pr merge` — unless this repo's recorded delegation prescribes its own guarded merge |
 | **approve a PR** | the worker's gate report names every routed target and its exit status at the SHA you approve; `git merge-base --is-ancestor origin/main <head>` (`MERGEABLE` is about conflicts). A new head voids the approval. "No doc ack needed" is not "no approval needed" |
 | **merge a worker's PR yourself** | a recorded delegation for this repo; the epic's 🤖 approval is on the PR per `gh` before the merge, and no later *epic* comment withdraws it or holds — every session posts as one account, so identify the epic's comments by signature and read all of them; the worker's head SHA is the PR head; `origin/main` is an ancestor |
 | **cite an artifact by path** | preserved first if it lives in a pooled clone or scratchpad |
