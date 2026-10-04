@@ -47,3 +47,7 @@ Workers loop `/bip-pr-check` and `/bip-pr-review` until both pass clean.
 Legacy phases from older `.epic-status.json` files:
 - `blocked` → treat as `needs-human`
 - `pr-review` → treat as `quality-gate`
+
+## Rebuilding a lost worklog
+
+A deleted worklog is usually recoverable from the slot's transcript, `~/.claude/projects/$(echo "$CLONE" | sed 's|/|-|g')/<session-id>.jsonl`: replay the seed `Write`'s `input.content`, then each `Edit`'s `old_string`→`new_string`, then any Bash heredoc appends, in timestamp order. Stop if an `old_string` doesn't match. Mark the result as a reconstruction in its README.
