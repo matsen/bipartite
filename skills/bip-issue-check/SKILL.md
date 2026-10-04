@@ -29,7 +29,7 @@ A constitution violation is **CRITICAL**; a `DESIGN.md` conflict, or anything th
 When the issue extends existing code, spawn the `code-reuse-reviewer` agent on the files it names as integration points.
 Flag a cut that would deliver the same goal as **HIGH**; checks the issue lacks are proposals to weigh, not gaps (`CONSTITUTION.md` Article VII).
 
-**Duplicate issues.** Search issues on 3–5 key terms from the draft (`gh issue list --state all --search "<terms>" --limit 30`) and read the body of every plausible match. An open issue with the same core deliverable, one that already contains this work as a subtask, or closed work whose result already answers part of the deliverable is **HIGH**: recommend consolidating, an explicit scope split with cross-references, or closing one — or, when the match is closed, citing its result. Related work with a clearly different goal is **MEDIUM**, worth a link.
+**Duplicate issues.** Search issues on 3–5 key terms from the draft (`gh issue list --state all --search "<terms>" --limit 30`) and read the body of every plausible match. An open issue with the same core deliverable, one that already contains this work as a subtask, or closed work whose result already answers part of the deliverable is **HIGH**: recommend consolidating, an explicit scope split with cross-references, or closing one — or, for closed work, narrowing the draft to what remains and citing it. Related work with a clearly different goal is **MEDIUM**, worth a link.
 
 **Project traps** — each looks fine on reading and isn't:
 
