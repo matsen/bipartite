@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -91,6 +92,17 @@ func GetWebhookURL(channel string) string {
 	return config.GetSlackWebhook(channel)
 }
 
+// stripURL drops the *url.Error wrapper that net/http puts around request
+// errors, because its message quotes the whole URL and a webhook URL is a
+// secret.
+func stripURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return ue.Err
+	}
+	return err
+}
+
 // PostToSlack posts a message to Slack via webhook.
 func PostToSlack(webhookURL, message string) error {
 	payload := map[string]string{"text": message}
@@ -102,13 +114,13 @@ func PostToSlack(webhookURL, message string) error {
 	client := newSlackHTTPClient()
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return fmt.Errorf("creating request: %w", stripURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("posting to Slack: %w", err)
+		return fmt.Errorf("posting to Slack: %w", stripURL(err))
 	}
 	defer resp.Body.Close()
 
