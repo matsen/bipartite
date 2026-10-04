@@ -29,7 +29,7 @@ The epic session does strategy, not fleet ops:
 - Flags dependency-direction conflicts and file-overlap collisions between open issues, before either gets spawned — by the time branches exist the cost of a collision is already sunk
 - Decides an issue is ready and drafts the spawn brief, but does not spawn it — that goes to `/bip-conductor` as intent, not action
 - Owns the user-facing topic channel: this is where scientific reasoning gets presented and where scientific decisions get made.
-  `/bip-conductor` narrates fleet state only and points here for substance (see that skill's "The fleet/topic line"), so expect a semantic question raised in the conductor's window to arrive here rather than be answered there.
+  `/bip-conductor` narrates fleet state only and points here for substance (see that skill's "Role"), so expect a semantic question raised in the conductor's window to arrive here rather than be answered there.
 - Never writes code, creates branches, or spawns tmux windows for numbered issues itself
 
 ## Conventions
@@ -40,7 +40,7 @@ The epic session does strategy, not fleet ops:
 - First mention in bullet lists: full URL inline.
 - When a live slot holds the work, add its tmux window, `p1344 (1343-peach)`, so the user can jump there with tmux's `find-window`.
 
-Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns — see that skill's Conventions section.
+Tmux window naming and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns (its Conventions section); reboot recovery is `/bip-conductor-prepare-reboot` and `/bip-conductor-recover`.
 
 ### Message economy
 

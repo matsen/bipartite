@@ -48,6 +48,7 @@ new schema silently won't take.
 ## Repo facts
 
 - Agents decide and land changes here without asking the user, under downward pressure on size: a peer's suggested addition is a proposal to weigh, not a fix to apply, and deleting beats adding (`CONSTITUTION.md` Article VII).
+- Every PR gets `/bip-pr-review` before it lands, skill-only PRs included; peer sessions' acks don't replace it. Skip the steps that don't apply and say so in the report.
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE-<role>.md` (gitignored); never commit. Written by `/bip-tuckin`, read by `/bip-continue`; see `docs/guides/continuation-prompt.md`.
 - Secrets: the token getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`; `config.yml` holds no secrets, so reading it is safe.
@@ -74,5 +75,3 @@ topic search with no local hit. Add via `./bip s2 add DOI:...` when rate limits 
   `docs/guides/`. Skills live in `./skills/` (not `./.claude/skills/`).
 - When a change adds or alters a command, run `./bip <cmd> --help` and make the skill docs
   match the real flags and workflow.
-- The pre-PR process *is* the `/bip-pr-review` skill (with `/bip-pr-check` as a quick gate) —
-  don't restate the checklist here.
