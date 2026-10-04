@@ -261,6 +261,19 @@ When drafting new results or methods text:
 5. Run the `@scientific-tex-editor` agent on the new text for style review
 6. Present the edited draft for final approval before inserting into the TeX file
 
+Any prose you write into the paper, drafted or edited, follows these rules from the start, so the editor's pass has less to fix:
+- Lead every paragraph with its claim sentence; put all support after it.
+- Don't open a sentence with This/That/Such or "The consequence" as its subject.
+- Split any sentence past ~40 words or with two clauses joined by comma plus and/so/since/while/where.
+- Never use em-dashes; use a period, comma, colon, or parenthetical.
+- No clefts ("it is X that", "what P cannot tell us is") and no "there is/are ... that".
+- Avoid inert main verbs (is, has, offers, provides, represents, constitutes) that bury the real action.
+- Replace vague verbs (emits, captures, encodes, leverages) with the precise relation (estimates, predicts, assigns, defines).
+- No meta-commentary on your own claims ("The key insight is", "Importantly", "It is worth noting").
+- No rhetorical flourish: punchy closers, announcing topic sentences, coy negative-space framing, escalating tails.
+- Plain register; cut intensifiers (exactly, precisely, genuinely, crucially) unless technically load-bearing.
+- One sentence per line in the TeX source.
+
 ## Remote server awareness
 
 Experiment results and data live on remote servers (orca/ermine), not locally.

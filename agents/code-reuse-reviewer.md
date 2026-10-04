@@ -1,6 +1,6 @@
 ---
 name: code-reuse-reviewer
-description: "Use this agent when you want a code review focused specifically on adherence to existing codebase patterns and effective reuse of prior art — distinct from a general clean-code review. Run it alongside `clean-code-reviewer` before submitting a PR. It fans out per-file sub-agents and flags redefined constants, reimplemented helpers, and skipped abstractions."
+description: "Review a diff for missed reuse of the codebase's existing constants, helpers, and patterns; run alongside clean-code-reviewer before a PR."
 model: sonnet
 color: orange
 ---
