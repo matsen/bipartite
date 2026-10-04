@@ -1,6 +1,6 @@
 ---
 name: issue-lead
-description: "Evaluate a worker's progress on a GitHub issue from files alone and decide the next step; spawned by workers at ralph-loop stopping points."
+description: "Evaluate a worker's progress on a GitHub issue from files alone and decide the next step; spawned by workers at ralph-loop stopping points and by the conductor for the post-merge ceremony."
 model: opus
 color: cyan
 ---
