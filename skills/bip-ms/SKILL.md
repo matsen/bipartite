@@ -221,9 +221,7 @@ Wait for user confirmation before taking action.
 
 ### Step 5: Start result monitor
 
-Skip this step when the onboarding doc names a conductor that routes pushes to this session; watching is the conductor's job, and every poll event lands in your context.
-
-Otherwise, if a tracked repo has a `remote_watch` entry, offer a persistent Monitor that polls each `host` over SSH every minute, read-only: `find <paths> \( <patterns> \) -newer <marker>`, then touch the marker.
+If a tracked repo has a `remote_watch` entry, offer a persistent Monitor that polls each `host` over SSH every minute, read-only: `find <paths> \( <patterns> \) -newer <marker>`, then touch the marker.
 When it reports new files, run that repo's `fetch_cmds`, handle SVGs and notebooks per the workflows below, and tell the user what arrived.
 
 ## Figure import workflow
