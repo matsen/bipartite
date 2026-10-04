@@ -125,6 +125,8 @@ cat .ms-config.json
 ```
 
 Read `CLAUDE.md` and the top of `misc/session-onboarding.md`: everything above its live-thread index, plus the index itself.
+Then read the Introduction's prose, the turn-one read of the paper: it should convey the paper's idea on its own, and may end with an outline of the other sections.
+If it falls short, propose an Introduction edit rather than a summary elsewhere.
 Durable session state lives in the repo; `/bip-ms-tuckin` Step 4 is the contract for what goes where.
 Open a thread's detail only when that thread comes up, by grepping the doc for its handle.
 
