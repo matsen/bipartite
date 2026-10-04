@@ -54,7 +54,7 @@ Everything below lives in the repo.
    A fresh session reads its top and index whole and the rest only by grep, so it has three parts.
    The **top** carries what is needed *before* acting: what the paper is and is not, hazards, the peer sessions and their remits, and the working disciplines, one line per rule; an incident story goes in the commit message, not here.
    The **live-thread index** has one line per open thread, carrying its grep handles (issue and PR numbers, ledger id or `\label`, never a line number) and a pointer to where its evidence lives.
-   Below the index, or in one file the index points to, each thread's **detail** carries what it would *mean for the paper*, the analyses requested, and what it is waiting on; a ruling is quoted verbatim, never paraphrased.
+   Below the index, each thread's **detail** carries what it would *mean for the paper*, the analyses requested, and what it is waiting on; a ruling is quoted verbatim, never paraphrased.
    Prefer pointing at the file that holds a fact over restating it; a number that sits in a `%PROV` or `notes/` file is not copied here.
    It is a standing document, not a log: **edit the lines that are now wrong rather than appending**.
    When a thread closes, move any guard it carries ("no exposure", "do not restore") into a `%PROV` beside the sentence it protects, then delete the thread.
