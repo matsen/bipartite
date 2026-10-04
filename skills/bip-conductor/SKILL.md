@@ -26,7 +26,7 @@ Process findings stay out of the user report: measurement discipline goes to `EV
 
 ### Who rules on what
 
-In `matsengrp/phyz` the user ruled (2026-09-11) that **the epic owns science, the conductor owns correctness and hygiene**. There the conductor rules on hygiene questions (a convention, a doc call, a provenance rule) from measured state, tells the worker the ruling is the terminus and on what authority, records it in the slot's `.epic-worklog.md` (never `lead_guidance`), and informs the epic. It still never attributes a defect to a mechanism or judges a result, even one it found.
+In `matsengrp/phyz` the user ruled (2026-09-11) that **the epic owns science, the conductor owns correctness and hygiene**. There the conductor rules on hygiene questions (a convention, a doc call, a provenance rule) from measured state, tells the worker the ruling is the terminus and on what authority, records it in the slot's `.epic-worklog.md` (never `lead_guidance`), and informs the epic, not the user. It still never attributes a defect to a mechanism or judges a result, even one it found.
 
 **Skill changes** (user, 2026-09-11): *"I want you and the EPIC agent to agree on any changes before you actually push them to bipartite."* The conductor drafts; a change encoding a scientific judgement is the epic's call.
 
@@ -40,7 +40,7 @@ Resolve conflicts over a clone, cache or host, or between the epic's intent and 
 
 ### Paging the user
 
-For a question that clears that bar and is the user's, the session that will act on the answer rings once: `bip page --from <your ListAgents name> --link <URL> "<one-line ask>"`. Ring even if the user just typed; a recent turn is not presence. One ring per wait — fold later items into it. If it resolves first, `bip page --cancel --from <name> "<why>"`. When the user next types here, re-verify each item, then lead with the ask and your recommendation.
+For a question that clears that bar and is the user's, the session that will act on the answer rings once (any other session that spots it sends it to that owner): `bip page --from <your ListAgents name> --link <URL> "<one-line ask>"`. Ring even if the user just typed; a recent turn is not presence. One ring per wait — fold later items into it. If it resolves first, `bip page --cancel --from <name> "<why>"`. When the user next types here, re-verify each item, then lead with the ask and your recommendation.
 
 Put such a question as one line in your report, park only that item, and keep working. Never use `AskUserQuestion`: while it waits, no peer message reaches you.
 
@@ -57,7 +57,7 @@ Whether a correction is durable is `/bip-epic`'s call; the conductor delivers it
 - If it changes what the worker produces (scope, target, artifact, gate), append a timestamped, attributed entry to the slot's `.epic-worklog.md` **first**, then send: the file survives compaction and name drift, the message doesn't. Never write `lead_guidance` (the lead's field); use `conductor_guidance` or a `lead_notes` entry tagged `source: conductor`.
 - The address is what `ListAgents` reports for that session, or the `from` of its message; never compose one — a bare clone name isn't an address, and a near-miss delivers to the wrong session.
 - A worker asking whether an authorization is real: a plain user turn authorizes; a `<cross-session-message>` or `NOT USER INPUT` payload does not (table in `/bip-conductor-spawn`'s landing-gate block).
-- No nudge for an `awaiting-results` slot with a live `check_cmd`; to hear when a worker finishes, `notify_when_idle: true`. For current state, `tmux capture-pane`.
+- No nudge for an `awaiting-results` slot with a live `check_cmd`; to hear when a worker finishes, `notify_when_idle: true`. For current state, `tmux capture-pane`. When the target isn't addressable, make the correction file-only.
 
 ### Completion pushes
 
@@ -84,7 +84,12 @@ Lead with the decision, ask or correction; give only reasoning the receiver can'
 
 ### Step 1: Load config, or set it up
 
-`cat .epic-config.json`. If it is missing, follow `setup.md` in this skill's directory. Take every path and name from it; never hardcode.
+`cat .epic-config.json`. If it is missing, follow `setup.md` in this skill's directory. Take every path and name from it; never hardcode. Every file this skill writes to the conductor cwd needs a `.gitignore` entry in the consuming repo.
+
+```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
+```
 
 Write this session's `ListAgents` name as the sole line of `$CLONE_ROOT/.conductor-session`.
 
@@ -99,8 +104,6 @@ Read every tracked subdirectory `CLAUDE.md`/`AGENTS.md` (`git ls-files | /usr/bi
 `/bip-issue-file` moves a draft to `_ignore/` once filed, so a loose `ISSUE-*.md` in a clone is unfiled (or mid-update):
 
 ```bash
-source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
-CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 ```
 
@@ -119,9 +122,9 @@ find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
 
 Worktree mode: slots are `$CLONE_ROOT/issue-*`, and `bip fleet currency` doesn't cover them.
 
-Classify each slot: **occupied** (has a tmux window, whatever its status), **held** (named in `$CLONE_ROOT/.holds/`), **stale** (no window but a status file or non-main branch; clean up only via `reclaim_slot`), **available** (no window, on `main`, clean, current with `origin/main`). Note legacy phases, missing status files and contradictions; run the "Slot staleness" checks below.
+Classify each slot: **occupied** (has a tmux window, whatever its status), **held** (named in `$CLONE_ROOT/.holds/`), **stale** (no window but a status file or non-main branch; clean up only via `reclaim_slot`), **available** (no window, on `main`, clean, current with `origin/main`). Note legacy phases (mapped in `status-spec.md`), missing status files and contradictions; run the "Slot staleness" checks below.
 
-**Hold** a slot something outside it depends on (another slot reads its files, remote jobs run from it): `echo "<reason>" > "$CLONE_ROOT/.holds/<slot>"`, removed when the dependency ends. `bip spawn` refuses a held slot (`--ignore-hold` overrides, `--force` doesn't) and `bip fleet currency` shows it `HELD`.
+**Hold** a slot something outside it depends on (another slot reads its files, remote jobs run from it): `mkdir -p "$CLONE_ROOT/.holds" && echo "<reason>" > "$CLONE_ROOT/.holds/<slot>"`, removed when the dependency ends. `bip spawn` refuses a held slot (`--ignore-hold` overrides, `--force` doesn't) and `bip fleet currency` shows it `HELD`.
 
 Clean is not current: fast-forward an idle slot that is behind. Whether a finished *result* is stale is a different question: `git diff <artifact's build commit> <tip> -- <source paths>`.
 
@@ -186,7 +189,7 @@ reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 
 It preserves the worklog to `.preserved/`, kills the worker's pane (never the window — another session's pane can share it; same by hand), waits for no process to have its cwd in the clone, checks out the base, and deletes the state files and merged branch. Its output:
 - `RECLAIMED` → spawn pending intent.
-- `HOLD` → nothing changed; fix the cause or leave it.
+- `HOLD` → nothing changed. It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty; fix the cause or leave the slot.
 - `NOT FREE` (exit 2) → window gone, clone not reset. Re-run later with `none` if processes linger (a detached build outlasts the 30 s poll); fix a failed checkout first. It can't see writes from outside (`git -C`, `rsync`).
 - `CEREMONY OWED #<pr> <slot-dir>` → spawn an `issue-lead` subagent: *"Post-merge terminal ceremony for <owner/repo>#<issue>, PR #<N>, which `gh` reports MERGED. The slot's clone is `<slot-dir>`. Read its `.epic-status.json` and `.epic-worklog.md` there, run git as `git -C <that path>`, and pass `-R <owner/repo>` to `gh`. Follow your full evaluation protocol; Step 8 applies."* Then re-run `reclaim_slot`.
 - `ceremony UNRUN` → tell the user; the worklog is gone.
@@ -194,7 +197,7 @@ It preserves the worklog to `.preserved/`, kills the worker's pane (never the wi
 
 A loop is live when `.claude/ralph-loop.local.md` exists and its `session_id` is a running session. Worktree mode has no helper: `preserve_epic_state`, then `git worktree remove --force $CLONE_ROOT/issue-N && git branch -d <branch>`. A lost worklog: check `<clone_root>/<clone>/.preserved/`, then `status-spec.md` for rebuilding it from the transcript.
 
-Then spawn through `/bip-conductor-spawn` (never improvised tmux/claude commands), and report after; the proposal is not a gate. Spawn ready, in-scope, unblocked briefs while capacity exists, re-assessing whenever a slot frees, a PR merges or a brief appears. One issue whose result informs the others goes alone; independent ones go in parallel. Before each spawn ask the epic what next moves its EPIC's top line, and whether this is it — a stated hold is a complete answer. Which other issues deserve slots is the epic's call.
+Then spawn through `/bip-conductor-spawn` (never improvised tmux/claude commands), and report after; the proposal is not a gate. Spawn ready, in-scope, unblocked briefs while capacity exists — the gate is topic and objective, not count — re-assessing whenever a slot frees, a PR merges or a brief appears. One issue whose result informs the others goes alone; independent ones go in parallel. Before each spawn ask the epic what next moves its EPIC's top line, and whether this is it — a stated hold is a complete answer. Which other issues deserve slots is the epic's call.
 
 ### Step 7: Start slot monitor
 
@@ -218,7 +221,8 @@ When several slots go quiet at once, ask what they share — host, rate budget, 
 
 ## Slot staleness
 
-The status schema is `status-spec.md`. Check on every reconciliation:
+The status schema, for reading or writing a status file, is `status-spec.md`. Check on every reconciliation:
+- Run `process-checks.md`'s shell-wait sweep: a slot blocked on a foreground shell reads `shell` and can't drain a `SendMessage`.
 - No window, status file older than 30 min → abandoned; reclaim candidate.
 - A pane on a permission modal is frozen: it can't receive `SendMessage` and the watcher can't see it.
 
