@@ -19,7 +19,7 @@ Use `$ARGUMENTS`, else the ISSUE-*.md most recently discussed; if unclear, ask.
 ## Step 2: Spawn a review subagent
 
 Launch a general-purpose subagent on the issue file, passing the repo's `CONSTITUTION.md` and `DESIGN.md` if they exist.
-It reads every file, flag, and PR the issue references — each in the repo and branch the issue names, including another repo's unmerged PR branch (`gh api 'repos/<owner>/<repo>/contents/<path>?ref=<branch>' --jq .content | base64 -d` needs no clone) — and checks claims against them rather than against the text.
+It reads every file, flag, and PR the issue references — each in the repo and branch the issue names, including another repo's unmerged PR branch (`gh api -H 'Accept: application/vnd.github.raw' 'repos/<owner>/<repo>/contents/<path>?ref=<branch>'` needs no clone) — and checks claims against them rather than against the text.
 
 **The bar:** a worker who has never seen the conversation can implement this without asking a question, and can tell when it is done.
 That means concrete paths, formats, and formulas; every named quantity tied to the code or formula that computes it; measurable success criteria with a stated baseline; and, for algorithmic work, at least two validations specific to this method that would catch a wrong implementation.
