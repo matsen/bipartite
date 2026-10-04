@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -85,15 +86,21 @@ type ChannelInfo struct {
 	Purpose string `json:"purpose"`
 }
 
-// webhookEnvVar returns the environment variable name for a channel's webhook.
-func webhookEnvVar(channel string) string {
-	return "SLACK_WEBHOOK_" + strings.ToUpper(channel)
-}
-
-// GetWebhookURL returns the Slack webhook URL for a channel.
-// Checks SLACK_WEBHOOK_<CHANNEL> environment variable first, then global config.
+// GetWebhookURL returns the Slack webhook URL for a channel; see
+// config.GetSlackWebhook for where it is looked up.
 func GetWebhookURL(channel string) string {
 	return config.GetSlackWebhook(channel)
+}
+
+// stripURL drops the *url.Error wrapper that net/http puts around request
+// errors, because its message quotes the whole URL and a webhook URL is a
+// secret.
+func stripURL(err error) error {
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		return ue.Err
+	}
+	return err
 }
 
 // PostToSlack posts a message to Slack via webhook.
@@ -107,13 +114,13 @@ func PostToSlack(webhookURL, message string) error {
 	client := newSlackHTTPClient()
 	req, err := http.NewRequest("POST", webhookURL, bytes.NewReader(data))
 	if err != nil {
-		return fmt.Errorf("creating request: %w", err)
+		return fmt.Errorf("creating request: %w", stripURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("posting to Slack: %w", err)
+		return fmt.Errorf("posting to Slack: %w", stripURL(err))
 	}
 	defer resp.Body.Close()
 
@@ -128,7 +135,7 @@ func PostToSlack(webhookURL, message string) error {
 func SendDigest(channel, message string) error {
 	webhookURL := GetWebhookURL(channel)
 	if webhookURL == "" {
-		return fmt.Errorf("no webhook configured for channel '%s'; set %s", channel, webhookEnvVar(channel))
+		return fmt.Errorf("no webhook configured for channel '%s'; set %s in ~/.config/bip/secrets.env", channel, config.SlackWebhookEnvVars(channel)[0])
 	}
 	return PostToSlack(webhookURL, message)
 }

@@ -15,7 +15,8 @@ const (
 var slackCmd = &cobra.Command{
 	Use:   "slack",
 	Short: "Slack channel integration commands",
-	Long: `Commands for reading from Slack channels.
+	Long: `Commands for reading from Slack channels, and for posting to them through
+their webhooks ('post').
 
 Fetch message history, list configured channels, and analyze team activity.
 Requires a Slack bot token with channels:history, channels:read, and

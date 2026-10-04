@@ -51,7 +51,7 @@ new schema silently won't take.
 - Every PR gets `/bip-pr-review` before it lands, skill-only PRs included; peer sessions' acks don't replace it. Skip the steps that don't apply and say so in the report.
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE-<role>.md` (gitignored); never commit. Written by `/bip-tuckin`, read by `/bip-continue`; see `docs/guides/continuation-prompt.md`.
-- Secrets: the token getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`; `config.yml` holds no secrets, so reading it is safe.
+- Secrets: the token and webhook getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, `BIP_SLACK_WEBHOOK_<CHANNEL>`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`. `config.yml` should hold no secrets, but an older one may still carry tokens or `slack_webhooks`, so don't print it whole: read the field you need.
 - Per-issue git worktrees are opt-in via a `layout:` block in `~/.config/bip/config.yml`
   (per-repo overrides in `sources.yml`). Absent block = today's clone-per-repo behavior.
   Schema and precedence: `docs/guides/layout.md`. The resolver is `flow.ResolveRepoPath`.

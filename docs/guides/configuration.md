@@ -23,8 +23,6 @@ The config file follows the XDG Base Directory specification:
 mkdir -p ~/.config/bip
 cat > ~/.config/bip/config.yml << 'EOF'
 nexus_path: ~/re/nexus
-slack_webhooks:
-  channel-name: https://hooks.slack.com/services/...
 EOF
 ```
 
@@ -36,12 +34,15 @@ Put them in `~/.config/bip/secrets.env` beside it, which bip reads itself, so th
 BIP_ASTA_API_KEY=your-asta-key
 BIP_GITHUB_TOKEN=ghp_your-github-token
 BIP_SLACK_TOKEN=xoxb-your-slack-bot-token
+BIP_SLACK_WEBHOOK_CHANNEL_NAME=https://hooks.slack.com/services/...
 EOF
 )
 ```
 
 Each token is looked up as an environment variable first, then under the same name in `secrets.env`, then in `config.yml`.
 Lines may start with `export ` and values may be quoted.
+Slack webhook URLs are secrets too: anyone holding one can post to the channel.
+Each goes in `secrets.env` as `BIP_SLACK_WEBHOOK_<CHANNEL>`, where `<CHANNEL>` is the channel name upper-cased with every character other than a letter or digit replaced by `_` (`nonparam-f-matrix` → `BIP_SLACK_WEBHOOK_NONPARAM_F_MATRIX`).
 
 ### Configuration Options
 
@@ -51,11 +52,11 @@ Lines may start with `export ` and values may be quoted.
 | `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Prefer `BIP_ASTA_API_KEY` in `secrets.env`; looked up as `BIP_ASTA_API_KEY`, then `ASTA_API_KEY`. |
 | `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Prefer `BIP_GITHUB_TOKEN` in `secrets.env`; looked up as `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, then `GH_TOKEN`. |
 | `slack_bot_token` | Slack bot token for reading channel history. Prefer `BIP_SLACK_TOKEN` in `secrets.env`; looked up as `BIP_SLACK_TOKEN`, then `SLACK_BOT_TOKEN`. |
-| `slack_webhooks` | Slack webhook URLs keyed by channel name |
+| `slack_webhooks` | Slack webhook URLs keyed by channel name. Prefer `BIP_SLACK_WEBHOOK_<CHANNEL>` in `secrets.env`; looked up as `BIP_SLACK_WEBHOOK_<CHANNEL>`, then `SLACK_WEBHOOK_<CHANNEL>`. |
 | `spawn_agent` | Default agent runner for `bip spawn` (`claude` or `agy`, default: `claude`). Also accepts env var: `BIP_SPAWN_AGENT`. |
 | `ntfy_topic` | ntfy.sh topic `bip page` pushes to; subscribe to it in the ntfy app. Also accepts env var: `BIP_NTFY_TOPIC`. |
 
-> **Note:** For the three tokens, each name is looked up in the environment,
+> **Note:** For the three tokens and the webhooks, each name is looked up in the environment,
 > then in `secrets.env`, and only then is the `config.yml` field used.
 > For other fields, an environment variable overrides the field.
 > Empty values are treated as unset.

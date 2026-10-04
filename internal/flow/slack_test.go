@@ -2,8 +2,10 @@ package flow
 
 import (
 	"encoding/json"
+	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -454,5 +456,31 @@ func TestMessage_JSONFields(t *testing.T) {
 		if _, ok := raw[field]; !ok {
 			t.Errorf("missing required field: %s", field)
 		}
+	}
+}
+
+func TestPostToSlackErrorsOmitURL(t *testing.T) {
+	// Grab a free port, then close it so the post is refused.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close()
+
+	const secretPath = "/services/T000/B000/secret-token"
+	for name, webhook := range map[string]string{
+		"refused connection": "http://" + addr + secretPath,
+		"malformed URL":      "http://bad host" + secretPath,
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := PostToSlack(webhook, "hi")
+			if err == nil {
+				t.Fatal("PostToSlack succeeded, want an error")
+			}
+			if strings.Contains(err.Error(), "secret-token") {
+				t.Errorf("error leaks the webhook URL: %v", err)
+			}
+		})
 	}
 }
