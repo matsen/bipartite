@@ -8,390 +8,46 @@ allowed-tools: Agent, Bash, Read, Edit, Skill
 
 Review a GitHub issue markdown file for implementation-readiness, fix gaps, then submit via `/bip-issue-file`.
 
-## Usage
-
 ```
 /bip-issue-check ISSUE-feature-name.md
 ```
 
-## Workflow
+## Step 1: Find the file
 
-### Step 1: Determine the file path
+Use `$ARGUMENTS`, else the ISSUE-*.md most recently discussed; if unclear, ask.
 
-- If `$ARGUMENTS` is provided, use that as the file path
-- Otherwise, check conversation context for the most recently discussed issue file (ISSUE-*.md)
-- If unclear, ask the user which file to use
+## Step 2: Spawn a review subagent
 
-### Step 2: Load project constitution and design docs
+Launch a general-purpose subagent on the issue file, passing the repo's `CONSTITUTION.md` and `DESIGN.md` if they exist.
+It reads every file, flag, and PR the issue references, and checks claims against them rather than against the text.
 
-Search for `CONSTITUTION.md` and `DESIGN.md` in the repository root.
-If found, load them.
-The constitution contains process/workflow principles (MUST/SHOULD rules).
-The design doc contains technical architecture decisions.
-Both will be checked against the issue in Step 3.
+**The bar:** a worker who has never seen the conversation can implement this without asking a question, and can tell when it is done.
+That means concrete paths, formats, and formulas; every named quantity tied to the code or formula that computes it; measurable success criteria with a stated baseline; and, for algorithmic work, at least two validations specific to this method that would catch a wrong implementation.
+A constitution violation is **CRITICAL**; a `DESIGN.md` conflict, or anything that forces the worker to guess or choose between two sections, is **HIGH**.
 
-### Step 3: Spawn a review subagent
+**Could it be smaller?** Ask what the smallest change is that delivers the goal, and what in the proposal could be cut, deferred, or replaced by something that already exists — a helper, pipeline, or Snakefile in the repo (search merged PRs and the tree) — and what cheap check, run first, could make part of it unnecessary.
+When the issue extends existing code, spawn the `code-reuse-reviewer` agent on the files it names as integration points.
+Flag a cut that would deliver the same goal as **HIGH**; checks the issue lacks are proposals to weigh, not gaps (`CONSTITUTION.md` Article VII).
 
-Use the Agent tool to launch a general-purpose subagent that reads the issue file and checks for the following.
-The subagent should also read any referenced files (data files, config files, source code) to verify claims.
-Pass the contents of `CONSTITUTION.md` and `DESIGN.md` to the subagent if they exist.
+**Duplicate issues.** Search open issues on 3–5 key terms from the draft (`gh issue list --state open --search "<terms>" --limit 15`) and read the body of every plausible match. An open issue with the same core deliverable, or one that already contains this work as a subtask, is **HIGH**: recommend consolidating, an explicit scope split with cross-references, or closing one. Related work with a clearly different goal is **MEDIUM**, worth a link.
 
-#### Constitution alignment
+**Project traps** — each looks fine on reading and isn't:
 
-If a `CONSTITUTION.md` exists, check every MUST/SHOULD principle against the issue.
-Flag violations as **CRITICAL**.
-Common things to catch:
+- **Flag liveness.** For every CLI flag or `--param` the issue arms, check that (a) it parses — run it; a struct field or YAML-only setting is not necessarily a flag; (b) it reaches the targeted code path — trace it to its consumer, not its declaration; (c) it is not already the default; (d) for a disable arm, no sibling path implements the same behaviour and survives the disable — a partial disable produces a refutation that looks like a real one. An arm byte-identical to baseline is a dead knob, not a null result. **HIGH.**
+- **Untracked paths.** Every in-repo path the issue references must be tracked on the branch readers have (`git ls-files --error-unmatch <path>`, `git status --porcelain <path>`). Fix by inlining the load-bearing content — snippets, numbers, the commands behind "ad-hoc" figures; ask the user only when that would be pages long. **HIGH.**
+- **Stale draft.** If the file predates this session, find the commit or binary each quoted measurement was taken on and run `git diff <commit> HEAD -- <source files>` (not a `log` range: a binary's build commit need not be an ancestor of HEAD); if anything there could move the number, re-measure rather than re-pin. A gate on byte-identity of gitignored output is not a gate. **HIGH.**
+- **Content in flight.** When the draft quotes a file an open PR is changing, name the PR and the obligation instead of the content. Find those PRs with `gh pr list --state open --limit 200 --json number,files -q '.[] | select(any(.files[]; .path == "<path>")) | .number'` — `--search "<path>"` matches PR text, not changed files, the default page of 30 truncates silently, and on a repo with no open PRs the result is empty whether or not it works, so prove it once against `--state all`. **MEDIUM.**
 
-- Issue proposes an approach that contradicts a stated principle
-- Issue omits something the constitution requires (e.g., file-based state for agent workflows, scope tied to a GitHub issue, quality gate expectations)
-- Issue describes manual steps where the constitution calls for automation (or vice versa — automation where human judgment is needed)
+Apply `PROSE-DISCIPLINE.md` and `EVIDENCE-DISCIPLINE.md` (bipartite repo root); violations are **MEDIUM**, **HIGH** when they obscure the deliverable.
 
-#### Design alignment
+## Step 3: Fix gaps
 
-If a `DESIGN.md` exists, check technical proposals against architecture decisions.
-Flag conflicts as **HIGH**.
-Common things to catch:
+If you wrote the issue earlier in this session, edit it directly.
+Otherwise (user-authored, from GitHub, or from a previous session), present the findings by severity with a proposed fix for each, and **wait for the user** to say which to apply.
+For more than a few findings, write them to a temp file and open it (`tmux display-popup -w 80% -h 80% -E -- less <file>` under tmux).
 
-- Issue proposes a storage approach that contradicts the data model (e.g., database migrations instead of rebuild-from-JSONL)
-- Issue introduces dependencies that violate constraints (e.g., CGO, cloud-only services without offline fallback)
-- Issue writes data outside the nexus pattern
+Fix with concrete detail, not placeholders, and unwrap hard-wrapped paragraphs to one line each.
 
-#### Completeness checks
+## Step 4: Submit and report
 
-1. **Data paths**: Are all file paths concrete and verifiable?
-   Can someone find every referenced file without asking questions?
-   Check that paths exist on disk or that remote paths have copy instructions.
-
-**Git-tracked status** (reproducibility): For every in-repo path the issue references — notes files, scripts, configs, notebooks — check that the path is tracked in the remote branch that readers will have.
-Flag as **HIGH** if a path is untracked, uncommitted, or committed only to a local branch that hasn't been pushed.
-Other contributors cannot open a file that lives only on the author's machine, and ad-hoc shell snippets "not committed anywhere" are the same problem.
-Checks (run against the branch the issue lives on, or `main`):
-   ```bash
-   git ls-files --error-unmatch <path>     # tracked?
-   git log -1 --oneline -- <path>          # has a commit?
-   git status --porcelain <path>           # uncommitted changes?
-   ```
-**Fix:** default to inlining the needed content directly into the issue body — reproducer snippets, tables of numbers, key paragraphs from a notes file.
-Do this as part of the normal fix pass; read the uncommitted file and lift the load-bearing parts.
-"Ad-hoc shell snippets" cited as the source of quoted numbers are a red flag — inline the actual commands.
-Only if inlining would be unreasonable (many pages of content, binary artifacts, or relevance is ambiguous) surface to the user and ask whether to inline a subset or drop the reference.
-
-2. **Column names / API contracts**: If the issue references specific data formats (CSV columns, API fields, config keys), verify them against the actual source (read the relevant code or data files).
-
-2b. **Flag and `--param` liveness**: For every CLI flag or `--param` key the issue arms, check that:
-   - **(a)** it parses. Run it: a struct field, preset entry, or YAML-only setting is not necessarily a CLI flag.
-   - **(b)** it reaches the code path the issue targets. Trace it to its consumer, not its declaration.
-   - **(c)** it is not already the default.
-   - **(d)** for a disable arm, no sibling path implements the same behaviour and survives the disable (a partial disable produces a refutation that looks like a real one).
-
-   Flag as **HIGH** if any clause fails.
-   An arm whose output is byte-identical to baseline is a dead knob, not a null result.
-
-3. **Algorithm specification**: Is the core algorithm described with enough detail to implement?
-   Check for:
-   - Mathematical formulas written out explicitly
-   - Clear input/output types
-   - Edge cases addressed (what to skip, what to include)
-   - References for non-obvious algorithms
-
-4. **Prerequisites**: Are all needed packages, tools, and data listed?
-   Are version constraints noted where they matter?
-
-5. **Directory structure**: Does the proposed structure follow project conventions?
-   (Check the repo's and `experiments/`'s AGENTS.md or CLAUDE.md for patterns.)
-
-6. **Code organization — library vs scripts**: If the repo has a Python package (look for `__init__.py` under a top-level directory, or `pyproject.toml` with `[project]`), and the issue proposes new `.py` files in `scripts/`, `workflow/scripts/`, or `bin/`, check whether the core logic should instead live in the library package as a reusable module, with only a thin CLI wrapper in the scripts directory.
-   Flag as **HIGH** if:
-   - The proposed script contains non-trivial logic (algorithms, data transformations, model fitting) rather than just CLI argument parsing and a `main()` call
-   - Similar modules already exist in the library package (check for a pattern of library + wrapper)
-   - The logic would benefit from unit testing independent of the CLI
-Suggest a concrete module path following the existing package naming conventions (check sibling modules for style).
-
-7. **Test config**: If the project requires fast test configs (e.g., < 1 minute), is one specified with concrete parameters?
-
-#### Infrastructure reuse
-
-8. **Existing infrastructure reuse**: Before accepting that the issue should build new infrastructure (Snakefiles, pipelines, experiment directories, scripts, configs), search for existing work that could be extended.
-
-**How to check:**
-   - Search merged PRs for related keywords (dataset names, method names, tool names):
-     ```bash
-     gh pr list --repo <org/repo> --state merged --search "<keywords>" --limit 20
-     ```
-   - Search the repo for existing Snakefiles, experiment directories, or pipeline configs that overlap with the proposed work:
-     ```bash
-     find <repo_path> -name "Snakefile" -o -name "*.smk" -o -name "config.yml" | head -20
-     ```
-   - Read the most promising matches to assess overlap.
-
-**Flag as HIGH if:**
-   - An existing Snakefile/pipeline already implements >50% of the proposed workflow steps (e.g., same data ingestion, same tool invocations, same output structure)
-   - The issue proposes a new experiment directory when an existing one uses the same datasets and tools
-   - The issue creates new wrapper scripts for tools that already have wrappers in the repo
-
-**Recommend:** Extend the existing infrastructure (add rules to the existing Snakefile, add config entries, add new targets) rather than duplicating it.
-Name the specific existing file/directory and explain what can be reused.
-
-#### Codebase style and structure alignment
-
-8b.
-**Existing code pattern conformance**: Read the source files most relevant to the proposed work (the directory where new code would land, plus 2-3 sibling modules) and check that the issue's design fits the patterns already established in the codebase.
-
-**How to check:**
-   - Identify where the proposed code would live (package, directory, module).
-   - Read 2-3 existing files in that area to extract patterns: naming conventions (functions, types, files), error handling idiom, constructor/factory style, test file layout, and public API shape.
-   - Compare the issue's proposed interfaces, type names, function signatures, and file organization against those patterns.
-
-**Flag as HIGH if:**
-   - The issue proposes a naming convention that conflicts with neighbors (e.g., `NewFooClient()` when siblings use `OpenFoo()`)
-   - The issue introduces a structural pattern not used elsewhere (e.g., a global registry when the codebase uses dependency injection, or callbacks when the codebase uses interfaces)
-   - The issue puts files in a location that breaks the existing package layout (e.g., a new top-level package when similar functionality lives under `internal/`)
-   - The issue proposes a public API surface that is inconsistent with sibling modules (e.g., exposing struct fields when neighbors use getter methods, or vice versa)
-
-**Recommend:** Name the specific existing files that set the pattern and show what the issue should match.
-
-#### Deep reuse audit (code-reuse-reviewer)
-
-8c.
-**Fan-out reuse audit via `code-reuse-reviewer`**: When the issue proposes extending or modifying existing modules (not pure greenfield work), spawn the `code-reuse-reviewer` agent as a deeper pass beyond 8b's lightweight sibling-file check.
-This agent fans out per-file sub-agents to actively hunt for duplicated helpers/constants and missed reuse opportunities — worth the extra cost when there's a concrete integration point to check the proposal against.
-
-**Gate — does this apply?**
-Check whether the issue names specific existing files, functions, or packages it will extend, modify, or call into.
-   - **Opportunity present** (run it): the issue names existing files/functions/packages as integration points, even loosely ("add a method to X", "extend the Y pipeline", "hook into Z's config loading").
-     In this codebase, this is the common case — very little proposed work is pure greenfield.
-   - **No opportunity** (skip it): the issue describes a genuinely new package/directory with no stated integration point into existing code.
-     Note explicitly in the report "skipped — no integration point found" rather than silently omitting it, so the gate call itself is reviewable.
-
-**How to run:** Use the Agent tool with `subagent_type: code-reuse-reviewer`.
-Pass it the issue's proposed interfaces/design and the specific existing files it names as integration points, and ask it to check for: helpers or constants that already exist and would be duplicated, structural patterns it should follow but doesn't, and any existing function it could call instead of reimplementing.
-
-**Flag as HIGH if** the agent finds an existing helper, constant, or pattern that the issue's proposed design would duplicate or bypass.
-
-**Recommend:** Name the specific existing symbol or file and show how the issue's design should call it instead.
-
-#### Redundancy with existing issues
-
-8d.
-**Duplicate or overlapping issues**: Search open GitHub issues to check whether the proposed work duplicates or substantially overlaps with an existing issue.
-
-**How to check:**
-   - Extract 3-5 key terms from the issue title and body (feature names, tool names, data types, package names).
-   - Search open issues:
-     ```bash
-     gh issue list --repo <org/repo> --state open --search "<keywords>" --limit 15
-     ```
-   - For any promising matches, read the issue body:
-     ```bash
-     gh issue view <number> --repo <org/repo>
-     ```
-   - Assess whether the scope overlaps meaningfully (>30% of tasks or the same core deliverable).
-
-**Flag as HIGH if:**
-   - An open issue targets the same feature, dataset, or pipeline with substantial overlap in deliverables
-   - An open issue is a superset that already includes this work as a subtask
-
-**Flag as MEDIUM if:**
-   - An open issue touches related code or data but with a clearly different goal (mention it for awareness, not as a blocker)
-
-**Recommend:** Link to the overlapping issue and suggest one of: consolidate into the existing issue, explicitly scope-split with cross-references, or close the duplicate.
-
-#### Ambiguity and placeholder checks
-
-9. **Vague language**: Scan the entire issue for adjectives and adverbs that lack measurable criteria.
-   Flag instances of words like "fast", "scalable", "robust", "intuitive", "efficient", "significant", "reasonable", "appropriate", "properly", "should improve".
-   Each flagged term must be replaced with a concrete, quantified criterion.
-
-9b.
-**Defined terms for computed quantities**: Every named metric, rate, ratio, slope, statistic, or other computed quantity must be anchored to an explicit formula or to code that computes it.
-Interpretive or evaluative names ("quality", "fit", "accuracy", "performance", "signal") are worse than neutral ones — they carry connotations the computation may not support, and reviewers can't check claims built on a term they can't pin down.
-
-**Common failure modes:**
-   - Rate, ratio, or fraction without a specified denominator (the same numerator over different denominators gives different answers).
-   - Average, mean, or median without naming the population, subset, or weighting it's taken over.
-   - Correlation, slope, or regression without naming both variables, the sample, and any weighting.
-   - Domain-loaded nouns ("quality", "fitness", "affinity", "performance") attached to what is actually a mechanical count, ratio, or model output.
-   - Comparison claim ("X is better than baseline") without naming the baseline, the test, or the threshold for "better".
-   - Statistical test reported with name or software but not the settings that matter (alpha, alternative, one- vs two-sided, weighting).
-
-**How to check:** For every named quantity, find a formula, code snippet, or pointer to the exact function.
-If a pointer is given, read the code and confirm the name matches what the code computes — denominators, filters, and weightings are where names most often drift from reality.
-
-**Flag as HIGH** when the quantity drives a conclusion (prediction, success criterion, hypothesis).
-Flag as **MEDIUM** when it only appears in motivating context and the surrounding discussion doesn't depend on its exact value.
-
-**Recommend:** replace evaluative labels with mechanical ones, and give the formula or code inline the first time a quantity appears.
-Spell out denominator, population, and weighting explicitly — these are the details reviewers most often have to reconstruct on their own.
-
-10. **Unresolved placeholders**: Scan for `TODO`, `TKTK`, `TBD`, `???`,
-`<placeholder>`, `[NEEDS CLARIFICATION]`, `XXX`, or similar markers that indicate unfinished thinking.
-Every placeholder must be resolved with concrete content before the issue is submitted.
-
-#### Staleness of a pre-existing draft
-
-10d.
-**If the issue file predates this session** (a draft carried in a clone, a deferral, a body being re-filed), revalidate its measurements and gates, not only its line numbers:
-- For every quoted measurement, identify the commit or binary it was taken on, then run `git log --oneline <that-commit>..HEAD -- <source-files-it-depends-on>`.
-  If anything in that range could move the number, re-run the measurement rather than re-pinning the citation.
-- For every success criterion or test-plan gate that names a file, confirm the file is tracked (`git ls-files --error-unmatch <path>`).
-  A gate on byte-identity of results that are gitignored is not a gate.
-
-**Flag as HIGH** when a quoted measurement's source files changed in the interval, or when a gate names an untracked artifact.
-
-#### Point at an artifact, do not transcribe it
-
-10e.
-When the draft refers to content that an in-flight PR or issue is changing, name the PR and the obligation ("PR #N is already in it — confirm it needs nothing further"), not the content.
-The test: would the sentence still be true after every open PR it names has landed?
-Content at rest (a symbol, a committed measurement, code nothing is touching) still gets quoted; 10d covers revalidating it.
-
-The References list is a lower bound on what is in flight, so before accepting a quote from a file, check which open PRs modify it:
-
-```bash
-gh pr list --state open --limit 200 --json number,files \
-  -q '.[] | select(any(.files[]; .path == "<path>")) | "PR #\(.number) touches <path>"'
-```
-
-(Not `gh pr list --search "<path>"`: it matches PR text, not changed files, and returns a plausible but wrong list. `--limit 200` because the default page is 30 and truncates silently. On a repo with no open PRs the command is empty whether or not it works, so prove it once against `--state all`.)
-
-**Flag as MEDIUM** when a draft quotes content from a file that any open PR modifies.
-
-#### Prose discipline
-
-10c.
-**Apply `PROSE-DISCIPLINE.md`** (bipartite repo root), and **`EVIDENCE-DISCIPLINE.md`** for every number the issue cites.
-Read the file and check the issue against its rules and reviewer flags.
-Flag violations as **MEDIUM**, or **HIGH** when they materially obscure the deliverable.
-Name the offending location and propose the trimmed version; for paragraph-form enumerations, write the bullet-list rewrite.
-
-#### Internal consistency
-
-10b.
-**Cross-section agreement**: An issue is a specification.
-
-**Common failure modes:**
-   - Numbers stated in one section don't match another (counts, sums, line deltas).
-   - Two rules or constraints, each satisfiable alone, can't both hold on some inputs.
-   - Named entities (file paths, identifiers, issue numbers) appear in multiple sections with different forms.
-
-**How to check:** For each prescriptive section (tables, rules, lists, counts), find the other sections that reference or verify it and confirm they agree.
-Count things that state a count.
-Run each verification command mentally against the prescribed content.
-
-**Flag as HIGH if** the worker would have to choose between two sections of the issue to proceed.
-
-**Recommend:** Name the conflicting locations and propose which side should change — usually the prescriptive section reflects author intent and the verification should match it, but the author confirms.
-
-#### Validation and benchmarking checks
-
-11. **Success criteria**: Are there concrete, measurable success criteria?
-Not vague ("should improve") but specific ("held-out lnL improves by >1 nat per lineage on average").
-
-12. **Null model / baseline**: Is there a clearly specified baseline for comparison?
-    Is the baseline computation described in enough detail to reproduce (formula, software, parameters)?
-
-13. **Evaluation metric**: Is the primary metric well-defined?
-    Is it clear how to compute it (what software, what formula, what data)?
-
-14. **Cross-validation / held-out evaluation**: If the issue involves model fitting, is the train/test split strategy specified?
-    Are leakage risks addressed?
-
-15. **Benchmarks**: Are runtime expectations stated?
-    Are absolute numbers reported (not just relative improvements) so future work can compare?
-
-16. **Diagnostics**: Are there diagnostic outputs that help debug problems (e.g., coverage histograms, convergence plots, sanity checks)?
-
-#### Correctness validation brainstorm (REQUIRED)
-
-The subagent MUST actively brainstorm additional validations that would be convincing evidence the math and implementation are correct, then check whether the issue already includes them.
-If not, flag as **HIGH**.
-
-Think creatively about what tests would actually catch bugs in the mathematical or algorithmic core.
-Common categories:
-
-17. **Known-answer tests**: Are there cases where the correct answer is known analytically or from a trusted reference implementation?
-    For example: degenerate inputs where the formula simplifies, textbook examples with published answers, or toy cases small enough to verify by hand.
-    Every non-trivial algorithm should have at least one known-answer test specified in the issue.
-
-18. **Symmetry and invariance checks**: Does the algorithm have mathematical properties that can be tested?
-    Examples: commutativity (swapping inputs gives the same result), idempotency (applying twice gives the same result as once), conservation laws (quantities that should sum to a constant), invariance under permutation or relabeling.
-    Each such property is a free correctness check.
-
-19. **Limit and boundary behavior**: What happens at extremes?
-    Does the algorithm degrade gracefully or produce known results at boundaries?
-    Examples: uniform input, all-zeros, single-element input, very large/small values, identity transformations.
-    These often expose off-by-one errors and numerical issues.
-
-20. **Comparison to reference implementation**: If a reference implementation exists (in R, Python, another language, or a published software package), is there a test that runs both and compares outputs on realistic data?
-    Matching a trusted implementation on non-trivial inputs is strong evidence of correctness.
-
-21. **Stochastic / statistical tests**: For randomized algorithms, are there distribution-level tests?
-    Examples: checking that samples have the correct mean/variance, that a sampler passes a goodness-of-fit test, that Monte Carlo estimates converge to known values as sample size increases.
-
-22. **Gradient / sensitivity checks**: For optimization or differentiable code, are there finite-difference gradient checks?
-    For any continuous function, is the output tested for reasonable sensitivity to input perturbations?
-
-23. **Round-trip and self-consistency**: Can the computation be checked by inverting it or by verifying an internal consistency relation?
-    Examples: encode then decode should recover the original, likelihood of the MAP estimate should be >= likelihood of perturbed values, forward and reverse computations should agree.
-
-The subagent should propose at least 2-3 concrete, specific validations tailored to the particular algorithm or method in the issue.
-Generic suggestions like "add more tests" are not acceptable — each suggestion must name the specific test, what inputs to use, and what the expected output or property is.
-
-### Step 4: Fix gaps (with approval gate)
-
-Determine whether the agent authored this issue file in the current session.
-This controls whether edits require approval:
-
-- **Agent-authored** (the agent wrote the issue earlier in this same session): Edit the file directly to fix all gaps.
-  No approval needed — the agent owns the content.
-- **User-authored or external** (the file was provided by the user, loaded from GitHub, or written in a previous session): **Do not edit without explicit user approval.**
-  Present findings first.
-
-#### When approval is required
-
-Present the subagent's findings as a concise summary:
-- List each gap found, grouped by severity (CRITICAL / HIGH / MEDIUM / LOW)
-- For each gap, state what the problem is and what the proposed fix would be
-- Note any hard-wrapping issues (paragraphs broken at ~70-80 chars that should be single lines)
-
-If the findings are substantial (more than 3-4 items, or any CRITICAL/HIGH), write them to a temporary file and open for review:
-
-```bash
-cat > /tmp/bip-issue-check-findings.md <<'EOF'
-... findings ...
-EOF
-
-if [ -n "$TMUX" ]; then
-    tmux display-popup -w 80% -h 80% -E -- less /tmp/bip-issue-check-findings.md
-elif [ "$TERM_PROGRAM" = "zed" ]; then
-    zed /tmp/bip-issue-check-findings.md
-fi
-```
-
-Then **stop and wait** for the user to confirm which edits to apply.
-Do not proceed until the user says to go ahead.
-
-#### Applying edits
-
-Whether auto-applying (agent-authored) or after approval (user-authored), fix gaps by adding concrete details (exact column names, formulas, file paths) over vague placeholders.
-
-**Fix hard-wrapping.**
-If the file contains hard-wrapped paragraphs (newlines inserted mid-sentence at ~70-80 characters), unwrap them so each paragraph is a single long line.
-Only newlines for actual structural breaks (between paragraphs, list items, headings).
-GitHub renders markdown with soft wrapping.
-
-### Step 6: Submit via /bip-issue-file
-
-Invoke the `/bip-issue-file` skill with the same file path.
-It will open the file for the user to review after submitting:
-
-```
-/bip-issue-file <file_path>
-```
-
-### Step 7: Report
-
-Summarize:
-- Number of gaps found and fixed (grouped by severity if constitution checks were run: CRITICAL / HIGH / MEDIUM / LOW)
-- The GitHub issue URL
-- Any remaining open questions that need user input
+Run `/bip-issue-file <file_path>`, then report the gaps found and fixed by severity, the issue URL, and any open questions for the user.
