@@ -124,12 +124,19 @@ Then create `.ms-config.json` and proceed.
 cat .ms-config.json
 ```
 
-Read `misc/session-onboarding.md` and `CLAUDE.md`.
+Read `CLAUDE.md` and the top of `misc/session-onboarding.md`: everything above its live-thread index, plus the index itself.
 Durable session state lives in the repo; `/bip-ms-tuckin` Step 4 is the contract for what goes where.
-The onboarding doc carries what the paper is and is not, the peer sessions and their remits, the working disciplines, and the open threads; take it as the baseline for what is done vs. in flight.
+Open a thread's detail only when that thread comes up, by grepping the doc for its handle.
 
-It never records open/merged/closed status, so cross-check every open thread against live GitHub before acting: where the doc and `gh pr view`/`gh issue view` disagree on where a thread stands, trust GitHub.
-After loading, briefly note what the doc says the current state is, then verify it in Steps 1-4 — do not trust the doc over live state.
+The doc never records open/merged/closed status, so check each thread you act on against live GitHub; where they disagree, trust GitHub.
+Batch the status checks (one `gh` call per repo, not one per thread).
+Shallow is enough for status; a claim of absence ("nothing new", "that flag doesn't exist") still needs the pulled clone and a full read.
+
+**Reading the manuscript.**
+The paper is too large to read whole, and it is not summarized anywhere else, so read it by topic.
+Grep the topic, symbol, or ledger marker (`%CLAIM`, `%PIECE`, `%PROV`) across the whole file, then read the ranges it hits; a section-scoped read misses the `%PROV` that guards your sentence from another block.
+When a task needs the whole paper (notation consistency, cross-references, duplicate sentences), read the prose only (`grep -v '^\s*%' main.tex`), or hand the read to a subagent and check its edits with a diff rather than its own account.
+After a rewrite, read the diff's deleted lines, since a rewrite for one reason silently drops text kept for another.
 
 ### Step 1: Check manuscript state
 
@@ -141,6 +148,8 @@ git log --oneline -5
 Note any uncommitted changes or recent work.
 
 ### Step 2: Fan out per-repo scanners
+
+Skip this step when `/bip-continue` brought you here from a continuation file under a day old: its FIRST CHECKs already re-derived what moved.
 
 For each entry in `tracked_repos`, dispatch one `general-purpose` subagent **in parallel** — single message, multiple `Agent` tool calls.
 Follow the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
@@ -212,61 +221,10 @@ Wait for user confirmation before taking action.
 
 ### Step 5: Start result monitor
 
-If any tracked repo has a `remote_watch` configuration, offer to start a **persistent Monitor** that watches remote servers for new result files via SSH.
-This provides real-time awareness of experiment completion without waiting for the next `/bip-ms-poll` cycle.
+Skip this step when the onboarding doc names a conductor that routes pushes to this session; watching is the conductor's job, and every poll event lands in your context.
 
-Use the Monitor tool with `persistent: true`:
-
-```
-description: "Remote experiment results"
-persistent: true
-command: |
-  # Built from .ms-config.json remote_watch entries
-  touch /tmp/.ms-monitor-baseline
-
-  while true; do
-    CHANGED=0
-    # For each tracked repo with remote_watch:
-    #   HOST=<remote_watch.host>
-    #   PATHS=<remote_watch.paths joined by space>
-    #   PATTERNS=<-name "*.svg" -o -name "*.html" etc.>
-    #
-    # SSH to check for new files (read-only):
-    NEW=$(ssh -o ConnectTimeout=5 "$HOST" \
-      "find $PATHS \( $PATTERNS \) -newer /tmp/.ms-monitor-mark-\$USER 2>/dev/null" \
-      || true)
-    if [ -n "$NEW" ]; then
-      echo "$NEW" | while read f; do
-        echo "NEW on $HOST: $f"
-      done
-      CHANGED=1
-      # Update remote marker
-      ssh -o ConnectTimeout=5 "$HOST" "touch /tmp/.ms-monitor-mark-\$USER" || true
-    fi
-
-    [ "$CHANGED" -eq 0 ] || true
-    sleep 60
-  done
-```
-
-The conductor dynamically builds this script from `.ms-config.json` at startup — the template above shows the structure.
-Each repo's `remote_watch` contributes one SSH check block.
-
-When a notification arrives showing new files:
-1. Run the repo's `fetch_cmds` to pull the new results locally
-2. Check if the files are SVGs/notebooks and react per the import workflows below
-3. Notify the user with a summary of what arrived
-
-**Prerequisites**: SSH access to the remote host with key-based auth (no password prompts).
-If SSH fails, the monitor logs the error to stderr and retries on the next cycle.
-
-**Alternative: sshfs + fswatch** — For lower latency, mount the remote result directories via `sshfs` and use `fswatch` locally:
-```bash
-sshfs host:/remote/results /local/mount -o reconnect,ServerAliveInterval=15
-fswatch --batch-marker=EOF /local/mount --include '*.svg' --include '*.html' --exclude '.*'
-```
-This gives true real-time notification but requires `sshfs` (`brew install macfuse sshfs`) and is less robust on flaky networks.
-The SSH poll approach is the default recommendation.
+Otherwise, if a tracked repo has a `remote_watch` entry, offer a persistent Monitor that polls each `host` over SSH every minute, read-only: `find <paths> \( <patterns> \) -newer <marker>`, then touch the marker.
+When it reports new files, run that repo's `fetch_cmds`, handle SVGs and notebooks per the workflows below, and tell the user what arrived.
 
 ## Figure import workflow
 
@@ -297,7 +255,7 @@ After they review, ask which plots or findings to incorporate.
 When drafting new results or methods text:
 
 1. Read the relevant EPIC findings, PR descriptions, and experiment results
-2. Read the current manuscript to understand style, notation, and structure
+2. Read the manuscript around where the text will go, per "Reading the manuscript" in Step 0, for style, notation, and structure
 3. Present the key points as a **bullet-point summary** and ask the user which to include and where in the manuscript they belong
 4. After confirmation, draft the paragraph(s) in LaTeX
 5. Run the `@scientific-tex-editor` agent on the new text for style review
