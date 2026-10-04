@@ -1050,4 +1050,35 @@ func TestTurnLinePatterns(t *testing.T) {
 			t.Errorf("turnActive(%q) = %v, want %v", line, got, want)
 		}
 	}
+	for line, want := range map[string]bool{
+		"  ⏵⏵ bypass permissions on · 2 shells · ← 1 agent":                      true,
+		"  ⏵⏵ bypass permissions on (shift+tab to cycle) · 1 shell":              true,
+		"  ? for shortcuts · 1 monitor · PR #12":                                 true,
+		"  ⏵⏵ bypass permissions on (shift+tab to cycle) · PR #1374 · ← 1 agent": false,
+		"✻ Baked for 1m 37s · done 8:40 PM · 2 shells still running":             false,
+	} {
+		if got := footerJobs.MatchString(line); got != want {
+			t.Errorf("footerJobs(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
+
+func TestScreenWaitingReadsOnlyTheFooter(t *testing.T) {
+	const sep = "────────────────────"
+	for name, tc := range map[string]struct {
+		screen string
+		want   bool
+	}{
+		"footer shell": {"⏺ Waiting on the run.\n" + sep + "\n❯ \n" + sep +
+			"\n  Opus 5.5 (w) | repo [b]\n  ⏵⏵ bypass permissions on · 1 shell · ← 1 agent\n", true},
+		"quoted footer in transcript": {"  ⎿  its footer shows ⏵⏵ bypass permissions on · 2 shells · ← 1 agent\n" + sep +
+			"\n❯ \n" + sep + "\n  ⏵⏵ bypass permissions on · ← 1 agent\n", false},
+		"no separator": {"  ⏵⏵ bypass permissions on · 1 shell · ← 1 agent\n", false},
+		"turn-end still running": {"✻ Baked for 1m · done 8:40 PM · 2 shells still running\n" + sep +
+			"\n❯ \n" + sep + "\n  ⏵⏵ bypass permissions on\n", true},
+	} {
+		if got := screenWaiting(tc.screen); got != tc.want {
+			t.Errorf("%s: screenWaiting = %v, want %v", name, got, tc.want)
+		}
+	}
 }

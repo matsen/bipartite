@@ -691,9 +691,15 @@ var turnDone = regexp.MustCompile(` · done .*`)
 // "· Improvising… (11s · ↓ 513 tokens)".
 var turnActive = regexp.MustCompile(`^\S \S+… \(\d+[hms]`)
 
+// footerJobs matches the always-visible footer's count of background jobs,
+// e.g. "⏵⏵ bypass permissions on · 2 shells · ← 1 agent". The turn-end
+// line can scroll off the captured screen; the footer cannot.
+var footerJobs = regexp.MustCompile(`· \d+ (?:shell|monitor)s?(?: ·|\s*$)`)
+
 // paneWaiting reports whether any tmux pane under dir is mid-turn, or its
-// newest turn-end line says a shell or monitor is still running. Those
-// re-invoke the session when they exit, so the slot is waiting, not stalled. Any failure
+// footer or newest turn-end line says a shell or monitor is still running. Those
+// re-invoke the session when they exit, so the slot is waiting, not stalled; a
+// forgotten long-lived shell (a tail -F, a server) therefore hides a stall. Any failure
 // reads as not waiting, so the stall is reported rather than hidden.
 func paneWaiting(dir string) bool {
 	out, err := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_id}\t#{pane_current_path}").Output()
@@ -709,18 +715,35 @@ func paneWaiting(dir string) bool {
 		if err != nil {
 			continue
 		}
-		last := ""
-		for _, line := range strings.Split(string(screen), "\n") {
-			if turnActive.MatchString(line) {
-				return true
-			}
-			if turnDone.MatchString(line) {
-				last = line
-			}
-		}
-		if strings.Contains(last, "still running") {
+		if screenWaiting(string(screen)) {
 			return true
 		}
 	}
 	return false
+}
+
+// screenWaiting applies paneWaiting's test to one captured screen. footerJobs
+// is checked only below the last "────" separator, so transcript text that
+// quotes a footer cannot hide a stall.
+func screenWaiting(screen string) bool {
+	lines := strings.Split(screen, "\n")
+	footer := len(lines)
+	last := ""
+	for i, line := range lines {
+		if turnActive.MatchString(line) {
+			return true
+		}
+		if turnDone.MatchString(line) {
+			last = line
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "────") {
+			footer = i + 1
+		}
+	}
+	for _, line := range lines[footer:] {
+		if footerJobs.MatchString(line) {
+			return true
+		}
+	}
+	return strings.Contains(last, "still running")
 }
