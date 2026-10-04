@@ -696,15 +696,20 @@ func TestGetSlackWebhook_Precedence(t *testing.T) {
 		t.Errorf("secrets file: got %q, want from-secrets", got)
 	}
 
-	t.Setenv("SLACK_WEBHOOK_NONPARAM_F_MATRIX", "from-env")
-	if got := GetSlackWebhook("nonparam-f-matrix"); got != "from-env" {
-		t.Errorf("env: got %q, want from-env", got)
+	t.Setenv("SLACK_WEBHOOK_NONPARAM_F_MATRIX", "from-fallback-env")
+	if got := GetSlackWebhook("nonparam-f-matrix"); got != "from-fallback-env" {
+		t.Errorf("fallback env: got %q, want from-fallback-env", got)
+	}
+
+	t.Setenv("BIP_SLACK_WEBHOOK_NONPARAM_F_MATRIX", "from-bip-env")
+	if got := GetSlackWebhook("nonparam-f-matrix"); got != "from-bip-env" {
+		t.Errorf("BIP_ name should win over fallback: got %q, want from-bip-env", got)
 	}
 }
 
 func TestSlackWebhookEnvVars(t *testing.T) {
-	got := SlackWebhookEnvVars("dasm2")
-	want := []string{"BIP_SLACK_WEBHOOK_DASM2", "SLACK_WEBHOOK_DASM2"}
+	got := SlackWebhookEnvVars("Fortnight-goals.v2")
+	want := []string{"BIP_SLACK_WEBHOOK_FORTNIGHT_GOALS_V2", "SLACK_WEBHOOK_FORTNIGHT_GOALS_V2"}
 	if len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Errorf("SlackWebhookEnvVars(dasm2) = %v, want %v", got, want)
 	}

@@ -286,14 +286,9 @@ func SlackWebhookEnvVars(channel string) []string {
 	return []string{"BIP_SLACK_WEBHOOK_" + suffix, "SLACK_WEBHOOK_" + suffix}
 }
 
-// GetSlackWebhook returns the Slack webhook URL for a channel.
-//
-// Precedence:
-//  1. the SlackWebhookEnvVars names in the environment
-//  2. the same names in ~/.config/bip/secrets.env
-//  3. slack_webhooks.<channel> in ~/.config/bip/config.yml
-//
-// Empty values are treated as unset.
+// GetSlackWebhook returns the Slack webhook URL for a channel: the
+// SlackWebhookEnvVars names in the environment, then in secrets.env, then
+// slack_webhooks.<channel> in config.yml. Empty values are treated as unset.
 func GetSlackWebhook(channel string) string {
 	cfg, _ := LoadGlobalConfig()
 	configValue := ""

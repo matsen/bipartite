@@ -106,8 +106,7 @@ func runDigest(cmd *cobra.Command, args []string) {
 		webhookURL := flow.GetWebhookURL(postTo)
 		if webhookURL == "" {
 			fmt.Printf("No webhook configured for channel '%s'.\n", postTo)
-			fmt.Printf("Add to ~/.config/bip/config.yml: \"slack_webhooks\": {\"%s\": \"https://...\"}\n", postTo)
-			fmt.Printf("Or set SLACK_WEBHOOK_%s environment variable.\n", strings.ToUpper(postTo))
+			fmt.Printf("Set %s=https://... in ~/.config/bip/secrets.env.\n", config.SlackWebhookEnvVars(postTo)[0])
 			os.Exit(1)
 		}
 	}

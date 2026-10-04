@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/flow"
@@ -29,11 +31,22 @@ func init() {
 	slackCmd.AddCommand(slackPostCmd)
 }
 
+// SlackPostResult is the JSON output of bip slack post.
+type SlackPostResult struct {
+	Channel string `json:"channel"`
+	Posted  bool   `json:"posted"`
+}
+
 func runSlackPost(cmd *cobra.Command, args []string) error {
 	channel, text := args[0], strings.Join(args[1:], " ")
 	if err := flow.SendDigest(channel, text); err != nil {
-		return outputSlackError(1, "post_failed", err.Error())
+		return outputSlackError(ExitError, "post_failed", err.Error())
 	}
-	fmt.Printf("Posted to #%s\n", channel)
-	return nil
+	if humanOutput {
+		fmt.Printf("Posted to #%s\n", channel)
+		return nil
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(SlackPostResult{Channel: channel, Posted: true})
 }
