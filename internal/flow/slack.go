@@ -85,13 +85,8 @@ type ChannelInfo struct {
 	Purpose string `json:"purpose"`
 }
 
-// webhookEnvVar returns the environment variable name for a channel's webhook.
-func webhookEnvVar(channel string) string {
-	return "SLACK_WEBHOOK_" + strings.ToUpper(channel)
-}
-
-// GetWebhookURL returns the Slack webhook URL for a channel.
-// Checks SLACK_WEBHOOK_<CHANNEL> environment variable first, then global config.
+// GetWebhookURL returns the Slack webhook URL for a channel; see
+// config.GetSlackWebhook for where it is looked up.
 func GetWebhookURL(channel string) string {
 	return config.GetSlackWebhook(channel)
 }
@@ -128,7 +123,7 @@ func PostToSlack(webhookURL, message string) error {
 func SendDigest(channel, message string) error {
 	webhookURL := GetWebhookURL(channel)
 	if webhookURL == "" {
-		return fmt.Errorf("no webhook configured for channel '%s'; set %s", channel, webhookEnvVar(channel))
+		return fmt.Errorf("no webhook configured for channel '%s'; set %s in ~/.config/bip/secrets.env", channel, config.SlackWebhookEnvVars(channel)[0])
 	}
 	return PostToSlack(webhookURL, message)
 }

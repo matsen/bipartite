@@ -267,13 +267,40 @@ func GetNtfyTopic() string {
 	return firstEnvOrConfig(NtfyTopicEnvVars, configValue)
 }
 
-// GetSlackWebhook returns the Slack webhook URL for a channel from global config.
+// SlackWebhookEnvVars lists the names consulted by GetSlackWebhook for a
+// channel, in precedence order: BIP_SLACK_WEBHOOK_<CHANNEL>, then
+// SLACK_WEBHOOK_<CHANNEL>. <CHANNEL> is the channel name upper-cased, with
+// every character other than a letter or digit replaced by '_', so that
+// "nonparam-f-matrix" becomes NONPARAM_F_MATRIX and the name is a valid
+// shell variable.
+func SlackWebhookEnvVars(channel string) []string {
+	suffix := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r - 'a' + 'A'
+		case (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'):
+			return r
+		}
+		return '_'
+	}, channel)
+	return []string{"BIP_SLACK_WEBHOOK_" + suffix, "SLACK_WEBHOOK_" + suffix}
+}
+
+// GetSlackWebhook returns the Slack webhook URL for a channel.
+//
+// Precedence:
+//  1. the SlackWebhookEnvVars names in the environment
+//  2. the same names in ~/.config/bip/secrets.env
+//  3. slack_webhooks.<channel> in ~/.config/bip/config.yml
+//
+// Empty values are treated as unset.
 func GetSlackWebhook(channel string) string {
 	cfg, _ := LoadGlobalConfig()
-	if cfg.SlackWebhooks != nil {
-		return cfg.SlackWebhooks[channel]
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.SlackWebhooks[channel]
 	}
-	return ""
+	return firstEnvOrConfig(SlackWebhookEnvVars(channel), configValue)
 }
 
 // GetNexusPath returns the configured nexus path from global config.

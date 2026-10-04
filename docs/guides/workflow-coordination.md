@@ -81,6 +81,7 @@ Read and ingest Slack channel history:
 
 ```bash
 bip slack channels                              # List configured channels
+bip slack post <channel> "<text>"               # Post via the channel's webhook
 bip slack history fortnight-goals               # Last 14 days of messages
 bip slack history fortnight-goals --days 7      # Last week
 bip slack history fortnight-goals --since 2026-01-01
