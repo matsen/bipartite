@@ -40,7 +40,7 @@ The epic session does strategy, not fleet ops:
 - First mention in bullet lists: full URL inline.
 - When a live slot holds the work, add its tmux window, `p1344 (1343-peach)`, so the user can jump there with tmux's `find-window`.
 
-Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns — see that skill's Conventions section.
+Tmux window naming and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns (its Conventions section); reboot recovery is `/bip-conductor-prepare-reboot` and `/bip-conductor-recover`.
 
 ### Message economy
 

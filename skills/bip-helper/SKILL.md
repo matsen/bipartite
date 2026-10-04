@@ -80,7 +80,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
      git -C <repo> worktree add --detach "$DIR" origin/main
      ```
      It branches there itself (for example via `/bip-issue-work`), as the checkout's only session.
-   - Gates or builds that need a built environment (a `.pixi` env, a vendored binary), where a fresh worktree would pay a full install first: a conductor or epic session that manages a clone pool can lend it an `available` pooled clone (as `/bip-conductor` Step 5 classifies it), held so spawn selection and `bip spawn` skip it, `KIND=held-clone`:
+   - Gates or builds that need a built environment (a `.pixi` env, a vendored binary), where a fresh worktree would pay a full install first: a conductor or epic session that manages a clone pool can lend it an `available` pooled clone (as `/bip-conductor` Step 4 classifies it), held so spawn selection and `bip spawn` skip it, `KIND=held-clone`:
      ```bash
      source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
      CLONE_ROOT=$(resolve_clone_root .epic-config.json)
