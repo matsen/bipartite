@@ -91,6 +91,8 @@ source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 ```
 
+Shell state doesn't persist between Bash calls: start every block that uses `$CLONE_ROOT` or the lib with these two lines, or an empty `$CLONE_ROOT` makes it report nothing.
+
 Write this session's `ListAgents` name as the sole line of `$CLONE_ROOT/.conductor-session`.
 
 Read every tracked subdirectory `CLAUDE.md`/`AGENTS.md` (`git ls-files | /usr/bin/grep -E '(CLAUDE|AGENTS)\.md$'`); only the root one auto-loads.
