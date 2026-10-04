@@ -161,6 +161,7 @@ Resolve a cited file, line range or symbol against the repo before acting on it 
 Lead with the decision, the ask, or the correction; give the reasoning the receiver cannot reconstruct; cite `.epic-decisions.md`, the issue, the PR, or the worklog entry for the rest. Succinct, not terse. This applies to user-facing reports too.
 Economy governs how much you say, never whether you report a defect: a bad check is one line, not silence.
 Two cases it never licenses: a forwarded worker finding still goes verbatim, and a live-worker correction still states the change in at least one line.
+No ack to a relay's sender when the worker's own reply will reach them.
 
 ### `.epic-decisions.md`: the durable fleet-decision log
 
@@ -181,48 +182,6 @@ Conductor's own reading, if any, marked separately: <...>
 
 **Not `.epic-worklog.md`.** That file is per-slot and is removed on slot cleanup.
 
-## Configuration
-
-The conductor skill reads `.epic-config.json` from the repo root — the same file `/bip-epic` reads.
-This file is gitignored and must exist before either skill can operate; the conductor owns creating it.
-
-**Clone mode** (remote compute or pre-existing clones):
-```json
-{
-  "clone_root": "~/re/myproject",
-  "clone_names": ["alpha", "beta", "gamma"],
-  "new_clone_names": ["delta", "epsilon", "zeta"],
-  "github_repo": "org/repo",
-  "conductor": "alpha",
-  "max_lead_iterations": 8
-}
-```
-
-**Worktree mode** (local parallel work only):
-```json
-{
-  "clone_root": "~/re/myproject-workers",
-  "local_worktrees": true,
-  "github_repo": "org/repo",
-  "max_lead_iterations": 8
-}
-```
-
-**Validation**: If `local_worktrees: true` and `clone_names` are both present, **stop and report an error** — they are mutually exclusive.
-`clone_names` is meaningless in worktree mode because slots are created on demand and named after the issue.
-
-Fields:
-- **clone_root**: Parent directory containing all clones or worktrees.
-  Also where the shared `.spawn-prompts/` intent directory, `.preserved/`, and any unfiled `ISSUE-*.md` drafts live.
-- **clone_names**: (clone mode only) Existing clone directory names. This is the pool's universe; other directories under `clone_root` (e.g. CI clones) are unmanaged.
-- **new_clone_names**: (clone mode only) Names available for creating new clones
-- **local_worktrees**: (worktree mode) If `true`, use `git worktree` for local slots named `issue-N`
-- **github_repo**: `org/repo` for `gh` commands
-- **conductor**: (clone mode only) Which clone is the orchestrator (stays on main)
-- **max_lead_iterations**: Max issue-lead evaluations before escalating to `needs-human` (default: 8)
-- **shared_filesystem**: (optional, default `false`) Set to `true` when the conductor and all compute nodes share an NFS filesystem; the conductor composes direct SSH execution commands instead of `make remote-sync` calls, and experiment results are immediately visible on local NFS paths.
-  Each machine sets this flag for itself.
-
 ## Workflow
 
 ### Step 1: Load config, or set it up
@@ -231,20 +190,7 @@ Fields:
 cat .epic-config.json
 ```
 
-**If the file does not exist**, stop and ask the user:
-1. Are you using local git worktrees or separate clones for parallel work?
-2. Where should slots live?
-   (e.g. `~/re/pz-workers` for worktrees, or `~/re/pz` for clones)
-3. (Clone mode only) What are the clone directory names?
-   Which is the conductor?
-4. What is the GitHub repo (`org/repo`)?
-5. Are compute nodes on a shared NFS filesystem?
-   (sets `shared_filesystem`)
-
-**Note (worktree mode)**: The skill is run from the main repo itself, which acts as the conductor.
-There is no separate conductor clone — `clone_root` is just where worktrees are placed.
-
-Then create `.epic-config.json` with their answers and proceed.
+**If the file does not exist**, follow `setup.md` in this skill's directory, then proceed.
 
 All subsequent steps use values from this config — never hardcode paths or clone names.
 
@@ -459,7 +405,7 @@ esac
 The watcher emits one event per phase transition (default filter: `needs-human`, `completed`, `awaiting-results`, `quality-gate`). A transition into a phase that is not one of the seven legal values always emits, so `--phases` only ever lists legal phases.
 
 It is not liveness detection. It is silent when:
-- a slot never transitions — only the staleness checks in the spec below catch that. The one exception it reports is a `STALLED` event: `awaiting-results`, no ralph loop, its pane neither mid-turn nor showing a shell or monitor still running, status and worklog quiet 45 minutes, so nothing will wake it when its jobs end;
+- a slot never transitions — only the checks in "Slot staleness" below catch that. The one exception it reports is a `STALLED` event: `awaiting-results`, no ralph loop, its pane neither mid-turn nor showing a shell or monitor still running, status and worklog quiet 45 minutes, so nothing will wake it when its jobs end;
 - a slot was already in its phase when the watcher first read it. Restarting the watcher re-baselines the whole fleet, so re-run `/bip-conductor` after a restart; a clone added to `clone_names` after launch is never enumerated;
 - **a slot lands**: `/bip-pr-land` deletes the status file, so `completed` is never observed. Run a second Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (the default order is by creation, so an old PR's merge falls off the list); for landings it is a correctness requirement.
 
@@ -467,104 +413,25 @@ To also receive events as notifications, start a Monitor with `command: tail -F 
 
 When a `needs-human` or `completed` transition arrives, react immediately: read the slot's status and lead guidance, refresh `$CLONE_ROOT/.conductor-session`, then read `$CLONE_ROOT/.epic-session` and `SendMessage` that address the issue number and phase (skip silently if absent or the send fails), and propose the next action or flag it for the user.
 
+**Process questions** (what runs in the pool, a slot reading `shell`): never match argv — a worker's whole prompt is its argv — and follow `process-checks.md` in this skill's directory.
+
 **When several slots go quiet at once, ask what they share before investigating any one** — a host, a token or rate budget, a mount, a freshly landed commit. Never read push silence or a quiet log as "still running".
 
-#### Process checks
+## Slot staleness
 
-A `bip spawn` worker's entire spawn prompt is its argv, so **never match argv** (`pgrep -f`, `ps | grep`) for a question about processes: it matches every worker whose prompt mentions the string, and the asking shell itself. Enumerate by exact name and attribute by working directory:
+The status-file schema is `status-spec.md` in this skill's directory.
 
-```bash
-# Which clone is each live Claude session in?
-for pid in $(pgrep -x claude); do
-  printf '%s\t%s\n' "$pid" "$(readlink /proc/$pid/cwd)"
-done
-```
+- *No tmux window, status file older than 30 minutes* → abandoned slot, a cleanup candidate (Step 6).
+- *Window blocked on a permission modal* → frozen, cannot receive a `SendMessage`, and invisible to the watcher. Sweep on every reconciliation:
 
-- `pgrep -x` is not fleet-scoped; filter on the cwd being under `$CLONE_ROOT`.
-- To ask "what is running in my pool", don't hand-list names: take `/proc/<pid>/comm` for every pid whose cwd is under `$CLONE_ROOT`, `sort | uniq -c` (test runners are named neither `zig` nor after the product).
-- On shared hosts, scope with `-u $(id -u)`. You cannot read another user's `/proc/<pid>/cwd`; treat an unreadable cwd as foreign and report own and foreign counts separately.
-- To wait on something you launched, poll its `$!`, never a pattern — or background it and let the harness re-invoke you.
-- Load average answers "is this host contended", not "is my job still running": enumerate processes for occupancy.
-
-**A slot blocked on a foreground shell wait** reports `shell`, never `idle`, and cannot drain a `SendMessage`. Sweep whenever a slot reads `shell`, and on any full reconciliation:
-
-```bash
-for pid in $(pgrep -x zsh; pgrep -x bash; pgrep -x sh); do
-  [ "$pid" = "$$" ] && continue
-  cwd=$(readlink /proc/$pid/cwd 2>/dev/null); case "$cwd" in "$CLONE_ROOT"/*) ;; *) continue;; esac
-  ppid=$(ps -o ppid= -p $pid | tr -d ' '); et=$(ps -o etimes= -p $pid | tr -d ' ')
-  [ "$(ps -o comm= -p $ppid | tr -d ' ')" = "claude" ] || continue
-  [ "$et" -gt 600 ] || continue
-  echo "$et|$pid|${cwd##*/}"; tr '\0' '\n' < /proc/$pid/cmdline | tail -1 | /usr/bin/grep -o "eval '.*' < /dev/null"
-done | sort -rn
-```
-
-Before killing one, confirm no real process of that clone is being waited on (`pgrep -x make` / `-x zig` plus a cwd match).
-
-## .epic-status.json specification
-
-```json
-{
-  "issue": 281,
-  "title": "Short title",
-  "phase": "exploring | coding | testing | awaiting-results | quality-gate | needs-human | completed",
-  "summary": "Human-readable one-liner",
-  "updated_at": "2026-03-03T14:30:00Z",
-  "blockers": [],
-  "remote_run": null,
-  "quality": null,
-  "scope": "One-line restatement of issue goal from lead",
-  "stop_reason": "phase-complete | needs-instrumentation | needs-deeper-investigation | awaiting-results | run-production | pr-ready | quality-gate | mechanical-blocker | scope-drift | needs-human | awaiting-human-merge | completed",
-  "lead_guidance": "What the worker should do next",
-  "lead_notes": [],
-  "completed_at": null,
-  "awaiting": null
-}
-```
-
-- Must be `.gitignored`, along with `.epic-worklog.md`, `.epic-decisions.md`, and `.epic-notifications.log`. Any file this skill writes to the **conductor cwd** needs a `.gitignore` entry in the consuming repo; files at `$CLONE_ROOT` (`.epic-session`, `.conductor-session`, `.spawn-prompts/`, `.preserved/`) do not, since that path is outside every clone's git tree.
-- **Staleness checks:**
-  - *No tmux window, status file older than 30 minutes* → abandoned slot, a cleanup candidate (Step 6).
-  - *Window blocked on a permission modal* → frozen, cannot receive a `SendMessage`, and invisible to the watcher. Sweep on every reconciliation:
-
-    ```bash
-    for p in $(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' | /usr/bin/grep -F "$CLONE_ROOT/" | awk '{print $1}'); do
-      tmux capture-pane -p -t $p | /usr/bin/grep -q 'Do you want to proceed?' && echo "MODAL: $p"
-    done
-    ```
-
-    Cancel with `Escape`; never send `Enter` or select "Yes" (the cursor sits on "1. Yes"). Then tell the worker what was blocked and that you declined. A subagent's modal surfaces in its parent's pane. For a slot "waiting on a subagent", ~20 minutes with no output is worth a sweep.
-  - *Window still open, status file older than ~45 minutes* → possibly **stalled**. Surface it in Step 5's dashboard for a human; never clean it up.
-  - Check file **mtimes** of both `.epic-status.json` and `.epic-worklog.md`, not the `updated_at` field, which workers sometimes hand-type.
-  - The `phase` field is not evidence that work is done: check `gh pr view`.
-  - A pane's scrollback is current; its statusline is re-rendered on Claude Code's own schedule and can be stale. Don't use it to verify anything.
-- `remote_run` optional — set when work dispatched to remote server
-- `quality` optional — set during `quality-gate` phase:
-  ```json
-  {"pr_check": "pass|fail", "pr_review": "pass|fail", "iterations": 2}
-  ```
-Workers loop `/bip-pr-check` and `/bip-pr-review` until both pass clean.
-- `scope` — set by the issue lead each iteration (one-line restatement of the issue goal)
-- `stop_reason` — categorized reason from the lead's decision framework
-- `lead_guidance` — actionable instruction for the worker's next iteration
-- `lead_notes` — append-only log of lead evaluations (max 8 before escalation)
-- `completed_at` — ISO 8601 timestamp set by the lead after it finishes the terminal `completed` ceremony (files any legitimate follow-ups, posts the final PR comment).
-  Its presence is the idempotency signal: subsequent lead invocations at `completed` skip the ceremony.
-- `awaiting` — set during `awaiting-results` phase:
-  ```json
-  {
-    "description": "What we're waiting for",
-    "check_cmd": "command that exits 0 when done",
-    "check_files": ["paths whose existence means done"],
-    "started_at": "ISO 8601",
-    "timeout_hours": 12
-  }
+  ```bash
+  for p in $(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' | /usr/bin/grep -F "$CLONE_ROOT/" | awk '{print $1}'); do
+    tmux capture-pane -p -t $p | /usr/bin/grep -q 'Do you want to proceed?' && echo "MODAL: $p"
+  done
   ```
 
-### Phase migration
-
-Legacy phases from older `.epic-status.json` files:
-- `blocked` → treat as `needs-human`
-- `pr-review` → treat as `quality-gate`
-
-EPIC orchestration reads `.epic-config.json`, not the `layout:` block in `~/.config/bip/config.yml` (which configures non-EPIC `bip spawn`).
+  Cancel with `Escape`; never send `Enter` or select "Yes" (the cursor sits on "1. Yes"). Then tell the worker what was blocked and that you declined. A subagent's modal surfaces in its parent's pane. For a slot "waiting on a subagent", ~20 minutes with no output is worth a sweep.
+- *Window still open, status file older than ~45 minutes* → possibly **stalled**. Surface it in Step 5's dashboard for a human; never clean it up.
+- Check file **mtimes** of both `.epic-status.json` and `.epic-worklog.md`, not the `updated_at` field, which workers sometimes hand-type.
+- The `phase` field is not evidence that work is done: check `gh pr view`.
+- A pane's scrollback is current; its statusline is re-rendered on Claude Code's own schedule and can be stale. Don't use it to verify anything.
