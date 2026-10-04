@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/flow"
@@ -46,7 +44,5 @@ func runSlackPost(cmd *cobra.Command, args []string) error {
 		fmt.Printf("Posted to #%s\n", channel)
 		return nil
 	}
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(SlackPostResult{Channel: channel, Posted: true})
+	return outputJSON(SlackPostResult{Channel: channel, Posted: true})
 }
