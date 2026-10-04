@@ -25,7 +25,7 @@ It reads every file, flag, and PR the issue references, and checks claims agains
 That means concrete paths, formats, and formulas; every named quantity tied to the code or formula that computes it; measurable success criteria with a stated baseline; and, for algorithmic work, at least two validations specific to this method that would catch a wrong implementation.
 A constitution violation is **CRITICAL**; a `DESIGN.md` conflict, or anything that forces the worker to guess or choose between two sections, is **HIGH**.
 
-**Could it be smaller?** Ask what the smallest change is that delivers the goal, and what in the proposal could be cut, deferred, or replaced by something that already exists — a helper, pipeline, or Snakefile in the repo (search merged PRs and the tree), or an open issue that already covers it (`gh issue list --state open --search`).
+**Could it be smaller?** Ask what the smallest change is that delivers the goal, and what in the proposal could be cut, deferred, or replaced by something that already exists — a helper, pipeline, or Snakefile in the repo (search merged PRs and the tree), or an open issue that already covers it (`gh issue list --state open --search`) — and what cheap check, run first, could make part of it unnecessary.
 When the issue extends existing code, spawn the `code-reuse-reviewer` agent on the files it names as integration points.
 Flag a cut that would deliver the same goal as **HIGH**; checks the issue lacks are proposals to weigh, not gaps (`CONSTITUTION.md` Article VII).
 
