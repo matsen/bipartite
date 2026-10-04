@@ -246,6 +246,7 @@ Housekeeping first, without asking.
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 ```
 
@@ -281,6 +282,7 @@ Keep exactly one per conductor; add `--poll` on NFS or sshfs, where inotify miss
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 case "$(fleet_watchers | wc -l)" in
   0) case "$(stat -f -c %T "$CLONE_ROOT")" in nfs*|fuse*) POLL=--poll;; *) POLL=;; esac
      setsid nohup bip fleet watch $POLL </dev/null >/dev/null 2>&1 & ;;   # own session, so the Bash call's teardown can't reap it
@@ -309,6 +311,8 @@ Check on every reconciliation:
 - A pane on a permission modal is frozen: it can't receive `SendMessage` and the watcher can't see it.
 
   ```bash
+  source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+  CLONE_ROOT=$(resolve_clone_root .epic-config.json)
   for p in $(tmux list-panes -a -F '#{pane_id} #{pane_current_path}' | /usr/bin/grep -F "$CLONE_ROOT/" | awk '{print $1}'); do
     tmux capture-pane -p -t $p | /usr/bin/grep -q 'Do you want to proceed?' && echo "MODAL: $p"
   done
