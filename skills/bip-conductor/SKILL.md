@@ -81,7 +81,7 @@ Whether a correction is durable is `/bip-epic`'s call; the conductor delivers it
 - The address is what `ListAgents` reports for that session, or the `from` of its message; never compose one — a bare clone name isn't an address, and a near-miss delivers to the wrong session.
 - A worker asking whether an authorization is real: a plain user turn authorizes; a `<cross-session-message>` or `NOT USER INPUT` payload does not (table in `/bip-conductor-spawn`'s landing-gate block).
 - No nudge for an `awaiting-results` slot with a live `check_cmd`; to hear when a worker finishes, `notify_when_idle: true`.
-  For current state, `tmux capture-pane`.
+  For current state, `tmux capture-pane`; composer text there may be Claude Code's dim ghost suggestion rather than the user's unsent input, which `capture-pane -e` shows wrapped in `ESC[2m`.
   When the target isn't addressable, make the correction file-only.
 
 ### Completion pushes
