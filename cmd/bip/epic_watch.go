@@ -691,8 +691,13 @@ var turnDone = regexp.MustCompile(` · done .*`)
 // "· Improvising… (11s · ↓ 513 tokens)".
 var turnActive = regexp.MustCompile(`^\S \S+… \(\d+[hms]`)
 
+// footerJobs matches the always-visible footer's count of background jobs,
+// e.g. "⏵⏵ bypass permissions on · 2 shells · ← 1 agent". The turn-end
+// line can scroll off the captured screen; the footer cannot.
+var footerJobs = regexp.MustCompile(`· \d+ (?:shell|monitor)s?(?: ·|\s*$)`)
+
 // paneWaiting reports whether any tmux pane under dir is mid-turn, or its
-// newest turn-end line says a shell or monitor is still running. Those
+// footer or newest turn-end line says a shell or monitor is still running. Those
 // re-invoke the session when they exit, so the slot is waiting, not stalled. Any failure
 // reads as not waiting, so the stall is reported rather than hidden.
 func paneWaiting(dir string) bool {
@@ -711,7 +716,7 @@ func paneWaiting(dir string) bool {
 		}
 		last := ""
 		for _, line := range strings.Split(string(screen), "\n") {
-			if turnActive.MatchString(line) {
+			if turnActive.MatchString(line) || footerJobs.MatchString(line) {
 				return true
 			}
 			if turnDone.MatchString(line) {
