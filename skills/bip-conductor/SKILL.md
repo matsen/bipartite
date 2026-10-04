@@ -106,6 +106,8 @@ Read every tracked subdirectory `CLAUDE.md`/`AGENTS.md` (`git ls-files | /usr/bi
 `/bip-issue-file` moves a draft to `_ignore/` once filed, so a loose `ISSUE-*.md` in a clone is unfiled (or mid-update):
 
 ```bash
+source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
+CLONE_ROOT=$(resolve_clone_root .epic-config.json)
 find "$CLONE_ROOT" -maxdepth 2 -name 'ISSUE-*.md' -not -path '*/_ignore/*'
 ```
 
