@@ -223,7 +223,7 @@ bip asta author-papers 145666442 --human
 
 ### Add Papers to Collection
 
-When you find a paper worth keeping, give the user its DOI and ask them to add it to Paperpile. Once they have imported it, run `git -C "$NEXUS_PATH" pull --ff-only && bip rebuild` to see it. `bip s2 add` by an agent is discouraged.
+When you find a paper worth keeping, give the user its DOI and ask them to add it to Paperpile. Once they have imported it, `git pull --ff-only` in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`) and run `bip rebuild` to see it. `bip s2 add` by an agent is discouraged.
 
 ---
 
