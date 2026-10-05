@@ -223,7 +223,7 @@ bip asta author-papers 145666442 --human
 
 ### Add Papers to Collection
 
-When you find a paper worth keeping, give the user its DOI and ask the user to add it to Paperpile; `/bip-lit-import` brings it in. Agents never run `bip s2 add`.
+When you find a paper worth keeping, give the user its DOI and ask the user to add it to Paperpile; `/bip-lit-import` brings it in. `bip s2 add` by an agent is discouraged.
 
 ---
 

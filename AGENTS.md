@@ -66,8 +66,8 @@ grep -i "name|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " 
 
 ~6000 papers are already imported, so most relevant work is present. **Ask before any ASTA MCP
 call** — ASTA is only for papers confirmed absent locally, citation/reference discovery, or
-topic search with no local hit. Never add papers yourself (`bip s2 add` included): ask the user to put
-them in Paperpile, whose import is the only path into `refs.jsonl`.
+topic search with no local hit. To add a paper, ask the user to put it in Paperpile; adding it yourself
+(`bip s2 add`) is discouraged.
 
 ## Docs conventions
 
