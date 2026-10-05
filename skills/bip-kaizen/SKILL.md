@@ -169,9 +169,7 @@ git commit -m "kaizen: <description>"
 gh pr create --title "kaizen: <description>" --body "..."
 ```
 
-**Write an issue** (using /bip-issue-file pattern):
-- Create `ISSUE-kaizen-<topic>.md` in the current repo
-- Use the `/bip-issue-file` workflow to submit
+**Write an issue**: create `ISSUE-kaizen-<topic>.md` in the current repo and submit it with `/bip-issue-check`.
 
 ## Guidelines
 

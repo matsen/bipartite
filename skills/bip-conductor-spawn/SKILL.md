@@ -50,7 +50,7 @@ If the intent conflicts with current fleet state, resolve it from measured state
 
 ### Prerequisite: Issue number required
 
-Every spawn targets an existing GitHub issue; issueless spawns break EPIC tracking, PR linking, and slot monitoring. For work with no issue yet (reruns, follow-ups, quick experiments), file a minimal one first (title, 3-sentence motivation, success criteria) with `gh issue create --body-file`.
+Every spawn targets an existing GitHub issue; issueless spawns break EPIC tracking, PR linking, and slot monitoring. For work with no issue yet (reruns, follow-ups, quick experiments), file a minimal one first (title, 3-sentence motivation, success criteria) through `/bip-issue-check`.
 
 ### Step 1: Select or create slot
 
