@@ -277,7 +277,7 @@ For a **figure, panel, or rendered equation** you need to *see*, use the built-i
    bip asta references DOI:10.1093/sysbio/syy032
    ```
 
-4. **Want a paper in the library?** Give the user its DOI and ask the user to add it to Paperpile; `/bip-lit-import` brings it in.
+4. **Want a paper in the library?** Give the user its DOI and ask them to add it to Paperpile. Once they have imported it, run `git -C "$NEXUS_PATH" pull --ff-only && bip rebuild` to see it.
 
 See [workflows.md](workflows.md) for detailed workflow instructions.
 
