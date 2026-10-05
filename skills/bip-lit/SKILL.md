@@ -91,7 +91,7 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
 | Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
-| Add paper to collection | `bip s2 add DOI:10.1234/...` |
+| Add paper to collection | Ask the user to add it to Paperpile; `bip s2 add` by an agent is discouraged |
 | Find literature gaps | `bip s2 gaps` |
 | Backfill missing PMCIDs from NCBI | `bip ncbi backfill --dry-run` |
 | One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |
@@ -198,7 +198,6 @@ S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution servi
 
 | Use Case | Command | Why |
 |----------|---------|-----|
-| Add paper to collection | `bip s2 add` | Only S2 can modify local library |
 | Find literature gaps | `bip s2 gaps` | Analyzes your collection |
 | Explore without adding | `bip asta *` | Faster, read-only |
 | Find text snippets in papers | `bip asta snippet` | Unique to ASTA |
@@ -206,7 +205,7 @@ S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution servi
 | Get citations/references | Either S2 or ASTA | ASTA is faster |
 | Backfill PMCIDs (e.g., for NIH RPPR) | `bip ncbi backfill` | NCBI is the canonical source; S2/ASTA do not return PMCIDs reliably |
 
-**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library, `bip ncbi` for authoritative PMCID resolution.
+**Rule of thumb**: Use `bip asta` for exploration, `bip s2` for lookups and collection gaps, `bip ncbi` for authoritative PMCID resolution.
 NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
 
 See [api-guide.md](api-guide.md) for detailed comparison.
@@ -278,10 +277,7 @@ For a **figure, panel, or rendered equation** you need to *see*, use the built-i
    bip asta references DOI:10.1093/sysbio/syy032
    ```
 
-4. **Add interesting papers** to your collection:
-   ```bash
-   bip s2 add DOI:10.1093/sysbio/syy032
-   ```
+4. **Want a paper in the library?** Give the user its DOI and ask them to add it to Paperpile. Once they have imported it, `git pull --ff-only` in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`) and run `bip rebuild` to see it.
 
 See [workflows.md](workflows.md) for detailed workflow instructions.
 
