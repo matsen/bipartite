@@ -298,6 +298,7 @@ Get events as notifications with a Monitor on `tail -F .epic-notifications.log`;
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, push the issue and phase to `.epic-session`'s address, and propose the next action.
 An event with a `procedure` field and no `slot` comes from an external hook, such as a failed nightly: reuse an open issue whose title matches its `summary`, or file a minimal one from it through `/bip-issue-check`, then spawn via `/bip-conductor-spawn` with that procedure.
+When the event carries a `key`, put it in the new issue's title or in a comment on the reused one: the hook's later check searches for it and pages the user when it finds nothing.
 
 When several slots go quiet at once, ask what they share — host, rate budget, mount, a fresh commit — before investigating one.
 Silence is never "still running".
