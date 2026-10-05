@@ -1,7 +1,7 @@
 ---
 name: bip-issue-file
-description: Create or update GitHub issue from markdown file using --body-file
-allowed-tools: Bash, Read
+description: Create (after /bip-issue-check) or update a GitHub issue from a markdown file using --body-file
+allowed-tools: Bash, Read, Skill
 ---
 
 # /bip-issue-file
@@ -33,6 +33,9 @@ Search the recent conversation history for:
 
 If found, this is an UPDATE operation.
 Otherwise, CREATE.
+
+**Every CREATE is reviewed first.** If `/bip-issue-check` did not just review this file and hand it here (or `/bip-epic-check`, for an EPIC), run `/bip-issue-check` on it instead and stop: it files through this skill when it is done.
+A peer session's review does not replace it. Updates skip this step.
 
 ### Step 3: Check for assignee context
 

@@ -30,7 +30,7 @@ Within that context, the agent's **first job is to be a scientific discussant an
 This is *manuscript-driven development*: the PI directs the science at the level of the paper while agents handle the implementation.
 
 Research is directed **through issues and PRs**, not through constant edits to the paper.
-Comment on PRs/issues to request analyses, draft issues for the implementor (via the Issue quality gate), and advise the code-side owner on what to build next.
+Comment on PRs/issues to request analyses, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner on what to build next.
 
 The manuscript is **updated when a thread of research is complete** — you then reconcile the finished result into the paper (the manuscript prevails on disagreement; cf. `/bip-ms-audit`), rather than appending every incremental finding as it lands.
 Until then the paper stays the stable context the discussion runs against.
@@ -39,7 +39,7 @@ Supporting mechanics, in service of the above: monitor tracked EPICs, pull clone
 
 **Out of scope — a safety boundary, not a limit on what you may think about or direct:** this session does not itself run experiments or modify remote server state (other agents are actively working there — see the next rule).
 Guiding, scoping, and *requesting* that work is central and in scope.
-Do **not** create issues on your own initiative — surface gaps to the user; when the user explicitly asks to file one, follow the Issue quality gate below.
+Do **not** create issues on your own initiative — surface gaps to the user; when the user explicitly asks to file one, use `/bip-issue-check`.
 
 **Never modify remote server state.**
 Do not run `snakemake` (even dry-run), `zig build`, `git pull`, `snakemake --unlock`, or any write command on remote servers (ermine, quokka, orca, etc.).
@@ -48,9 +48,6 @@ SSH is fine for read-only inspection (`ls`, `cat`, `head`, `grep`, checking file
 Report what you observe and let the user or the responsible agent handle modifications.
 
 **A question that is the user's to answer** follows `/bip-conductor`'s "Paging the user".
-
-**Issue quality gate:** When the user asks to file an issue during a manuscript session, always run `/bip-issue-check` on the draft before submitting via `/bip-issue-file`.
-Do not shortcut to `gh issue create` directly, regardless of perceived simplicity.
 
 ## Configuration
 
@@ -217,7 +214,7 @@ Based on what's new, propose concrete next steps:
 2. **Open notebooks**: Open HTML notebooks in Chrome for review
 3. **Draft text**: Summarize findings in bullets, then draft results/methods
 4. **Note gaps**: If manuscript work reveals missing experiments or analyses, note them for the user; do not file issues on your own initiative.
-   If the user asks you to file one, follow the Issue quality gate (`/bip-issue-check` → `/bip-issue-file`).
+   If the user asks you to file one, use `/bip-issue-check`.
 
 Wait for user confirmation before taking action.
 
