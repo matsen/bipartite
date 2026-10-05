@@ -14,12 +14,9 @@ Both `bip s2` and `bip asta` commands access Semantic Scholar's paper database, 
 
 ## When to Use S2
 
-Use `bip s2` when you need to **modify your local collection**:
+Use `bip s2` for lookups and for analysis of your local collection. Agents never run `bip s2 add`; to add a paper, ask the user to add it to Paperpile; `/bip-lit-import` brings it in.
 
 ```bash
-# Add a paper to your collection
-bip s2 add DOI:10.1093/sysbio/syy032
-
 # Look up paper info (slower, 1 req/sec)
 bip s2 lookup DOI:10.1093/sysbio/syy032
 
@@ -34,7 +31,6 @@ bip s2 gaps
 ```
 
 **Key S2 capabilities**:
-- `bip s2 add` - Add papers to your local collection
 - `bip s2 gaps` - Analyze your collection for missing papers
 
 ## When to Use ASTA
@@ -117,11 +113,11 @@ ASTA_API_KEY=your_asta_api_key  # For both bip s2 and bip asta commands
 ## Decision Flowchart
 
 ```
-Want to modify your collection?
-├── Yes → Use bip s2
-│   ├── Add paper → bip s2 add
-│   └── Find gaps → bip s2 gaps
-└── No (read-only exploration)
+Want a paper in your collection?
+├── Yes → ask the user to add it to Paperpile
+Analyze your collection?
+├── Find gaps → bip s2 gaps
+Read-only exploration?
     ├── Need text snippets? → bip asta snippet
     ├── Bulk search? → bip asta search (faster)
     ├── Author info? → bip asta author

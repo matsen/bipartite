@@ -223,10 +223,7 @@ bip asta author-papers 145666442 --human
 
 ### Add Papers to Collection
 
-When you find papers worth keeping:
-```bash
-bip s2 add DOI:10.1093/sysbio/syy032
-```
+When you find a paper worth keeping, give the user its DOI and ask the user to add it to Paperpile; `/bip-lit-import` brings it in. Agents never run `bip s2 add`.
 
 ---
 
@@ -238,10 +235,7 @@ Identify papers cited by your collection but not in it.
 bip s2 gaps --human
 ```
 
-Review the gaps and add interesting papers:
-```bash
-bip s2 add DOI:10.xxxx/yyyy
-```
+Review the gaps and list the interesting ones for the user to add to Paperpile.
 
 ---
 
