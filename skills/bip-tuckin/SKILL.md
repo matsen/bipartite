@@ -1,6 +1,6 @@
 ---
 name: bip-tuckin
-description: Universal tuckin dispatcher — persist session state before a context reset by delegating to the right /bip-*-tuckin (ms, spawn, epic, conductor), or a generic fallback when the session is none of those. Run before /clear; pairs with /bip-continue. `/bip-cycle` also clears and resumes the session itself.
+description: Universal tuckin dispatcher — persist session state before a context reset by delegating to the right /bip-*-tuckin (ms, spawn, epic, conductor), or a generic fallback (also used by staff) when the session is none of those. Run before /clear; pairs with /bip-continue. `/bip-cycle` also clears and resumes the session itself.
 allowed-tools: Skill, Bash, Read, Write, Edit
 ---
 
@@ -11,13 +11,14 @@ It determines the session's role, runs the matching tuckin, and that skill write
 
 ## Choosing the tuckin
 
-If `$ARGUMENTS` names a role — `ms`, `spawn`, `epic`, `conductor`, or `generic` — use it.
+If `$ARGUMENTS` names a role — `ms`, `spawn`, `epic`, `conductor`, `staff`, or `generic` — use it.
 
 Otherwise determine the role per `docs/guides/continuation-prompt.md` ("Determining the role"): this session's `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file (`.ms-config.json` → `ms`, `.epic-status.json` → `spawn`), then ask.
 Never infer the role from what the session has been discussing.
 
 Map the role to its skill and invoke it with the Skill tool — do not reimplement it:
 `ms` → `/bip-ms-tuckin`, `spawn` → `/bip-spawn-tuckin`, `epic` → `/bip-epic-tuckin`, `conductor` → `/bip-conductor-tuckin`.
+`staff` has no tuckin of its own: run the generic fallback below, committing `rulings.md` and `briefs/`, and write `_ignore/CONTINUE-staff.md` naming `/bip-staff`.
 
 ## Generic fallback
 
