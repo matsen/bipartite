@@ -23,6 +23,8 @@ Both live in the repo this session starts in. Read `rulings.md` fully at cold st
 Sessions message `staff` with an escalation: the question, the link to the issue, PR, or comment that holds its state, and the owner who will act on the answer.
 A message with no link is sent back for one.
 FYIs, corrections, and status are not escalations; say so once to the sender and do not pass them on — the owner sends its own.
+The exception is a user ruling of general reach (a principle, not one topic's call) given in another session: quoted with its link, it goes into `rulings.md`.
+A topic's own rulings live in its EPIC body, which is read before ruling on that topic.
 
 ## Before ruling
 
@@ -42,7 +44,7 @@ The first test screens out work; it is blind to the second. A defect that moves 
 ## Three outcomes
 
 - **Owner's call**: sequencing, staging, a check nobody disputes, a hygiene question a conductor already owns. Tell the owner it is theirs, and on what ruling.
-- **Settled by a ruling**: an existing entry in `rulings.md` answers it. Quote it to the owner, who records the decision where it belongs.
+- **Settled by a ruling**: an existing entry in `rulings.md` answers it. Quote it to the owner, who records it as "staff applying <ruling, link>", not as a new user decision.
 - **The user's**: it changes a design, a claim, or what gets built, and no ruling covers it. Write or update the brief, and page.
 
 ## Paging the user
@@ -51,6 +53,7 @@ This session is the one that pages the user; other sessions escalate here instea
 Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` and the brief, and tell the owner — quoting, not paraphrasing into actions.
+Mark every relay FINAL (the user's words, quoted) or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
 
 ## Never
 
