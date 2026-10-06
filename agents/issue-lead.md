@@ -62,7 +62,7 @@ issue's goal in one line), and append to `lead_notes`
 
 **One exception:** if the worker wrote `stop_reason:
 awaiting-human-merge` (its brief's `LANDING DELEGATION` doesn't let
-this PR land yet, so a reviewer or the user acts next) and the gate is clean with nothing left
+this PR land yet: it is waiting on the named reviewer or the user) and the gate is clean with nothing left
 for the worker, leave that exact value and keep phase `quality-gate`.
 The worker ends its loop on it, and the fleet reads it as "waiting on a
 human". Put your own classification in the `lead_notes` entry. If the

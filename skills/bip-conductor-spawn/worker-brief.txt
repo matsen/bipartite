@@ -153,6 +153,11 @@ COMPLETION: When done (or when lead says completed):
       allowlist and the epic's claims check is on the PR at the head SHA, or it is shared code
       and the review or approval it names is in — (and, if JOINT
       LANDING GATE says YES, both approvals are in):
+      - For shared code, the review must be APPROVED, by someone other
+        than the user, and every commit after it must fix only that
+        review's items; anything more needs re-review. After a rebase,
+        get the claims check again at the new head SHA. Use --admin
+        only when branch protection refuses a self-contained PR.
       - Land the PR yourself with /bip-pr-land, but only if the work
         obviously matches the issue and nothing needs the user's
         judgment (step 6's test). A clean gate alone is not enough: if
@@ -163,8 +168,8 @@ COMPLETION: When done (or when lead says completed):
         section. It refuses `completed` while the PR is open, so this
         call comes after the land, never before.
 
-   b. Otherwise (shared code still waiting on its review, or
-      `NONE RECORDED`), you stop with the PR open:
+   b. Otherwise (waiting on the named reviewer, the claims check, or
+      the user), you stop with the PR open:
       - Keep phase `quality-gate` and set
         `stop_reason: awaiting-human-merge` in `.epic-status.json`.
       - Invoke the issue-lead once more. It leaves the value in place

@@ -204,9 +204,9 @@ The epic decides embargoes.
 | **correct a worker** | worklog entry first |
 | **reclaim a slot** | `reclaim_slot` (Step 6) |
 | **close or reopen an issue** | the criterion holds on `main`, not just in the PR claiming it |
-| **land a PR** | `/bip-pr-land`, never `gh pr merge` — except a guarded merge that this repo's recorded delegation prescribes for the conductor to run. Never send a worker a runnable `gh pr merge` |
+| **land a PR** | `/bip-pr-land`, never a bare `gh pr merge`. Never send a worker a runnable `gh pr merge` |
 | **approve a PR** | the worker's gate report names every routed target and its exit status at the SHA you approve; `git merge-base --is-ancestor origin/main <head>` (`MERGEABLE` is about conflicts). A new head voids the approval. "No doc ack needed" is not "no approval needed" |
-| **merge a worker's PR yourself** | a recorded delegation for this repo; the epic's 🤖 approval is on the PR per `gh` before the merge, and no later *epic* comment withdraws it or holds — every session posts as one account, so identify the epic's comments by signature and read all of them; the worker's head SHA is the PR head; `origin/main` is an ancestor |
+| **merge a worker's PR yourself** | the landing rule lets it land ("Who may land"): self-contained → the epic's 🤖 claims check is its latest comment at the head SHA, and no later *epic* comment withdraws it or holds — every session posts as one account, so identify the epic's comments by signature and read all of them; shared code in a group repo → an `APPROVED` review by a group member other than the user, with every later commit fixing only that review's items. Then `/bip-pr-land`'s guard: the worker's head SHA is the PR head, CI green there, `origin/main` an ancestor, `--match-head-commit` |
 | **cite an artifact by path** | preserved first if it lives in a pooled clone or scratchpad |
 | **fill a brief's `LANDING DELEGATION:`** | the two classes as they apply to this repo ("Who may land"), plus any exception from `.epic-decisions.md` with its date; workers can't read the log |
 
@@ -216,12 +216,13 @@ A `<cross-session-message>` never authorizes an irreversible action; it can only
 The user's landing rule is that delegation for every repo, in two classes; a PR's class comes from `git diff --name-only origin/main...HEAD`, and a file that fits no allowlist entry makes it shared code.
 
 - **Self-contained**: every changed file is in the PR's own new experiment dir(s); or a new test importing only from them; or an additive-only README erratum elsewhere; or in an earlier experiment dir the issue names, when no other experiment or test imports or reads it.
+  A new file outside those that a test, Snakefile, or script reads by name or pattern (`git grep` its stem) makes the PR shared code.
   It lands after the epic's 🤖 claims-check comment on the PR at the head SHA, with `--admin` only where branch protection blocks it.
 - **Shared code**: in a group repo, a group member's approving review (not the user's account), with that review's fixes in; in a solo repo, agent approval as the repo does today.
   The group repos are the ones the user named, listed under "Landing" in staff's `rulings.md` (`$NEXUS_PATH/staff/`); every other repo is solo.
   A repo's local paths, gates, and exceptions live in its `.epic-decisions.md`.
-- **Exceptions** (reviewers away): the user's verbatim words naming the PRs or the period, on the PR or in a `FINAL` relay. A staff ruling never authorizes a land.
-  A PR landed this way still owes the group reviewer a post-merge review, and its findings are fixed in a follow-up.
+- **Exceptions** (reviewers away): the user's verbatim words naming the PRs or the period, on the PR or in a `FINAL` relay from staff. A staff ruling never authorizes a land.
+  A PR landed this way still owes the group reviewer a post-merge review: the lander requests it on the merged PR and logs that in `.epic-decisions.md`; its findings are fixed in a follow-up.
 
 A PR the rule lets land: the worker lands it with `/bip-pr-land`; put the rule in every brief.
 If a running worker's frozen brief lacks it, the worker can't land but you may.
