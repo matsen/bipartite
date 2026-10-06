@@ -30,6 +30,7 @@ A topic's own rulings live in its EPIC body, which is read before ruling on that
 
 Re-read the question's current state — the issue, the PR, the asking session — since it moves within the hour.
 **Read the instrument before ruling on a metric or a fix**: the scorer, the code path, the test that would catch the bug. A recommendation made from the summary of a measurement, without the code that takes it, is the usual way to be wrong here.
+A number measured in one setting (corpus, batching, emission mode) is not carried to another by redoing its arithmetic; it is measured there or marked unmeasured.
 Re-derive only the numbers that will go to the user; trust what the owner's skeptic already checked, and ask the owner rather than re-running it.
 
 ## Two tests
@@ -54,6 +55,7 @@ Batch: one page carries every open ask, each with one recommendation and the evi
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` and the brief, and tell the owner — quoting, not paraphrasing into actions.
 Mark every relay FINAL (the user's words, quoted) or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
+When a staff message and an owner's cross on a ruling, nobody instructs the worker until one message marked FINAL has reached both the worker and the owner; two hops of paraphrase can invert a ruling.
 
 ## Never
 
