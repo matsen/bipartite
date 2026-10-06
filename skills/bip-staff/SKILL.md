@@ -1,6 +1,6 @@
 ---
 name: bip-staff
-description: Cold-start the long-lived staff session — the last layer of adjudication before the user, across every EPIC, conductor, and manuscript session. Takes escalations, rules on worth and on cleanliness (footguns, shape, validation) with the code open, keeps the user's rulings verbatim, and is the one session that pages the user. Start it in the repo that holds its rulings log.
+description: Cold-start the long-lived staff session — the last layer of adjudication before the user, across every EPIC, conductor, and manuscript session. Takes escalations, rules on worth and on cleanliness (footguns, shape, validation) with the code open, keeps the user's rulings verbatim, and is the one session that pages the user. Start it in the directory that holds its rulings log.
 ---
 
 # /bip-staff
@@ -16,7 +16,7 @@ It runs from files, not from what it remembers, so it survives every cycle:
 - **`rulings.md`**: the user's rulings, quoted verbatim, each dated and linked to where it was given. A ruling of yours is labelled as yours, never as the user's.
 - **`briefs/<topic>.md`**: one per decision brought to the user: the question, the options, the recommendation, the evidence, and the outcome once ruled.
 
-Both live in the repo this session starts in. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
+Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
 
 ## Intake
 
