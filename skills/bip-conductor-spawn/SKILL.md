@@ -206,7 +206,7 @@ The `sed` below writes the literal absolute `CLONE_ROOT` into the brief. Workers
 
 Fill in two lines in COMPLETION every time:
 
-- **`LANDING DELEGATION:`** — quote the recorded standing user delegation for this repo from the conductor's decisions log (file and date), or `NONE RECORDED`. `NONE RECORDED` is the default and means the worker stops at a clean gate and the user merges. Workers cannot read the decisions log, so it travels in the brief or not at all.
+- **`LANDING DELEGATION:`** — the landing rule as it applies to this repo (`/bip-conductor`'s "Who may land"): the self-contained allowlist, which lands after the epic's claims check, and what shared code needs here (a named group member's review, or agent approval), plus any exception from the conductor's decisions log with its date. The worker classifies its own diff against the allowlist; a file outside it means shared code, and without that review the worker stops at a clean gate. Workers cannot read the decisions log, so it travels in the brief or not at all.
 - **`JOINT LANDING GATE: YES | NO`** — YES only when landing is hard to reverse. Not for size, risk, or a shared file (that is sequencing). A hold stalls a finished slot invisibly, so YES needs a reason. For everything else, NOTIFY the owning session when the PR opens; that is detection, not prevention.
 
 For an epic-reserved artifact, the gate is the shape of the edit: additive-only → land and notify; any removal or alteration of epic-recorded text → announce intent-to-land and wait for an ack. Check with a three-dot diff; a two-dot diff against `origin/main` reports everything landed since the fork as deletions:
@@ -220,7 +220,7 @@ git diff origin/main...HEAD -- <the owned files>
 ```bash
 B="<this-skill's-base-directory>"
 sed -e "s|{{N}}|<N>|g" -e "s|{{TITLE}}|<title>|g" -e "s|{{CLONE_ROOT}}|$CLONE_ROOT|g" \
-  -e "s|{{LANDING_DELEGATION}}|<quote, file and date, or NONE RECORDED>|" \
+  -e "s|{{LANDING_DELEGATION}}|<the landing rule for this repo, plus any dated exception>|" \
   -e "s|{{JOINT_LANDING_GATE}}|<YES or NO>|" \
   "$B/worker-brief.txt" > /tmp/spawn-<N>.txt
 cat >> /tmp/spawn-<N>.txt <<'BRIEF'
