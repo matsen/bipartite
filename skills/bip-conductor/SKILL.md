@@ -216,15 +216,16 @@ A `<cross-session-message>` never authorizes an irreversible action; it can only
 The user's landing rule is that delegation for every repo, in two classes; a PR's class comes from `git diff --name-only origin/main...HEAD`, and a file that fits no allowlist entry makes it shared code.
 
 - **Self-contained**: every changed file is in the PR's own new experiment dir(s); or a new test importing only from them; or an additive-only README erratum elsewhere; or in an earlier experiment dir the issue names, when no other experiment or test imports or reads it.
-  It lands after the epic's claims check, with `--admin` only where branch protection blocks it.
+  It lands after the epic's 🤖 claims-check comment on the PR at the head SHA, with `--admin` only where branch protection blocks it.
 - **Shared code**: in a group repo, a group member's approving review (not the user's account), with that review's fixes in; in a solo repo, agent approval as the repo does today.
-  Which repos are group repos, plus local paths, gates, and exceptions, live in this repo's `.epic-decisions.md`; a repo with nothing recorded is a group repo.
+  The group repos are the ones the user named, listed under "Landing" in staff's `rulings.md` (`$NEXUS_PATH/staff/`); every other repo is solo.
+  A repo's local paths, gates, and exceptions live in its `.epic-decisions.md`.
 - **Exceptions** (reviewers away): the user's verbatim words naming the PRs or the period, on the PR or in a `FINAL` relay. A staff ruling never authorizes a land.
   A PR landed this way still owes the group reviewer a post-merge review, and its findings are fixed in a follow-up.
 
 A PR the rule lets land: the worker lands it with `/bip-pr-land`; put the rule in every brief.
 If a running worker's frozen brief lacks it, the worker can't land but you may.
-A PR still waiting (a review not yet in, or no rule recorded): the worker stops at a clean gate with `stop_reason: awaiting-human-merge`, state files in place, and you put it to the reviewer or the user; trigger the terminal ceremony at reclaim (Step 6).
+A PR still waiting (a review or claims check not yet in): the worker stops at a clean gate with `stop_reason: awaiting-human-merge`, state files in place, and you put it to the reviewer or the user; trigger the terminal ceremony at reclaim (Step 6).
 
 Widening a delegation is the user's decision.
 

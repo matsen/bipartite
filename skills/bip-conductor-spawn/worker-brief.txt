@@ -150,7 +150,7 @@ COMPLETION: When done (or when lead says completed):
 
    a. LANDING DELEGATION below lets this PR land — every file in
       `git diff --name-only origin/main...HEAD` fits its self-contained
-      allowlist and the epic's claims check is in, or it is shared code
+      allowlist and the epic's claims check is on the PR at the head SHA, or it is shared code
       and the review or approval it names is in — (and, if JOINT
       LANDING GATE says YES, both approvals are in):
       - Land the PR yourself with /bip-pr-land, but only if the work
