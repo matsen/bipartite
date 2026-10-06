@@ -120,6 +120,7 @@ gh pr checks "$BRANCH" --json name,state,conclusion
   This repo has no CI for this PR.
 - **Checks present**: wait until all required checks are `COMPLETED` with conclusion `SUCCESS` (or `NEUTRAL`/`SKIPPED`).
   Use `gh pr checks "$BRANCH" --watch --fail-fast` to block.
+  `SKIPPED` passes only if a check that builds or tests concluded `SUCCESS` at this head: a gate job can succeed while skipping the tests it gates (e.g. on a branch behind `main`), leaving every check green with nothing run. If so, rebase and wait for the tests.
 - **Any check fails**: abort with the failing check name and a link via `gh pr view --web`.
   Do **not** merge.
   Report to user and stop.
