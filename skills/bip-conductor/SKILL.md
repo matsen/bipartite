@@ -270,7 +270,9 @@ reclaim_slot "$CLONE_ROOT/<slot>" <owner/repo> <PR number> <ListAgents state>
 
 It preserves the worklog to `.preserved/`, kills the worker's pane (never the window — another session's pane can share it; same by hand), waits for no process to have its cwd in the clone, checks out the base, and deletes the state files and merged branch.
 Its output:
-- `RECLAIMED` → spawn pending intent.
+- `RECLAIMED` → wipe that clone's oversized build caches, then spawn pending intent.
+  The clone is idle at this point, so delete (`find <dir> -delete`) each of its `.zig-cache*` (or other build-cache) dirs over 50 GB (`du -sh`); never touch a clone with a live pane or a running build.
+  Reused clones' caches grow without bound (phyz, 2026-10-06: 112–158 GB each); the cost is one cold build (user, 2026-10-06: "yes, wipe them and make it standard at reclaim").
 - `HOLD` → nothing changed.
   It holds unless the terminal ceremony has run, the PR closes at least one issue and all are closed, the tree is clean, the local branch has no commit the merged head lacks, and the composer is empty; fix the cause or leave the slot.
 - `NOT FREE` (exit 2) → window gone, clone not reset.
