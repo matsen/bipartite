@@ -56,7 +56,7 @@ Batch: one page carries every open ask, each with one recommendation and the evi
 When the context the user needs lives in the owner's window rather than in a brief, the ask says so and names that window.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` (general) or to the owner for its EPIC body (topic), delete the brief, and tell the owner — quoting, not paraphrasing into actions.
-Mark every relay FINAL (the user's words, quoted) or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
+Mark every relay FINAL (the user's words, quoted, with the window and date, and at least one contiguous phrase with no internal "…" so the receiver can verify it per `/bip-conductor`'s "Decision relays") or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
 When a staff message and an owner's cross on a ruling, nobody instructs the worker until one message marked FINAL has reached both the worker and the owner; two hops of paraphrase can invert a ruling.
 
 ## Never
