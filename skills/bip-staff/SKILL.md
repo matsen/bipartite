@@ -13,8 +13,9 @@ It is long-lived, holds no topic and runs no workers. Other sessions reach it by
 
 It runs from files, not from what it remembers, so it survives every cycle:
 
-- **`rulings.md`**: the user's rulings, quoted verbatim, each dated and linked to where it was given. A ruling of yours is labelled as yours, never as the user's.
-- **`briefs/<topic>.md`**: one per decision brought to the user: the question, the options, the recommendation, the evidence, and the outcome once ruled.
+- **`rulings.md`**: only the user's general rulings now in force — the operative words verbatim, the date, the link, a one-line scope. A changed ruling replaces its entry; a superseded one is deleted, never qualified. Git keeps the history.
+  Topic rulings live only in their EPIC body, never also here.
+- **`briefs/<topic>.md`**: one per question open with the user — the question, the options, the recommendation, the evidence. Once the user rules, the brief is deleted.
 
 Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
 
@@ -53,7 +54,7 @@ The first test screens out work; it is blind to the second. A defect that moves 
 This session is the one that pages the user; other sessions escalate here instead (`/bip-conductor`'s "Paging the user").
 Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
-When the user rules, quote the words into `rulings.md` and the brief, and tell the owner — quoting, not paraphrasing into actions.
+When the user rules, quote the words into `rulings.md` (general) or to the owner for its EPIC body (topic), delete the brief, and tell the owner — quoting, not paraphrasing into actions.
 Mark every relay FINAL (the user's words, quoted) or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
 When a staff message and an owner's cross on a ruling, nobody instructs the worker until one message marked FINAL has reached both the worker and the owner; two hops of paraphrase can invert a ruling.
 
