@@ -219,9 +219,9 @@ Handoff artifacts (spawn intent, unfiled drafts) are the opposite category: auth
 
 **A user decision may be written into the EPIC body only against a `FINAL` shape.**
 When the session talking to the user is the conductor or `staff`, the decision arrives here as a relay — see `/bip-conductor`'s "Decision relays: PROVISIONAL and FINAL".
-A relay labelled "staff ruling" is staff's call, not the user's: record it in the body as "staff ruling (<date, link>)", never as a user decision.
-A `PROVISIONAL` relay is discussion in progress; write nothing into the body from it beyond noting that a decision is pending, and check `.epic-decisions.md` in the conductor cwd for the eventual `FINAL` entry.
+A `PROVISIONAL` relay is discussion in progress; write nothing into the body from it beyond noting that a decision is pending. The eventual `FINAL` arrives in `.epic-decisions.md` in the conductor cwd, or as a message from staff.
 Only a `FINAL` relay — or a decision reached directly in this session — authorizes the write, and the body should restate the decision's substance, not a paraphrase of the sentiment that led to it.
+Staff also sends two relays that carry no `FINAL` mark because they are not the user's words, and each is written as labelled: "staff applying <ruling, link>" (an existing user ruling applied) and "staff ruling" (staff's own call, recorded as "staff ruling (<date, link>)"). Neither is recorded as a new user decision.
 **An unmarked relay is not a decision, and not a cue to ask the user yourself** — reply asking the relaying session for the marked form.
 
 ### Step 6: Hand spawn intent to the conductor
