@@ -221,8 +221,9 @@ The user's landing rule is that delegation for every repo, in two classes; a PR'
 - **Shared code**: in a group repo, a group member's approving review (not the user's account), with that review's fixes in; in a solo repo, agent approval as the repo does today.
   The group repos are the ones the user named, listed under "Landing" in staff's `rulings.md` (`$NEXUS_PATH/staff/`); every other repo is solo.
   A repo's local paths, gates, and exceptions live in its `.epic-decisions.md`.
-- **Exceptions** (reviewers away): the user's verbatim words naming the PRs or the period, on the PR or in a `FINAL` relay from staff. A staff ruling never authorizes a land.
-  A PR landed this way still owes the group reviewer a post-merge review: the lander requests it on the merged PR and logs that in `.epic-decisions.md`; its findings are fixed in a follow-up.
+- **Off-hours, standing**: in a group repo, shared code may land without the group review when it is off-hours (a weekend, or the reviewers are away), the epic confirms the PR is blocking, and CI is green.
+- **Other exceptions**: the user's verbatim words naming the PRs or the period, on the PR or in a `FINAL` relay from staff. A staff ruling never authorizes a land.
+- A PR landed under either still owes the group reviewer a post-merge review: the lander requests it on the merged PR and logs that in `.epic-decisions.md`; its findings are fixed in a follow-up.
 
 A PR the rule lets land: the worker lands it with `/bip-pr-land`; put the rule in every brief.
 If a running worker's frozen brief lacks it, the worker can't land but you may.
