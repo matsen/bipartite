@@ -13,6 +13,8 @@
 # subagent and Monitor notifications, and command output are also "user" records,
 # so after stripping pasted text and system reminders, a turn that opens with a tag
 # counts only if the tag is one the user types through (<bash-input>, <command-...>).
+# Text a skill types into a pane (tmux send-keys: spawn briefs, /bip-cycle) looks typed,
+# so verify only against the window where the user spoke, never a worker window.
 set -euo pipefail
 name=$1 phrase=$2
 
