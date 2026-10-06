@@ -53,6 +53,7 @@ The first test screens out work; it is blind to the second. A defect that moves 
 
 This session is the one that pages the user; other sessions escalate here instead (`/bip-conductor`'s "Paging the user").
 Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
+When the context the user needs lives in the owner's window rather than in a brief, the ask says so and names that window.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` (general) or to the owner for its EPIC body (topic), delete the brief, and tell the owner — quoting, not paraphrasing into actions.
 Mark every relay FINAL (the user's words, quoted) or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
