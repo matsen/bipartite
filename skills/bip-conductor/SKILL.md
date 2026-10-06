@@ -54,7 +54,8 @@ Merge friction is not that, nor is a question nothing operational reads, however
 
 ### Paging the user
 
-For a question that clears that bar and is the user's, the session that will act on the answer rings once (any other session that spots it sends it to that owner): `bip page --from <your ListAgents name> --link <URL> "<one-line ask>"`.
+For a question that clears that bar and is the user's, the session that will act on the answer escalates it to `staff` (`/bip-staff`): the question, a link to where its state lives, and that this session will act on the answer. Staff settles it or pages the user.
+Only if no session named `staff` is in `ListAgents` does the owner ring itself once: `bip page --from <your ListAgents name> --link <URL> "<one-line ask>"`.
 Ring even if the user just typed; a recent turn is not presence.
 One ring per wait — fold later items into it.
 If it resolves first, `bip page --cancel --from <name> "<why>"`.

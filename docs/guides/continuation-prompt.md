@@ -16,7 +16,7 @@ It is an orientation for what to do next, pointing at the durable state rather t
 
 ## Canonical location
 
-`_ignore/CONTINUE-<role>.md`, where `<role>` is one of `ms`, `spawn`, `epic`, `conductor`, or `generic`, in the directory the next session will start in.
+`_ignore/CONTINUE-<role>.md`, where `<role>` is one of `ms`, `spawn`, `epic`, `conductor`, `staff`, or `generic`, in the directory the next session will start in.
 The role suffix is not optional: an epic session and a conductor session routinely share one repo checkout, so a single `_ignore/CONTINUE.md` would let the second tuckin silently overwrite the first and the resume would pick up the wrong role.
 For an epic, key it by EPIC number as well — `_ignore/CONTINUE-epic-<N>.md` — because one checkout can host several epic sessions for different EPICs, and a bare `CONTINUE-epic.md` recreates the collision between them.
 It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks it).
@@ -26,6 +26,7 @@ It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks 
 `/bip-tuckin` and `/bip-continue` pick the role the same way, and never from what the session has been discussing — an epic session talks about slots and spawns all day, so activity misclassifies it:
 
 1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against the self-registered fleet files `$CLONE_ROOT/.epic-session` and `$CLONE_ROOT/.conductor-session`, each of which holds the name of the session in that role and is rewritten every cycle. A match is the role (`epic` or `conductor`).
+   A session named `staff` is the role `staff`.
 2. Else the **marker file** in the working directory: `.ms-config.json` → `ms`; `.epic-status.json` → `spawn` (a worker slot).
 3. Else **ask**, or fall back to `generic`.
 
