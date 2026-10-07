@@ -13,8 +13,8 @@ A CLI tool for managing academic references with local storage and external pape
 
 ## Local-First, Paper-First Policy
 
-**ASTA and S2 are always authorized; use them for wide or topic searches without asking.
-Search locally first for a paper you already know of, and for a first-cut topic search.**
+**Every search starts in the local library.
+When it comes up short or the search needs to be wider, go on to ASTA or S2 without asking.**
 
 **When answering questions about papers, READ THE ACTUAL PAPER PDF.**
 Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library.
