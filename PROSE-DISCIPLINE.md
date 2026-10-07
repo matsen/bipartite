@@ -16,6 +16,16 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 - **The body is the final state of the diff, not a changelog.** Describe the finished artifact once, in the present tense. Don't write "Reviewer follow-up:", "Update:", a History section, or "originally X, now Y". When the story has settled, rewrite the body from scratch instead of patching it.
 - **A label drifts silently from what it labels, and the label is what gets read.** When you change a section, re-read its heading, caption, commit subject or title against the new content.
 
+## Showing a draft to the user
+
+Write the draft to a gitignored path inside the repo (e.g. `_ignore/<name>.md`), not a scratchpad: the user can't see a scratchpad path, and `glow` is a snap with a private `/tmp`. Open it beside the user's pane and hand focus back:
+
+```bash
+tmux split-window -h -l 45% -c <repo> "command glow -t -s dark _ignore/<name>.md" && tmux last-pane
+```
+
+Use `-s light` in daytime. The pane reloads when the file changes, so revise by editing the file; don't paste the draft inline or reopen the pane.
+
 ## Is the claim true?
 
 Checking the claims is a separate discipline, in `EVIDENCE-DISCIPLINE.md`. Apply it whenever you cite a number, not only when you draft.
