@@ -64,9 +64,9 @@ Search locally first:
 grep -i "name|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
 ```
 
-~6000 papers are already imported, so most relevant work is present. **Ask before any ASTA MCP
-call** — ASTA is only for papers confirmed absent locally, citation/reference discovery, or
-topic search with no local hit. To add a paper, ask the user to put it in Paperpile; adding it yourself
+~6000 papers are already imported, so search locally first for a known paper (and read its local
+PDF) or a first-cut topic search. ASTA needs no permission; use it for wide searches and
+citation/reference discovery. To add a paper, ask the user to put it in Paperpile; adding it yourself
 (`bip s2 add`) is discouraged.
 
 ## Docs conventions
