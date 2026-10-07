@@ -18,7 +18,7 @@ It runs from files, not from what it remembers, so it survives every cycle:
 - **`briefs/<topic>.md`**: one per question open with the user — the question, the options, the recommendation, the evidence. Once the user rules, the brief is deleted.
 
 Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
-Commit and push each change to them (`git pull --rebase && git push`): other sessions pull that repo with `--ff-only`, and an unpushed commit stops them.
+Commit each change to them, then `git pull --rebase && git push` before citing the commit's hash anywhere: other sessions pull that repo with `--ff-only`, and a rebase rewrites a hash that hasn't been pushed.
 
 ## Intake
 
