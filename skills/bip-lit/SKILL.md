@@ -11,10 +11,10 @@ A CLI tool for managing academic references with local storage and external pape
 
 **Issues**: https://github.com/matsen/bipartite/issues
 
-## ⚠️ CRITICAL: Local-First, Paper-First Policy
+## Local-First, Paper-First Policy
 
-**ALWAYS search locally before using external APIs.
-NEVER call ASTA without explicit user permission.**
+**ASTA and S2 are always authorized; use them for wide or topic searches without asking.
+Search locally first for a paper you already know of, and for a first-cut topic search.**
 
 **When answering questions about papers, READ THE ACTUAL PAPER PDF.**
 Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library.
@@ -55,12 +55,7 @@ Get the PDF base path from `bip config pdf-root --human` rather than hardcoding 
 4. **Before concluding a paper is absent, try an exact-match check** — `bip search -a "LastName"` or `bip search --doi "..."` — rather than another keyword permutation.
    `bip search` reports when results are truncated (`Found N references (showing M; ...)`), so a plain "not found" is trustworthy, but a truncated keyword search on its own is not proof of absence.
 
-5. **Only if not found locally AND user confirms**, use ASTA:
-   ```
-   "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
-   ```
-
-**DO NOT** call `bip asta`, `mcp__asta__*`, or any external API without asking first.
+5. **If not found locally, or the search needs to be wider**, use ASTA (`bip asta` or `mcp__asta__*`).
 
 **DO NOT** rely on abstracts or S2 metadata when you have access to the actual paper PDF.
 
@@ -71,7 +66,7 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 1. **Always search local library first** with `bip search "<query>" --human`
 2. If local search fails with an error, rebuild the database and retry
 3. **If found locally and answering a question, read the paper PDF** using pdf-navigator tools
-4. **Only after exhausting local options**, ask user if they want to search externally
+4. **If local options come up short**, search externally with ASTA
 5. For title searches, use the full title; for topic searches, use key terms
 
 ## Quick Reference
@@ -162,7 +157,7 @@ For finding a specific paper or result:
    # Then use pdf-navigator to search/read the PDF
    ```
 
-3. **External keyword search** (only if not found locally, with permission):
+3. **External keyword search** (if not found locally):
    ```bash
    bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
    ```
@@ -237,7 +232,7 @@ For a **figure, panel, or rendered equation** you need to *see*, use the built-i
    ```
 **Always prefer reading the paper over relying on abstracts or external metadata.**
 
-4. **Only if not in library**, search externally (with user permission):
+4. **If not in library**, search externally:
    ```bash
    bip asta search "phylogenetic inference"
    ```
