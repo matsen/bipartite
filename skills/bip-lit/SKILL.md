@@ -347,6 +347,12 @@ If `bip get <id>` or `bip asta paper <id>` fails:
 2. **Try alternate IDs**: Same paper may have DOI, PMID, arXiv ID
 3. **Search by title instead**: `bip asta search "exact paper title"`
 
+### PDF Missing After an Import
+
+On a Linux rclone mount, a just-imported PDF can be absent because the mount's directory cache is stale.
+Flush it with `systemctl --user kill -s HUP <mount service>` (on pax, `rclone-gdrive.service`).
+If the file is still missing and `rclone lsf "<remote>:<dir>"` doesn't list it either, Paperpile hasn't synced it to Drive yet.
+
 ### SQL Schema Errors
 
 If you see errors like `no such column: pmid` or similar schema mismatches:
