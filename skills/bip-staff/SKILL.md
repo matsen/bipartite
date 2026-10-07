@@ -18,6 +18,7 @@ It runs from files, not from what it remembers, so it survives every cycle:
 - **`briefs/<topic>.md`**: one per question open with the user — the question, the options, the recommendation, the evidence. Once the user rules, the brief is deleted.
 
 Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
+Commit each change to them, then `git pull --rebase && git push` before citing the commit's hash anywhere: other sessions pull that repo with `--ff-only`, and a rebase rewrites a hash that hasn't been pushed.
 
 ## Intake
 
@@ -69,4 +70,4 @@ When a staff message and an owner's cross on a ruling, nobody instructs the work
 
 ## Tuckin
 
-`/bip-tuckin` runs its generic steps with role `staff`: commit `rulings.md` and `briefs/`, then write `_ignore/CONTINUE-staff.md` naming `/bip-staff` as the cold start.
+`/bip-tuckin` runs its generic steps with role `staff`: commit and push `rulings.md` and `briefs/`, then write `_ignore/CONTINUE-staff.md` naming `/bip-staff` as the cold start.
