@@ -29,7 +29,7 @@ It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks 
 1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against the self-registered fleet files `$CLONE_ROOT/.epic-session` and `$CLONE_ROOT/.conductor-session`, each of which holds the name of the session in that role and is rewritten every cycle. A match is the role (`epic` or `conductor`).
    A session named `staff` is the role `staff`.
 2. Else the **marker file** in the working directory: `.ms-config.json` → `ms`, but only when its `session` field is this session's name or is absent (a config `/bip-ms` hasn't stamped yet), since other sessions also run in manuscript trees; `.epic-status.json` → `spawn` (a worker slot).
-3. Else **ask**, or fall back to `generic`.
+3. Else **ask**, or fall back to `generic` — but when `.ms-config.json` names a different session, ask, naming both: a `/rename` leaves the ms session's stamp stale.
 
 ## Shape
 
