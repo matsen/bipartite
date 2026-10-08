@@ -318,7 +318,8 @@ rm -f /tmp/epic-pull.json
 # ...
 
 # Ownership can move between pull and push; the conflict check below catches a body changed since the pull.
-OWNER=$(gh issue view <number> --json body -q .body | grep -m1 '^Owner: ')
+LIVE=$(gh issue view <number> --json body -q .body) || { echo "ABORT: could not read the live body"; exit 1; }
+OWNER=$(printf '%s\n' "$LIVE" | grep -m1 '^Owner: ')
 [ -z "$OWNER" ] || [ "$OWNER" = "Owner: <this session's name>" ] || { echo "ABORT: $OWNER is not this session"; exit 1; }
 grep -q '^Owner: ' ISSUE-EPIC-<N>.md || { echo "ABORT: the draft lost its Owner: line"; exit 1; }
 

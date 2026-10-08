@@ -45,14 +45,14 @@ The owner re-asserts `Owner:` at each cold start and pushes a body only while `O
 
 A worker's brief freezes `EPIC: <owner/repo>#<N>`, or `EPIC: none`, and may add `Notify:` with the exact names of the sessions that requested or framed the issue.
 A follow-up issue inherits both lines from its parent.
-Notices go to the EPIC's `Owner:`, read when the notice is sent, plus every `Notify:` name; an EPIC with no `Owner:` line yet routes like `EPIC: none`, to `Notify:` only.
+Notices go to the EPIC's `Owner:`, read when the notice is sent, plus every `Notify:` name.
 The conductor hears every phase transition through `.epic-notifications.log` either way.
 
 Names match exactly.
-A name with no live session is never routed to some other session: the transition stays in `.epic-notifications.log`, and the conductor reports the EPIC to staff.
+A missing `Owner:` line, or a name with no live session, is never routed to some other session: the transition stays in `.epic-notifications.log`, and the conductor reports the EPIC to staff.
 Staff proposes an owner to the user, usually the session already producing the EPIC's edits; staff never stands in as the owner.
 
-The 🤖 landing signer is landing policy, set in the brief's `LANDING DELEGATION:` line; it defaults to the EPIC's owner but need not be.
+The 🤖 landing signer is landing policy, set in the brief's `LANDING DELEGATION:` line; it defaults to the EPIC's owner but need not be. A brief with `EPIC: none` names its signer, or its PR waits for a human merge.
 
 ## Claims: no self-judging
 
