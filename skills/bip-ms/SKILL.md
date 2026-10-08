@@ -121,6 +121,8 @@ Then create `.ms-config.json` and proceed.
 cat .ms-config.json
 ```
 
+Set its `session` field to this session's `ListAgents` name (the "This session is ..." row), so `/bip-tuckin` and `/bip-continue` don't take another session in this tree for the ms session.
+
 Read `CLAUDE.md` and the top of `misc/session-onboarding.md`: everything above its live-thread index, plus the index itself.
 Then read the Introduction's prose, the turn-one read of the paper: it should convey the paper's idea on its own, and may end with an outline of the other sections.
 If it falls short, propose an Introduction edit rather than a summary elsewhere.
