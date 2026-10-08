@@ -94,16 +94,26 @@ might need to `{{CLONE_ROOT}}/.preserved/<slug>/` with a README (what it is,
 source host and path, which issue) and say in the PR body where it went —
 or commit it if small, or state that it is regenerable and at what cost.
 
+EPIC: {{EPIC}}
+NOTIFY: {{NOTIFY}}
+
+WHO HEARS FROM YOU — resolve each address when you send, never earlier:
+  the conductor -> {{CLONE_ROOT}}/.conductor-session
+  the owner     -> the EPIC body's `Owner:` line (none when EPIC is none,
+                   or the body has no such line):
+                   gh issue view <N> -R <owner/repo> --json body -q .body | grep -m1 '^Owner: '
+  NOTIFY        -> the names above, as written
+Send only to a name that `ListAgents` shows exactly; never pick a nearby
+row. A missing name or failed send is not yours to fix: don't retry or
+guess, note it in your FINAL RECAP, and the conductor reports it.
+
 PUSH NOTIFICATION — when you finish, stand down, hand off, or get blocked,
-`SendMessage` the conductor one line (issue number, state, summary),
-whether or not .epic-status.json exists — /bip-pr-land deletes it. Read
-the address from `{{CLONE_ROOT}}/.conductor-session`; never pick a
-`ListAgents` row. If the file is missing or the send fails, don't retry or
-guess — note it in your FINAL RECAP. Send when you decide to land, and
-again after if anything changed.
+`SendMessage` everyone in WHO HEARS FROM YOU one line (issue number, state,
+summary), whether or not .epic-status.json exists — /bip-pr-land deletes
+it. Send when you decide to land, and again after if anything changed.
 
 DO NOT EDIT THE EPIC ISSUE'S BODY. If it is stale or contradicted by your
-work, tell the conductor and let the epic session fix it.
+work, tell the conductor and let the EPIC's owner fix it.
 
 SUBAGENTS: delegate reading and analysis freely, never a permission-gated
 action (rm, force-push, a write outside the clone, an unfamiliar binary):
@@ -193,9 +203,8 @@ COMPLETION: When done (or when lead says completed):
    defect in this prompt: ask the conductor before landing.
 
    IF JOINT LANDING GATE IS YES, request it yourself. Set phase to
-   quality-gate and SendMessage BOTH, reading each address at send time:
-       the conductor -> {{CLONE_ROOT}}/.conductor-session
-       the epic      -> {{CLONE_ROOT}}/.epic-session
+   quality-gate and SendMessage BOTH the conductor and the owner, resolved
+   as in WHO HEARS FROM YOU (no owner -> ask the conductor who gates it).
    Say the PR is quality-gate clean, give the headline result and SHA,
    and flag anything either should weigh. Then set awaiting-results with
    a real check_cmd and keep looping.

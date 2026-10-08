@@ -26,8 +26,9 @@ It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks 
 
 `/bip-tuckin` and `/bip-continue` pick the role the same way, and never from what the session has been discussing — an epic session talks about slots and spawns all day, so activity misclassifies it:
 
-1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against the self-registered fleet files `$CLONE_ROOT/.epic-session` and `$CLONE_ROOT/.conductor-session`, each of which holds the name of the session in that role and is rewritten every cycle. A match is the role (`epic` or `conductor`).
+1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against two records: the `Session: X` line of an `_ignore/CONTINUE-epic-<N>.md` in the working directory, which `/bip-epic` writes at cold start, so this one file is state as well as handoff (role `epic`, EPIC `N`); and `$CLONE_ROOT/.conductor-session`, which the conductor rewrites every cycle (role `conductor`).
    A session named `staff` is the role `staff`.
+   A session that two records name holds two roles, which `docs/guides/roles.md` forbids: stop and ask.
 2. Else the **marker file** in the working directory: `.ms-config.json` → `ms`, but only when its `session` field is this session's name or is absent (a config `/bip-ms` hasn't stamped yet), since other sessions also run in manuscript trees; `.epic-status.json` → `spawn` (a worker slot).
 3. Else **ask**, or fall back to `generic` — but when `.ms-config.json` names a different session, ask, naming both: a `/rename` leaves the ms session's stamp stale.
 
@@ -66,6 +67,6 @@ Point at the check, not the answer.
 
 In the next session, after `/clear`, run `/bip-continue`.
 `/bip-cycle` does both steps itself, in tmux: it types `/clear`, and then `/bip-continue` into the fresh session.
-It determines the role (above), reads the matching `_ignore/CONTINUE-<role>.md`, reports how stale the file is (its stamp against `git log -1` and the newest PR/issue activity), runs each in-flight item's inline check before acting, and hands off to the cold-start or resume skill the prompt names — which owns the role-specific work (re-registering `.epic-session`/`.conductor-session`, live-run and pooled-slot handling, surfacing standing traps).
+It determines the role (above), reads the matching `_ignore/CONTINUE-<role>.md`, reports how stale the file is (its stamp against `git log -1` and the newest PR/issue activity), runs each in-flight item's inline check before acting, and hands off to the cold-start or resume skill the prompt names — which owns the role-specific work (re-registering `.conductor-session` or the EPIC's `Owner:` line, live-run and pooled-slot handling, surfacing standing traps).
 
 `/bip-tuckin` is the matching entry point on the way out: it delegates to the right `/bip-*-tuckin` (or a generic fallback), each of which writes this prompt.

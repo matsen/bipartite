@@ -13,7 +13,7 @@ It determines the session's role, runs the matching tuckin, and that skill write
 
 If `$ARGUMENTS` names a role — `ms`, `spawn`, `epic`, `conductor`, `staff`, or `generic` — use it.
 
-Otherwise determine the role per `docs/guides/continuation-prompt.md` ("Determining the role"): this session's `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file (`.ms-config.json` → `ms` when its `session` field is this session's name or absent, `.epic-status.json` → `spawn`), then ask.
+Otherwise determine the role per `docs/guides/continuation-prompt.md` ("Determining the role"): this session's `ListAgents` name against the `Session:` line of `_ignore/CONTINUE-epic-<N>.md` and `$CLONE_ROOT/.conductor-session`, then the marker file (`.ms-config.json` → `ms` when its `session` field is this session's name or absent, `.epic-status.json` → `spawn`), then ask.
 Never infer the role from what the session has been discussing.
 
 Map the role to its skill and invoke it with the Skill tool — do not reimplement it:

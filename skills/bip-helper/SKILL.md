@@ -96,7 +96,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    The helper starts with no other context.
    Beyond the task, the brief gives your name (it reports to you by `SendMessage`), its home and working directory as expanded paths, and these rules:
    - extra checkouts and anything it cites go under its home, never its scratchpad;
-   - after each round, append a timed section with findings and evidence paths to `result.md` (the durable record), then report to the primary; if that send fails, the primary was likely renamed on a restart — re-resolve it from `ListAgents` by name prefix and resend;
+   - after each round, append a timed section with findings and evidence paths to `result.md` (the durable record), then report to the primary; if that send fails, the primary was likely renamed on a restart — note it in `result.md` and don't resend; never guess the primary from a name prefix;
    - leave a held clone clean and on `main`;
    - no merging, no pushing to main, no other checkouts, no helpers of its own.
 

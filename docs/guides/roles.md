@@ -1,66 +1,91 @@
 # Agent Roles
 
-A bipartite fleet is a set of long-lived Claude sessions, each with one role.
+A bipartite fleet is a set of Claude sessions, each with one role; every role but the worker is long-lived.
 A role fixes what a session owns, whom it answers, and which skill starts it.
 This page names the roles; the skills carry the procedures.
 
-| Role | One per | Owns | Starts with |
+| Role | How many | Owns | Starts with |
 |---|---|---|---|
-| Conductor | fleet (repo + clone pool) | ops: slots, spawns, hosts, landing mechanics | `/bip-conductor` |
-| Epic | live EPIC | the EPIC: its body, its direction, the current edge of its topic | `/bip-epic <N>` |
-| Manuscript (ms) | paper | the paper: broad perspective, literature, what the results mean for it | `/bip-ms` |
-| Staff | site | adjudication, the user's rulings, paging the user | `/bip-staff` |
-| Worker | issue | one issue's branch and PR | spawned by the conductor |
+| Conductor | one per fleet (repo + clone pool) | ops: slots, spawns, hosts, landing mechanics | `/bip-conductor` |
+| Epic | one per live EPIC, one EPIC each | the EPIC: its body, its direction, the current edge of its topic | `/bip-epic <N>` |
+| Manuscript (ms) | one per paper | the paper: broad perspective, literature, what the results mean for it | `/bip-ms` |
+| Staff | one per site | adjudication, the user's rulings, paging the user | `/bip-staff` |
+| Worker | one per issue in flight | one issue's branch and PR | spawned by the conductor |
 
-Discussants (an interpretation or literature pal, a brainstorm partner) are generic sessions attached to an epic or ms session; they tuck in with the generic fallback and put their reasoning on the issues it bears on.
+Discussants (an interpretation or literature pal, a brainstorm partner) are generic sessions attached to an epic or ms session; they tuck in with the generic fallback, put their reasoning on the issues it bears on, and escalate to staff directly.
+A `/bip-helper` session is an extension of its primary, not a role.
 
 ## Conductor: ops
 
 The conductor runs the fleet: which clone holds which issue, what runs on which host, what is free, what lands.
 It narrates fleet state and nothing else; why an issue matters is the epic's to say.
 Its reports never ask the user a question: each question goes to the session that owns its subject, and the report lists it as `pending with <owner>`.
+Workers reach it through `$CLONE_ROOT/.conductor-session`, which it rewrites every cycle.
 
 ## Epic: one EPIC, the current edge
 
 An epic session owns exactly one EPIC.
-It keeps the EPIC body current, drafts spawn briefs for the conductor, judges whether its workers' results answer the EPIC, and is where the topic's questions to the user come from (through staff).
+It keeps the EPIC body current, drafts spawn briefs for its EPIC, and judges whether its workers' results answer the question the EPIC asked.
+Its questions to the user go directly when the user is in its window, otherwise through staff.
 
 **One EPIC per epic session is a bright line.**
 A session that finds itself wanting a second EPIC has found either two EPICs that should merge, or a second topic that needs its own session.
+Issues already filed under the wrong EPIC stay there until the user names an owner for their topic.
 
-The EPIC body names its owner and what it feeds:
+The EPIC body names its owner and what it feeds, each entry a `repo#N` or an exact ms session name:
 
 ```
 Owner: <session name>
-Feeds: <repo#N>, <paper>
+Feeds: <repo#N>, <ms session name>
 ```
 
-Workers and the conductor read `Owner:` when they send a notice, not when the worker spawns, so an ownership change takes effect at once.
-The match is on the exact session name; a name with no live session is reported, never routed to some other session.
-An EPIC with no live owner keeps its notices on file, and the conductor reports it to staff, who finds or names an owner; staff never stands in as the owner.
+The owner re-asserts `Owner:` at each cold start and pushes a body only while `Owner:` names it.
 
-An epic does not rule on its own hypotheses.
-A result claim goes into the EPIC body only after someone other than the session that framed it has checked it: `surprising-conclusion-skeptic`, a paper the EPIC feeds, or the user.
+## Routing notices
+
+A worker's brief freezes `EPIC: <owner/repo>#<N>`, or `EPIC: none`, and may add `Notify:` with the exact names of the sessions that requested or framed the issue.
+A follow-up issue inherits both lines from its parent.
+Notices go to the EPIC's `Owner:`, read when the notice is sent, plus every `Notify:` name; an EPIC with no `Owner:` line yet routes like `EPIC: none`, to `Notify:` only.
+The conductor hears every phase transition through `.epic-notifications.log` either way.
+
+Names match exactly.
+A name with no live session is never routed to some other session: the transition stays in `.epic-notifications.log`, and the conductor reports the EPIC to staff.
+Staff proposes an owner to the user, usually the session already producing the EPIC's edits; staff never stands in as the owner.
+
+The 🤖 landing signer is landing policy, set in the brief's `LANDING DELEGATION:` line; it defaults to the EPIC's owner but need not be.
+
+## Claims: no self-judging
+
+An epic rules on how to test — design, procedure, the calls inside a pre-registration — and on whether a result answers the question asked.
+It does not rule on whether its own hypothesis holds.
+A result claim goes into the EPIC body, or to the user, only after a session that did not frame it has re-derived the decisive fact from code or data and named the files or lines: `surprising-conclusion-skeptic` by default, a worker's PR-level skeptic, a reviewer session the EPIC body names, or the user.
+Agreeing with the reasoning is not a check, and neither is relaying another session's reading.
+The body entry names its checker.
+A hypothesis labelled unmeasured is not a claim and needs no check.
+
+A session that receives a user ruling on an EPIC's subject relays it to that EPIC's `Owner:`, quoted with window and date, and the owner writes it into the body.
 
 ### From brainstorm to epic
 
 Many threads start as a brainstorm in an ad-hoc session.
 When one becomes a Thing, file or revive its EPIC, set `Owner:` to that session, and run `/bip-epic <N>` in it.
-The session keeps its context; nothing is handed over.
+The session keeps its context, which is why the no-self-judging rule matters most here.
 
 ## Manuscript: the broad view
 
 An ms session owns one paper.
 It holds the perspective across EPICs and repos, knows the literature (`/bip-lit`), and decides what results mean for the paper.
-An epic consults the papers in its `Feeds:` line before it changes direction, and a paper may check an epic's result claim.
+An epic consults the papers in its `Feeds:` line before it changes direction; they are consulted, not a gate.
 An ms session owns no EPIC; when a paper session finds itself running one, that EPIC needs its own epic session.
 
 ## Staff: adjudication
 
 Staff is the last layer before the user: it rules on worth and on cleanliness, records the user's rulings verbatim, and is the one session that pages the user.
-Every session escalates a user-owned question to staff; staff settles it or pages.
+Process and ops questions are settled among the agents, by their owner or by staff; design, claims, and what gets built go to the user.
+A staff call is labelled a staff ruling: it is never recorded as the user's and never authorizes a land.
 
 ## Names
 
 Session names describe topics, not EPIC numbers, so they survive an EPIC being superseded: `phyz-search`, `dasm2-neutral`, `pcp-ms`.
-Each name is unique across the machine, because routing matches it exactly, and the session's tmux window carries the same name.
+Each name is unique among the sessions `ListAgents` shows, because routing matches it exactly, and the session's tmux window carries the same name.
+Renaming a session edits every `Owner:` line that names it, in the same step.

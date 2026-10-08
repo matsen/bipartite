@@ -20,16 +20,16 @@ Topic-side state (EPIC bodies, findings, decisions) is `/bip-epic-tuckin`'s job,
 
 ### Step 1: Verify role registration
 
-`$CLONE_ROOT/.conductor-session` and `$CLONE_ROOT/.epic-session` name the sessions currently holding those roles.
-They are written at cold start and at handover, and nothing else re-checks them — a tuckin is the moment they are most likely to be wrong, since a role often changes hands shortly before a context reset.
+`$CLONE_ROOT/.conductor-session` names the session currently holding the role.
+It is written at cold start and at handover, and nothing else re-checks it — a tuckin is the moment it is most likely to be wrong, since a role often changes hands shortly before a context reset.
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-for f in .conductor-session .epic-session; do echo "$f: $(cat "$CLONE_ROOT/$f" 2>/dev/null)"; done
+echo ".conductor-session: $(cat "$CLONE_ROOT/.conductor-session" 2>/dev/null)"
 ```
 
-Cross-check each name against `ListAgents`:
+Cross-check the name against `ListAgents`:
 
 - **Names a live session** — correct, leave it alone.
 - **Names this session under an old name** — rewrite it with the current name.
