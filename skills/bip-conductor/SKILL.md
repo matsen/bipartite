@@ -95,7 +95,7 @@ Whether a correction is durable is `/bip-epic`'s call; the conductor delivers it
 Workers push their own notices to the conductor, their EPIC's owner, and their `NOTIFY:` names (`/bip-conductor-spawn`'s worker brief).
 Workers find the conductor through `$CLONE_ROOT/.conductor-session` (Step 1, refreshed before reacting in Step 7).
 To reach an epic, read the `Owner:` line of its EPIC body when you send and `SendMessage` that exact name.
-No `Owner:` line, a name `ListAgents` doesn't show, or a failed send: the transition stays in `.epic-notifications.log`, and the report lists the EPIC as `pending with staff: no live owner`.
+No `Owner:` line, a name `ListAgents` doesn't show, or a failed send: the owner's copy stays in `.epic-notifications.log`, and the report lists the EPIC as `pending with staff: no live owner`; `NOTIFY:` names still receive theirs.
 Leave a fleet's legacy `$CLONE_ROOT/.epic-session` in place until every slot whose brief predates `OWNER_CMD` has been reclaimed: those briefs still read it.
 Never retry-loop, hunt `ListAgents` for a substitute, or act on a "Did you mean" list.
 

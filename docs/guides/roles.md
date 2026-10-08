@@ -49,7 +49,7 @@ Notices go to the EPIC's `Owner:`, read when the notice is sent, plus every `Not
 The conductor hears every phase transition through `.epic-notifications.log` either way.
 
 Names match exactly.
-A missing `Owner:` line, or a name with no live session, is never routed to some other session: the transition stays in `.epic-notifications.log`, and the conductor reports the EPIC to staff.
+A missing `Owner:` line, or a name with no live session, is never routed to some other session: the owner's copy stays in `.epic-notifications.log`, and the conductor reports the EPIC to staff. `Notify:` names still receive theirs.
 Staff proposes an owner to the user, usually the session already producing the EPIC's edits; staff never stands in as the owner.
 
 The 🤖 landing signer is landing policy, set in the brief's `LANDING DELEGATION:` line; it defaults to the EPIC's owner but need not be. A brief with `EPIC: none` names its signer, or its PR waits for a human merge.
@@ -61,7 +61,7 @@ It does not rule on whether its own hypothesis holds.
 A result claim goes into the EPIC body, or to the user, only after a session that did not frame it has re-derived the decisive fact from code or data and named the files or lines: `surprising-conclusion-skeptic` by default, a worker's PR-level skeptic, a reviewer session the EPIC body names, or the user.
 Agreeing with the reasoning is not a check, and neither is relaying another session's reading.
 The body entry names its checker.
-A hypothesis labelled unmeasured is not a claim and needs no check.
+A hypothesis labelled unmeasured needs no check of its inference, but any checkable fact it rests on is re-derived the same way before it reaches the EPIC body or the user.
 
 A session that receives a user ruling on an EPIC's subject relays it to that EPIC's `Owner:`, quoted with window and date, and the owner writes it into the body.
 
