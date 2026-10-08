@@ -54,7 +54,8 @@ Merge friction is not that, nor is a question nothing operational reads, however
 
 ### Paging the user
 
-For a question that clears that bar and is the user's, the session that will act on the answer escalates it to `staff` (`/bip-staff`): the question, a link to where its state lives, and that this session will act on the answer. Staff settles it or pages the user.
+For a question that clears that bar and is the user's, the session that owns its subject escalates it to `staff` (`/bip-staff`): the question, a link to where its state lives, and who will act on the answer.
+A topic PR's landing exception or worth question is its epic's, though the conductor lands it; a host question is infra's; the conductor's own are fleet mechanics. Staff settles it or pages the user.
 Escalate each item when it arises; batching is staff's job.
 A user ruling of general reach given directly in this session goes to `staff` too, quoted with its link.
 Only if no session named `staff` is in `ListAgents` does the owner ring itself: `bip page --from <your ListAgents name> --link <URL> "<one-line ask>"`.
@@ -63,7 +64,8 @@ One ring per wait — fold later items into it.
 If it resolves first, `bip page --cancel --from <name> "<why>"`.
 When the user next types here, re-verify each item, then lead with the ask and your recommendation.
 
-Put such a question as one line in your report, park only that item, and keep working.
+The owner puts such a question as one line in its report, parks only that item, and keeps working.
+The conductor's report never asks: hand the owner its question and list it as `pending with <owner>: <one line>`. An answer the user types here anyway still counts.
 Never use `AskUserQuestion`: while it waits, no peer message reaches you.
 
 ## Conventions
