@@ -100,10 +100,13 @@ Use absolute paths, not `cd`.
 
 ```bash
 d=<scratch>/build; rm -rf "$d"; mkdir -p "$d"
-rsync -a --exclude .git --exclude '*.aux' --exclude '*.bbl' --exclude main.pdf <repo>/ "$d"/
-latexmk -pdf -cd -interaction=nonstopmode "$d/main.tex"
+rsync -a --exclude .git --exclude '*.aux' --exclude '*.bbl' --exclude '*.fdb_latexmk' \
+  --exclude '*.fls' --exclude '*.blg' --exclude '*.log' --exclude main.pdf <repo>/ "$d"/
+latexmk -pdf -cd -interaction=nonstopmode "$d/main.tex"; echo "latexmk exit $?"
 grep -n "undefined\|^!" "$d/main.log"
 ```
+
+A nonzero exit is a failure even if the grep is clean; after a bibtex error `main.log` can be stale or missing.
 
 ## Wrap-up
 
