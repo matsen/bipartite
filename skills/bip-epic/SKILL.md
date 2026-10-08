@@ -241,7 +241,7 @@ mkdir -p "$CLONE_ROOT/.spawn-prompts"
 `<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-epic`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory.
 `clone_root` is tilde-form; `resolve_clone_root` expands it.
 
-**Every brief opens with an `EPIC: <N>` line.** `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
+**Every brief opens with an `EPIC: <owner/repo>#<N>` line**, cross-repo included. `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
 
 **Intersect the candidate set with the occupancy table as a discrete step**, and write "checked against conductor table of HH:MM" in the handoff; re-ask if the table is older than a cycle. In clone mode no downstream guard refuses the same issue spawned into a second idle clone.
 

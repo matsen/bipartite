@@ -99,9 +99,8 @@ NOTIFY: {{NOTIFY}}
 
 WHO HEARS FROM YOU — resolve each address when you send, never earlier:
   the conductor -> {{CLONE_ROOT}}/.conductor-session
-  the owner     -> the EPIC body's `Owner:` line (none when EPIC is none,
-                   or the body has no such line):
-                   gh issue view <N> -R <owner/repo> --json body -q .body | grep -m1 '^Owner: '
+  the owner     -> the name this prints (nothing printed: no owner yet):
+                   {{OWNER_CMD}}
   NOTIFY        -> the names above, as written
 Send only to a name that `ListAgents` shows exactly; never pick a nearby
 row. A missing name or failed send is not yours to fix: don't retry or

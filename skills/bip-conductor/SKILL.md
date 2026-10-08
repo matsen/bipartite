@@ -321,6 +321,7 @@ So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-
 Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
+A `completed` that the post-merge ceremony set came after the worker had gone, so send it to the EPIC's owner yourself, the same way.
 An event with a `procedure` field and no `slot` comes from an external hook, such as a failed nightly: reuse an open issue whose title matches its `summary`, or file a minimal one from it through `/bip-issue-check`, then spawn via `/bip-conductor-spawn` with that procedure.
 When the event carries a `key`, put it in the new issue's title or in a comment on the reused one: the hook's later check searches for it and pages the user when it finds nothing.
 
