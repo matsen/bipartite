@@ -63,6 +63,7 @@ nav:
     - Configuration: guides/configuration.md
     - Reference Management: guides/reference-management.md
     - Projects, Repos, and Stores: guides/projects-and-stores.md
+    - Agent Roles: guides/roles.md
     - Issue Lifecycle: guides/issue-lifecycle.md
     - Workflow Coordination: guides/workflow-coordination.md
     - Worktree Layout: guides/layout.md

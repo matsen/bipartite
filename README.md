@@ -22,6 +22,7 @@ The experiments side is the **EPIC orchestration system** — split across two r
 
 Key skills: `/bip-epic`, `/bip-conductor`, `/bip-conductor-spawn`, `/bip-conductor-handoff`, `/bip-pr-review`, `/bip-pr-land`, `/bip-epic-check`, `/bip-conductor-prepare-reboot` and `/bip-conductor-recover` (host reboots)
 
+The [Agent Roles](https://matsen.github.io/bipartite/guides/roles/) guide names the session roles (conductor, epic, manuscript, staff, worker) and what each owns.
 The [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/) guide gives the order in which to run the issue and PR skills, from draft to landed PR.
 
 ### Workflow Coordination
@@ -95,6 +96,7 @@ See the [Getting Started guide](https://matsen.github.io/bipartite/guides/gettin
 
 - [Getting Started](https://matsen.github.io/bipartite/guides/getting-started/): full setup
 - [Configuration](https://matsen.github.io/bipartite/guides/configuration/): every config option and token
+- [Agent Roles](https://matsen.github.io/bipartite/guides/roles/): the session roles and what each owns
 - [Issue Lifecycle](https://matsen.github.io/bipartite/guides/issue-lifecycle/): which skill to run at each step, from draft issue to landed PR
 - [Workflow Coordination](https://matsen.github.io/bipartite/guides/workflow-coordination/): check-ins, digests, boards, Slack, `bip spawn`
 - [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/): the paper library behind `/bip-lit`

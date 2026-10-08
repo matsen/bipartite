@@ -41,7 +41,7 @@ INTENT=$(find_spawn_intent "$CLONE_ROOT" <N>)
 - **Intent file present**: it is the base for the `IMPORTANT CONTEXT` section of Step 4's prompt — don't re-derive what it already says.
   Check it against live fleet state (Step 2b) and append fleet facts it structurally couldn't know: which host/clone is actually free, a concurrent worker editing an overlapping file, a build running on a target remote host.
   Mark it consumed after a successful launch (Step 6).
-  An epic-written brief carries an `EPIC:` reference near the top; the conductor counts live slots by it. Match it tolerantly — `grep -iE '^\**EPIC\**:? *#?([0-9]+)'` — since both `EPIC: 369` and `**EPIC**: #369` are in use. If an epic brief lacks one, ask the epic rather than inferring it. A user-originated brief legitimately has none.
+  An epic-written brief carries an `EPIC:` reference near the top; the conductor counts live slots by it. Match it tolerantly — `grep -iE '^\**EPIC\**:? *([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#?([0-9]+)'` — since `EPIC: matsengrp/phyz#369`, the older `EPIC: 369` and `**EPIC**: #369` are all in use. If an epic brief lacks one, ask the epic rather than inferring it. A user-originated brief legitimately has none.
 - **No intent file** — compose the prompt from the issue directly. This is a first-class path: a user-originated spawn, a conductor-initiated respawn, routine maintenance. A user-originated issue may belong to no EPIC; never reject or defer it for that. See `/bip-conductor`'s "Terms and intake".
 
 If the intent conflicts with current fleet state, resolve it from measured state and say so in your report — a contended host or a taken clone is a placement decision. Escalate only if either resolution risks an actual problem (see `/bip-conductor`'s "Arbitration").
@@ -204,9 +204,13 @@ Re-read every issue-specific *sentence* when reusing a previous prompt, not just
 
 The `sed` below writes the literal absolute `CLONE_ROOT` into the brief. Workers' clones have no `.epic-config.json`, so a worker cannot resolve it.
 
-Fill in two lines in COMPLETION every time:
+Fill in these every time:
 
-- **`LANDING DELEGATION:`** — the landing rule as it applies to this repo (`/bip-conductor`'s "Who may land"): the self-contained allowlist, which lands after the epic's claims check at the head SHA, and what shared code needs here (a named group member's review, or agent approval), plus any exception from the conductor's decisions log with its date. The worker classifies its own diff against the allowlist; a file outside it means shared code, and without that review the worker stops at a clean gate. Workers cannot read the decisions log, so it travels in the brief or not at all.
+- **`EPIC:`** — `<owner/repo>#<N>` from the brief's `EPIC:` header, cross-repo included, or `none` for work under no EPIC. A follow-up takes its parent issue's. The worker reads the EPIC body's `Owner:` at send time, so freeze the EPIC here, never its owner.
+- **`OWNER_CMD`** — the literal lookup for that EPIC, so the worker copies it rather than building one beside its own issue number: `gh issue view <EPIC N> -R <owner/repo> --json body -q .body | grep -m1 '^Owner: '`, or `true # EPIC: none` for work under no EPIC.
+- **`NOTIFY:`** — the exact `ListAgents` names of the sessions that requested or framed the issue, or `none`. With `EPIC: none`, these and the conductor are all the routing the slot has.
+
+- **`LANDING DELEGATION:`** — the landing rule as it applies to this repo (`/bip-conductor`'s "Who may land"): the self-contained allowlist, which lands after the epic's claims check at the head SHA, and what shared code needs here (a named group member's review, or agent approval), plus any exception from the conductor's decisions log with its date. With `EPIC: none`, name the signer (a `NOTIFY:` session, or the conductor for a mechanical-only PR); with none named, a self-contained PR stops at `awaiting-human-merge` like shared code. The worker classifies its own diff against the allowlist; a file outside it means shared code, and without that review the worker stops at a clean gate. Workers cannot read the decisions log, so it travels in the brief or not at all.
 - **`JOINT LANDING GATE: YES | NO`** — YES only when landing is hard to reverse. Not for size, risk, or a shared file (that is sequencing). A hold stalls a finished slot invisibly, so YES needs a reason. For everything else, NOTIFY the owning session when the PR opens; that is detection, not prevention.
 
 For an epic-reserved artifact, the gate is the shape of the edit: additive-only → land and notify; any removal or alteration of epic-recorded text → announce intent-to-land and wait for an ack. Check with a three-dot diff; a two-dot diff against `origin/main` reports everything landed since the fork as deletions:
@@ -215,11 +219,12 @@ For an epic-reserved artifact, the gate is the shape of the edit: additive-only 
 git diff origin/main...HEAD -- <the owned files>
 ```
 
-**Prompt file.** The brief is `worker-brief.txt` in this skill's directory; it ends at `IMPORTANT CONTEXT:`. Fill it with `sed` and append the context with a heredoc. Don't Read the template to fill it: `sed` fills it without loading its ~370 lines into your context. Escape `&`, `|` and `\` in the substituted values.
+**Prompt file.** The brief is `worker-brief.txt` in this skill's directory; it ends at `IMPORTANT CONTEXT:`. Fill it with `sed` and append the context with a heredoc. Don't Read the template to fill it: `sed` fills it without loading its ~370 lines into your context. Escape `&`, `|` and `\` in the substituted values — `OWNER_CMD`'s pipe included.
 
 ```bash
 B="<this-skill's-base-directory>"
 sed -e "s|{{N}}|<N>|g" -e "s|{{TITLE}}|<title>|g" -e "s|{{CLONE_ROOT}}|$CLONE_ROOT|g" \
+  -e "s|{{EPIC}}|<owner/repo#N or none>|" -e "s|{{OWNER_CMD}}|<the lookup above>|" -e "s|{{NOTIFY}}|<exact session names or none>|" \
   -e "s|{{LANDING_DELEGATION}}|<the landing rule for this repo, plus any dated exception>|" \
   -e "s|{{JOINT_LANDING_GATE}}|<YES or NO>|" \
   "$B/worker-brief.txt" > /tmp/spawn-<N>.txt
@@ -275,7 +280,7 @@ An epic can append to `.spawn-prompts/<N>.md` after you consumed it, recreating 
 
 ```bash
 if [ -f "$CLONE_ROOT/.spawn-prompts/consumed/$N.md" ] \
-   && ! grep -qiE '^\**EPIC\**:? *#?[0-9]+' "$CLONE_ROOT/.spawn-prompts/$N.md"; then
+   && ! grep -qiE '^\**EPIC\**:? *([[:alnum:]_.-]+/[[:alnum:]_.-]+)?#?[0-9]+' "$CLONE_ROOT/.spawn-prompts/$N.md"; then
   echo "DELTA, not a brief"     # deliver it; do NOT spawn from it
 else
   echo "BRIEF"

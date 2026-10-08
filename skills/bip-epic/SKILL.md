@@ -85,9 +85,12 @@ git ls-files | /usr/bin/grep -E '(CLAUDE|AGENTS)\.md$'
 
 Use `git ls-files`, not `find`: vendored copies and stale nested clones also contain files named `CLAUDE.md`. Before claiming a measured number is new, grep the experiment's own README for it.
 
-**Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.epic-session` — this is how the conductor finds the epic to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows.
-See `/bip-conductor`'s Conventions section ("Completion pushes").
-Re-run this write every time `/bip-epic` starts a fresh cycle, since the address can drift mid-session.
+**Own the EPIC** (`docs/guides/roles.md`): this session owns this one EPIC and no other.
+At every cold start, make the body's `Owner:` line this session's exact `ListAgents` name (the "This session is ..." row) — workers and the conductor read it at send time.
+If it names another live session, stop and ask staff rather than take it over.
+Make `_ignore/CONTINUE-epic-<N>.md` carry the line `Session: <that name>`, creating the file if needed, so `/bip-tuckin` can tell this session is an epic before its first tuckin.
+Rule on how to test and on whether a result answers the EPIC; a claim that your own hypothesis holds goes into the body only once someone else has re-derived it, as the guide says, and the entry names the checker.
+Consult the papers in the `Feeds:` line before changing direction.
 
 ### Step 2: Fan out scanners
 
@@ -238,7 +241,7 @@ mkdir -p "$CLONE_ROOT/.spawn-prompts"
 `<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-epic`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory.
 `clone_root` is tilde-form; `resolve_clone_root` expands it.
 
-**Every brief opens with an `EPIC: <N>` line.** `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
+**Every brief opens with an `EPIC: <owner/repo>#<N>` line**, cross-repo included. `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
 
 **Intersect the candidate set with the occupancy table as a discrete step**, and write "checked against conductor table of HH:MM" in the handoff; re-ask if the table is older than a cycle. In clone mode no downstream guard refuses the same issue spawned into a second idle clone.
 
@@ -314,6 +317,12 @@ rm -f /tmp/epic-pull.json
 # Edit the file (add findings, check boxes, cut finished sections)
 # ...
 
+# Ownership can move between pull and push; the conflict check below catches a body changed since the pull.
+LIVE=$(gh issue view <number> --json body -q .body) || { echo "ABORT: could not read the live body"; exit 1; }
+OWNER=$(printf '%s\n' "$LIVE" | grep -m1 '^Owner: ')
+[ -z "$OWNER" ] || [ "$OWNER" = "Owner: <this session's name>" ] || { echo "ABORT: $OWNER is not this session"; exit 1; }
+grep -q '^Owner: ' ISSUE-EPIC-<N>.md || { echo "ABORT: the draft lost its Owner: line"; exit 1; }
+
 # Before pushing: check if someone else edited since our pull.
 # Both values MUST be non-empty: an unreadable timestamp compares "" to "" and passes.
 CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
@@ -360,7 +369,7 @@ gh api repos/<org>/<repo>/issues/comments/"$CID" -q .body | tail -40 \
   | /usr/bin/grep -q '<a phrase from the archive'"'"'s final section>' \
   || { echo "ABORT: archive tail missing — truncated"; exit 1; }
 
-gh issue edit <N> --body-file new-body.md   # authorised by the verified copy
+gh issue edit <N> --body-file new-body.md   # authorised by the verified copy; new-body.md keeps the Owner:/Feeds: lines
 ```
 
 Do not add a third timestamp read after your write: `updatedAt` can lag a few seconds.

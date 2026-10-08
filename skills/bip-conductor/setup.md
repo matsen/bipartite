@@ -63,6 +63,6 @@ Fields:
   Each machine sets this flag for itself.
 
 `.epic-status.json` must be gitignored, along with `.epic-worklog.md`, `.epic-decisions.md`, and `.epic-notifications.log`.
-Any file this skill writes to the **conductor cwd** needs a `.gitignore` entry in the consuming repo; files at `$CLONE_ROOT` (`.epic-session`, `.conductor-session`, `.spawn-prompts/`, `.preserved/`) do not, since that path is outside every clone's git tree.
+Any file this skill writes to the **conductor cwd** needs a `.gitignore` entry in the consuming repo; files at `$CLONE_ROOT` (`.conductor-session`, `.spawn-prompts/`, `.preserved/`) do not, since that path is outside every clone's git tree.
 
 EPIC orchestration reads `.epic-config.json`, not the `layout:` block in `~/.config/bip/config.yml` (which configures non-EPIC `bip spawn`).

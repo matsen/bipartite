@@ -12,7 +12,7 @@ The two coordinate over `SendMessage` and `$CLONE_ROOT/.spawn-prompts/`.
 
 ## Terms and intake
 
-- An **EPIC** is a GitHub tracking issue; the **epic agent** is the `/bip-epic` session for one EPIC (one per conductor).
+- An **EPIC** is a GitHub tracking issue; its **epic agent** is the `/bip-epic` session its body's `Owner:` line names. A fleet can serve several EPICs, each with its own epic (`docs/guides/roles.md`).
 - The **slot protocol** (`.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch`) applies to every spawn, whatever its source; the `.epic-` prefix is legacy.
 - **Epic-originated** work arrives as a brief in `.spawn-prompts/`: the epic has judged it worth a slot, so check only mechanics — gates, staleness, host and slot availability, collisions.
 - **User-originated** work may have no EPIC.
@@ -92,9 +92,11 @@ Whether a correction is durable is `/bip-epic`'s call; the conductor delivers it
 
 ### Completion pushes
 
-Each role writes its own `ListAgents` "This session is ..." name as the sole line of a file only it writes: `$CLONE_ROOT/.conductor-session` (Step 1, refreshed before reacting in Step 7) and `/bip-epic`'s `$CLONE_ROOT/.epic-session`.
-To push, read the other's file and `SendMessage` it.
-A missing file or failed send means "not addressable now": fall back to file state silently.
+Workers push their own notices to the conductor, their EPIC's owner, and their `NOTIFY:` names (`/bip-conductor-spawn`'s worker brief).
+Workers find the conductor through `$CLONE_ROOT/.conductor-session` (Step 1, refreshed before reacting in Step 7).
+To reach an epic, read the `Owner:` line of its EPIC body when you send and `SendMessage` that exact name.
+No `Owner:` line, a name `ListAgents` doesn't show, or a failed send: the owner's copy stays in `.epic-notifications.log`, and the report lists the EPIC as `pending with staff: no live owner`; `NOTIFY:` names still receive theirs.
+Leave a fleet's legacy `$CLONE_ROOT/.epic-session` in place until every slot whose brief predates `OWNER_CMD` has been reclaimed: those briefs still read it.
 Never retry-loop, hunt `ListAgents` for a substitute, or act on a "Did you mean" list.
 
 ### Decision relays: PROVISIONAL and FINAL
@@ -205,7 +207,7 @@ The epic decides embargoes.
 
 | about to… | check |
 |---|---|
-| **spawn** | `bip fleet currency` and `bip fleet collisions`; the issue body is unchanged since its brief was written; ask the epic what moves its EPIC's top line (Step 6); `systemctl --user list-timers --all` (it shows LAST and NEXT; `is-active` doesn't) and `uptime` — also before telling a slot to run a full suite |
+| **spawn** | `bip fleet currency` and `bip fleet collisions`; the issue body is unchanged since its brief was written; ask the `Owner:` of the issue's EPIC what moves its top line (Step 6); `systemctl --user list-timers --all` (it shows LAST and NEXT; `is-active` doesn't) and `uptime` — also before telling a slot to run a full suite |
 | **clear runs to share a host** | their summed thread counts fit the host's free cores |
 | **file an issue** | a success criterion naming a denominator, population or "a default run" names its dispatch path |
 | **correct a worker** | worklog entry first |
@@ -224,7 +226,7 @@ The user's landing rule is that delegation for every repo, in two classes; a PR'
 
 - **Self-contained**: every changed file is in the PR's own new experiment dir(s); or a new test importing only from them; or an additive-only README erratum elsewhere; or in an earlier experiment dir the issue names, when no other experiment or test imports or reads it.
   A new file outside those that a test, Snakefile, or script reads by name or pattern (`git grep` its stem) makes the PR shared code.
-  It lands after the epic's 🤖 claims-check comment on the PR at the head SHA, with `--admin` only where branch protection blocks it.
+  It lands after the signer's 🤖 claims-check comment on the PR at the head SHA — the signer is the EPIC's owner unless the brief's `LANDING DELEGATION:` names another — with `--admin` only where branch protection blocks it.
 - **Shared code**: in a group repo, a group member's approving review (not the user's account), with that review's fixes in; in a solo repo, agent approval as the repo does today.
   The group repos are the ones the user named, listed under "Landing" in staff's `rulings.md` (`$NEXUS_PATH/staff/`); every other repo is solo.
   A repo's local paths, gates, and exceptions live in its `.epic-decisions.md`.
@@ -294,7 +296,7 @@ A lost worklog: check `<clone_root>/<clone>/.preserved/`, then `status-spec.md` 
 Then spawn through `/bip-conductor-spawn` (never improvised tmux/claude commands), and report after; the proposal is not a gate.
 Spawn ready, in-scope, unblocked briefs while capacity exists — the gate is topic and objective, not count — re-assessing whenever a slot frees, a PR merges or a brief appears.
 One issue whose result informs the others goes alone; independent ones go in parallel.
-Before each spawn ask the epic what next moves its EPIC's top line, and whether this is it — a stated hold is a complete answer.
+Before each spawn ask the `Owner:` of the issue's EPIC what next moves its top line, and whether this is it — a stated hold is a complete answer.
 Which other issues deserve slots is the epic's call.
 
 ### Step 7: Start slot monitor
@@ -318,7 +320,8 @@ It is silent when a slot never transitions (the staleness checks catch that), fo
 So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation).
 Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
 
-On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, push the issue and phase to `.epic-session`'s address, and propose the next action.
+On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
+A `completed` that the post-merge ceremony set came after the worker had gone, so send it to the EPIC's owner yourself, the same way.
 An event with a `procedure` field and no `slot` comes from an external hook, such as a failed nightly: reuse an open issue whose title matches its `summary`, or file a minimal one from it through `/bip-issue-check`, then spawn via `/bip-conductor-spawn` with that procedure.
 When the event carries a `key`, put it in the new issue's title or in a comment on the reused one: the hook's later check searches for it and pages the user when it finds nothing.
 

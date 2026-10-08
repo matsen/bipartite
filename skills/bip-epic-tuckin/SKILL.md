@@ -55,7 +55,7 @@ Only what survives both gates gets a destination:
 - **What is in flight**, per worker, and what each one's next decision point is.
 - **Housekeeping**: EPIC body headroom, known recurring conflicts, skill changes landed this session.
 
-**The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user.
+**The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user. Keep its `Session: <this session's ListAgents name>` line: role resolution reads it.
 Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; the next session loads it with `/bip-continue`.
 On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
 
