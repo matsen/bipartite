@@ -7,6 +7,7 @@ description: Cold-start a long-lived infra session that tracks compute hosts and
 
 The infra session is where other sessions send host trouble, and where the user asks "what's up, what's down, where can this run".
 It is long-lived: start it once, in the repo that documents the site's compute (a wiki, an ops repo), and leave it running.
+Its hosts are the remote ones. The workstation the fleet runs on (packages, drivers, kernel, reboots, local overload) belongs to a sysadmin session where one exists: route that trouble there. When fleet jobs overload the workstation, sysadmin diagnoses it, and infra points the work to a remote host.
 Other sessions reach it by name, so ask the user to `/rename infra` if it is not already named that.
 
 ## Where site facts come from
