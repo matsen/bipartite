@@ -33,6 +33,9 @@ These standards come before any style guide a specialist agent applies.
 - Watch for words that promise more than you believe ("conflate" implies that perfect separation is possible).
 - Check every number and model description against the tables and methods; a claim often holds for one setting only.
 - Don't cite or characterize work that neither author has read.
+- Never attribute to Erick a feeling or claim he didn't state.
+- Keep caveats proportionate: fix a misleading implication in one clause, framed as a finding where that is honest, and don't give every weaker variant equal weight.
+  Describe a baseline by what it does, not by judging it.
 
 ## Sentences
 
@@ -64,7 +67,7 @@ He does like em dashes (`---`) around a list appositive in a topic sentence.
 - Simple, short, everyday words over fancy ones or jargon.
   Active voice.
 - Cut any word you can without hurting flow or meaning.
-- Cut contentless phrases: "Of course", "Note that", "Interestingly", "very", "nice", "We can see that", "It is important to note that".
+- Cut contentless phrases: "Of course", "Note that", "Interestingly", "very", "nice", "genuinely", "truly", "We can see that", "It is important to note that".
 - which vs. that: dated, but still observe it.
 - No contractions in the paper body.
 - Define each acronym once in the abstract, once in the main text, once in the figures, and once in the tables.

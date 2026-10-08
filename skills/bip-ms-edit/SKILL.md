@@ -23,6 +23,9 @@ Find the response letter if there is one (`ls response*`).
 Check for a `latexmk -pvc` watcher on the repo: `pgrep -fl "latexmk -pvc"`, then `lsof -a -p <pid> -d cwd` for each; a watcher clobbers your builds.
 Build once (below) so later warnings are attributable to your edits.
 
+Ask how refined the text is.
+A refined draft gets only fixes to what is broken, and for each change you must be able to say what was wrong with the original.
+
 **Pull and evaluate**: `git pull`, read the coauthor's commit with `git show --word-diff=plain`, and build it.
 Report in plain terms what changed and what is wrong (build, leftover TODOs, one sentence per line, the change's place in the paragraph's logic, prose), then propose a rewrite.
 
@@ -69,6 +72,7 @@ He edits the file too: re-read the lines before every `Edit`, fix his typos, and
 - the response letter: grep it for any phrase you remove or change, and fix stale quotes, `[QUOTE … "X" to "Y"]` pointers, and examples;
 - promises the letter makes ("we cut rhetorical turns"): check new text against them.
 
+Before reporting a batch, audit your own diff: for each hunk, name what was wrong with the original, and revert the hunks where you can't.
 Rebuild after each batch of edits and report new warnings.
 
 ## Citations
@@ -87,6 +91,7 @@ Continuing the same agent with `SendMessage` is fine for a "did this fix it?" ch
 
 **Specialists** (`scientific-tex-editor`, `topic-sentence-stickler`, `tex-grammar-checker`, `tex-verb-tense-checker`): fan out in parallel on a whole section once its structure is settled.
 Triage their output against `STANDARDS.md` and show him only what survives; never apply it wholesale.
+Their fact checks are valuable, but their style suggestions overreach on refined text; accept a style edit only when you can name what was broken.
 
 ## Build check
 
