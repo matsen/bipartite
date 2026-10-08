@@ -10,7 +10,7 @@ Pick up where the last session's `/bip-tuckin` left off, from the role-keyed pro
 
 ## Steps
 
-1. **Determine the role** (per the guide: `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file) and read `_ignore/CONTINUE-<role>.md` — for an epic, `_ignore/CONTINUE-epic-<N>.md`, keyed by EPIC number.
+1. **Determine the role** (per the guide: `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file) and read `_ignore/CONTINUE-<role>.md` — for an epic, `_ignore/CONTINUE-epic-<N>.md`, keyed by EPIC number; for generic, `_ignore/CONTINUE-generic-<name>.md`, keyed by this session's name, else a bare `CONTINUE-generic.md` an older tuckin left.
    If several `CONTINUE-*.md` exist and the role or EPIC is unknown, list them and ask.
    If none exists, say so and stop; if a marker file makes the type obvious, offer the matching cold-start instead (`/bip-ms`, `/bip-spawn-resume`, `/bip-conductor`, `/bip-epic`, or `/bip-staff`).
 2. **Report staleness**: the file's written-at stamp against `git log -1` and the newest PR/issue activity. If the world moved since it was written, the checks below matter more.

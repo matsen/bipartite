@@ -13,7 +13,7 @@ It determines the session's role, runs the matching tuckin, and that skill write
 
 If `$ARGUMENTS` names a role — `ms`, `spawn`, `epic`, `conductor`, `staff`, or `generic` — use it.
 
-Otherwise determine the role per `docs/guides/continuation-prompt.md` ("Determining the role"): this session's `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file (`.ms-config.json` → `ms`, `.epic-status.json` → `spawn`), then ask.
+Otherwise determine the role per `docs/guides/continuation-prompt.md` ("Determining the role"): this session's `ListAgents` name against `$CLONE_ROOT/.epic-session` / `.conductor-session`, then the marker file (`.ms-config.json` → `ms` when its `session` field is this session's name or absent, `.epic-status.json` → `spawn`), then ask.
 Never infer the role from what the session has been discussing.
 
 Map the role to its skill and invoke it with the Skill tool — do not reimplement it:
@@ -25,6 +25,6 @@ Map the role to its skill and invoke it with the Skill tool — do not reimpleme
 For a session that is none of the four — an ad-hoc or adjudicator session — there is no specialised tuckin, so do the minimum that makes a reset safe:
 
 1. Commit and push anything this session owns; branch first if on `main`, and leave the pooled-slot branches a conductor manages alone. Report what is unpushed rather than forcing it.
-2. Write `_ignore/CONTINUE-generic.md` per the guide.
+2. Write `_ignore/CONTINUE-generic-<name>.md` per the guide.
 3. Report what was committed and that the prompt is written; then it is safe to reset.
 
