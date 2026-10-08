@@ -43,6 +43,12 @@ implementation steps, run experiments, or set up tests — just do them.
 If the issue specifies an experiment, benchmark, or analysis, the work is
 not done until you have run it and collected the results.
 
+WHERE TO RUN — this host is shared by dozens of sessions. Here, run only
+builds, tests, and scripts over results already on disk. Any training,
+fitting, or experiment run goes to a remote host (/bip-scout picks one),
+smoke runs included: a smoke config is a small dataset, not a small
+footprint.
+
 PROMPT VS ISSUE — RAISE IT, DO NOT SETTLE IT. The issue binds what the work
 is; this prompt may narrow it but not widen it:
 - A prompt constraint that SUBTRACTS ("do not touch X", "this phase only",
