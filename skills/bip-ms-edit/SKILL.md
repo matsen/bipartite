@@ -1,6 +1,6 @@
 ---
 name: bip-ms-edit
-description: Edit a TeX manuscript live with Erick, line by line, in his style — "pull and evaluate" a coauthor's commit, "let's work on the abstract/intro/paragraph X", or vet a coauthor's rewording. Structure first, then sentences; apply-and-show each edit; keep %EM notes and the response letter in sync; commit only when asked. Not a batch punch list (/bip-ms-sweep) or a mathematics revision (/bip-ms-math).
+description: Edit a TeX manuscript or blog post live with Erick, line by line, in his style — "pull and evaluate" a coauthor's commit, "let's work on the abstract/intro/paragraph X", or vet a coauthor's rewording. Structure first, then sentences; apply-and-show each edit; keep %EM notes and the response letter in sync; commit only when asked. Not a batch punch list (/bip-ms-sweep) or a mathematics revision (/bip-ms-math).
 allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write, Skill, mcp__pdf-navigator__*
 ---
 
@@ -16,9 +16,12 @@ allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write, Skill, mcp__pdf-
 Erick's writing standards are in `STANDARDS.md` next to this file.
 Read it at the start of every session; it replaces the `misc/writing_with_erick.md` copied into paper repos.
 
+**Blog posts** (`~/writing/matsenweb`): also read `posts_prep/blog_voice_with_erick.md`, whose register ladder says which `STANDARDS.md` rules the blog relaxes; social posts follow `socials/CLAUDE.md`.
+Skip the TeX-only steps (build check, `%EM` notes, response letter), and check every number against the paper the post describes.
+
 ## Step 0: Orient
 
-Read `STANDARDS.md`, the repo's `AGENTS.md` or `CLAUDE.md`, and the whole paper with `Read`, not only the target section: you can't judge what an introduction must set up, or whether its promises are kept, without the Results and Discussion.
+Read `STANDARDS.md`, the repo's `AGENTS.md` or `CLAUDE.md`, and the whole paper or post with `Read`, not only the target section: you can't judge what an introduction must set up, or whether its promises are kept, without the Results and Discussion.
 Find the response letter if there is one (`ls response*`).
 Check for a `latexmk -pvc` watcher on the repo: `pgrep -fl "latexmk -pvc"`, then `lsof -a -p <pid> -d cwd` for each; a watcher clobbers your builds.
 Build once (below) so later warnings are attributable to your edits.
@@ -46,7 +49,7 @@ When he pastes a sentence with a terse note ("clefty", "However, ?", "delete?"),
 3. quote before and after;
 4. give at most two alternatives, one line each, if the choice is close.
 
-Apply small prose edits without asking, since the tree stays uncommitted and "revert" undoes your last change.
+Apply small prose edits without asking, provided you can say what was wrong with the original, since the tree stays uncommitted and "revert" undoes your last change.
 Ask first only for structural changes, cuts of whole passages, and anything outward-facing.
 Keep replies short; he responds to quoted sentences, not to prose about them.
 "Give feedback and clean it up" means a bulleted diagnosis, then the cleaned paragraph quoted in full.
