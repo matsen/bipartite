@@ -1,7 +1,7 @@
 ---
 name: bip-ms-edit
 description: Edit a TeX manuscript live with Erick, line by line, in his style — "pull and evaluate" a coauthor's commit, "let's work on the abstract/intro/paragraph X", or vet a coauthor's rewording. Structure first, then sentences; apply-and-show each edit; keep %EM notes and the response letter in sync; commit only when asked. Not a batch punch list (/bip-ms-sweep) or a mathematics revision (/bip-ms-math).
-allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write
+allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write, Skill, mcp__pdf-navigator__*
 ---
 
 # /bip-ms-edit
@@ -18,7 +18,7 @@ Read it at the start of every session; it replaces the `misc/writing_with_erick.
 
 ## Step 0: Orient
 
-Read `STANDARDS.md`, the repo's `AGENTS.md` or `CLAUDE.md`, and the whole target section with `Read`.
+Read `STANDARDS.md`, the repo's `AGENTS.md` or `CLAUDE.md`, and the whole paper with `Read`, not only the target section: you can't judge what an introduction must set up, or whether its promises are kept, without the Results and Discussion.
 Find the response letter if there is one (`ls response*`).
 Check for a `latexmk -pvc` watcher on the repo: `pgrep -fl "latexmk -pvc"`, then `lsof -a -p <pid> -d cwd` for each; a watcher clobbers your builds.
 Build once (below) so later warnings are attributable to your edits.
@@ -59,6 +59,8 @@ Before showing any text you or an agent wrote, check it against `STANDARDS.md`, 
 When a coauthor objects to a claim, decide on the merits whether the objection hits the claim or only its wording, and present both readings before recommending.
 Don't side with either author before testing the objection against the paper's own argument.
 
+When he proposes his own wording or asks a question ("However, ?"), answer in one line and offer to apply his version; don't overwrite it with yours.
+
 He edits the file too: re-read the lines before every `Edit`, fix his typos, and mention each in one line.
 
 **Keep in sync, in the same edit:**
@@ -88,15 +90,14 @@ Triage their output against `STANDARDS.md` and show him only what survives; neve
 
 ## Build check
 
-Build in a clean directory; `latexmk -outdir` can reuse a stale `main.bbl` and report no undefined citations when there are some.
+Build in a clean copy of the repo; `latexmk -outdir` in the repo can reuse a stale `main.bbl` and report no undefined citations when there are some.
+Use absolute paths, not `cd`.
 
 ```bash
 d=<scratch>/build; rm -rf "$d"; mkdir -p "$d"
-cp main.tex main.bib "$d"/; cp -R figures "$d"/     # plus any other inputs
-cd "$d"
-pdflatex -interaction=nonstopmode main.tex; bibtex main
-pdflatex -interaction=nonstopmode main.tex; pdflatex -interaction=nonstopmode main.tex
-grep -n "undefined\|^!" main.log
+rsync -a --exclude .git --exclude '*.aux' --exclude '*.bbl' --exclude main.pdf <repo>/ "$d"/
+latexmk -pdf -cd -interaction=nonstopmode "$d/main.tex"
+grep -n "undefined\|^!" "$d/main.log"
 ```
 
 ## Wrap-up
