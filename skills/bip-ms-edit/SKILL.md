@@ -23,13 +23,14 @@ Skip the TeX-only steps (build check, `%EM` notes, response letter), and check e
 
 Read `STANDARDS.md`, the repo's `AGENTS.md` or `CLAUDE.md`, and the whole paper or post with `Read`, not only the target section: you can't judge what an introduction must set up, or whether its promises are kept, without the Results and Discussion.
 Find the response letter if there is one (`ls response*`).
-Check for a `latexmk -pvc` watcher on the repo: `pgrep -fl "latexmk -pvc"`, then `lsof -a -p <pid> -d cwd` for each; a watcher clobbers your builds.
-Build once (below) so later warnings are attributable to your edits.
+Check whether a watcher is already building the repo, usually `make cont`: `pgrep -fl "make cont|latexmk -pvc"`, then `lsof -a -p <pid> -d cwd` for each.
+If one is running, read build results from the repo's `main.log` after it rebuilds.
+Never build yourself unless Erick says to; ask when you need a build and no watcher is running.
 
 Ask how refined the text is.
 A refined draft gets only fixes to what is broken, and for each change you must be able to say what was wrong with the original.
 
-**Pull and evaluate**: `git pull`, read the coauthor's commit with `git show --word-diff=plain`, and build it.
+**Pull and evaluate**: `git pull`, read the coauthor's commit with `git show --word-diff=plain`, and check its build (watcher log, or ask).
 Report in plain terms what changed and what is wrong (build, leftover TODOs, one sentence per line, the change's place in the paragraph's logic, prose), then propose a rewrite.
 
 ## Step 1: Structure first, then wait
@@ -76,7 +77,7 @@ He edits the file too: re-read the lines before every `Edit`, fix his typos, and
 - promises the letter makes ("we cut rhetorical turns"): check new text against them.
 
 Before reporting a batch, audit your own diff: for each hunk, name what was wrong with the original, and revert the hunks where you can't.
-Rebuild after each batch of edits and report new warnings.
+After each batch, check the watcher's `main.log` for new warnings and report them.
 
 ## Citations
 
@@ -98,7 +99,7 @@ Their fact checks are valuable, but their style suggestions overreach on refined
 
 ## Build check
 
-Build in a clean copy of the repo; `latexmk -outdir` in the repo can reuse a stale `main.bbl` and report no undefined citations when there are some.
+Only when Erick asks for a build, and no watcher is running, build in a clean copy of the repo; `latexmk -outdir` in the repo can reuse a stale `main.bbl` and report no undefined citations when there are some.
 Use absolute paths, not `cd`.
 
 ```bash
