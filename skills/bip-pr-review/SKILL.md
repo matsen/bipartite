@@ -1,6 +1,6 @@
 ---
 name: bip-pr-review
-description: Run the comprehensive pre-merge quality checklist on the current branch's PR, or, given a PR number, review someone else's PR read-only. The user's choice for every PR review, in place of /code-review.
+description: Run the comprehensive pre-merge quality checklist on the current branch's PR, your own or someone else's checked out for review. The user's choice for every PR review, in place of /code-review.
 ---
 
 # /bip-pr-review
@@ -11,23 +11,10 @@ Automatically detects project type and runs appropriate checks.
 ## Usage
 
 ```
-/bip-pr-review        # this session's own branch
-/bip-pr-review <N>    # reviewer mode: someone else's PR #N
+/bip-pr-review
 ```
 
-### Reviewer mode
-
-With a PR number that isn't this session's branch, review it without touching anyone's checkout:
-
-```bash
-git fetch origin pull/<N>/head
-git worktree add --detach <scratchpad>/pr-<N> FETCH_HEAD
-```
-
-Run the workflow below inside that worktree, with `gh pr view <N>` wherever it reads "the PR".
-A checklist step that edits files, such as `make format`, runs there too, and what it changed (`git diff --stat`) is a finding.
-Post nothing to the PR, the Step 7 math comment included, unless the request says to. Report the findings instead.
-Remove the worktree when done: `git worktree remove --force <scratchpad>/pr-<N>`.
+To review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`. Push and post nothing there, the Step 7 math comment included, unless the user says to: report the findings instead.
 
 ## Workflow
 

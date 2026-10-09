@@ -15,6 +15,7 @@ The two coordinate over `SendMessage` and `$CLONE_ROOT/.spawn-prompts/`.
 - An **EPIC** is a GitHub tracking issue; its **epic agent** is the `/bip-epic` session its body's `Owner:` line names. A fleet can serve several EPICs, each with its own epic (`docs/guides/roles.md`).
 - The **slot protocol** (`.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch`) applies to every spawn, whatever its source; the `.epic-` prefix is legacy.
 - **Epic-originated** work arrives as a brief in `.spawn-prompts/`: the epic has judged it worth a slot, so check only mechanics — gates, staleness, host and slot availability, collisions.
+- A **review of someone else's PR** is a spawn too (user, 2026-10-09): claim a clone, `gh pr checkout <N>`, run `/bip-pr-review`, never `/code-review`. Nothing is pushed or posted unless the user says so, and reclaim resets the clone.
 - **User-originated** work may have no EPIC.
   Never reject, defer, or route it to the epic for lacking one.
 
