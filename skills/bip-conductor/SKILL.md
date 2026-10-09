@@ -226,7 +226,8 @@ The user's landing rule is that delegation for every repo, in two classes; a PR'
 
 - **Self-contained**: every changed file is in the PR's own new experiment dir(s); or a new test importing only from them; or an additive-only README erratum elsewhere; or in an earlier experiment dir the issue names, when no other experiment or test imports or reads it.
   A new file outside those that a test, Snakefile, or script reads by name or pattern (`git grep` its stem) makes the PR shared code.
-  It lands after the signer's 🤖 claims-check comment on the PR at the head SHA — the signer is the EPIC's owner unless the brief's `LANDING DELEGATION:` names another — with `--admin` only where branch protection blocks it.
+  It lands after the signer's 🤖 claims-check comment on the PR at the head SHA — the signer is the EPIC's owner unless the brief's `LANDING DELEGATION:` names another.
+  In a solo repo, `--admin` is allowed where branch protection blocks the PR. In a group repo it is for a narrower case (user, 2026-10-09): branch protection blocks the PR, `git diff --name-only origin/main...HEAD` shows every changed file under the new `experiments/<dir>/` the PR creates (you check it, before the merge), a named non-framer's claims check is on the PR at the head SHA, and CI is green there. A blocked self-contained PR that also touches `tests/`, a README elsewhere, or an earlier experiment dir needs a group review or the user's words naming it.
 - **Shared code**: in a group repo, a group member's approving review (not the user's account), with that review's fixes in; in a solo repo, agent approval as the repo does today.
   The group repos are the ones the user named, listed under "Landing" in staff's `rulings.md` (`$NEXUS_PATH/staff/`); every other repo is solo.
   A repo's local paths, gates, and exceptions live in its `.epic-decisions.md`.

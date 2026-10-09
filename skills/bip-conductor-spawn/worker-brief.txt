@@ -167,7 +167,14 @@ COMPLETION: When done (or when lead says completed):
         review's items; anything more needs re-review, but a rebase
         onto main is not more. After a rebase,
         get the claims check again at the new head SHA. Use --admin
-        only when branch protection refuses a self-contained PR.
+        only when branch protection refuses the PR. In a group repo
+        (see LANDING DELEGATION), --admin also needs all of:
+          - every changed file under the new experiments/<dir>/ this
+            PR creates;
+          - a named non-framer's claims check on the PR at the head SHA;
+          - CI green there;
+          - the conductor's confirmation of the file list you sent it.
+        Otherwise stop at the clean gate.
       - Land the PR yourself with /bip-pr-land, but only if the work
         obviously matches the issue and nothing needs the user's
         judgment (step 6's test). A clean gate alone is not enough: if
