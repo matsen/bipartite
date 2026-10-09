@@ -1,6 +1,6 @@
 ---
 name: bip-pr-review
-description: Run comprehensive pre-merge quality checklist for current branch's PR
+description: Run the comprehensive pre-merge quality checklist on the current branch's PR, your own or someone else's checked out for review. The user's choice for every PR review, in place of /code-review.
 ---
 
 # /bip-pr-review
@@ -13,6 +13,8 @@ Automatically detects project type and runs appropriate checks.
 ```
 /bip-pr-review
 ```
+
+To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`. Push and post nothing there, the Step 7 math comment included, unless the user says to: report the findings instead.
 
 ## Workflow
 
