@@ -167,7 +167,11 @@ COMPLETION: When done (or when lead says completed):
         review's items; anything more needs re-review, but a rebase
         onto main is not more. After a rebase,
         get the claims check again at the new head SHA. Use --admin
-        only when branch protection refuses a self-contained PR.
+        only when branch protection refuses the PR, every changed file
+        is under this PR's own experiments/<dir>/, the claims check is
+        on the PR at the head SHA, CI is green there, and the conductor
+        has confirmed the file list you sent it. Otherwise stop at the
+        clean gate.
       - Land the PR yourself with /bip-pr-land, but only if the work
         obviously matches the issue and nothing needs the user's
         judgment (step 6's test). A clean gate alone is not enough: if
