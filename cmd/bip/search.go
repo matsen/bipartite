@@ -174,9 +174,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	if searchSort == "date" {
 		sortByDateDesc(refs)
-		if searchLimit > 0 && len(refs) > searchLimit {
-			refs = refs[:searchLimit]
-		}
+		refs = storage.LimitRefs(refs, searchLimit)
 	}
 
 	// Empty result is not an error
