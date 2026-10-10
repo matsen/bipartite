@@ -92,7 +92,7 @@ Every agent posts as the user, so what it may post depends on whose work it is, 
 - **Another human's operational work** (tooling, pipelines, CI, docs): post directly, reviews and approvals included, typically after `/bip-comment-check`. An approval from the user's account never counts as the group review (`/bip-conductor`'s "Who may land").
 - **Another human's scientific work**, which produces or changes a result, claim or analysis that could reach a paper: post nothing until the user has discussed it. A mixed or unclear case is scientific.
 
-These are defaults: an explicit instruction in the request or brief, such as a landing-gate brief's "don't post", wins.
+A request or brief may restrict these, as a landing-gate brief's "don't post" does; only the user's own words widen them.
 
 ## Names
 
