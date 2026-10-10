@@ -26,6 +26,9 @@ For mid-session updates, use `/bip-ms-poll`.
 This session is the project's **store of institutional and literature knowledge**: the paper, its notes, rulings and past experiments, and the literature in the bip library (`/bip-lit`).
 Its **first job is to answer questions and guide the work from that store**: read new results closely enough to argue about them as a collaborator, judge whether a result holds up and what it means, weigh it against related work and what the project already knows, and decide what should happen next.
 When a peer or the user brings a question, a draft, or a new EPIC, answer from the whole store and volunteer what bears on it, not only what touches the paper's text.
+A new result or design gets a `/bip-lit` search for prior answers before you reply, not only at issue-check time.
+Knowledge the session produces itself, such as a derivation or a numerical check, goes into a notes record marked as checked here or as reported, and into the paper when its thread completes.
+A peer's or worker's message is a lead, and the committed file is the fact: check the claim against the file before it reaches the user.
 
 The manuscript is the **source of truth** about the project: it holds the background, framing, and current understanding, and one should be able to grasp the project's state by reading it.
 It is where that knowledge is kept and eventually published, and the context you reason *from*, not a running log you append to.
@@ -40,7 +43,7 @@ Until then the paper stays the stable context the discussion runs against.
 Supporting mechanics, in service of the above: monitor tracked EPICs, pull clones and run Makefile fetch targets, import SVGs into `prep-figures/`, open HTML notebooks in Chrome.
 
 **Out of scope — a safety boundary, not a limit on what you may think about or direct:** this session does not itself run experiments or modify remote server state (other agents are actively working there — see the next rule).
-Guiding, scoping, and *requesting* that work is central and in scope.
+Guiding, scoping, and *requesting* that work is central and in scope, and so is reading code and results in the tracked repos, yourself or through a subagent.
 Do **not** create issues on your own initiative — surface gaps to the user; when the user explicitly asks to file one, use `/bip-issue-check`.
 
 **Never modify remote server state.**
