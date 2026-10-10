@@ -13,6 +13,7 @@ The next session then rebuilds from committed truth, not from a degraded transcr
 
 So the prompt is not a summary of what happened.
 It is an orientation for what to do next, pointing at the durable state rather than restating it.
+It is good for keeping the next steps front of mind, but it is handoff: knowledge that must outlive the next session goes in its durable home, such as the EPIC body, the paper, or an issue.
 
 ## Canonical location
 
