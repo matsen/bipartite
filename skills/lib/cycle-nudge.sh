@@ -17,14 +17,14 @@ tokens=$(tail -n 400 "$transcript" | jq -r 'select(.type=="assistant" and (.isSi
 
 # A worker slot (its clone holds .epic-status.json) runs short and under a ralph loop, so it gets more room.
 if [ -f "$cwd/.epic-status.json" ]; then threshold=${BIP_CYCLE_WORKER_TOKENS:-500000}; else threshold=${BIP_CYCLE_TOKENS:-300000}; fi
-[ "$tokens" -ge "$threshold" ] || exit 0
-
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/bip/cycle-nudge
 mkdir -p "$state_dir"
+# Below threshold (a compaction can shrink a session in place): forget past nudges.
+[ "$tokens" -ge "$threshold" ] || { rm -f "$state_dir/$session"; exit 0; }
 bucket=$((tokens / 100000))
 last=$(cat "$state_dir/$session" 2>/dev/null || echo -1)
 [ "$bucket" -gt "$last" ] || exit 0
 echo "$bucket" > "$state_dir/$session"
 
 k=$((tokens / 1000))
-jq -n --arg r "This session's context is ${k}k tokens, past the ${threshold%000}k cycle threshold. At a natural boundary, run /bip-cycle: a fresh session costs less per turn and attends better. Wait instead only if you hold key context a tuckin can't capture yet; say in one line what it is, write down what you can, and cycle once it is resolved. Either way, knowledge that must outlive the next session belongs in its durable home (EPIC body, paper, issue), not only in the continuation note." '{decision: "block", reason: $r}'
+jq -n --arg r "This session's context is ${k}k tokens, past the ${threshold%000}k cycle threshold. At a natural boundary, run /bip-cycle: a fresh session costs less per turn and attends better. Wait instead if a background agent or task you are waiting on is still running (cycling strands its result), or if you hold key context a tuckin can't capture yet; say in one line which, write down what you can, and cycle once it is resolved. Either way, knowledge that must outlive the next session belongs in its durable home (EPIC body, paper, issue), not only in the continuation note." '{decision: "block", reason: $r}'
