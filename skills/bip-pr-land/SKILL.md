@@ -116,8 +116,8 @@ Check whether the PR has any CI checks configured, and if so, block until they a
 gh pr checks "$BRANCH" --json name,state,conclusion
 ```
 
-- **No checks configured** (empty array): proceed immediately.
-  This repo has no CI for this PR.
+- **No checks configured** (empty array, and the repo has no `.github/workflows/`): proceed immediately.
+  An empty array right after a push, in a repo with workflows, means CI hasn't registered yet: wait until checks appear (`until [ "$(gh pr checks "$BRANCH" --json name | jq length)" -gt 0 ]; do sleep 5; done`), then continue below.
 - **Checks present**: wait until all required checks are `COMPLETED` with conclusion `SUCCESS` (or `NEUTRAL`/`SKIPPED`).
   Use `gh pr checks "$BRANCH" --watch --fail-fast` to block.
   `SKIPPED` passes only if a check that builds or tests concluded `SUCCESS` at this head: a gate job can succeed while skipping the tests it gates (e.g. on a branch behind `main`), leaving every check green with nothing run. If so, rebase and wait for the tests.
