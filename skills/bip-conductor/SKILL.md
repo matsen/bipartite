@@ -68,7 +68,6 @@ When the user next types in the owner's window, the owner re-verifies each item,
 
 The owner puts such a question as one line in its report, parks only that item, and keeps working.
 The conductor's report never asks: hand the owner its question and list it as `pending with <owner>: <one line>`. An answer the user types here anyway still counts.
-Never use `AskUserQuestion`: while it waits, no peer message reaches you.
 
 ## Conventions
 
