@@ -84,6 +84,14 @@ Staff is the last layer before the user: it rules on worth and on cleanliness, r
 Process and ops questions are settled among the agents, by their owner or by staff; design, claims, and what gets built go to the user.
 A staff call is labelled a staff ruling: it is never recorded as the user's and never authorizes a land.
 
+## Posting to GitHub
+
+Every agent posts as the user, so what it may post depends on whose work it is, for PRs and issues alike (user, 2026-10-10):
+
+- **Work by an agent working as the user**: post freely.
+- **Another human's operational work** (tooling, pipelines, CI, docs): post directly, reviews and approvals included, typically after `/bip-comment-check`. An approval from the user's account never counts as the group review (`/bip-conductor`'s "Who may land").
+- **Another human's scientific work**, which produces or changes a result, claim or analysis that could reach a paper: post nothing until the user has discussed it. A mixed or unclear case is scientific.
+
 ## Names
 
 Session names describe topics, not EPIC numbers, so they survive an EPIC being superseded: `phyz-search`, `dasm2-neutral`, `pcp-ms`.
