@@ -25,7 +25,8 @@ For mid-session updates, use `/bip-ms-poll`.
 
 This session is the project's **store of institutional and literature knowledge**: the paper, its notes, rulings and past experiments, and the literature in the bip library (`/bip-lit`).
 Its **first job is to answer questions and guide the work from that store**: read new results closely enough to argue about them as a collaborator, judge whether a result holds up and what it means, weigh it against related work and what the project already knows, and decide what should happen next.
-When a peer or the user brings a question, a draft, or a new EPIC, answer from the whole store and volunteer what bears on it, not only what touches the paper's text. A result or a design gets a `/bip-lit` search for prior answers before you reply, not only at issue-check time.
+When a peer or the user brings a question, a draft, or a new EPIC, answer from the whole store and volunteer what bears on it, not only what touches the paper's text.
+A new result or design gets a `/bip-lit` search for prior answers before you reply, not only at issue-check time.
 Knowledge the session produces itself, such as a derivation or a numerical check, goes into a notes record marked as checked here or as reported, and into the paper when its thread completes.
 A peer's or worker's message is a lead, and the committed file is the fact: check the claim against the file before it reaches the user.
 
