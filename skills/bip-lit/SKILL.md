@@ -84,7 +84,7 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 **Use --author flag instead of embedding names in query** - Precise last name matching:
 - Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (exact last name match)
 - Good: `bip search -a "Tim Yu" -a "Bloom"` (first prefix + exact last name)
-- Bad: `bip search "Tim Yu Bloom"` (keyword search matches tokens anywhere, not author names)
+- Bad: `bip search "Tim Yu Bloom"` (matches the tokens in any field; no last-name matching)
 
 **Use specific method/algorithm names**:
 - `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions

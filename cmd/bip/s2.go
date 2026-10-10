@@ -21,7 +21,11 @@ Add papers by DOI, explore citation graphs, discover literature gaps,
 and link preprints to published versions.
 
 All commands output JSON by default for agent consumption.
-Use --human flag for human-readable output.`,
+Use --human flag for human-readable output.
+
+Requests authenticate with the ASTA API key (see "bip asta --help" for
+where it is read from); without one they are sent anonymously at a lower
+rate limit.`,
 }
 
 func init() {
