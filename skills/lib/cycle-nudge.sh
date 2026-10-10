@@ -15,8 +15,11 @@ cwd=$(jq -r '.cwd // empty' <<<"$input")
 tokens=$(tail -n 400 "$transcript" | jq -r 'select(.type=="assistant" and (.isSidechain|not) and .message.usage) | .message.usage | (.input_tokens + (.cache_read_input_tokens // 0) + (.cache_creation_input_tokens // 0))' 2>/dev/null | tail -1)
 [ -n "$tokens" ] || exit 0
 
-# A worker slot (its clone holds .epic-status.json) runs short and under a ralph loop, so it gets more room.
-if [ -f "$cwd/.epic-status.json" ]; then threshold=${BIP_CYCLE_WORKER_TOKENS:-500000}; else threshold=${BIP_CYCLE_TOKENS:-300000}; fi
+root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
+# A /clear gives the session a new id, which orphans a ralph loop keyed to the old one.
+[ -f "$root/.claude/ralph-loop.local.md" ] || [ -f "$cwd/.claude/ralph-loop.local.md" ] && exit 0
+# A worker slot (its clone holds .epic-status.json) runs short, so it gets more room.
+if [ -f "$root/.epic-status.json" ]; then threshold=${BIP_CYCLE_WORKER_TOKENS:-500000}; else threshold=${BIP_CYCLE_TOKENS:-300000}; fi
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/bip/cycle-nudge
 mkdir -p "$state_dir"
 # Below threshold (a compaction can shrink a session in place): forget past nudges.
