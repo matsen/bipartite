@@ -86,7 +86,7 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 | Get paper details | `bip get <id>` |
 | Export to BibTeX | `bip export --bibtex <id>...` |
 | Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
-| Add paper to collection | Ask the user to add it to Paperpile; `bip s2 add` by an agent is discouraged |
+| Add paper to collection | Ask the user to add it to Paperpile; `bip s2 add` changes the library and needs the user's word |
 | Find literature gaps | `bip s2 gaps` |
 | Backfill missing PMCIDs from NCBI | `bip ncbi backfill --dry-run` |
 | One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |

@@ -5,7 +5,7 @@ An epic session asks them before drafting a spawn brief, a manuscript session be
 
 - **Back to the goal.** What was this work for, and does the next step serve it, or is it adding machinery?
 - **Simplest direct measure.** Can we report a number instead of setting a threshold, or measure the thing directly instead of through a proxy?
-- **Literature first.** Has someone already measured or solved this? Search the library (`/bip-lit`) before designing.
+- **Literature first.** Has someone already measured or solved this? Search the literature before designing: the local library, then ASTA (`/bip-lit`).
 - **Distrust the surprise.** A result that would surprise us, or two of our numbers that disagree, goes to `surprising-conclusion-skeptic` before anything builds on it, and the skeptic's own quotes are checked against their source.
 - **Matched comparison, runtime included.** Is the comparison matched, with execution time measured against the reference? Does this step's runtime matter for the whole pipeline? Turn knobs only after that comparison.
 - **Define the terms.** Every unit, abbreviation and quantity is defined where it is first used.
