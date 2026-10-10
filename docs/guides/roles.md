@@ -74,7 +74,7 @@ The session keeps its context, which is why the no-self-judging rule matters mos
 ## Manuscript: the broad view
 
 An ms session owns one paper.
-It holds the perspective across EPICs and repos, knows the literature (`/bip-lit`), and decides what results mean for the paper.
+It is the project's resource for questions and guidance, from what the project and the field know: it holds the perspective across EPICs and repos, knows the literature (`/bip-lit`), and decides what results mean for the paper, which follows from that perspective.
 An epic consults the papers in its `Feeds:` line before it changes direction; they are consulted, not a gate.
 An ms session owns no EPIC; when a paper session finds itself running one, that EPIC needs its own epic session.
 
