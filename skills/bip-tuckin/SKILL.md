@@ -8,6 +8,7 @@ allowed-tools: Skill, Bash, Read, Write, Edit
 
 One entry point for persisting session state before `/clear`.
 It determines the session's role, runs the matching tuckin, and that skill writes the role-keyed continuation prompt (`docs/guides/continuation-prompt.md`) which `/bip-continue` reads in the next session.
+Whatever role it is, knowledge that must outlive the next session goes to its durable home first (the EPIC body, the paper, an issue or PR, a skill via `/bip-kaizen`); the continuation prompt only points at it and keeps the next steps front of mind.
 
 ## Choosing the tuckin
 
@@ -25,6 +26,7 @@ Map the role to its skill and invoke it with the Skill tool — do not reimpleme
 For a session that is none of the four — an ad-hoc or adjudicator session — there is no specialised tuckin, so do the minimum that makes a reset safe:
 
 1. Commit and push anything this session owns; branch first if on `main`, and leave the pooled-slot branches a conductor manages alone. Report what is unpushed rather than forcing it.
-2. Write `_ignore/CONTINUE-generic-<name>.md` per the guide.
-3. Report what was committed and that the prompt is written; then it is safe to reset.
+2. Put what this session learned that must outlive it in its durable home (above).
+3. Write `_ignore/CONTINUE-generic-<name>.md` per the guide.
+4. Report what was committed and that the prompt is written; then it is safe to reset.
 
