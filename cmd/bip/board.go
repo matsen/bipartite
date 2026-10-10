@@ -166,11 +166,12 @@ func runBoardList(cmd *cobra.Command, args []string) {
 	exitIfBoardsFailed(failed)
 }
 
-// exitIfBoardsFailed exits non-zero when any board failed to list, so an
-// unreadable board isn't mistaken for an empty one.
+// exitIfBoardsFailed exits non-zero when any board failed to list. Unlike
+// digest's open-ended repo scan, boards are a short configured list, and a
+// missing one would otherwise read as an empty board.
 func exitIfBoardsFailed(failed map[string]bool) {
 	if len(failed) > 0 {
-		os.Exit(1)
+		os.Exit(ExitError)
 	}
 }
 
