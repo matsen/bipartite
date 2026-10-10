@@ -7,7 +7,7 @@ description: Unified guidance for using the bipartite reference library CLI. Use
 
 The library (~6000 papers) lives in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`); most relevant papers are already there.
 `bip <cmd> --help` is the reference for flags, ID formats, and output modes; this skill carries only what the help can't.
-An argument (`/bip-lit <query>`) is the query for the steps below.
+An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped) is the query for the steps below.
 
 ## Find a paper, answer a question about one
 
@@ -17,11 +17,11 @@ An argument (`/bip-lit <query>`) is the query for the steps below.
    ```
    If it errors (e.g. `no such column`), run `bip rebuild` and retry; the SQLite layer is rebuilt from JSONL.
 2. **Found it → read the PDF**, not the abstract or S2/ASTA metadata.
-   The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus `pdf_path` from `bip get <id> --human`.
+   The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus the `PDF:` field of `bip get <id> --human`.
    - Text: pdf-navigator MCP — `search_pdf_text` to find the page, then `read_pdf_text`. Keeps column order and inline math, and is searchable.
    - Figures, panels, rendered equations, tables: built-in `Read` on the 1–3 pages that hold them. It renders pages as images, so never the whole paper.
 3. **Before concluding it's absent**, run an exact-match check (`-a "LastName"` or `--doi`) rather than another keyword permutation.
-   A plain "not found" is trustworthy; a search that reports truncation (`showing M`) is not proof of absence.
+   No truncation notice (`showing M`) means you saw every match for those tokens, not that the paper is absent.
 4. **Not found, or the search needs to be wider → ASTA**, without asking: `bip asta search` or `mcp__asta__*`.
    Broaden by dropping terms and trying synonyms, then trace citations of a related paper (`bip asta citations <id>`).
 
@@ -29,12 +29,12 @@ An argument (`/bip-lit <query>`) is the query for the steps below.
 
 `bip search` is exact-token AND matching, unstemmed, so one inflected or half-remembered word zeroes out a query.
 Keep queries short and use distinctive method names (`"WEIGHBOR"`, `"FASTME"`), not descriptions.
-Put people in `-a`, not the query: `"Tim Yu Bloom"` matches those tokens in any field, while `-a "Yu" -a "Bloom"` matches last names.
+In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches those tokens in any field, while `-a "Yu" -a "Bloom"` matches last names.
 
 ## S2, ASTA, NCBI
 
 - `bip asta` for exploration: read-only, 10 req/s, and the only one with snippet search.
-- `bip s2` for lookups and `bip s2 gaps` (papers your collection cites but lacks); 1 req/s.
+- `bip s2` for lookups and `bip s2 gaps` (papers your collection cites but lacks); 1 req/s with the key, ~0.33 without.
 - `bip ncbi` for PMCIDs (e.g. NIH RPPR); S2 and ASTA don't return them reliably. NCBI only knows papers in PMC, so a missing PMCID doesn't mean a missing paper.
 
 `bip asta snippet` often times out ("context deadline exceeded"): use `--limit 5`, or `mcp__asta__snippet_search` with a small limit, retry once, then fall back to `bip asta search`.
@@ -56,5 +56,5 @@ The `api.semanticscholar.org` redirect often gives the browser JSON, and `semant
 ```bash
 pid=$(curl -s "https://api.semanticscholar.org/graph/v1/paper/DOI:10.1093/sysbio/syy032?fields=title" \
   | sed -n 's/.*"paperId": *"\([^"]*\)".*/\1/p')   # or CorpusId:236964352
-open -a "Google Chrome" "https://www.semanticscholar.org/paper/$pid"
+xdg-open "https://www.semanticscholar.org/paper/$pid"   # macOS: open
 ```
