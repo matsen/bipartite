@@ -67,7 +67,7 @@ grep -i "name|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " 
 ~6000 papers are already imported, so every search starts there (and reads the local PDF of a
 known paper). ASTA needs no permission; go on to it for wide searches and citation/reference
 discovery. To add a paper, ask the user to put it in Paperpile; adding it yourself
-(`bip s2 add`) is discouraged.
+(`bip s2 add`) needs the user's word.
 
 ## Docs conventions
 
