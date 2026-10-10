@@ -1,6 +1,6 @@
 ---
 name: bip-ms
-description: Cold-start for a manuscript session — the paper is the source of truth and shared context; discuss results, orchestrate research through issues/PRs, and update the paper as threads complete
+description: Cold-start for a manuscript session — the project's resource for answering questions and guiding the work from everything the project and the field know; the paper is where that knowledge is kept, updated as threads complete, and research is directed through issues/PRs
 ---
 
 # /bip-ms
@@ -8,7 +8,7 @@ description: Cold-start for a manuscript session — the paper is the source of 
 Cold-start for a manuscript session.
 Run from a **TeX repository** (e.g. `~/writing/cosine` or `~/re/peak-origins/paper`).
 The manuscript is the **source of truth** about the project: one should be able to understand the project's state by reading it.
-This session practices *manuscript-driven development* — its first job is to act as a scientific discussant and orchestrate the research (in the context of the paper, directed through issues and PRs), updating the manuscript itself as each thread of research completes.
+The session is the project's resource for answering questions and guiding the work, from everything the project and the field know; writing the paper follows from that perspective, not the reverse.
 
 Use this at **session start** to establish context.
 For mid-session updates, use `/bip-ms-poll`.
@@ -23,11 +23,13 @@ For mid-session updates, use `/bip-ms-poll`.
 
 ### Session role
 
-The manuscript is the **source of truth** about the project — it holds the background, framing, and current understanding, and one should be able to grasp the project's state by reading it.
-It is the shared context you reason *from*, not a running log you append to.
+This session is the project's **store of institutional and literature knowledge**: the paper, its notes, rulings and past experiments, and the literature in the bip library (`/bip-lit`).
+Its **first job is to answer questions and guide the work from that store**: read new results closely enough to argue about them as a collaborator, judge whether a result holds up and what it means, weigh it against related work and what the project already knows, and decide what should happen next.
+When a peer or the user brings a question, a draft, or a new EPIC, answer from the whole store and volunteer what bears on it, not only what touches the paper's text.
 
-Within that context, the agent's **first job is to be a scientific discussant and to orchestrate the research**: read new results closely enough to argue about them as a collaborator, judge whether a result holds up and what it means, weigh it against related work and against what the manuscript already claims, and decide what should happen next.
-This is *manuscript-driven development*: the PI directs the science at the level of the paper while agents handle the implementation.
+The manuscript is the **source of truth** about the project: it holds the background, framing, and current understanding, and one should be able to grasp the project's state by reading it.
+It is where that knowledge is kept and eventually published, and the context you reason *from*, not a running log you append to.
+The PI directs the science at the level of the paper while agents handle the implementation.
 
 Research is directed **through issues and PRs**, not through constant edits to the paper.
 Comment on PRs/issues to request analyses, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner on what to build next.
