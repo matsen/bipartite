@@ -212,7 +212,7 @@ Then list specific new artifacts:
 
 ### Step 4: Propose actions
 
-Based on what's new, propose concrete next steps:
+Based on what's new, propose concrete next steps, after running the PI questions (`docs/guides/pi-questions.md`) against the current state:
 
 1. **Import figures**: Copy new SVGs to `prep-figures/`, run `make pdf-figures`
 2. **Open notebooks**: Open HTML notebooks in Chrome for review
