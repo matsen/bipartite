@@ -261,7 +261,7 @@ func printRefSummary(num int, ref reference.Reference) {
 }
 
 // sortByDateDesc orders refs newest first by publication year, month, and
-// day; an unknown month or day (0) sorts before known ones in the same year.
+// day; an unknown month or day (0) sorts after known ones in the same year.
 func sortByDateDesc(refs []reference.Reference) {
 	sort.SliceStable(refs, func(i, j int) bool {
 		a, b := refs[i].Published, refs[j].Published
