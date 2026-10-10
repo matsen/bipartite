@@ -319,8 +319,8 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	return truncated, total, nil
 }
 
-// limitRefs returns refs truncated to limit entries. limit <= 0 means unlimited.
-func limitRefs(refs []reference.Reference, limit int) []reference.Reference {
+// LimitRefs returns refs truncated to limit entries. limit <= 0 means unlimited.
+func LimitRefs(refs []reference.Reference, limit int) []reference.Reference {
 	if limit <= 0 || limit >= len(refs) {
 		return refs
 	}
@@ -330,7 +330,7 @@ func limitRefs(refs []reference.Reference, limit int) []reference.Reference {
 // splitByLimit truncates refs to limit entries and reports the total match
 // count before truncation. limit <= 0 means unlimited.
 func splitByLimit(refs []reference.Reference, limit int) ([]reference.Reference, int) {
-	return limitRefs(refs, limit), len(refs)
+	return LimitRefs(refs, limit), len(refs)
 }
 
 // SearchFilters contains optional filters for SearchWithFilters.

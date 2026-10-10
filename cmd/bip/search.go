@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,7 @@ var (
 	searchVenue   string
 	searchDOI     string
 	searchTag     string
+	searchSort    string
 )
 
 // SearchResult is the --json shape for `bip search`. Total may exceed
@@ -47,6 +49,7 @@ func init() {
 	searchCmd.Flags().StringVar(&searchVenue, "venue", "", "Filter by venue/journal (partial match)")
 	searchCmd.Flags().StringVar(&searchDOI, "doi", "", "Lookup by exact DOI")
 	searchCmd.Flags().StringVar(&searchTag, "tag", "", "Filter by tag/label (partial match)")
+	searchCmd.Flags().StringVar(&searchSort, "sort", "relevance", "Result order: relevance or date (newest first)")
 	rootCmd.AddCommand(searchCmd)
 }
 
@@ -66,6 +69,7 @@ center" will not match a title containing only "germinal centers". Try
 absent from the library.
 
 Results are ranked by relevance (best match first), not alphabetically.
+Use --sort date for newest first; it sorts every match before --limit applies.
 
 Flags:
   --author, -a   - Search by author (repeatable, AND logic, exact last name)
@@ -75,6 +79,7 @@ Flags:
   --doi          - Lookup by exact DOI
   --tag          - Filter by tag/label (partial match)
   --limit        - Maximum results to return (default 50; 0 or -1 for unlimited)
+  --sort         - relevance (default) or date (newest first)
 
 Author matching uses exact last name matching to avoid false positives:
   -a "Yu"           - Matches last name "Yu" exactly (not "Yujia")
@@ -93,6 +98,7 @@ Examples:
   bip search "phylogenetics"
   bip search "deep mutational scanning" -a "Bloom" --year 2023:
   bip search -a "Yu" -a "Bloom" --year 2022:
+  bip search -a "Bloom" --sort date --limit 2
   bip search --title "SARS-CoV-2" --venue Nature
   bip search --doi "10.1126/science.abf4063"
   bip search --tag "antibody"`,
@@ -104,6 +110,15 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	repoRoot := mustFindRepository()
 	db := mustOpenDatabase(repoRoot)
 	defer db.Close()
+
+	if searchSort != "relevance" && searchSort != "date" {
+		exitWithError(ExitError, "invalid --sort %q: use relevance or date", searchSort)
+	}
+	// Sorting by date must see every match, so the limit applies afterwards.
+	fetchLimit := searchLimit
+	if searchSort == "date" {
+		fetchLimit = 0
+	}
 
 	var refs []reference.Reference
 	var total int
@@ -134,7 +149,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			filters.YearTo = to
 		}
 
-		refs, total, err = db.SearchWithFilters(filters, searchLimit)
+		refs, total, err = db.SearchWithFilters(filters, fetchLimit)
 	} else if len(args) > 0 {
 		// Legacy behavior: positional query argument
 		query := args[0]
@@ -142,12 +157,12 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		// Check for field-specific searches (legacy syntax)
 		if strings.HasPrefix(query, "author:") {
 			value := strings.TrimPrefix(query, "author:")
-			refs, total, err = db.SearchField("author", value, searchLimit)
+			refs, total, err = db.SearchField("author", value, fetchLimit)
 		} else if strings.HasPrefix(query, "title:") {
 			value := strings.TrimPrefix(query, "title:")
-			refs, total, err = db.SearchField("title", value, searchLimit)
+			refs, total, err = db.SearchField("title", value, fetchLimit)
 		} else {
-			refs, total, err = db.Search(query, searchLimit)
+			refs, total, err = db.Search(query, fetchLimit)
 		}
 	} else {
 		exitWithError(ExitError, "must specify a query or at least one filter (--author, --year)")
@@ -155,6 +170,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	if err != nil {
 		exitWithError(ExitError, "searching: %v", err)
+	}
+
+	if searchSort == "date" {
+		sortByDateDesc(refs)
+		refs = storage.LimitRefs(refs, searchLimit)
 	}
 
 	// Empty result is not an error
@@ -236,4 +256,19 @@ func printRefSummary(num int, ref reference.Reference) {
 		fmt.Printf("    (%d)\n", ref.Published.Year)
 	}
 	fmt.Println()
+}
+
+// sortByDateDesc orders refs newest first by publication year, month, and
+// day; an unknown month or day (0) sorts after known ones in the same year.
+func sortByDateDesc(refs []reference.Reference) {
+	sort.SliceStable(refs, func(i, j int) bool {
+		a, b := refs[i].Published, refs[j].Published
+		if a.Year != b.Year {
+			return a.Year > b.Year
+		}
+		if a.Month != b.Month {
+			return a.Month > b.Month
+		}
+		return a.Day > b.Day
+	})
 }
