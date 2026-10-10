@@ -90,10 +90,12 @@ func runBoardList(cmd *cobra.Command, args []string) {
 	}
 
 	allItems := make(map[string][]flow.BoardItem)
+	failed := make(map[string]bool)
 	for _, key := range boards {
 		items, err := board.ListBoardItems(key)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Warning: failed to list board %s: %v\n", key, err)
+			failed[key] = true
 			continue
 		}
 
@@ -116,6 +118,7 @@ func runBoardList(cmd *cobra.Command, args []string) {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 		enc.Encode(allItems)
+		exitIfBoardsFailed(failed)
 		return
 	}
 
@@ -130,6 +133,11 @@ func runBoardList(cmd *cobra.Command, args []string) {
 		}
 		fmt.Printf("## %s\n\n", header)
 
+		if failed[key] {
+			fmt.Println("Failed to list board (see warning above).")
+			fmt.Println()
+			continue
+		}
 		if len(items) == 0 {
 			fmt.Println("No items on board.")
 			fmt.Println()
@@ -154,6 +162,15 @@ func runBoardList(cmd *cobra.Command, args []string) {
 			}
 			fmt.Println()
 		}
+	}
+	exitIfBoardsFailed(failed)
+}
+
+// exitIfBoardsFailed exits non-zero when any board failed to list, so an
+// unreadable board isn't mistaken for an empty one.
+func exitIfBoardsFailed(failed map[string]bool) {
+	if len(failed) > 0 {
+		os.Exit(1)
 	}
 }
 
