@@ -69,59 +69,11 @@ When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
 4. **If local options come up short**, search externally with ASTA
 5. For title searches, use the full title; for topic searches, use key terms
 
-## Quick Reference
+## Commands
 
-| Task | Command |
-|------|---------|
-| Search local library | `bip search "query" --human` (searches title, abstract, authors, notes) |
-| Search by author | `bip search -a "LastName" --human` |
-| Search by title | `bip search -t "keywords" --human` |
-| Search by year | `bip search --year 2024 --human` |
-| Search by note | `bip search "AlphaSeq" --human` (user notes from Paperpile are indexed) |
-| Search by venue | `bip search --venue "Nature" --human` |
-| Lookup by DOI | `bip search --doi "10.1234/..." --human` |
-| Combined search | `bip search "topic" -a "Author" --year 2020: --human` |
-| Limit results | `bip search "topic" --limit 100 --human` (default 50, ranked by relevance) |
-| Unlimited results | `bip search "topic" --limit 0 --human` (`-1` also works) |
-| Get paper details | `bip get <id>` |
-| Export to BibTeX | `bip export --bibtex <id>...` |
-| Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
-| Add paper to collection | Ask the user to add it to Paperpile; `bip s2 add` changes the library and needs the user's word |
-| Find literature gaps | `bip s2 gaps` |
-| Backfill missing PMCIDs from NCBI | `bip ncbi backfill --dry-run` |
-| One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |
-| Fast paper search (external) | `bip asta search "query"` |
-| Find text snippets | `bip asta snippet "query"` |
-| Import projects from config | `bip project import <file>` |
+`bip <cmd> --help` is the reference for every flag, ID format, and output mode; this skill carries only what the help can't.
 
 ## Search Strategy
-
-### Field-Specific Search Flags
-
-Use `--author` and `--year` flags for precise filtering:
-
-```bash
-# Search by author (exact last name matching to avoid false positives)
-bip search --author "Yu" --author "Bloom"    # Last names only
-bip search -a "Tim Yu" -a "Bloom"            # First + last name
-bip search -a "Yu, Timothy"                  # Last, First format
-
-# Filter by year
-bip search --year 2024           # exact year
-bip search --year 2020:2024      # range (inclusive)
-bip search --year 2022:          # 2022 and later
-bip search --year :2020          # 2020 and earlier
-
-# Combine keyword + filters
-bip search "deep mutational scanning" --author "Bloom" --year 2023:
-```
-
-**Multiple authors use AND logic** - all must appear in the paper.
-
-**Author matching rules:**
-- Single word (e.g., `-a "Yu"`) → exact last name match (won't match "Yujia")
-- Two+ words (e.g., `-a "Tim Yu"`) → exact last name + first name prefix
-- Comma format (e.g., `-a "Yu, Tim"`) → same as above
 
 ### Query Formulation Tips
 
@@ -132,7 +84,7 @@ bip search "deep mutational scanning" --author "Bloom" --year 2023:
 **Use --author flag instead of embedding names in query** - Precise last name matching:
 - Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (exact last name match)
 - Good: `bip search -a "Tim Yu" -a "Bloom"` (first prefix + exact last name)
-- Bad: `bip search "Tim Yu Bloom"` (keyword search is substring-based)
+- Bad: `bip search "Tim Yu Bloom"` (keyword search matches tokens anywhere, not author names)
 
 **Use specific method/algorithm names**:
 - `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions
@@ -203,8 +155,6 @@ S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution servi
 **Rule of thumb**: Use `bip asta` for exploration, `bip s2` for lookups and collection gaps, `bip ncbi` for authoritative PMCID resolution.
 NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
 
-See [api-guide.md](api-guide.md) for detailed comparison.
-
 ## Common Workflows
 
 ### Find a Paper / Answer a Question About a Paper
@@ -239,63 +189,13 @@ For a **figure, panel, or rendered equation** you need to *see*, use the built-i
 
 ### Update Library from Paperpile
 
-1. Export from Paperpile (JSON format) to ~/Downloads
-2. Find the export file:
-   ```bash
-   ls -t ~/Downloads/Paperpile*.json | head -1
-   ```
-3. Import:
-   ```bash
-   bip import --format paperpile "<path>"
-   ```
-4. Rebuild the search index:
-   ```bash
-   bip rebuild
-   ```
-5. Optionally delete the export file after confirming success
+Run `/bip-lit-import`.
 
-### Explore Literature
+### Want a Paper in the Library?
 
-1. **Search by topic**:
-   ```bash
-   bip asta search "variational inference phylogenetics" --limit 20
-   ```
+Give the user its DOI and ask them to add it to Paperpile. Once they have imported it, `git pull --ff-only` in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`) and run `bip rebuild` to see it.
 
-2. **Find specific text passages**:
-   ```bash
-   bip asta snippet "Bayesian phylogenetic inference"
-   ```
-
-3. **Trace citations**:
-   ```bash
-   bip asta citations DOI:10.1093/sysbio/syy032
-   bip asta references DOI:10.1093/sysbio/syy032
-   ```
-
-4. **Want a paper in the library?** Give the user its DOI and ask them to add it to Paperpile. Once they have imported it, `git pull --ff-only` in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`) and run `bip rebuild` to see it.
-
-See [workflows.md](workflows.md) for detailed workflow instructions.
-
-## Output Format
-
-All commands output JSON by default.
-Add `--human` for readable format:
-
-```bash
-bip asta search "phylogenetics" --human
-bip s2 lookup DOI:10.1234/example --human
-```
-
-## Paper ID Formats
-
-Both S2 and ASTA accept these identifier formats:
-- `DOI:10.1093/sysbio/syy032`
-- `ARXIV:2106.15928`
-- `PMID:19872477`
-- `CorpusId:215416146`
-- Raw Semantic Scholar ID (40-char hex)
-
-### Opening a paper page in the browser
+## Opening a paper page in the browser
 
 The reliable way to open an S2 paper page in Chrome is to resolve the identifier to the 40-char paper ID, then open the **website** URL.
 The `https://api.semanticscholar.org/...` redirect form is NOT reliable — Chrome often gets a JSON/non-navigable response instead of the rendered page.

@@ -56,7 +56,7 @@ var searchCmd = &cobra.Command{
 	Long: `Search references with flexible filtering options.
 
 Query Syntax (positional argument):
-  Plain text     - Searches title, abstract, authors, and tags
+  Plain text     - Searches title, abstract, authors, notes, and tags
   author:name    - Search author names only (legacy syntax)
   title:text     - Search title only
 
