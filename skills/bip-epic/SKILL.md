@@ -229,6 +229,7 @@ Staff also sends two relays that carry no `FINAL` mark because they are not the 
 
 ### Step 6: Hand spawn intent to the conductor
 
+Before drafting a brief, run the PI questions (`docs/guides/pi-questions.md`) against the EPIC's current state.
 For each issue judged ready — unblocked per Step 3, no unresolved conflict per Step 4a/4b, **and holding no live slot in the conductor's occupancy table** — draft the semantic brief and write it to:
 
 ```bash
