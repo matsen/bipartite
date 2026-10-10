@@ -66,8 +66,8 @@ When the user says so in this window, staff goes round the EPIC owners and their
 Staff asks; each owner decides and spawns as usual, consulting its paper sessions, so cheap experiments and literature reads go ahead through `/bip-issue-next`.
 Every message is labelled "staff, weekend mode".
 The mode widens no authorization: landing rules, the no-auto-post rule for reviews, the rules on outward-facing posts, and infra's host rules stand as they are.
-Held for the user: anything that changes a claim or a design, reopens a ruling, or is outward-facing beyond what the rulings allow, and anything the user said he would discuss himself.
-The mode ends at the user's next turn in this window, and staff hands him one brief of everything held.
+Held for the user: anything that changes a claim or a design, reopens a ruling, or is outward-facing beyond what the rulings allow, and anything the user said they would discuss themselves.
+The mode ends when the user says so; at each of the user's turns in this window, staff hands them one brief of everything held.
 
 ## Never
 
