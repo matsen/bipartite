@@ -14,7 +14,7 @@ Automatically detects project type and runs appropriate checks.
 /bip-pr-review
 ```
 
-To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`. Push and post nothing there, the Step 7 math comment included, unless the user says to: report the findings instead.
+To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`, and push nothing there. Whether to post, the Step 7 math comment included, follows `docs/guides/roles.md` ("Posting to GitHub"): another human's scientific PR gets the findings reported to the user, not posted.
 
 ## Workflow
 

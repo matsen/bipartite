@@ -35,7 +35,7 @@ It is where that knowledge is kept and eventually published, and the context you
 The PI directs the science at the level of the paper while agents handle the implementation.
 
 Research is directed **through issues and PRs**, not through constant edits to the paper.
-Comment on PRs/issues to request analyses, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner on what to build next.
+Comment on PRs/issues to request analyses where `docs/guides/roles.md` ("Posting to GitHub") allows it, otherwise message the owning session, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner on what to build next.
 
 The manuscript is **updated when a thread of research is complete** — you then reconcile the finished result into the paper (the manuscript prevails on disagreement; cf. `/bip-ms-audit`), rather than appending every incremental finding as it lands.
 Until then the paper stays the stable context the discussion runs against.

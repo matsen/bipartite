@@ -224,7 +224,7 @@ That is a document-structure decision for the author, not something this pass sh
 
 ### Step 5a: Applying a PR body
 
-A PR body is visible to others the moment it's posted — per this repo's GitHub Action Sequencing rule, show the squashed body and get explicit approval before applying it.
+A PR body is visible to others the moment it's posted; whether to show the squashed body first follows `docs/guides/roles.md` ("Posting to GitHub").
 Once approved:
 
 ```bash
