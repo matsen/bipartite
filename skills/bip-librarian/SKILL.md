@@ -1,6 +1,6 @@
 ---
 name: bip-librarian
-description: Cold-start the librarian session — triage one pasted batch of Semantic Scholar and Google Scholar alert emails, cut the noise, ask the relevant EPIC owners about the few survivors, send gems to hhmi, and hand the user a Paperpile list. One batch per round; the user clears between rounds.
+description: Cold-start the librarian session — triage one pasted batch of Semantic Scholar and Google Scholar alert emails, cut the noise, ask the relevant EPIC owners about the few survivors, send gems to hhmi, and hand the user a Paperpile list. One batch per round; the user runs /bip-cycle between rounds.
 ---
 
 # /bip-librarian

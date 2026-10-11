@@ -3,21 +3,21 @@
 # tmux pane, wait for the fresh session, then type `/bip-continue`.
 #
 # Usage:  self-cycle            # from a Bash tool call, as the last act of a turn
-#         self-cycle /bip-<name> # resume with that skill instead (a stateless role)
+#         self-cycle /bip-librarian  # resume with a stateless role's skill instead
 #
 # It detaches immediately and returns. The `/clear` is typed while the turn is
 # still running, so Claude Code queues it and runs it once the turn ends.
 # Text keystrokes go in with `send-keys -l`, then a separate Enter after a pause:
 # sent in one call, the Enter lands inside the paste and nothing submits.
-# It types only `/clear` and one `/bip-<name>` command: keystrokes in a pane
-# read as the user's own turn, so nothing else derived from session output may
-# ever be sent.
+# It types only `/clear` and one allowlisted resume command: keystrokes in a
+# pane read as the user's own turn, so nothing derived from session output may
+# ever be sent. Add a role to the allowlist only when one needs it.
 set -u
 
 if [ "${1:-}" != --detached ]; then
 	resume=${1:-/bip-continue}
-	if ! [[ $resume =~ ^/bip-[a-z-]+$ ]]; then
-		echo "self-cycle: resume command must be /bip-<name>, got '$resume'" >&2
+	if ! [[ $resume =~ ^/bip-(continue|librarian)$ ]]; then
+		echo "self-cycle: resume command must be /bip-continue or /bip-librarian, got '$resume'" >&2
 		exit 1
 	fi
 	if [ -z "${TMUX_PANE:-}" ]; then
