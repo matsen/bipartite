@@ -22,4 +22,4 @@ Run it in either session of an EPIC's pair (`/bip-epic`, `/bip-ms`); the other i
    The pair agreeing is not corroboration; ask the session that consumes the output whether the draft misstates its gates.
 4. **Put it to the user** as one numbered list in plain text, so they can answer by number; if they are away, escalate to `staff`.
    Record the list in the EPIC body as PROPOSED.
-5. **After the discussion**, record the user's words verbatim as FINAL in the EPIC body; only then file and spawn, per `/bip-epic`.
+5. **After the discussion**, record the user's words verbatim as FINAL in the EPIC body, labelling any answer given in a dialog (picked option or typed into it) as such, since `user-said.sh` cannot find it; only then file and spawn, per `/bip-epic`.
