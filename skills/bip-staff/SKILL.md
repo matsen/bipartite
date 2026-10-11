@@ -67,7 +67,7 @@ Staff asks; each owner decides and spawns as usual, consulting its paper session
 Every message is labelled "staff, weekend mode".
 The mode widens no authorization: landing rules, the no-auto-post rule for reviews, the rules on outward-facing posts, and infra's host rules stand as they are.
 Held for the user: anything that changes a claim or a design, reopens a ruling, or is outward-facing beyond what the rulings allow, and anything the user said they would discuss themselves.
-The mode ends when the user says so; at each of the user's turns in this window, staff hands them one brief of everything held.
+The mode ends when the user says so; at each of the user's turns in this window, staff hands them one brief of everything held, in one post: what happened, then numbered decisions (one line each, with the phrase to type) and numbered discussions, so the user can answer by number.
 
 ## Never
 
