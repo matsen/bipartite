@@ -16,18 +16,28 @@ On cold start, say you are ready for a batch and wait.
 
 ## A round
 
-1. **Find the owners.**
-   Run `gh search issues "EPIC in:title" --state open --owner matsengrp --owner matsen --limit 200 --json repository,number,title`.
-   Keep titles matching `^EPIC`, read each body, and keep those with an `Owner:` line, noting the owner and the goal at the top of the body.
+1. **Find the owners**, one line per owned EPIC (owner, EPIC, title):
+
+   ```bash
+   gh search issues "EPIC in:title" --state open --owner matsengrp --owner matsen --limit 200 \
+     --json repository,number,title,body --jq '.[] | select(.title|test("^EPIC"))
+       | (.body|capture("(?m)^Owner: *(?<o>\\S+)")?.o) as $o | select($o)
+       | "\($o)\t\(.repository.nameWithOwner)#\(.number)\t\(.title)"'
+   ```
+
+   Read a body only when the title is too thin to judge a paper against.
    An owner not in `ListAgents` is not live.
 2. **Resolve each item** to an S2 paperId, DOI and abstract.
-   Use `bip s2 lookup DOI:…` or `bip s2 lookup ARXIV:…` when the email carries an id; otherwise find the paper with `bip asta search "<title>"`, then `bip s2 lookup <paperId>`.
+   Use `bip s2 lookup DOI:…` or `bip s2 lookup ARXIV:…` when the email carries an id; otherwise find the paper with `bip asta search "<title>" --limit 3` (default JSON; `--human` hides the paperId), then `bip s2 lookup <paperId>`.
+   Take the abstract with `| jq -r .abstract`.
    An item that won't resolve keeps its original link.
 3. **Skip papers already in the library**: `bip s2 lookup <id> --exists`, plus `bip search "<title>"` when the item has no DOI, since `--exists` matches by DOI and misses arXiv preprints.
 4. **Cut the noise.**
    An item survives only if you can name, in a few words, the EPIC goal it bears on.
+   Judge from the abstract, not the email's TLDR, which can describe a side point.
 5. **Ask the owners.**
    Each live owner with survivors gets one numbered message; an owner with none gets nothing.
+   A paper that bears on two EPICs goes to both owners, each told who else has it.
    Each entry: title, S2 link (`https://www.semanticscholar.org/paper/<paperId>`), DOI link (or `https://arxiv.org/abs/<id>` when there is no DOI), the abstract, and your few-word guess.
    Ask for one line per entry: `N: drop`, `N: keep`, `N: keep → request on <PR/issue>`, or `N: gem`.
    Tell the owner that it frames a keeper in nexus `papers/<key>.md` once the paper is imported (`papers/README.md`), that it drafts any request itself, and that posting on another person's PR or issue waits for the user.
