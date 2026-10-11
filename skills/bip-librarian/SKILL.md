@@ -31,7 +31,7 @@ On cold start, say you are ready for a batch and wait.
    Use `bip s2 lookup DOI:…` or `bip s2 lookup ARXIV:…` when the email carries an id; otherwise find the paper with `bip asta search "<title>" --limit 3` (default JSON; `--human` hides the paperId), then `bip s2 lookup <paperId>`.
    Take the abstract with `| jq -r .abstract`.
    An item that won't resolve keeps its original link.
-3. **Skip papers already in the library**: `bip s2 lookup <id> --exists`, plus `bip search "<title>"` when the item has no DOI, since `--exists` matches by DOI and misses arXiv preprints.
+3. **Skip papers already in the library**, after `git pull --ff-only` and `bip rebuild` (`/bip-lit`; again before quoting a key to an owner): `bip s2 lookup <id> --exists`, plus `bip search "<title>"` when the item has no DOI, since `--exists` matches by DOI and misses arXiv preprints.
 4. **Cut the noise.**
    An item survives only if you can name, in a few words, the EPIC goal it bears on.
    Judge from the abstract, not the email's TLDR, which can describe a side point.
