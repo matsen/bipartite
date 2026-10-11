@@ -47,32 +47,36 @@ func runGet(cmd *cobra.Command, args []string) error {
 
 	notesFile := paperNotesFile(repoRoot, id)
 	if humanOutput {
-		printRefDetail(*ref)
-		if notesFile != "" {
-			fmt.Println()
-			fmt.Printf("Paper notes: %s\n", notesFile)
-		}
+		printRefDetail(*ref, notesFile)
 	} else {
-		outputJSON(struct {
-			*reference.Reference
-			NotesFile string `json:"notes_file,omitempty"`
-		}{ref, notesFile})
+		outputJSON(GetResult{ref, notesFile})
 	}
 
 	return nil
 }
 
+// GetResult is the JSON shape for `bip get`: the reference plus the path of
+// its shared nexus notes file, when one exists.
+type GetResult struct {
+	*reference.Reference
+	NotesFile string `json:"notes_file,omitempty"`
+}
+
 // paperNotesFile returns the path of the shared notes file for id in the
-// nexus papers/ directory, or "" if there is none.
+// nexus papers/ directory, or "" if there is none. An error other than the
+// file not existing is reported on stderr rather than read as "no notes".
 func paperNotesFile(repoRoot, id string) string {
 	path := filepath.Join(repoRoot, "papers", id+".md")
 	if _, err := os.Stat(path); err != nil {
+		if !os.IsNotExist(err) {
+			fmt.Fprintf(os.Stderr, "Warning: checking paper notes %s: %v\n", path, err)
+		}
 		return ""
 	}
 	return path
 }
 
-func printRefDetail(ref reference.Reference) {
+func printRefDetail(ref reference.Reference, notesFile string) {
 	fmt.Println(ref.ID)
 	fmt.Println(strings.Repeat("═", DetailTitleMaxLen))
 	fmt.Println()
@@ -146,6 +150,9 @@ func printRefDetail(ref reference.Reference) {
 	if ref.PDFPath != "" {
 		fmt.Println()
 		fmt.Printf("PDF:      %s\n", ref.PDFPath)
+	}
+	if notesFile != "" {
+		fmt.Printf("Paper notes: %s\n", notesFile)
 	}
 
 	// Supplements
