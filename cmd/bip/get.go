@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/matsen/bipartite/internal/export"
@@ -17,6 +19,10 @@ var getCmd = &cobra.Command{
 	Use:   "get <id>",
 	Short: "Get a single reference by ID",
 	Long: `Get a single reference by its ID.
+
+If nexus holds shared notes for the paper (papers/<id>.md), the output
+names that file ("Paper notes:", or "notes_file" in JSON); read it before
+the PDF.
 
 Example:
   bip get Ahn2026-rs`,
@@ -39,13 +45,31 @@ func runGet(cmd *cobra.Command, args []string) error {
 		exitWithError(ExitError, "reference not found: %s", id)
 	}
 
+	notesFile := paperNotesFile(repoRoot, id)
 	if humanOutput {
 		printRefDetail(*ref)
+		if notesFile != "" {
+			fmt.Println()
+			fmt.Printf("Paper notes: %s\n", notesFile)
+		}
 	} else {
-		outputJSON(ref)
+		outputJSON(struct {
+			*reference.Reference
+			NotesFile string `json:"notes_file,omitempty"`
+		}{ref, notesFile})
 	}
 
 	return nil
+}
+
+// paperNotesFile returns the path of the shared notes file for id in the
+// nexus papers/ directory, or "" if there is none.
+func paperNotesFile(repoRoot, id string) string {
+	path := filepath.Join(repoRoot, "papers", id+".md")
+	if _, err := os.Stat(path); err != nil {
+		return ""
+	}
+	return path
 }
 
 func printRefDetail(ref reference.Reference) {
