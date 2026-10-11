@@ -18,7 +18,7 @@ Import a Paperpile JSON export from `~/Downloads/` into the bip reference librar
 
 ### 0. Refuse a stale binary
 
-A `bip` built before a merge fix replaces refs instead of merging them. It drops fields such as `pmcid` silently, and nothing records which binary ran. Go only when the first command prints `vcs.revision=<SHA>` matching the second command's SHA, and also prints `vcs.modified=false`; a binary with no `vcs` lines counts as stale. If they differ, rebuild from main in the clone the binary links to (`readlink -f "$(command -v bip)"`), then re-run both.
+A stale `bip` may replace refs instead of merging them, silently dropping fields such as `pmcid`, and nothing records which binary ran. Go only when the first command prints `vcs.revision=<SHA>` matching the second command's SHA, and also prints `vcs.modified=false`; a binary with no `vcs` lines counts as stale. If they differ, rebuild from main in the clone the binary links to (`readlink -f "$(command -v bip)"`), then re-run both.
 
 ```bash
 go version -m "$(command -v bip)" | grep -E 'vcs\.(revision|modified)'
