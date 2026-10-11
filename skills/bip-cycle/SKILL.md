@@ -8,6 +8,8 @@ allowed-tools: Skill, Bash
 
 Run `/bip-tuckin` with the Skill tool, passing `$ARGUMENTS` through (a role name, if given).
 
+A role whose cold-start skill says it keeps no state between rounds (`/bip-librarian`) skips the tuckin: run `<this skill's base directory>/self-cycle /bip-<role>` instead, and it types that skill in place of `/bip-continue`.
+
 When it has finished and the continuation prompt is written, make this the turn's last tool call:
 
 ```bash
