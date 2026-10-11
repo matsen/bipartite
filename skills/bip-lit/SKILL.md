@@ -20,6 +20,8 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
    The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus the `PDF:` field of `bip get <id> --human`.
    - Text: pdf-navigator MCP — `search_pdf_text` to find the page, then `read_pdf_text`. Keeps column order and inline math, and is searchable.
    - Figures, panels, rendered equations, tables: built-in `Read` on the 1–3 pages that hold them. It renders pages as images, so never the whole paper.
+   If `bip get` shows `Paper notes:`, read that shared nexus file first and go to the PDF only for what it doesn't answer.
+   Whatever you learn from the paper goes into `nexus/papers/<id>.md` (create it if absent; format in `papers/README.md` there), not only into your project's notes; commit and push nexus.
 3. **Before concluding it's absent**, run an exact-match check (`-a "LastName"` or `--doi`) rather than another keyword permutation.
    No truncation notice (`showing M`) means you saw every match for those tokens, not that the paper is absent.
 4. **Not found, or the search needs to be wider → ASTA**, without asking: `bip asta search` or `mcp__asta__*`.
