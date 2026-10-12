@@ -57,3 +57,4 @@ Fix with concrete detail, not placeholders, and unwrap hard-wrapped paragraphs t
 ## Step 4: Submit and report
 
 Run `/bip-issue-file <file_path>`, then report the gaps found and fixed by severity, the issue URL, and any open questions for the user.
+If the user wants the draft held (for someone's review, say), stop before `/bip-issue-file`: report the gaps and fixes, and file later with `/bip-issue-file <file>`.

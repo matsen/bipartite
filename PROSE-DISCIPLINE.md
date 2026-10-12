@@ -14,7 +14,7 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 - **Drop options nobody would contest.** If you'd recommend A, propose A. Mention B only if a reviewer would ask "why not B?"
 - **A test plan lists bugs, not invariants.** List tests that catch implementation mistakes, not identities that are true by construction.
 - **The body is the final state of the diff, not a changelog.** Describe the finished artifact once, in the present tense. Don't write "Reviewer follow-up:", "Update:", a History section, or "originally X, now Y". When the story has settled, rewrite the body from scratch instead of patching it.
-- **A label drifts silently from what it labels, and the label is what gets read.** When you change a section, re-read its heading, caption, commit subject or title against the new content.
+- **A label drifts silently from what it labels, and the label is what gets read.** When you change a section, re-read its heading, caption, opening paragraph, commit subject or title against the new content.
 
 ## Showing a draft to the user
 
