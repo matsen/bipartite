@@ -46,6 +46,7 @@ On cold start, say you are ready for a batch and wait.
 7. **Report to the user** as one numbered list:
    gems; keepers, with who they went to; survivors whose owner isn't live, with their EPIC; the Paperpile list; then a one-line count of what was cut, with the titles underneath.
    Each Paperpile line carries both the DOI link and the S2 link, or says "no DOI": the user prefers S2, but it can take several clicks and a captcha, so the DOI is the quick route.
+   Tag each keeper and gem "Save in S2": saving it to the user's S2 Library folder trains that folder's Research Feed, and S2 has no API to do it for them.
 
 The round ends when the owners have replied or the user says to stop waiting.
 Then the user runs `/bip-cycle` for the next batch.
