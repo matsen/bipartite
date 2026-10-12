@@ -240,8 +240,12 @@ func outputLookupHuman(result S2LookupResult) {
 	if result.DOI != "" {
 		fmt.Printf("  DOI: %s\n", doiURL(result.DOI))
 	}
-	if result.OpenAccessPDF != nil {
-		fmt.Printf("  Open-access PDF: %s (%s)\n", result.OpenAccessPDF.URL, result.OpenAccessPDF.Status)
+	if oa := result.OpenAccessPDF; oa != nil {
+		if oa.Status != "" {
+			fmt.Printf("  Open-access PDF: %s (%s)\n", oa.URL, oa.Status)
+		} else {
+			fmt.Printf("  Open-access PDF: %s\n", oa.URL)
+		}
 	}
 	if result.CitationCount > 0 {
 		fmt.Printf("  Citations: %d\n", result.CitationCount)
