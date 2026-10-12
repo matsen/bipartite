@@ -84,15 +84,16 @@ func TestGetPaperHappyPath(t *testing.T) {
 		"year": 2018,
 		"venue": "Nature",
 		"externalIds": {"DOI": "10.1038/nature12373"},
-		"authors": [{"name": "Cheng Zhang"}]
+		"authors": [{"name": "Cheng Zhang"}],
+		"openAccessPdf": {"url": "https://example.org/a.pdf", "status": "GREEN", "license": "CCBY"}
 	}`
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/paper/") {
 			t.Errorf("unexpected path %q", r.URL.Path)
 		}
-		if r.URL.Query().Get("fields") == "" {
-			t.Error("fields query param missing")
+		if !strings.Contains(r.URL.Query().Get("fields"), "openAccessPdf") {
+			t.Errorf("fields = %q, want openAccessPdf requested", r.URL.Query().Get("fields"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = io.WriteString(w, body)
@@ -121,6 +122,9 @@ func TestGetPaperHappyPath(t *testing.T) {
 	}
 	if len(paper.Authors) != 1 || paper.Authors[0].Name != "Cheng Zhang" {
 		t.Errorf("Authors = %+v", paper.Authors)
+	}
+	if paper.OpenAccess == nil || paper.OpenAccess.URL != "https://example.org/a.pdf" || paper.OpenAccess.Status != "GREEN" {
+		t.Errorf("OpenAccess = %+v", paper.OpenAccess)
 	}
 }
 

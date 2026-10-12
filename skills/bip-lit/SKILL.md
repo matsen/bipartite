@@ -20,7 +20,11 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
    The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus the `PDF:` field of `bip get <id> --human`.
    Read the `Supplements:` it lists too: methods numbers (data size, training budget, per-condition tables) are often only there.
    A listed PDF missing from disk is usually the Linux rclone mount's stale directory cache: `systemctl --user kill -s HUP <mount service>` (on pax, `rclone-gdrive.service`), then look again; an `Input/output error` on the first read after a HUP is transient, so retry once.
-   Fall back to the abstract only if `rclone lsf "<remote>:<dir>"` doesn't list it either (Paperpile hasn't synced it), and say the note is abstract-only.
+   If `rclone lsf "<remote>:<dir>"` lists it but the mount still won't serve it, `rclone copyto "<remote>:<dir>/<file>" <scratchpad>/<file>` and read that copy, which is the journal version.
+   If `rclone lsf` doesn't list it either, or the paper isn't in the library, read a legal open-access copy: `bip s2 lookup <id> --fields openAccessPdf` (the library key, or `DOI:`/`ARXIV:` for a paper not in it) gives its URL and status, and an arXiv preprint is at `https://arxiv.org/pdf/<id>`.
+   Note which version you read (published, author manuscript, preprint) and cite its sections rather than journal pages; this is for reading only, and Paperpile stays the library of record.
+   Don't use a lookup service that needs the user's email address (Unpaywall does); S2 already carries the same pointer.
+   Fall back to the abstract only if neither exists, say the note is abstract-only, and give the user the DOI link to add the paper.
    - Text: pdf-navigator MCP — `search_pdf_text` to find the page, then `read_pdf_text`. Keeps column order and inline math, and is searchable.
    - Figures, panels, rendered equations, tables: built-in `Read` on the 1–3 pages that hold them. It renders pages as images, so never the whole paper.
    If `bip get` shows `Paper notes:`, read that shared nexus file first and go to the PDF only for what it doesn't answer.

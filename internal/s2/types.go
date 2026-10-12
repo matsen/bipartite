@@ -3,18 +3,28 @@ package s2
 
 // S2Paper represents a paper from the Semantic Scholar API.
 type S2Paper struct {
-	PaperID      string      `json:"paperId"`
-	ExternalIDs  ExternalIDs `json:"externalIds,omitempty"`
-	Title        string      `json:"title"`
-	Abstract     string      `json:"abstract,omitempty"`
-	Authors      []S2Author  `json:"authors,omitempty"`
-	Year         int         `json:"year,omitempty"`
-	Venue        string      `json:"venue,omitempty"`
-	PubDate      string      `json:"publicationDate,omitempty"` // YYYY-MM-DD format
-	Citations    int         `json:"citationCount,omitempty"`
-	References   int         `json:"referenceCount,omitempty"`
-	IsOpenAccess bool        `json:"isOpenAccess,omitempty"`
-	Fields       []string    `json:"fieldsOfStudy,omitempty"`
+	PaperID      string         `json:"paperId"`
+	ExternalIDs  ExternalIDs    `json:"externalIds,omitempty"`
+	Title        string         `json:"title"`
+	Abstract     string         `json:"abstract,omitempty"`
+	Authors      []S2Author     `json:"authors,omitempty"`
+	Year         int            `json:"year,omitempty"`
+	Venue        string         `json:"venue,omitempty"`
+	PubDate      string         `json:"publicationDate,omitempty"` // YYYY-MM-DD format
+	Citations    int            `json:"citationCount,omitempty"`
+	References   int            `json:"referenceCount,omitempty"`
+	IsOpenAccess bool           `json:"isOpenAccess,omitempty"`
+	OpenAccess   *OpenAccessPDF `json:"openAccessPdf,omitempty"`
+	Fields       []string       `json:"fieldsOfStudy,omitempty"`
+}
+
+// OpenAccessPDF is S2's pointer to a legally hosted free copy of a paper.
+// Status is S2's open-access category (GOLD, GREEN, HYBRID, BRONZE, ...).
+// S2 can return an entry with an empty URL; treat that as no copy.
+type OpenAccessPDF struct {
+	URL     string `json:"url"`
+	Status  string `json:"status,omitempty"`
+	License string `json:"license,omitempty"`
 }
 
 // ExternalIDs contains various external identifiers for a paper.

@@ -32,6 +32,7 @@ Supported paper ID formats:
 Examples:
   bip s2 lookup DOI:10.1038/nature12373
   bip s2 lookup DOI:10.1038/nature12373 --fields title,citationCount
+  bip s2 lookup DOI:10.1093/sysbio/syy032 --fields openAccessPdf
   bip s2 lookup Zhang2018-vi --exists --human`,
 	Args: cobra.ExactArgs(1),
 	RunE: runS2Lookup,
@@ -45,21 +46,22 @@ func init() {
 
 // S2LookupResult is the JSON output for the lookup command.
 type S2LookupResult struct {
-	PaperID        string         `json:"paperId"`
-	DOI            string         `json:"doi,omitempty"`
-	ArXiv          string         `json:"arxiv,omitempty"`
-	Title          string         `json:"title"`
-	Authors        []S2Author     `json:"authors,omitempty"`
-	Abstract       string         `json:"abstract,omitempty"`
-	Year           int            `json:"year,omitempty"`
-	Venue          string         `json:"venue,omitempty"`
-	CitationCount  int            `json:"citationCount,omitempty"`
-	ReferenceCount int            `json:"referenceCount,omitempty"`
-	Fields         []string       `json:"fieldsOfStudy,omitempty"`
-	IsOpenAccess   bool           `json:"isOpenAccess,omitempty"`
-	ExistsLocally  *bool          `json:"existsLocally,omitempty"`
-	LocalID        string         `json:"localId,omitempty"`
-	Error          *S2ErrorResult `json:"error,omitempty"`
+	PaperID        string            `json:"paperId"`
+	DOI            string            `json:"doi,omitempty"`
+	ArXiv          string            `json:"arxiv,omitempty"`
+	Title          string            `json:"title"`
+	Authors        []S2Author        `json:"authors,omitempty"`
+	Abstract       string            `json:"abstract,omitempty"`
+	Year           int               `json:"year,omitempty"`
+	Venue          string            `json:"venue,omitempty"`
+	CitationCount  int               `json:"citationCount,omitempty"`
+	ReferenceCount int               `json:"referenceCount,omitempty"`
+	Fields         []string          `json:"fieldsOfStudy,omitempty"`
+	IsOpenAccess   bool              `json:"isOpenAccess,omitempty"`
+	OpenAccessPDF  *s2.OpenAccessPDF `json:"openAccessPdf,omitempty"`
+	ExistsLocally  *bool             `json:"existsLocally,omitempty"`
+	LocalID        string            `json:"localId,omitempty"`
+	Error          *S2ErrorResult    `json:"error,omitempty"`
 }
 
 // S2Author represents an author in lookup results.
@@ -130,6 +132,9 @@ func runS2Lookup(cmd *cobra.Command, args []string) error {
 		ReferenceCount: paper.References,
 		Fields:         paper.Fields,
 		IsOpenAccess:   paper.IsOpenAccess,
+	}
+	if paper.OpenAccess != nil && paper.OpenAccess.URL != "" {
+		result.OpenAccessPDF = paper.OpenAccess
 	}
 
 	// Map authors
@@ -203,6 +208,9 @@ func filterLookupFields(result S2LookupResult, fieldsStr string) S2LookupResult 
 	if fields["fieldsofstudy"] {
 		filtered.Fields = result.Fields
 	}
+	if fields["openaccesspdf"] {
+		filtered.OpenAccessPDF = result.OpenAccessPDF
+	}
 	if fields["isopenaccess"] {
 		filtered.IsOpenAccess = result.IsOpenAccess
 	}
@@ -231,6 +239,13 @@ func outputLookupHuman(result S2LookupResult) {
 	}
 	if result.DOI != "" {
 		fmt.Printf("  DOI: %s\n", doiURL(result.DOI))
+	}
+	if oa := result.OpenAccessPDF; oa != nil {
+		if oa.Status != "" {
+			fmt.Printf("  Open-access PDF: %s (%s)\n", oa.URL, oa.Status)
+		} else {
+			fmt.Printf("  Open-access PDF: %s\n", oa.URL)
+		}
 	}
 	if result.CitationCount > 0 {
 		fmt.Printf("  Citations: %d\n", result.CitationCount)
