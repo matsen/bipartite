@@ -27,6 +27,7 @@ Apply these whenever you cite a number or write a correction: in an issue, PR, c
 ## A source read that stops at the first plausible boundary
 
 - Say where you stopped: "read X and Y; did not follow Z's callers".
+- An open issue's state is in its sub-issues, linked PRs and last comments, not its open flag. Read them before calling it stalled or asking its owner for status, and ask only about what they leave open.
 - For a claim that something is absent, search for the thing you say is missing instead of reading where it would be.
 - Mark an unverified verdict as provisional in the text itself, not only in a column heading.
 
