@@ -1,6 +1,6 @@
 ---
 name: bip-lit
-description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, managing the library, or exploring literature via S2/ASTA.
+description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), managing the library, or exploring literature via S2/ASTA.
 ---
 
 # Bip Reference Library
@@ -18,6 +18,9 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
    If it errors (e.g. `no such column`), run `bip rebuild` and retry; the SQLite layer is rebuilt from JSONL.
 2. **Found it → read the PDF**, not the abstract or S2/ASTA metadata.
    The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus the `PDF:` field of `bip get <id> --human`.
+   Read the `Supplements:` it lists too: methods numbers (data size, training budget, per-condition tables) are often only there.
+   A listed PDF missing from disk is usually the Linux rclone mount's stale directory cache: `systemctl --user kill -s HUP <mount service>` (on pax, `rclone-gdrive.service`), then look again.
+   Fall back to the abstract only if `rclone lsf "<remote>:<dir>"` doesn't list it either (Paperpile hasn't synced it), and say the note is abstract-only.
    - Text: pdf-navigator MCP — `search_pdf_text` to find the page, then `read_pdf_text`. Keeps column order and inline math, and is searchable.
    - Figures, panels, rendered equations, tables: built-in `Read` on the 1–3 pages that hold them. It renders pages as images, so never the whole paper.
    If `bip get` shows `Paper notes:`, read that shared nexus file first and go to the PDF only for what it doesn't answer.
@@ -46,9 +49,6 @@ In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches tho
 Give the user the DOI and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
 To import a Paperpile export, run `/bip-lit-import`.
-
-A just-imported PDF can be missing because the Linux rclone mount's directory cache is stale: `systemctl --user kill -s HUP <mount service>` (on pax, `rclone-gdrive.service`).
-If `rclone lsf "<remote>:<dir>"` doesn't list it either, Paperpile hasn't synced it to Drive yet.
 
 ## Opening an S2 paper page in a browser
 
