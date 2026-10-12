@@ -161,7 +161,7 @@ func runCheck(cmd *cobra.Command, args []string) error {
 					fmt.Printf("  [WARN] Missing PDF for %s\n", issue.ID)
 					fmt.Printf("         Expected: %s\n\n", issue.Expected)
 				case "duplicate_doi":
-					fmt.Printf("  [WARN] Duplicate DOI %s\n", issue.DOI)
+					fmt.Printf("  [WARN] Duplicate DOI %s\n", doiURL(issue.DOI))
 					fmt.Printf("         Found in: %s\n\n", formatIDList(issue.IDs))
 				case "orphaned_repo":
 					fmt.Printf("  [WARN] Orphaned repo: %s (%s)\n\n", issue.ID, issue.Reason)

@@ -112,7 +112,7 @@ func printPMCIDHuman(in ncbi.Input, records []ncbi.Record) {
 			fmt.Printf("No PMCID: %s\n", msg)
 		}
 		if r.DOI != "" {
-			fmt.Printf("DOI:   %s\n", r.DOI)
+			fmt.Printf("DOI:   %s\n", doiURL(r.DOI))
 		}
 		if r.PMID != 0 {
 			fmt.Printf("PMID:  %d\n", r.PMID)

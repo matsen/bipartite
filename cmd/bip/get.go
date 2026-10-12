@@ -125,7 +125,7 @@ func printRefDetail(ref reference.Reference, notesFile string) {
 	fmt.Printf("Date:     %s\n", date)
 
 	if ref.DOI != "" {
-		fmt.Printf("DOI:      %s\n", ref.DOI)
+		fmt.Printf("DOI:      %s\n", doiURL(ref.DOI))
 	}
 
 	// Tags

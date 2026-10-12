@@ -165,7 +165,7 @@ func outputCitationsHuman(result S2CitationsResult) {
 			fmt.Printf("  [NOT IN COLLECTION] %s (%d)\n", c.Title, c.Year)
 		}
 		if c.DOI != "" {
-			fmt.Printf("    DOI: %s\n", c.DOI)
+			fmt.Printf("    DOI: %s\n", doiURL(c.DOI))
 		}
 		fmt.Println()
 	}

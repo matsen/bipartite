@@ -38,7 +38,7 @@ On cold start, say you are ready for a batch and wait.
 5. **Ask the owners.**
    Each live owner with survivors gets one numbered message; an owner with none gets nothing.
    A paper that bears on two EPICs goes to both owners, each told who else has it.
-   Each entry: title, S2 link (`https://www.semanticscholar.org/paper/<paperId>`), DOI link (or `https://arxiv.org/abs/<id>` when there is no DOI), the abstract, and your few-word guess.
+   Each entry: title, S2 link (`https://www.semanticscholar.org/paper/<paperId>`), DOI link (`https://doi.org/<doi>`, or `https://arxiv.org/abs/<id>` when there is no DOI), the abstract, and your few-word guess.
    Ask for one line per entry: `N: drop`, `N: keep`, `N: keep → request on <PR/issue>`, or `N: gem`.
    Tell the owner that it frames a keeper in nexus `papers/<key>.md` once the paper is imported (`papers/README.md`), that it drafts any request itself, and that posting on another person's PR or issue waits for the user.
    A reply never blocks the round.
