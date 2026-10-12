@@ -123,15 +123,7 @@ func abbreviateAuthorName(name string) string {
 	}
 
 	lastName := parts[len(parts)-1]
-	firstName := parts[0]
-
-	// Use runes for proper Unicode handling
-	runes := []rune(firstName)
-	if len(runes) == 0 {
-		return lastName
-	}
-
-	return lastName + " " + string(runes[0])
+	return lastName + " " + firstRune(parts[0])
 }
 
 // formatASTAAuthors formats a list of ASTA authors for human display.

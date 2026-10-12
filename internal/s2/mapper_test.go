@@ -208,3 +208,16 @@ func TestMapS2ToReference(t *testing.T) {
 		t.Errorf("Authors[0] = %+v, want {Cheng Zhang}", ref.Authors[0])
 	}
 }
+
+func TestGenerateTitleSuffixNonASCII(t *testing.T) {
+	cases := map[string]string{
+		"Évolution moléculaire": "ém",
+		"Évolution":             "éx",
+		"Deep mutational scans": "dm",
+	}
+	for title, want := range cases {
+		if got := generateTitleSuffix(title); got != want {
+			t.Errorf("generateTitleSuffix(%q) = %q, want %q", title, got, want)
+		}
+	}
+}
