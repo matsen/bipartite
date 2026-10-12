@@ -133,7 +133,7 @@ func formatAuthorFull(a reference.Author) string {
 // formatAuthorShort formats an author as "Last F" (abbreviated first name).
 func formatAuthorShort(a reference.Author) string {
 	if a.First != "" {
-		return a.Last + " " + string(a.First[0])
+		return a.Last + " " + string([]rune(a.First)[0])
 	}
 	return a.Last
 }
