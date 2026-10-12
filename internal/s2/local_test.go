@@ -141,3 +141,36 @@ func TestLocalResolverRefsWithDOI(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalResolverExistsLocallyArXivAndS2ID(t *testing.T) {
+	r := NewLocalResolverFromRefs([]reference.Reference{
+		{ID: "Feller2026-yj", DOI: "10.48550/arXiv.2610.00742", Source: reference.ImportSource{Type: "paperpile"}},
+		{ID: "Lee2023-ax", ArXivID: "2305.02350", Source: reference.ImportSource{Type: "paperpile"}},
+		{ID: "Kim2020-up", DOI: "10.48550/ARXIV.2005.01643", Source: reference.ImportSource{Type: "paperpile"}},
+		{ID: "Ray2021-pp", S2ID: "s2paper3", Source: reference.ImportSource{Type: "paperpile"}},
+	})
+
+	tests := []struct {
+		name   string
+		paper  S2Paper
+		wantOK bool
+		wantID string
+	}{
+		{"arXiv DOI form only", S2Paper{ExternalIDs: ExternalIDs{ArXiv: "2610.00742"}}, true, "Feller2026-yj"},
+		{"arxiv_id only", S2Paper{ExternalIDs: ExternalIDs{ArXiv: "2305.02350"}}, true, "Lee2023-ax"},
+		{"upper-case arXiv DOI", S2Paper{ExternalIDs: ExternalIDs{ArXiv: "2005.01643"}}, true, "Kim2020-up"},
+		{"paperpile s2_id", S2Paper{PaperID: "s2paper3"}, true, "Ray2021-pp"},
+		{"absent arXiv id", S2Paper{ExternalIDs: ExternalIDs{ArXiv: "2401.99999"}}, false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ref, ok := r.ExistsLocally(tt.paper)
+			if ok != tt.wantOK {
+				t.Fatalf("ExistsLocally ok = %v, want %v", ok, tt.wantOK)
+			}
+			if ok && ref.ID != tt.wantID {
+				t.Errorf("ExistsLocally ID = %q, want %q", ref.ID, tt.wantID)
+			}
+		})
+	}
+}
