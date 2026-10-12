@@ -230,7 +230,7 @@ func outputLookupHuman(result S2LookupResult) {
 		fmt.Printf("  Venue: %s\n", result.Venue)
 	}
 	if result.DOI != "" {
-		fmt.Printf("  DOI: %s\n", result.DOI)
+		fmt.Printf("  DOI: %s\n", doiURL(result.DOI))
 	}
 	if result.CitationCount > 0 {
 		fmt.Printf("  Citations: %d\n", result.CitationCount)

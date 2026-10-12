@@ -141,7 +141,7 @@ func runS2LinkPub(cmd *cobra.Command, args []string) error {
 		// Found published version
 		if humanOutput {
 			fmt.Printf("  %s (%s)\n", ref.ID, ref.DOI)
-			fmt.Printf("    -> Published in %s: %s\n", published.Venue, published.ExternalIDs.DOI)
+			fmt.Printf("    -> Published in %s: %s\n", published.Venue, doiURL(published.ExternalIDs.DOI))
 		}
 
 		// Confirm or auto-link

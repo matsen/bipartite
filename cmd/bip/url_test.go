@@ -223,3 +223,12 @@ func TestURLFormats_AllDefined(t *testing.T) {
 		}
 	}
 }
+
+func TestDOIURL(t *testing.T) {
+	if got := doiURL("10.1101/2024.06.06.597716"); got != "https://doi.org/10.1101/2024.06.06.597716" {
+		t.Errorf("doiURL = %q", got)
+	}
+	if got := doiURL(""); got != "" {
+		t.Errorf("doiURL(\"\") = %q, want empty", got)
+	}
+}

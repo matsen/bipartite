@@ -257,7 +257,7 @@ func outputAddPdfMultipleMatches(papers []s2.S2Paper) error {
 		for i, p := range papers {
 			fmt.Fprintf(os.Stderr, "  %d. %s (%d)\n", i+1, p.Title, p.Year)
 			if p.ExternalIDs.DOI != "" {
-				fmt.Fprintf(os.Stderr, "     DOI: %s\n", p.ExternalIDs.DOI)
+				fmt.Fprintf(os.Stderr, "     DOI: %s\n", doiURL(p.ExternalIDs.DOI))
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\nUse 'bip s2 add DOI:...' with the correct DOI\n")

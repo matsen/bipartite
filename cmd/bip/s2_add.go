@@ -224,7 +224,7 @@ func outputS2Duplicate(existingID, doi string) error {
 	if humanOutput {
 		fmt.Fprintf(os.Stderr, "Paper already exists: %s\n", existingID)
 		if doi != "" {
-			fmt.Fprintf(os.Stderr, "  DOI: %s\n", doi)
+			fmt.Fprintf(os.Stderr, "  DOI: %s\n", doiURL(doi))
 		}
 		fmt.Fprintf(os.Stderr, "  Use --update to refresh metadata\n")
 	} else {

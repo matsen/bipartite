@@ -213,3 +213,12 @@ func runURL(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
+
+// doiURL renders a DOI as a resolvable link for human-facing output, or ""
+// when there is no DOI.
+func doiURL(doi string) string {
+	if doi == "" {
+		return ""
+	}
+	return fmt.Sprintf(urlTemplateDOI, doi)
+}
