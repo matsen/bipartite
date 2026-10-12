@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/matsen/bipartite/internal/reference"
 )
@@ -168,17 +169,19 @@ func generateTitleSuffix(title string) string {
 	stopWords := map[string]bool{"a": true, "an": true, "the": true, "of": true, "and": true, "in": true, "on": true, "for": true, "to": true, "with": true}
 
 	var suffix strings.Builder
+	letters := 0
 	for _, word := range words {
 		if !stopWords[word] && len(word) > 0 {
-			suffix.WriteByte(word[0])
-			if suffix.Len() >= 2 {
+			r, _ := utf8.DecodeRuneInString(word)
+			suffix.WriteRune(r)
+			if letters++; letters >= 2 {
 				break
 			}
 		}
 	}
 
 	// Pad if needed
-	for suffix.Len() < 2 {
+	for ; letters < 2; letters++ {
 		suffix.WriteByte('x')
 	}
 

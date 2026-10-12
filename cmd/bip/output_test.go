@@ -12,3 +12,9 @@ func TestFormatAuthorShortNonASCIIInitial(t *testing.T) {
 		t.Errorf("formatAuthorShort = %q, want %q", got, "Ciudad Á")
 	}
 }
+
+func TestAbbreviateAuthorNameNonASCII(t *testing.T) {
+	if got := abbreviateAuthorName("Łukasz Nowak"); got != "Nowak Ł" {
+		t.Errorf("abbreviateAuthorName = %q, want %q", got, "Nowak Ł")
+	}
+}

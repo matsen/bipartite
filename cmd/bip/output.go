@@ -133,9 +133,18 @@ func formatAuthorFull(a reference.Author) string {
 // formatAuthorShort formats an author as "Last F" (abbreviated first name).
 func formatAuthorShort(a reference.Author) string {
 	if a.First != "" {
-		return a.Last + " " + string([]rune(a.First)[0])
+		return a.Last + " " + firstRune(a.First)
 	}
 	return a.Last
+}
+
+// firstRune returns the first character of s, not its first byte, so that a
+// name like "Álvaro" abbreviates to "Á".
+func firstRune(s string) string {
+	for _, r := range s {
+		return string(r)
+	}
+	return ""
 }
 
 // formatAuthorsFull formats all authors as "First Last, First Last, ...".
