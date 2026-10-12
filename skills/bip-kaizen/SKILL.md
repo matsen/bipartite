@@ -126,7 +126,7 @@ Then show the specific change—either as a diff, a new section to add, or a des
 Present options:
 
 1. **Apply now** — Make the edit directly (for small CLAUDE.md or skill changes)
-2. **Create a PR** — For changes to the bipartite repo (skills, code)
+2. **Send to the `bipartite` session** — For changes to the bipartite repo (skills, code), when a session by that name is live (`ListAgents`): send the diagnosis and the proposed edit as feedback, and it places, lands, and reports back. Otherwise, create a PR (Step 5)
 3. **Write an issue** — For larger improvements that need discussion
 4. **Skip** — User disagrees with the diagnosis
 
