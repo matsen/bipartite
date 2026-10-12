@@ -37,6 +37,15 @@ Snippets `/bip-conductor-spawn` Step 4 appends under `IMPORTANT CONTEXT:` when t
   home, which may differ from the NFS path).
 ```
 
+*In either mode, also include:*
+```
+- Before a fan-out, project its bytes (smoke per-cell size × cells) and
+  keep them under half of `df` free where they land. Write outputs to
+  /fh/fast as they finish; never pile them up in a host's /tmp, which is
+  small and shared. Per-host scratch and limits:
+  https://github.com/matsengrp/wiki/wiki/cluster
+```
+
 **For experiments (Snakemake workflows):**
 ```
 - SSF143587 data is at ~/re/superfamily-pcp/results/SSF143587/
