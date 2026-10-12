@@ -153,15 +153,8 @@ func runS2AddPdf(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for duplicates
-	if paper.ExternalIDs.DOI != "" {
-		if existingRef, found := resolver.FindByDOI(paper.ExternalIDs.DOI); found {
-			return outputAddPdfDuplicate(existingRef.ID, paper.ExternalIDs.DOI)
-		}
-	}
-
-	// Check by S2 ID
-	if existingRef, found := resolver.FindByS2ID(paper.PaperID); found {
-		return outputAddPdfDuplicate(existingRef.ID, "")
+	if existingRef, found := resolver.ExistsLocally(*paper); found {
+		return outputAddPdfDuplicate(existingRef.ID, paper.ExternalIDs.DOI)
 	}
 
 	// Generate unique ID

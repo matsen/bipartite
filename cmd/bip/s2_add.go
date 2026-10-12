@@ -123,20 +123,9 @@ func runS2Add(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for duplicates
-	if paper.ExternalIDs.DOI != "" {
-		if existingRef, found := resolver.FindByDOI(paper.ExternalIDs.DOI); found {
-			if !s2AddUpdate {
-				return outputS2Duplicate(existingRef.ID, paper.ExternalIDs.DOI)
-			}
-			// Update existing
-			return updateExistingPaper(refsPath, refs, existingRef.ID, ref)
-		}
-	}
-
-	// Check by S2 ID
-	if existingRef, found := resolver.FindByS2ID(paper.PaperID); found {
+	if existingRef, found := resolver.ExistsLocally(*paper); found {
 		if !s2AddUpdate {
-			return outputS2Duplicate(existingRef.ID, "")
+			return outputS2Duplicate(existingRef.ID, paper.ExternalIDs.DOI)
 		}
 		// Update existing
 		return updateExistingPaper(refsPath, refs, existingRef.ID, ref)
@@ -158,12 +147,12 @@ func updateExistingPaper(refsPath string, refs []reference.Reference, existingID
 	// Find and update the existing reference
 	for i, ref := range refs {
 		if ref.ID == existingID {
-			// Preserve the original ID
+			// Keep the ID and every field S2 leaves empty (DOI, tags, note,
+			// PDF path) from the existing reference. Unlike an import, a
+			// refresh is not a new provenance, so the source stays too.
+			newRef = reference.MergeUpdate(ref, newRef)
 			newRef.ID = existingID
-			// Preserve PDF path if not being updated
-			if s2AddLink == "" && ref.PDFPath != "" {
-				newRef.PDFPath = ref.PDFPath
-			}
+			newRef.Source = ref.Source
 			refs[i] = newRef
 			break
 		}

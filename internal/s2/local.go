@@ -1,22 +1,28 @@
 // Package s2 local.go provides local reference resolution for S2 commands.
 // It enables looking up papers in the local collection by various identifiers
-// (local ID, DOI, S2 paper ID) and resolving them to Semantic Scholar API IDs.
+// (local ID, DOI, arXiv ID, S2 paper ID) and resolving them to Semantic Scholar API IDs.
 package s2
 
 import (
+	"strings"
+
 	"github.com/matsen/bipartite/internal/reference"
 	"github.com/matsen/bipartite/internal/storage"
 )
 
 // LocalResolver resolves local paper IDs to S2 identifiers and provides
 // lookup capabilities for the local reference collection. It maintains
-// indexes by ID, DOI, and S2 paper ID for efficient lookups.
+// indexes by ID, DOI, arXiv ID, and S2 paper ID for efficient lookups.
 type LocalResolver struct {
-	refs   []reference.Reference
-	byID   map[string]*reference.Reference
-	byDOI  map[string]*reference.Reference
-	byS2ID map[string]*reference.Reference
+	refs    []reference.Reference
+	byID    map[string]*reference.Reference
+	byDOI   map[string]*reference.Reference
+	byArXiv map[string]*reference.Reference
+	byS2ID  map[string]*reference.Reference
 }
+
+// arXivDOIPrefix is the normalized DOI prefix arXiv assigns its preprints.
+const arXivDOIPrefix = "10.48550/arxiv."
 
 // NewLocalResolver creates a LocalResolver by loading references from a refs.jsonl file.
 // Returns an error if the file cannot be read or parsed.
@@ -32,21 +38,32 @@ func NewLocalResolver(refsPath string) (*LocalResolver, error) {
 // This is useful when references are already in memory.
 func NewLocalResolverFromRefs(refs []reference.Reference) *LocalResolver {
 	r := &LocalResolver{
-		refs:   refs,
-		byID:   make(map[string]*reference.Reference),
-		byDOI:  make(map[string]*reference.Reference),
-		byS2ID: make(map[string]*reference.Reference),
+		refs:    refs,
+		byID:    make(map[string]*reference.Reference),
+		byDOI:   make(map[string]*reference.Reference),
+		byArXiv: make(map[string]*reference.Reference),
+		byS2ID:  make(map[string]*reference.Reference),
 	}
 
 	for i := range refs {
 		ref := &refs[i]
 		r.byID[ref.ID] = ref
 		if ref.DOI != "" {
-			r.byDOI[NormalizeDOI(ref.DOI)] = ref
+			doi := NormalizeDOI(ref.DOI)
+			r.byDOI[doi] = ref
+			if id, ok := strings.CutPrefix(doi, arXivDOIPrefix); ok {
+				r.byArXiv[id] = ref
+			}
 		}
-		// Index by S2 ID if source is s2
+		if ref.ArXivID != "" {
+			r.byArXiv[strings.ToLower(ref.ArXivID)] = ref
+		}
+		// Index by S2 ID if source is s2, or if an import recorded one
 		if ref.Source.Type == "s2" && ref.Source.ID != "" {
 			r.byS2ID[ref.Source.ID] = ref
+		}
+		if ref.S2ID != "" {
+			r.byS2ID[ref.S2ID] = ref
 		}
 	}
 
@@ -101,12 +118,19 @@ func (r *LocalResolver) FindByS2ID(s2ID string) (*reference.Reference, bool) {
 }
 
 // ExistsLocally checks if an S2Paper exists in the local collection.
-// It checks by DOI first, then by S2 paper ID. Returns the matching
+// It checks by DOI first, then by arXiv ID, then by S2 paper ID. Returns the matching
 // reference and true if found, nil and false otherwise.
 func (r *LocalResolver) ExistsLocally(paper S2Paper) (*reference.Reference, bool) {
 	// Check by DOI
 	if paper.ExternalIDs.DOI != "" {
 		if ref, ok := r.FindByDOI(paper.ExternalIDs.DOI); ok {
+			return ref, true
+		}
+	}
+
+	// Check by arXiv ID, which S2 carries without a DOI for many preprints
+	if paper.ExternalIDs.ArXiv != "" {
+		if ref, ok := r.byArXiv[strings.ToLower(paper.ExternalIDs.ArXiv)]; ok {
 			return ref, true
 		}
 	}
