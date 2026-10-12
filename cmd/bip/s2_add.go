@@ -147,8 +147,9 @@ func updateExistingPaper(refsPath string, refs []reference.Reference, existingID
 	// Find and update the existing reference
 	for i, ref := range refs {
 		if ref.ID == existingID {
-			// Keep the ID, the source, and every field S2 leaves empty
-			// (DOI, tags, note, PDF path) from the existing reference.
+			// Keep the ID and every field S2 leaves empty (DOI, tags, note,
+			// PDF path) from the existing reference. Unlike an import, a
+			// refresh is not a new provenance, so the source stays too.
 			newRef = reference.MergeUpdate(ref, newRef)
 			newRef.ID = existingID
 			newRef.Source = ref.Source
