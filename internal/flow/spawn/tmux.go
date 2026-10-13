@@ -114,7 +114,7 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 
 	// Keep the brief out of argv: a 20 KB prompt there is matched by any
 	// other session's `pgrep -f`/`pkill -f`. The runner gets a short pointer
-	// and reads the brief from a file the launcher leaves in place.
+	// and reads the brief from a file that outlives the launcher.
 	briefPath, err := writeBrief(windowName, prompt)
 	if err != nil {
 		return err
@@ -183,19 +183,28 @@ rm -f '%s'
 	return nil
 }
 
-// writeBrief saves the prompt to a temp file and returns its path. The
-// file is not removed after launch: the runner reads it then.
+// writeBrief saves the prompt as <state dir>/bip/briefs/<window>.txt and
+// returns its path. The state dir is $XDG_STATE_HOME, else ~/.local/state,
+// so the file survives a reboot: a worker re-reads its brief after /clear.
+// The next spawn of the same window name overwrites it.
 func writeBrief(windowName, prompt string) (string, error) {
-	f, err := os.CreateTemp("", fmt.Sprintf("brief-%s-*.txt", windowName))
-	if err != nil {
-		return "", fmt.Errorf("creating brief file: %w", err)
+	state := os.Getenv("XDG_STATE_HOME")
+	if state == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("finding home dir: %w", err)
+		}
+		state = filepath.Join(home, ".local", "state")
 	}
-	defer f.Close()
-	if _, err := f.WriteString(prompt); err != nil {
-		os.Remove(f.Name())
+	dir := filepath.Join(state, "bip", "briefs")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("creating briefs dir: %w", err)
+	}
+	path := filepath.Join(dir, windowName+".txt")
+	if err := os.WriteFile(path, []byte(prompt), 0o600); err != nil {
 		return "", fmt.Errorf("writing brief: %w", err)
 	}
-	return f.Name(), nil
+	return path, nil
 }
 
 // briefPointer is the short prompt the runner gets in argv: the brief's
