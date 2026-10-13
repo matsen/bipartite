@@ -16,8 +16,10 @@ It runs from files, not from what it remembers, so it survives every cycle:
 - **`rulings.md`**: only the user's general rulings now in force — the operative words verbatim, the date, the link, a one-line scope. A changed ruling replaces its entry; a superseded one is deleted, never qualified. Git keeps the history.
   Topic rulings live only in their EPIC body, never also here.
 - **`briefs/<topic>.md`**: one per question open with the user — the question, the options, the recommendation, the evidence. Once the user rules, the brief is deleted.
+  A brief opens with its queue block, ended by a line `---`: a heading `# DECIDE: <one-line ask>` or `# DISCUSS: <one-line ask>`, then the recommendation, a short paragraph of why it is the user's, and for a DECIDE the phrase to type; the owner, and since when it has waited. Only questions waiting on the user get a brief.
 
 Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
+At cold start, open the queue pane beside this session: `tmux split-window -h -l 40% -t "$TMUX_PANE" <this skill's dir>/queue-pane "$PWD/briefs"`, unless one is already open. It shows every brief's queue block and redraws when one changes.
 Commit each change to them, then `git pull --rebase && git push` before citing the commit's hash anywhere: other sessions pull that repo with `--ff-only`, and a rebase rewrites a hash that hasn't been pushed.
 
 ## Intake
@@ -54,7 +56,7 @@ The first test screens out work; it is blind to the second. A defect that moves 
 
 This session is the one that pages the user; other sessions escalate here instead (`/bip-conductor`'s "Paging the user").
 Before paging, strike every ask that is the owner's call. Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
-Results that need nothing from the user go into the brief, not to the user. A turn spent answering a peer ends with one line on what changed, or "nothing changed"; the list of what is open goes only in reply to the user's own turn, and leads with where each thread now stands.
+Results that need nothing from the user go into the brief, not to the user. The queue pane is the list of what is open, so no reply repeats it. A turn spent answering a peer ends with one line on what changed, or "nothing changed"; a reply to the user's own turn says what changed since their last one.
 When an ask needs context outside the brief (a PR review, a spec), the session holding it exists before the page and the ask names its window; for a PR, that is a review spawn the reviews ruling allows, started without asking. The page lists every such window still waiting on the user.
 Write for the PI reading cold: each number says what it compares, and each item says what is already done.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
