@@ -240,11 +240,11 @@ func TestCreateWindow_NotFoundInPATH(t *testing.T) {
 
 func TestBriefPointer(t *testing.T) {
 	brief := "You are working on GitHub issue #1416 build (ubuntu-latest, 3.11).\n\nIMPORTANT CONTEXT:\n" + strings.Repeat("x", 20000)
-	got := briefPointer(brief, "/c/bip/briefs/w-1.txt")
+	got := briefPointer(brief, "/tmp/brief-w-1.txt")
 	if !strings.HasPrefix(got, "You are working on GitHub issue #1416") {
 		t.Errorf("pointer should start with the brief's first line, got %q", got)
 	}
-	if !strings.Contains(got, "/c/bip/briefs/w-1.txt") {
+	if !strings.Contains(got, "/tmp/brief-w-1.txt") {
 		t.Errorf("pointer should name the brief path, got %q", got)
 	}
 	if strings.Contains(got, "IMPORTANT CONTEXT") || len(got) > 400 {
@@ -258,14 +258,14 @@ func TestBriefPointer(t *testing.T) {
 }
 
 func TestWriteBrief(t *testing.T) {
-	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("TMPDIR", t.TempDir())
 	brief := "line one\nline two"
 	path, err := writeBrief("dasm2#1416", brief)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(filepath.Base(path), "#") {
-		t.Errorf("brief file name should not carry '#': %s", path)
+	if filepath.Dir(path) != os.Getenv("TMPDIR") {
+		t.Errorf("brief file should be in TMPDIR, got %s", path)
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

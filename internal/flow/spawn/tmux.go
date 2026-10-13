@@ -114,31 +114,23 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 
 	// Keep the brief out of argv: a 20 KB prompt there is matched by any
 	// other session's `pgrep -f`/`pkill -f`. The runner gets a short pointer
-	// and reads the brief from a file that outlives the launcher.
+	// and reads the brief from a file the launcher leaves in place.
 	briefPath, err := writeBrief(windowName, prompt)
 	if err != nil {
 		return err
 	}
-	pointer := briefPointer(prompt, briefPath)
+	launched := false
+	defer func() {
+		if !launched {
+			os.Remove(briefPath)
+		}
+	}()
+	pointer := strings.ReplaceAll(briefPointer(prompt, briefPath), "'", `'\''`)
 
 	// Write a launcher script that shows the brief in the pane and passes
-	// the pointer to the agent runner through a bash variable, so neither is
-	// interpreted by the shell.
-	pointerFile, err := os.CreateTemp("", fmt.Sprintf("pointer-%s-*.txt", windowName))
-	if err != nil {
-		return fmt.Errorf("creating pointer file: %w", err)
-	}
-	pointerPath := pointerFile.Name()
-	_, err = pointerFile.WriteString(pointer)
-	pointerFile.Close()
-	if err != nil {
-		os.Remove(pointerPath)
-		return fmt.Errorf("writing pointer: %w", err)
-	}
-
+	// the pointer to the agent runner through a bash variable.
 	launcherFile, err := os.CreateTemp("", fmt.Sprintf("launcher-%s-*.sh", windowName))
 	if err != nil {
-		os.Remove(pointerPath)
 		return fmt.Errorf("creating launcher: %w", err)
 	}
 
@@ -150,13 +142,12 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 	launcherContent := fmt.Sprintf(`#!/bin/bash
 %scat '%s'
 echo '---'
-prompt=$(<'%s')
-rm -f '%s' '%s'
+prompt='%s'
+rm -f '%s'
 %s
-`, urlLine, briefPath, pointerPath, pointerPath, launcherPath, invocation)
+`, urlLine, briefPath, pointer, launcherPath, invocation)
 
 	if _, err := launcherFile.WriteString(launcherContent); err != nil {
-		os.Remove(pointerPath)
 		os.Remove(launcherPath)
 		launcherFile.Close()
 		return fmt.Errorf("writing launcher: %w", err)
@@ -164,7 +155,6 @@ rm -f '%s' '%s'
 	launcherFile.Close()
 
 	if err := os.Chmod(launcherPath, 0755); err != nil {
-		os.Remove(pointerPath)
 		os.Remove(launcherPath)
 		return fmt.Errorf("chmod launcher: %w", err)
 	}
@@ -173,7 +163,6 @@ rm -f '%s' '%s'
 	cmd := exec.Command("tmux", "new-window", "-d", "-n", windowName, "-c", repoPath, "-P")
 	output, err := cmd.Output()
 	if err != nil {
-		os.Remove(pointerPath)
 		os.Remove(launcherPath)
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("creating window: %s", string(exitErr.Stderr))
@@ -190,23 +179,14 @@ rm -f '%s' '%s'
 		return fmt.Errorf("sending command to window: %w", err)
 	}
 
+	launched = true
 	return nil
 }
 
-// writeBrief saves the prompt under the user cache dir as
-// bip/briefs/<window>-*.txt and returns its path. The file is kept: the
-// runner reads it after launch, and a worker may re-read it later.
+// writeBrief saves the prompt to a temp file and returns its path. The
+// file is not removed after launch: the runner reads it then.
 func writeBrief(windowName, prompt string) (string, error) {
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return "", fmt.Errorf("finding cache dir: %w", err)
-	}
-	dir := filepath.Join(cache, "bip", "briefs")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return "", fmt.Errorf("creating briefs dir: %w", err)
-	}
-	safe := strings.NewReplacer("/", "_", "#", "-").Replace(windowName)
-	f, err := os.CreateTemp(dir, safe+"-*.txt")
+	f, err := os.CreateTemp("", fmt.Sprintf("brief-%s-*.txt", windowName))
 	if err != nil {
 		return "", fmt.Errorf("creating brief file: %w", err)
 	}
