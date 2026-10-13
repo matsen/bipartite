@@ -39,10 +39,10 @@ Snippets `/bip-conductor-spawn` Step 4 appends under `IMPORTANT CONTEXT:` when t
 
 *In either mode, also include:*
 ```
-- Before a fan-out, project its bytes (smoke per-cell size × cells) and
-  keep them under half of `df` free where they land. Write outputs to
-  /fh/fast as they finish; never pile them up in a host's /tmp, which is
-  small and shared. Per-host scratch and limits:
+- Before a fan-out, project its bytes (`du` of everything a smoke cell
+  writes, × cells) and keep them under half of `df` free where they
+  land. Write outputs to /fh/fast as they finish; never pile them up in
+  a host's /tmp, which is small and shared. Per-host scratch and limits:
   https://github.com/matsengrp/wiki/wiki/cluster
 ```
 
