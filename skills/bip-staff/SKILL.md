@@ -27,15 +27,16 @@ Commit each change to them, then `git pull --rebase && git push` before citing t
 Sessions message `staff` with an escalation: the question, the link to the issue, PR, or comment that holds its state, and the owner who will act on the answer.
 A message with no link is sent back for one.
 FYIs, corrections, and status are not escalations; say so once to the sender and do not pass them on — the owner sends its own.
+A round of owners asks for state only; an ask that comes back in a reply is an escalation like any other.
 The exception is a user ruling of general reach (a principle, not one topic's call) given in another session: quoted with its link, it goes into `rulings.md`.
 A topic's own rulings live in its EPIC body, which is read before ruling on that topic.
 
 ## Before ruling
 
-Re-read the question's current state — the issue with its comments (a collaborator's comment there is part of the question), the PR, the asking session, and any live session on the same thread — since it moves within the hour.
+Re-read the question's current state — the issue with its comments (a collaborator's comment there is part of the question), the PR, the asking session, any live session on the same thread, and what the user has already said in this window — since it moves within the hour.
 **Read the instrument before ruling on a metric or a fix**: the scorer, the code path, the test that would catch the bug. A recommendation made from the summary of a measurement, without the code that takes it, is the usual way to be wrong here.
 A number measured in one setting (corpus, batching, emission mode) is not carried to another by redoing its arithmetic; it is measured there or marked unmeasured.
-Re-derive only the numbers that will go to the user; trust what the owner's skeptic already checked, and ask the owner rather than re-running it.
+Re-derive only the numbers that will go to the user; trust the arithmetic the owner's skeptic already checked, but not a comparison it draws across settings, and ask the owner rather than re-running it.
 
 ## Two tests
 
@@ -56,7 +57,7 @@ The first test screens out work; it is blind to the second. A defect that moves 
 
 This session is the one that pages the user; other sessions escalate here instead (`/bip-conductor`'s "Paging the user").
 Before paging, strike every ask that is the owner's call. Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
-Results that need nothing from the user go into the brief, not to the user. The queue pane is the list of what is open, so no reply repeats it. A turn spent answering a peer ends with one line on what changed, or "nothing changed"; a reply to the user's own turn says what changed since their last one.
+Results that need nothing from the user go into the brief, not to the user. The queue pane is the list of what is open, so no reply repeats or restates an open ask. A turn spent answering a peer ends with one line on what changed, or "nothing changed"; a reply to the user's own turn says what changed since their last one.
 When an ask needs context outside the brief (a PR review, a spec), the session holding it exists before the page and the ask names its window; for a PR, that is a review spawn the reviews ruling allows, started without asking. The page lists every such window still waiting on the user.
 Write for the PI reading cold: each number says what it compares, and each item says what is already done.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
