@@ -28,13 +28,24 @@ render() {
   printf '# Waiting on you: %d\n\nupdated %s\n\n%s' "$n" "$(newest=$(ls -t "$dir"/*.md 2>/dev/null | head -1); [ -n "$newest" ] && date -u -r "$newest" +%H:%MZ)" "$body"
 }
 
-last=""
-while :; do
-  sig=$(stat -c '%n %Y' "$dir" "$dir"/*.md 2>/dev/null | md5sum)
-  if [ "$sig" != "$last" ]; then
-    last=$sig
-    clear
-    render | glow -s "$style" -w "$(( $(tput cols) - 2 ))" -
-  fi
-  sleep 2
-done
+# glow's TUI views one file and reloads it on change, so a background loop
+# recomposes that file when a brief changes. It lives beside the briefs, not
+# in /tmp (snap glow has a private /tmp), and is written in place because a
+# rename can drop glow's watch.
+out="$dir/../_ignore/queue.md"
+mkdir -p "$(dirname "$out")"
+(
+  last=""
+  while :; do
+    sig=$(stat -c '%n %Y' "$dir" "$dir"/*.md 2>/dev/null | md5sum)
+    if [ "$sig" != "$last" ]; then
+      last=$sig
+      render > "$out"
+    fi
+    sleep 2
+  done
+) &
+loop=$!
+trap 'kill $loop 2>/dev/null' EXIT
+sleep 1
+glow -t -s "$style" "$out"
