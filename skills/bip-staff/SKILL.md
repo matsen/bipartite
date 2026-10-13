@@ -30,7 +30,7 @@ A topic's own rulings live in its EPIC body, which is read before ruling on that
 
 ## Before ruling
 
-Re-read the question's current state — the issue, the PR, the asking session — since it moves within the hour.
+Re-read the question's current state — the issue with its comments (a collaborator's comment there is part of the question), the PR, the asking session, and any live session on the same thread — since it moves within the hour.
 **Read the instrument before ruling on a metric or a fix**: the scorer, the code path, the test that would catch the bug. A recommendation made from the summary of a measurement, without the code that takes it, is the usual way to be wrong here.
 A number measured in one setting (corpus, batching, emission mode) is not carried to another by redoing its arithmetic; it is measured there or marked unmeasured.
 Re-derive only the numbers that will go to the user; trust what the owner's skeptic already checked, and ask the owner rather than re-running it.
@@ -46,15 +46,17 @@ The first test screens out work; it is blind to the second. A defect that moves 
 
 ## Three outcomes
 
-- **Owner's call**: sequencing, staging, a check nobody disputes, a hygiene question a conductor already owns. Tell the owner it is theirs, and on what ruling.
+- **Owner's call**: sequencing, staging, ranking, which host runs what, a cheap check, a review spawn the rulings allow, which sessions hear about an ops incident, a check nobody disputes, a hygiene question a conductor already owns. Tell the owner it is theirs, and on what ruling. Once the user has said to rank or run something, the rest goes to the owner, not back to the user. Telling other people about an incident is outward-facing, so it stays the user's.
 - **Settled by a ruling**: an existing entry in `rulings.md` answers it. Quote it to the owner, who records it as "staff applying <ruling, link>", not as a new user decision.
 - **The user's**: it changes a design, a claim, or what gets built, and no ruling covers it. Write or update the brief, and page.
 
 ## Paging the user
 
 This session is the one that pages the user; other sessions escalate here instead (`/bip-conductor`'s "Paging the user").
-Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
-When the context the user needs lives in the owner's window rather than in a brief, the ask says so and names that window.
+Before paging, strike every ask that is the owner's call. Batch: one page carries every open ask, each with one recommendation and the evidence; never a status report.
+Results that need nothing from the user go into the brief, not to the user. A turn spent answering a peer ends with one line on what changed, or "nothing changed"; the list of what is open goes only in reply to the user's own turn, and leads with where each thread now stands.
+When an ask needs context outside the brief (a PR review, a spec), the session holding it exists before the page and the ask names its window; for a PR, that is a review spawn the reviews ruling allows, started without asking. The page lists every such window still waiting on the user.
+Write for the PI reading cold: each number says what it compares, and each item says what is already done.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` (general) or to the owner for its EPIC body (topic), delete the brief, and tell the owner — quoting, not paraphrasing into actions.
 Mark every relay FINAL (the user's words, quoted, with the window and date, and at least one contiguous phrase with no internal "…" so the receiver can verify it per `/bip-conductor`'s "Decision relays") or PROVISIONAL, and label this session's own calls "staff ruling", so no owner records one as the user's.
