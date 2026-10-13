@@ -52,14 +52,6 @@ Snippets `/bip-conductor-spawn` Step 4 appends under `IMPORTANT CONTEXT:` when t
 - Wrap the experiment in a Snakemake workflow
 ```
 
-**Next to any build or run command you put in the prompt** (not in a separate warnings section), add:
-```
-- This exact command string is in YOUR OWN argv (a bip spawn worker's prompt IS
-  its command line), so `pgrep -f` or `ps | grep` on ANY fragment of it matches
-  your own session and a wait loop built from it can never exit. Poll a PID you
-  captured at launch (`$!`), or just let a backgrounded Bash re-invoke you.
-```
-
 **If the issue adds a build-system target**, list as a deliverable whatever makes that target discoverable in the repo (a hand-maintained test-target table, a `make help` entry, a CI matrix row). On `matsengrp/phyz` the source→target table is the only lookup that exists, so a step absent from it is unreachable. If nothing makes it discoverable, say so in the brief.
 
 **For code changes:**
