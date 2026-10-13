@@ -90,7 +90,7 @@ At every cold start, make the body's `Owner:` line this session's exact `ListAge
 If it names another live session, stop and ask staff rather than take it over.
 Make `_ignore/CONTINUE-epic-<N>.md` carry the line `Session: <that name>`, creating the file if needed, so `/bip-tuckin` can tell this session is an epic before its first tuckin.
 Rule on how to test and on whether a result answers the EPIC; a claim that your own hypothesis holds goes into the body only once someone else has re-derived it, as the guide says, and the entry names the checker.
-Consult the papers in the `Feeds:` line before changing direction. Send each landed or reported result to the ms session named there as it arrives, marked checked, reported or provisional; it goes into that session's notes record even while the paper waits.
+Consult the papers in the `Feeds:` line before changing direction; each has a summary at `nexus/papers/ms-<owner>-<repo>.md`. Send each landed or reported result to the ms session named there as it arrives, marked checked, reported or provisional; it goes into that session's notes record even while the paper waits.
 
 ### Step 2: Fan out scanners
 
