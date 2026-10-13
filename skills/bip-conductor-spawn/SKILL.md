@@ -239,7 +239,7 @@ grep -n '{{' /tmp/spawn-<N>.txt   # must print nothing
 
 To check what the brief tells workers on one topic, grep it (`grep -n -A8 'DEFERRAL RULE' "$B/worker-brief.txt"`) rather than reading the whole file.
 
-**Context additions.** Standard snippets for the context section are in `context-additions.md` in this skill's directory: filesystem mode (always, when the work runs jobs on remote nodes; chosen by `shared_filesystem`), experiments, the own-argv `pgrep` warning (next to any build or run command), build-system targets, code changes (including phyz's stale-binary check), and phased work. Read it when the issue calls for one of them.
+**Context additions.** Standard snippets for the context section are in `context-additions.md` in this skill's directory: filesystem mode (always, when the work runs jobs on remote nodes; chosen by `shared_filesystem`), experiments, build-system targets, code changes (including phyz's stale-binary check), and phased work. Read it when the issue calls for one of them.
 
 ### Step 5: Launch tmux window
 

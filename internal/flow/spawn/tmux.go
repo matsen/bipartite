@@ -112,25 +112,25 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 		return fmt.Errorf("agent runner %q not found in PATH: %w", executable, err)
 	}
 
-	// Write prompt to temp file
-	promptFile, err := os.CreateTemp("", fmt.Sprintf("review-%s-*.txt", windowName))
+	// Keep the brief out of argv: a 20 KB prompt there is matched by any
+	// other session's `pgrep -f`/`pkill -f`. The runner gets a short pointer
+	// and reads the brief from a file that outlives the launcher.
+	briefPath, err := writeBrief(windowName, prompt)
 	if err != nil {
-		return fmt.Errorf("creating temp file: %w", err)
+		return err
 	}
-	defer promptFile.Close()
+	launched := false
+	defer func() {
+		if !launched {
+			os.Remove(briefPath)
+		}
+	}()
+	pointer := strings.ReplaceAll(briefPointer(prompt, briefPath), "'", `'\''`)
 
-	if _, err := promptFile.WriteString(prompt); err != nil {
-		os.Remove(promptFile.Name())
-		return fmt.Errorf("writing prompt: %w", err)
-	}
-	promptPath := promptFile.Name()
-
-	// Write a launcher script that reads the prompt into a bash variable
-	// and passes it to the agent runner. This avoids zsh shell expansion issues —
-	// the prompt content never gets interpreted by the shell.
+	// Write a launcher script that shows the brief in the pane and passes
+	// the pointer to the agent runner through a bash variable.
 	launcherFile, err := os.CreateTemp("", fmt.Sprintf("launcher-%s-*.sh", windowName))
 	if err != nil {
-		os.Remove(promptPath)
 		return fmt.Errorf("creating launcher: %w", err)
 	}
 
@@ -142,13 +142,12 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 	launcherContent := fmt.Sprintf(`#!/bin/bash
 %scat '%s'
 echo '---'
-prompt=$(<'%s')
-rm -f '%s' '%s'
+prompt='%s'
+rm -f '%s'
 %s
-`, urlLine, promptPath, promptPath, promptPath, launcherPath, invocation)
+`, urlLine, briefPath, pointer, launcherPath, invocation)
 
 	if _, err := launcherFile.WriteString(launcherContent); err != nil {
-		os.Remove(promptPath)
 		os.Remove(launcherPath)
 		launcherFile.Close()
 		return fmt.Errorf("writing launcher: %w", err)
@@ -156,7 +155,6 @@ rm -f '%s' '%s'
 	launcherFile.Close()
 
 	if err := os.Chmod(launcherPath, 0755); err != nil {
-		os.Remove(promptPath)
 		os.Remove(launcherPath)
 		return fmt.Errorf("chmod launcher: %w", err)
 	}
@@ -165,7 +163,6 @@ rm -f '%s' '%s'
 	cmd := exec.Command("tmux", "new-window", "-d", "-n", windowName, "-c", repoPath, "-P")
 	output, err := cmd.Output()
 	if err != nil {
-		os.Remove(promptPath)
 		os.Remove(launcherPath)
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			return fmt.Errorf("creating window: %s", string(exitErr.Stderr))
@@ -182,7 +179,42 @@ rm -f '%s' '%s'
 		return fmt.Errorf("sending command to window: %w", err)
 	}
 
+	launched = true
 	return nil
+}
+
+// writeBrief saves the prompt as <state dir>/bip/briefs/<window>.txt and
+// returns its path. The state dir is $XDG_STATE_HOME, else ~/.local/state,
+// so the file survives a reboot: a worker re-reads its brief after /clear.
+// The next spawn of the same window name overwrites it.
+func writeBrief(windowName, prompt string) (string, error) {
+	state := os.Getenv("XDG_STATE_HOME")
+	if state == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("finding home dir: %w", err)
+		}
+		state = filepath.Join(home, ".local", "state")
+	}
+	dir := filepath.Join(state, "bip", "briefs")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("creating briefs dir: %w", err)
+	}
+	path := filepath.Join(dir, windowName+".txt")
+	if err := os.WriteFile(path, []byte(prompt), 0o600); err != nil {
+		return "", fmt.Errorf("writing brief: %w", err)
+	}
+	return path, nil
+}
+
+// briefPointer is the short prompt the runner gets in argv: the brief's
+// first line, so session listings still show the topic, and the brief's path.
+func briefPointer(prompt, path string) string {
+	first, _, _ := strings.Cut(strings.TrimSpace(prompt), "\n")
+	if r := []rune(first); len(r) > 200 {
+		first = string(r[:200]) + "…"
+	}
+	return fmt.Sprintf("%s\n\nYour full brief is in %s. Read all of it before doing anything else, and follow it.", first, path)
 }
 
 // buildClaudeInvocation returns the shell command that launches claude, with

@@ -328,7 +328,7 @@ When the event carries a `key`, put it in the new issue's title or in a comment 
 
 When several slots go quiet at once, ask what they share — host, rate budget, mount, a fresh commit — before investigating one.
 Silence is never "still running".
-For process questions (what runs in the pool, a slot reading `shell`), never match argv — a worker's whole prompt is its argv — and follow `process-checks.md` in this skill's directory.
+For process questions (what runs in the pool, a slot reading `shell`), never match argv — it matches the asking shell and other sessions — and follow `process-checks.md` in this skill's directory.
 
 ## Slot staleness
 

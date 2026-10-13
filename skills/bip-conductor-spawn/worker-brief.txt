@@ -70,9 +70,11 @@ AWAITING RESULTS — if you launch a long-running experiment:
 4. After 3 consecutive check failures, set stop_reason to
    mechanical-blocker and invoke the lead.
 
-WAITING: poll a PID you captured at launch (`$!`), never a pattern — this
-prompt is your argv, so `pgrep -f` or `ps | grep` matches your own session
-and never exits. Better: background the command and let the harness
+WAITING AND KILLING: poll or kill a PID you captured at launch (`$!`;
+`pkill -P <pid>` for its children), never a pattern. `pgrep -f`,
+`pkill -f` and `ps | grep` match every process on the host, other
+sessions and your own pattern-matching shell included.
+Better: background the command and let the harness
 re-invoke you. A long foreground command makes you unreachable to
 SendMessage. Ending a turn does not idle under the ralph loop: its stop
 hook re-feeds you at once and spends an iteration. When a background task

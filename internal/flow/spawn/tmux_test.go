@@ -1,6 +1,7 @@
 package spawn
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -234,5 +235,44 @@ func TestCreateWindow_NotFoundInPATH(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "not found in PATH") {
 		t.Errorf("CreateWindow error = %q, want containing 'not found in PATH'", err.Error())
+	}
+}
+
+func TestBriefPointer(t *testing.T) {
+	brief := "You are working on GitHub issue #1416 build (ubuntu-latest, 3.11).\n\nIMPORTANT CONTEXT:\n" + strings.Repeat("x", 20000)
+	got := briefPointer(brief, "/s/bip/briefs/w.txt")
+	if !strings.HasPrefix(got, "You are working on GitHub issue #1416") {
+		t.Errorf("pointer should start with the brief's first line, got %q", got)
+	}
+	if !strings.Contains(got, "/s/bip/briefs/w.txt") {
+		t.Errorf("pointer should name the brief path, got %q", got)
+	}
+	if strings.Contains(got, "IMPORTANT CONTEXT") || len(got) > 400 {
+		t.Errorf("pointer should carry only the first line, got %d bytes", len(got))
+	}
+
+	long := briefPointer(strings.Repeat("é", 300), "/p")
+	if first, _, _ := strings.Cut(long, "\n"); len([]rune(first)) != 201 {
+		t.Errorf("first line should be cut to 200 runes plus an ellipsis, got %d runes", len([]rune(first)))
+	}
+}
+
+func TestWriteBrief(t *testing.T) {
+	state := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", state)
+	brief := "line one\nline two"
+	path, err := writeBrief("dasm2#1416", brief)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(state, "bip", "briefs", "dasm2#1416.txt"); path != want {
+		t.Errorf("brief path = %s, want %s", path, want)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != brief {
+		t.Errorf("brief file = %q, want %q", data, brief)
 	}
 }

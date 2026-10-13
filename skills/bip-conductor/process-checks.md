@@ -1,6 +1,6 @@
 # /bip-conductor process checks
 
-A `bip spawn` worker's entire spawn prompt is its argv, so **never match argv** (`pgrep -f`, `ps | grep`) for a question about processes: it matches every worker whose prompt mentions the string, and the asking shell itself.
+**Never match argv** (`pgrep -f`, `ps | grep`) for a question about processes: it matches the asking shell itself and every process whose command line mentions the string, other sessions' included.
 Enumerate by exact name and attribute by working directory:
 
 ```bash
