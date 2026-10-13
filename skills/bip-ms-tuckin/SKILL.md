@@ -78,6 +78,11 @@ Everything below lives in the repo.
 
 Only update what changed. Do not rewrite unchanged files.
 
+### Step 4b: Update the nexus summary
+
+If the paper changed in substance since the commit that `nexus/papers/ms-<owner>-<repo>.md` records, or the file doesn't exist, rewrite it from a pushed commit (format in nexus `papers/README.md`): the paper's own evidence status first (a do-not-cite banner, first-pass numbers), then the main claims, each with its section or `\label`; what is settled and what is open; which of the group's earlier papers it builds on.
+Cite only the remote and the commit, never a local path. Delete superseded claims rather than qualifying them. Commit and push nexus.
+
 ### Step 5: Verify build
 
 ```bash
