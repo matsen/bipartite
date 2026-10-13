@@ -10,6 +10,7 @@ Apply these whenever you cite a number or write a correction: in an issue, PR, c
 - Check that it reaches a file a reader can open. Gitignored or local-only paths don't count.
 - For "which items have property P", derive the population from P, not from the items you already had. Re-derivation cannot find a missing member.
 - A partial result licenses no direction. Wait for the whole result, or report only what has arrived and say what hasn't.
+- A clock time is a measurement. Write one only from `date -u`, a log line, or a transcript timestamp read in this turn; a long session's sense of "now" drifts by tens of minutes.
 
 ## Name the question your check answers, not the one you asked
 
