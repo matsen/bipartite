@@ -178,17 +178,10 @@ tmux list-windows -a -F '#W'
 find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)
 find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
   -exec jq -c --arg f {} '{f: $f, issue, phase, summary, scope, stop_reason, lead_guidance}' {} \;
-REPO=$(jq -r .github_repo .epic-config.json); ME=$(gh api user -q .login)
-for n in $(gh search prs --review-requested=@me --state=open --repo "$REPO" \
-             --updated ">=$(date -u -d '30 days ago' +%F)" --json number -q '.[].number'); do
-  gh pr view "$n" -R "$REPO" --json number,title,commits,comments,reviews | jq -c --arg me "$ME" '
-    .commits[-1].committedDate as $h
-    | select([(.comments[], .reviews[]) | select(.author.login == $me and (.body | startswith("🤖") | not)) | (.submittedAt // .createdAt)
-              | select(. > $h)] | length == 0) | {number, title}'
-done
+"$(dirname "<this-skill's-base-directory>")/bip-inbox/inbox" .epic-config.json
 ```
 
-Each PR the loop prints, unless it has a live `r<N>-*` window, gets a review spawn in Step 6 without asking: the request is the go. It lists a PR the user's review is requested on, updated in the last 30 days (user, 2026-10-14: "30 days is fine"), that the user hasn't commented on or reviewed since its last commit; drafts count, since a review request doesn't need ready. A comment doesn't clear a review request, so the loop checks for one itself, skipping 🤖 comments, which agents post under the user's account; a new push brings the PR back.
+Act on each line the inbox prints, as `/bip-inbox` says: review requests get a review spawn without asking, and humans' comments and reviews on fleet PRs go to the slot or the EPIC owner.
 
 Worktree mode: slots are `$CLONE_ROOT/issue-*`, and `bip fleet currency` doesn't cover them.
 
@@ -329,7 +322,7 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation).
+So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation), and one running the inbox every 10 minutes (`while :; do <inbox> .epic-config.json; sleep 600; done`), acting on each line as `/bip-inbox` says.
 Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
