@@ -16,7 +16,7 @@ The two coordinate over `SendMessage` and `$CLONE_ROOT/.spawn-prompts/`.
 - The **slot protocol** (`.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch`) applies to every spawn, whatever its source; the `.epic-` prefix is legacy.
 - **Epic-originated** work arrives as a brief in `.spawn-prompts/`: the epic has judged it worth a slot, so check only mechanics — gates, staleness, host and slot availability, collisions.
 - A **code review of someone else's PR** is a spawn too (user, 2026-10-09): claim a clone, `gh pr checkout <N>`, run `/bip-pr-review`, never `/code-review`. Nothing is pushed; posting follows `docs/guides/roles.md` ("Posting to GitHub").
-  A review for the user needs a GitHub review request to the user on that PR, or the user's own words; a peer's or staff's ask alone is not enough (user, 2026-10-14). Name the window `r<N>-<slot>`; it writes its findings to `_ignore/REVIEW-p<N>.md` and stays open for the user. Hold the clone in `.holds/` while the window lives, and reclaim it by hand once the window is gone.
+  A review for the user needs a GitHub review request to the user on that PR, or the user's own words; a peer's or staff's ask alone is not enough (user, 2026-10-14). Name the window `r<N>-<slot>`; it writes its findings to `_ignore/REVIEW-p<N>.md` and stays open for the user. Hold the clone in `.holds/` while the window lives. Once the window is gone, copy `REVIEW-p<N>.md` to `.preserved/r<N>-<date>/` (the next spawn's reset deletes `_ignore/`), delete the local copy of the author's branch, and reclaim the clone by hand.
 - **User-originated** work may have no EPIC.
   Never reject, defer, or route it to the epic for lacking one.
 
@@ -178,11 +178,17 @@ tmux list-windows -a -F '#W'
 find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)
 find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
   -exec jq -c --arg f {} '{f: $f, issue, phase, summary, scope, stop_reason, lead_guidance}' {} \;
-gh search prs --review-requested=@me --state=open --draft=false \
-  --repo "$(jq -r .github_repo .epic-config.json)" --json number,title,url
+REPO=$(jq -r .github_repo .epic-config.json); ME=$(gh api user -q .login)
+for n in $(gh search prs --review-requested=@me --state=open --draft=false --repo "$REPO" \
+             --updated ">=$(date -u -d '30 days ago' +%F)" --json number -q '.[].number'); do
+  gh pr view "$n" -R "$REPO" --json number,title,commits,comments,reviews | jq -c --arg me "$ME" '
+    .commits[-1].committedDate as $h
+    | select([(.comments[], .reviews[]) | select(.author.login == $me) | (.submittedAt // .createdAt)
+              | select(. > $h)] | length == 0) | {number, title}'
+done
 ```
 
-Each PR that last command lists without a live `r<N>-*` window gets a review spawn in Step 6 without asking: the request is the go. A submitted review clears the request, so a PR drops off the list once the user has reviewed it, and comes back if the author asks again.
+Each PR the loop prints, unless it has a live `r<N>-*` window, gets a review spawn in Step 6 without asking: the request is the go. It lists a PR the user's review is requested on, updated in the last 30 days (user, 2026-10-14: "30 days is fine"), that the user hasn't commented on or reviewed since its last commit. A comment doesn't clear a review request, so the loop checks for one itself; a new push brings the PR back.
 
 Worktree mode: slots are `$CLONE_ROOT/issue-*`, and `bip fleet currency` doesn't cover them.
 
