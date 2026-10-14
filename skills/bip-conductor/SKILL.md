@@ -15,7 +15,8 @@ The two coordinate over `SendMessage` and `$CLONE_ROOT/.spawn-prompts/`.
 - An **EPIC** is a GitHub tracking issue; its **epic agent** is the `/bip-epic` session its body's `Owner:` line names. A fleet can serve several EPICs, each with its own epic (`docs/guides/roles.md`).
 - The **slot protocol** (`.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch`) applies to every spawn, whatever its source; the `.epic-` prefix is legacy.
 - **Epic-originated** work arrives as a brief in `.spawn-prompts/`: the epic has judged it worth a slot, so check only mechanics — gates, staleness, host and slot availability, collisions.
-- A **code review of someone else's PR** is a spawn too (user, 2026-10-09): claim a clone, `gh pr checkout <N>`, run `/bip-pr-review`, never `/code-review`. Nothing is pushed; posting follows `docs/guides/roles.md` ("Posting to GitHub"). Reclaim the clone by hand afterwards: `reclaim_slot` holds on a PR that isn't merged.
+- A **code review of someone else's PR** is a spawn too (user, 2026-10-09): claim a clone, `gh pr checkout <N>`, run `/bip-pr-review`, never `/code-review`. Nothing is pushed; posting follows `docs/guides/roles.md` ("Posting to GitHub").
+  A review for the user needs a GitHub review request to the user on that PR, or the user's own words; a peer's or staff's ask alone is not enough (user, 2026-10-14). Name the window `r<N>-<slot>`; it writes its findings to `_ignore/REVIEW-p<N>.md` and stays open for the user. Hold the clone in `.holds/` while the window lives. Once the window is gone, copy `REVIEW-p<N>.md` to `.preserved/r<N>-<date>/` (the next spawn's reset deletes `_ignore/`), delete the local copy of the author's branch, and reclaim the clone by hand.
 - **User-originated** work may have no EPIC.
   Never reject, defer, or route it to the epic for lacking one.
 
@@ -177,7 +178,10 @@ tmux list-windows -a -F '#W'
 find "$CLONE_ROOT/.spawn-prompts" -maxdepth 1 \( -name '*.md' -o -name 'spawn-*.txt' \)
 find "$CLONE_ROOT" -mindepth 2 -maxdepth 2 -name .epic-status.json \
   -exec jq -c --arg f {} '{f: $f, issue, phase, summary, scope, stop_reason, lead_guidance}' {} \;
+"$(dirname "<this-skill's-base-directory>")/bip-inbox/inbox" .epic-config.json
 ```
+
+Act on each line the inbox prints, as `/bip-inbox` says: review requests get a review spawn without asking, and humans' comments and reviews on fleet PRs go to the slot or the EPIC owner.
 
 Worktree mode: slots are `$CLONE_ROOT/issue-*`, and `bip fleet currency` doesn't cover them.
 
@@ -318,7 +322,7 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation).
+So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation), and one running the inbox every 10 minutes (`while :; do <inbox> .epic-config.json; sleep 600; done`), acting on each line as `/bip-inbox` says.
 Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
