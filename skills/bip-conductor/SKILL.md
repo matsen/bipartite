@@ -322,8 +322,20 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also run one Monitor that every 10 minutes polls `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation) and runs the inbox (`<inbox> .epic-config.json`), acting on each inbox line as `/bip-inbox` says. One loop for both keeps an idle night to that Monitor's own re-arms.
-Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
+So also watch merged PRs (`gh pr list` orders by creation, hence the `sort:`) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
+
+```bash
+M() { gh pr list --state merged -L1 --search 'sort:updated-desc' --json number -q '.[0].number'; }
+last=$(M)
+while :; do
+  out=$(<inbox> .epic-config.json 2>&1) || { echo "inbox failed: $out"; break; }
+  [ -n "$out" ] && { echo "$out"; break; }
+  [ "$(M)" != "$last" ] && { echo "merged: #$(M)"; break; }
+  sleep 600
+done
+```
+
+and, for the log, `f=.epic-notifications.log; n=$(wc -l <$f); while [ "$(wc -l <$f)" -le $n ]; do sleep 30; done; tail -n +$((n+1)) $f`. Act on each inbox line as `/bip-inbox` says.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
 A `completed` that the post-merge ceremony set came after the worker had gone, so send it to the EPIC's owner yourself, the same way.
