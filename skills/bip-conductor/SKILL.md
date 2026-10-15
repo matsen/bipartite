@@ -322,7 +322,7 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also run a Monitor polling `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation), and one running the inbox every 10 minutes (`while :; do <inbox> .epic-config.json; sleep 600; done`), acting on each line as `/bip-inbox` says.
+So also run one Monitor that every 10 minutes polls `gh pr list --state merged --search 'sort:updated-desc'` (default order is by creation) and runs the inbox (`<inbox> .epic-config.json`), acting on each inbox line as `/bip-inbox` says. One loop for both keeps an idle night to that Monitor's own re-arms.
 Get events as notifications with a Monitor on `tail -F .epic-notifications.log`; set `timeout_ms: 1800000` on both and re-arm on expiry.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
