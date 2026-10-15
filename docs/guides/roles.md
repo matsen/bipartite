@@ -75,7 +75,7 @@ The session keeps its context, which is why the no-self-judging rule matters mos
 
 An ms session owns one paper.
 It is the project's resource for questions and guidance, from what the project and the field know: it holds the perspective across EPICs and repos, knows the literature (`/bip-lit`), and decides what results mean for the paper, which follows from that perspective.
-An epic consults the papers in its `Feeds:` line before it changes direction; they are consulted, not a gate. It also sends each landed or reported result to the ms session named there as the result arrives, marked checked, reported or provisional, so the result reaches that session's notes record even while the paper waits.
+An epic consults the papers in its `Feeds:` line before it changes direction; they are consulted, not a gate. It also sends each landed or reported result to the ms session named there as the result arrives, marked checked, reported or provisional, so the result reaches that session's notes record even while the paper waits. A result that names a consumer in another EPIC (a repo, an issue, or an owner) goes to that EPIC's owner too, with what it licenses and what it doesn't; that owner replies with the action it will take.
 An ms session owns no EPIC; when a paper session finds itself running one, that EPIC needs its own epic session.
 
 ## Staff: adjudication

@@ -91,6 +91,8 @@ If it names another live session, stop and ask staff rather than take it over.
 Make `_ignore/CONTINUE-epic-<N>.md` carry the line `Session: <that name>`, creating the file if needed, so `/bip-tuckin` can tell this session is an epic before its first tuckin.
 Rule on how to test and on whether a result answers the EPIC; a claim that your own hypothesis holds goes into the body only once someone else has re-derived it, as the guide says, and the entry names the checker.
 Consult the papers in the `Feeds:` line before changing direction; each has a summary at `nexus/papers/ms-<owner>-<repo>.md`. Send each landed or reported result to the ms session named there as it arrives, marked checked, reported or provisional; it goes into that session's notes record even while the paper waits.
+When the result names a consumer outside this EPIC — a repo, a `<repo>#N`, or an owner — send it after merge to that EPIC's `Owner:` too, saying what the result licenses and what it doesn't; never infer a consumer the result doesn't name.
+The consumer's owner replies with the action it will take, so a misreading shows at once, and records it on the consumer issue.
 
 ### Step 2: Fan out scanners
 
@@ -203,6 +205,8 @@ Follow the **EPIC body update pattern** below.
 Do this whenever findings come in, items complete, or new work starts — not on a fixed cadence.
 
 **Prune on every write, not on a separate sweep.** Whenever you touch a body to add a finding or check a box, cut sections whose work is now fully complete in the same edit.
+In an EPIC body, when new text replaces old, delete the old in that edit rather than qualify it; grep the body for the item's other mentions and fix them together.
+When the deleted line was a RULED OUT or settled entry, tell the conductor, so it greps the live briefs as `/bip-conductor`'s "Citations" says.
 
 **Before writing a correction, a retraction, or a unification of two findings**, apply the checks in `EVIDENCE-DISCIPLINE.md` ("Before writing a correction or a unification").
 
@@ -224,6 +228,7 @@ Handoff artifacts (spawn intent, unfiled drafts) are the opposite category: auth
 When the session talking to the user is the conductor or `staff`, the decision arrives here as a relay — see `/bip-conductor`'s "Decision relays: PROVISIONAL and FINAL".
 A `PROVISIONAL` relay is discussion in progress; write nothing into the body from it beyond noting that a decision is pending. The eventual `FINAL` arrives in `.epic-decisions.md` in the conductor cwd, or as a message from staff.
 Only a `FINAL` relay — or a decision reached directly in this session — authorizes the write, and the body should restate the decision's substance, not a paraphrase of the sentiment that led to it.
+Quote marks in a decision entry hold only the user's words; the owner's gloss goes outside the decision line, labelled as the owner's.
 Staff also sends two relays that carry no `FINAL` mark because they are not the user's words, and each is written as labelled: "staff applying <ruling, link>" (an existing user ruling applied) and "staff ruling" (staff's own call, recorded as "staff ruling (<date, link>)"). Neither is recorded as a new user decision.
 **An unmarked relay is not a decision, and not a cue to ask the user yourself** — reply asking the relaying session for the marked form.
 
@@ -343,7 +348,9 @@ Whenever a check gates something destructive or outward-facing:
 - **Verify the mutation happened, not that the command ran.** After a scripted edit, grep for the new text; after a commit, `git diff <base> HEAD -- <file>` should be exactly what you intended.
 - **Ask what the guard does when the thing it queries is unavailable.** If the answer is "the same as when everything is fine", it is not a guard.
 
-**Size limits.** GitHub rejects an issue body over 2^18 = 262,144 **bytes** (`GraphQL: Body is too long`). Measure with `wc -c`, not a character count. Past ~250 KB, every addition needs a cut in the same edit; the cheapest cuts are expired caveats and prose figures that have a live command. Comments of 131,076 characters have been accepted and 264,058 rejected; GitHub's own error text misstates the limit. Measure a stored body with `gh api repos/<org>/<repo>/issues/<n>` and `len(body.encode())` — `gh ... -q .body | wc -c` counts one extra newline.
+**Size limits.** GitHub rejects an issue body over 2^18 = 262,144 **bytes** (`GraphQL: Body is too long`). Measure with `wc -c`, not a character count. That cap is not the working limit: past 64 KB a body stops being re-read whole, so give it an archive pass (pattern below) between findings, not mid-edit.
+Move completed items, superseded findings and the Decisions history (`FINAL` quotes verbatim) to the archive comment, leaving a pointer where each was, since peers cite body text; keep live gates, open items and current Decisions.
+Never move `Owner:`, or a live landing exception or NEGATIVE that an in-flight brief cites. Past ~250 KB, every addition needs a cut in the same edit; the cheapest cuts are expired caveats and prose figures that have a live command. Comments of 131,076 characters have been accepted and 264,058 rejected; GitHub's own error text misstates the limit. Measure a stored body with `gh api repos/<org>/<repo>/issues/<n>` and `len(body.encode())` — `gh ... -q .body | wc -c` counts one extra newline.
 
 **Replacing a body while archiving the old one to a comment.** Posting the archive moves `updatedAt`, so run the conflict check *before* your own write, and let the verified archive — not a timestamp — authorise the replacement:
 
