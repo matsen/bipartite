@@ -30,5 +30,5 @@ The user invoking it is their go to post, including on another human's scientifi
    `<user>` is `gh api user --jq .login`.
 
 5. **Hand back the slot.**
-   Message the conductor named in `$CLONE_ROOT/.conductor-session` (the clone's parent directory) with the review's URL, and ask it to preserve `REVIEW-p<N>.md` and `REVIEW-p<N>-post.md`, close this window, and reclaim `<slot>`.
+   Message the conductor named in `$CLONE_ROOT/.conductor-session` (the clone's parent directory) with the review's URL and the head SHA it was posted at, and ask it to preserve `REVIEW-p<N>.md` and `REVIEW-p<N>-post.md`, close this window, and reclaim `<slot>`.
    Tell the user the URL and what changed between the review and the post.
