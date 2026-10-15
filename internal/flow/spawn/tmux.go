@@ -160,7 +160,7 @@ rm -f '%s'
 	}
 
 	// Create tmux window
-	cmd := exec.Command("tmux", "new-window", "-d", "-n", windowName, "-c", repoPath, "-P")
+	cmd := exec.Command("tmux", "new-window", "-d", "-n", windowName, "-c", repoPath, "-P", "-F", "#{pane_id}")
 	output, err := cmd.Output()
 	if err != nil {
 		os.Remove(launcherPath)
@@ -170,11 +170,11 @@ rm -f '%s'
 		return fmt.Errorf("creating window: %w", err)
 	}
 
-	// Window created successfully
-	_ = output // Contains the window target, not needed
+	// Target the pane by id: tmux reads a name with a leading dash as "previous window".
+	pane := strings.TrimSpace(string(output))
 
 	// Run the launcher script — bash reads the file safely
-	cmd = exec.Command("tmux", "send-keys", "-t", windowName, launcherPath, "Enter")
+	cmd = exec.Command("tmux", "send-keys", "-t", pane, launcherPath, "Enter")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("sending command to window: %w", err)
 	}

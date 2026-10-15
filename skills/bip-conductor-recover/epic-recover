@@ -243,13 +243,18 @@ spawn_one() { # $1=session-id  $2=optional window-name
   [ -n "$cwd" ] || { echo "  ! no clone found for session $id — skipped" >&2; return; }
   [ -n "$name" ] || name=$(label_for "$cwd")
   local cmd="$CLAUDE --resume $id"
+  # Target the new pane by id: tmux reads a name with a leading dash (-<handle>) as "previous window".
+  local pane
   if [ -n "${TMUX:-}" ]; then
-    tmux new-window -n "$name" -c "$cwd"
-    tmux send-keys -t "$name" "$cmd" Enter
+    pane=$(tmux new-window -P -F '#{pane_id}' -n "$name" -c "$cwd")
+  elif tmux has-session -t "$proj" 2>/dev/null; then
+    pane=$(tmux new-window -P -F '#{pane_id}' -t "$proj" -n "$name" -c "$cwd")
   else
-    tmux has-session -t "$proj" 2>/dev/null || tmux new-session -d -s "$proj" -n "$name" -c "$cwd" \; send-keys -t "$proj:$name" "$cmd" Enter && { echo "  + $name ($id) [new session '$proj']"; return; }
-    tmux new-window -t "$proj" -n "$name" -c "$cwd"; tmux send-keys -t "$proj:$name" "$cmd" Enter
+    pane=$(tmux new-session -d -P -F '#{pane_id}' -s "$proj" -n "$name" -c "$cwd")
+    tmux send-keys -t "$pane" "$cmd" Enter
+    echo "  + $name ($id) [new session '$proj']"; return
   fi
+  tmux send-keys -t "$pane" "$cmd" Enter
   echo "  + $name  ($id)  $cwd"
 }
 
