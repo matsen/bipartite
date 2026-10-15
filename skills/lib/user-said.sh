@@ -2,7 +2,9 @@
 # Did the user type this phrase in the named session's window?
 #
 # Usage: user-said.sh <session-name> '<contiguous phrase>'
-# Prints the timestamp of each user-typed turn containing the phrase; exits 1 if none.
+# Prints the timestamp of each user-typed turn containing the phrase. Exits 1 if none,
+# naming on stderr the project dirs it searched, since an old window can share the name;
+# exits 2 if no window carries the name.
 #
 # A window is the set of transcripts that carry a custom-title record with its name
 # (each /rename and each cycle writes one); sessions sharing a cwd share a project
@@ -19,6 +21,7 @@ set -euo pipefail
 name=$1 phrase=$2
 
 files=$(grep -lF -- "\"customTitle\":$(jq -Rn --arg n "$name" '$n')" ~/.claude/projects/*/*.jsonl 2>/dev/null || true)
+[ -n "$files" ] || { echo "no window named $name" >&2; exit 2; }
 
 found=0
 for f in $files; do
@@ -40,4 +43,4 @@ for f in $files; do
   [ -n "$hits" ] && { echo "$hits"; found=1; }
 done
 
-[ "$found" = 1 ]
+[ "$found" = 1 ] || { echo "not typed in window $name ($(dirname $files | sort -u | xargs -n1 basename | paste -sd, -))" >&2; exit 1; }
