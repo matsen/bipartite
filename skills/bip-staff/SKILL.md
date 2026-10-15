@@ -17,6 +17,8 @@ It runs from files, not from what it remembers, so it survives every cycle:
   Topic rulings live only in their EPIC body, never also here.
 - **`briefs/<topic>.md`**: one per question open with the user — the question, the options, the recommendation, the evidence. Once the user rules, the brief is deleted.
   A brief opens with its queue block, ended by a line `---`: a heading `# DECIDE: <one-line ask>` or `# DISCUSS: <one-line ask>`, then the recommendation, a short paragraph of why it is the user's, and for a DECIDE the phrase to type; the owner, and since when it has waited. Only questions waiting on the user get a brief.
+- **`interfaces.md`**: a pointer index of the contracts between EPICs (what one EPIC's output means to another's: a corpus's codon model, its neutral, a branch-length unit, a tree-search preset). One line each: the contract, its owner, the link that holds it, and the date of the ruling it rests on — never the value, which lives only in its EPIC.
+  Refresh it at each coherence round; a date older than its EPIC's last `FINAL` marks a line to re-check.
 
 Both live in the directory this session starts in, which may be a subdirectory of a repo. Read `rulings.md` fully at cold start, and before ruling on a question it may cover.
 At cold start, open the queue pane beside this session: `tmux split-window -h -l 40% -t "$TMUX_PANE" <this skill's dir>/queue-pane "$PWD/briefs"`, unless one is already open. It shows every brief's queue block and redraws when one changes.
