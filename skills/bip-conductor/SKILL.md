@@ -325,17 +325,19 @@ It is silent when a slot never transitions (the staleness checks catch that), fo
 So also watch merged PRs (`gh pr list` orders by creation, hence the `sort:`) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
 
 ```bash
-M() { gh pr list --state merged -L1 --search 'sort:updated-desc' --json number -q '.[0].number'; }
+M() { gh pr list --state merged -L10 --search 'sort:updated-desc' --json number,mergedAt \
+        -q 'max_by(.mergedAt) | "#\(.number) \(.mergedAt)"'; }   # a comment on an old merge must not count
 last=$(M)
 while :; do
+  sleep 600
   out=$(<inbox> .epic-config.json 2>&1) || { echo "inbox failed: $out"; break; }
   [ -n "$out" ] && { echo "$out"; break; }
-  [ "$(M)" != "$last" ] && { echo "merged: #$(M)"; break; }
-  sleep 600
+  m=$(M) || continue
+  [ -n "$m" ] && [ "$m" != "$last" ] && { echo "merged: $m"; break; }
 done
 ```
 
-and, for the log, `f=.epic-notifications.log; n=$(wc -l <$f); while [ "$(wc -l <$f)" -le $n ]; do sleep 30; done; tail -n +$((n+1)) $f`. Act on each inbox line as `/bip-inbox` says.
+and, for the log, `f=.epic-notifications.log; n=$(wc -l <$f); while [ "$(wc -l <$f)" -le $n ]; do sleep 30; done; tail -n +$((n+1)) $f`. Act on each inbox line as `/bip-inbox` says, and sweep merged PRs whenever you act, since a merge between an exit and the restart is not reported.
 
 On `needs-human` or `completed`: read the slot's status and guidance, refresh `.conductor-session`, check that the slot's EPIC has a live owner (the worker has sent its own notice; see "Completion pushes"), and propose the next action.
 A `completed` that the post-merge ceremony set came after the worker had gone, so send it to the EPIC's owner yourself, the same way.
