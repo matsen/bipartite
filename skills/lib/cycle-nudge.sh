@@ -21,8 +21,9 @@ root=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
 # A finished worker is reclaimed, not cycled, even after it answers a peer. /bip-pr-land has
 # already deleted its .epic-status.json and the ralph loop file, so its completion promise
 # is the signal left; each assignment is a fresh session, so a promise means this one is done.
-# Workers print it on a line of its own; anchoring skips text that merely quotes it.
-tail -n 400 "$transcript" | jq -r 'select(.type=="assistant" and (.isSidechain|not)) | .message.content[]? | select(.type=="text") | .text' 2>/dev/null | grep -qE '^[[:space:]]*<promise>[[:space:]]*ISSUE WORK COMPLETE[[:space:]]*</promise>[[:space:]]*$' && exit 0
+# Workers print it on a line of its own; anchoring skips text that merely quotes it. The
+# hook can run before the final message reaches the transcript, so check the input's copy too.
+{ jq -r '.last_assistant_message // empty' <<<"$input"; tail -n 400 "$transcript" | jq -r 'select(.type=="assistant" and (.isSidechain|not)) | .message.content[]? | select(.type=="text") | .text' 2>/dev/null; } | grep -qE '^[[:space:]]*<promise>[[:space:]]*ISSUE WORK COMPLETE[[:space:]]*</promise>[[:space:]]*$' && exit 0
 # A worker slot (its clone holds .epic-status.json) runs short, so it gets more room.
 if [ -f "$root/.epic-status.json" ]; then threshold=${BIP_CYCLE_WORKER_TOKENS:-500000}; else threshold=${BIP_CYCLE_TOKENS:-300000}; fi
 state_dir=${XDG_STATE_HOME:-$HOME/.local/state}/bip/cycle-nudge
