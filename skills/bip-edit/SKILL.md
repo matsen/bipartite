@@ -1,7 +1,7 @@
 ---
 name: bip-edit
 description: Edit prose live with the author, line by line — a TeX manuscript or a blog post. "Pull and evaluate" a coauthor's commit, "let's work on the abstract/intro/paragraph X", or vet a suggested rewording. Structure first, then sentences; apply-and-show each edit; keep margin notes and the response letter in sync; commit only when asked. Not a batch punch list (/bip-ms-sweep) or a mathematics revision (/bip-ms-math).
-allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write, Skill, mcp__pdf-navigator__*
+allowed-tools: Agent, AskUserQuestion, Bash, Read, Edit, Write, Skill, SendMessage, mcp__pdf-navigator__*
 ---
 
 # /bip-edit
@@ -27,8 +27,8 @@ Read the whole document with `Read`, not only the target section: you can't judg
 Find the response letter if there is one (`ls response*`).
 
 Ask how refined the text is.
-A refined draft gets only fixes to what is broken, and for each change you must be able to say what was wrong with the original.
-Your first pass over a refined draft is one batch: fix what is broken, audit it, and show the author `git diff --word-diff` before starting the edit loop.
+A refined draft gets only fixes to what is broken.
+Once its structure is settled (Step 1), your first pass over a refined draft is one batch: fix what is broken, audit it, and show the author `git diff --word-diff` before starting the edit loop.
 
 **Not a TeX manuscript** (a blog post, say): skip the build, `%XX`, and response-letter steps.
 Verify every number and claim against the source the text reports on, and ask where that source is if the repo doesn't say.
@@ -37,7 +37,7 @@ Verify every number and claim against the source the text reports on, and ask wh
 If one is, read results from the repo's `main.log` after it rebuilds.
 Never build yourself unless the author says to (recipe below).
 
-**Pull and evaluate**: `git pull`, read the coauthor's commit with `git show --word-diff=plain`, and check its build.
+**Pull and evaluate**: `git pull`, read the coauthor's commit with `git show --word-diff=plain`, and read its build log if a background build is running.
 Report plainly what changed and what is wrong (build, leftover TODOs, one sentence per line, the change's place in the paragraph's logic, prose), then propose a rewrite.
 
 ## Step 1: Structure first, then wait
@@ -46,7 +46,6 @@ Propose structural changes only: section and paragraph order, what each paragrap
 Use `AskUserQuestion` with previews (one line per paragraph's topic sentence) for reorder choices.
 Don't touch sentences until the author approves the structure; editing both at once throws away polished prose.
 
-Introduce every object before any paragraph that discusses it.
 After any reorder, re-read the section top to bottom and report dangling referents and ideas used before they are introduced.
 
 ## Step 2: The edit loop
@@ -83,7 +82,7 @@ Before reporting a batch, audit your diff against the last commit (`git diff`), 
 
 **Keep in sync, in the same edit:**
 
-- margin comments tagged with initials (`%XX`): never delete one yourself; when an edit addresses one, offer to delete it, and update a note of your own when you change the text it describes;
+- margin comments tagged with initials (`%XX`): never delete one yourself; when an edit addresses one, offer to delete it, and update a note you added this session when you change the text it describes;
 - the response letter: grep it for any phrase you remove or change, and fix stale quotes, pointers, and examples;
 - promises the letter makes ("we cut rhetorical turns"): check new text against them.
 
@@ -104,7 +103,7 @@ Continuing the same agent with `SendMessage` is fine for a "did this fix it?" ch
 
 **Specialists** (`scientific-tex-editor`, `topic-sentence-stickler`, `tex-grammar-checker`, `tex-verb-tense-checker`): fan out in parallel on a whole section once its structure is settled.
 Triage their output and show the author only what survives; never apply it wholesale.
-Their fact checks are valuable, but their style suggestions overreach on refined text; accept a style edit only when you can name what was broken.
+Their fact checks are valuable, but their style suggestions overreach on refined text.
 
 ## Build recipe
 
