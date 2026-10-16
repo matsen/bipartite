@@ -165,9 +165,8 @@ COMPLETION: When done (or when lead says completed):
       and the review or approval it names is in — (and, if JOINT
       LANDING GATE says YES, both approvals are in):
       - For shared code, the review must be APPROVED, by someone other
-        than the user, and every commit after it must fix only that
-        review's items; anything more needs re-review, but a rebase
-        onto main is not more. After a rebase,
+        than the user, at any head, with every review comment after it
+        addressed; later commits need no re-approval. After a rebase,
         get the claims check again at the new head SHA. Use --admin
         only when branch protection refuses the PR. In a group repo
         (see LANDING DELEGATION), --admin also needs all of:
