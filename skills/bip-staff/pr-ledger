@@ -45,7 +45,7 @@ print(" ".join("repo:" + r for r in sorted(r for r in repos if r and not r.start
           comments(last: 30) { nodes { author { login __typename } createdAt } }
         } }
       }
-    }' --jq '.data.search.nodes[]' > "$tmp"
+    }' --jq '.data.search.nodes[]' > "$tmp" || { rm -f "$tmp"; return 1; }
   jq -s . "$tmp" > "$cache" && rm -f "$tmp"
 }
 
@@ -85,6 +85,7 @@ render() {
       "",
       "updated \($at) · last \($days) days · agent = authored by \($self)",
       "",
+      (if length >= 1000 then "**GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS.**", "" else empty end),
       (($new | map(select(.star)) | sort_by(.updatedAt) | reverse) as $s
        | if ($s | length) > 0 then "## ★ others involved: \($s | length)", "", ($s[] | line), "" else empty end),
       ($new | map(select(.star | not)) | group_by(.repo.nameWithOwner)
