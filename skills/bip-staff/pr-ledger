@@ -116,20 +116,26 @@ case "${1:-}" in
   fetch) fetch; render ;;
   seen) shift; seen "$@" ;;
   pane)
+    pane=${TMUX_PANE:?pr-ledger pane runs in a tmux pane}
     fetch; render
     # A background loop rewrites the file in place (a refetch every 5 min, a re-render
-    # when an ack lands) and sends less `R`, which re-reads it; `less +F` can't follow
-    # a file rewritten in place. q relaunches less rather than closing the pane.
+    # when an ack lands) and, when the text changed, sends less `R` to re-read it;
+    # `less +F` can't follow a file rewritten in place. An `R` that lands while the user
+    # is typing a less search joins the search text, so it is sent only on a change.
+    # q relaunches less rather than closing the pane.
     (
-      last_fetch=$(date +%s) last_ack=""
+      set +e  # a failed fetch or send-keys must not end the loop
+      last_fetch=$(date +%s) last_ack="" shown=$(md5sum < "$out")
       while :; do
         sleep 5
         if [ $(( $(date +%s) - last_fetch )) -ge 300 ]; then
-          fetch && { render; tmux send-keys -t "$TMUX_PANE" R; }
+          fetch && render
           last_fetch=$(date +%s)
         fi
         sig=$(stat -c %Y "$acks")
-        [ "$sig" = "$last_ack" ] || { last_ack=$sig; render; tmux send-keys -t "$TMUX_PANE" R; }
+        [ "$sig" = "$last_ack" ] || { last_ack=$sig; render; }
+        now=$(md5sum < "$out")
+        [ "$now" = "$shown" ] || { shown=$now; tmux send-keys -t "$pane" R; }
       done
     ) &
     loop=$!
