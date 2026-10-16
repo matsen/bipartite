@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # pr-ledger: one line per recently updated PR the user hasn't seen, for a tmux split.
 #
-#   pr-ledger pane [style]     fetch every 5 min, render, and show it in glow
+#   pr-ledger pane             fetch every 5 min, render, and show it in less -S
 #   pr-ledger fetch            fetch and render once
 #   pr-ledger seen <repo>      ack every unseen PR in <repo> at its current state
 #   pr-ledger seen <repo>#<N>  ack one PR
@@ -12,14 +12,14 @@
 # agent PR. A PR is starred when anyone else authored, reviewed, or commented on it.
 # An ack holds while the head SHA is unchanged and, for a starred PR, while no
 # comment or review is newer than the ack. State lives in $NEXUS/staff/_ignore:
-# pr-seen.jsonl (acks), pr-ledger.json (last fetch), pr-ledger.md (what glow shows).
+# pr-seen.jsonl (acks), pr-ledger.json (last fetch), pr-ledger.txt (what less shows).
 set -euo pipefail
 nexus=$(sed -n 's/^nexus_path: *//p' "${XDG_CONFIG_HOME:-$HOME/.config}/bip/config.yml")
 nexus=${nexus/#\~/$HOME}
 dir=${PR_LEDGER_DIR:-$nexus/staff/_ignore}
 self=${PR_LEDGER_SELF:-$(gh api user -q .login)}
 days=${PR_LEDGER_DAYS:-7}
-acks=$dir/pr-seen.jsonl cache=$dir/pr-ledger.json out=$dir/pr-ledger.md
+acks=$dir/pr-seen.jsonl cache=$dir/pr-ledger.json out=$dir/pr-ledger.txt
 mkdir -p "$dir"
 touch "$acks"
 
@@ -70,28 +70,31 @@ annotate='
                     and (($p.star | not) or $a.at >= $p.last_event))}
     )'
 
-# Renders to a temp file and copies it in place on success: glow's watch survives an
-# in-place write, and a render that fails mid-ack keeps the last good view.
+# Renders to a temp file and copies it in place on success, so a render that fails
+# mid-ack keeps the last good view.
 render() {
-  [ -s "$cache" ] || { printf '# PR ledger\n\n_no fetch yet_\n' > "$out"; return; }
+  [ -s "$cache" ] || { echo 'PR ledger: no fetch yet' > "$out"; return; }
   local tmp
   tmp=$(mktemp "$dir/.render.XXXXXX")
   jq -r --slurpfile acks "$acks" --arg self "$self" --arg days "$days" \
      --arg at "$(date -u -r "$cache" +%H:%MZ)" "$annotate"'
-    | def line: "- \(.stage) · \(.title | if length > 60 then .[:59] + "…" else . end)"
-              + (if .author.login != $self then " · @\(.author.login)" else "" end) + " · \(.url)";
+    | def c($code): "\u001b[\($code)m\(.)\u001b[0m";
+      def pad($n): . + (" " * ([$n - length, 0] | max));
+      (map(.url | length) | max // 0) as $w
+      | {"merged": "35", "approved": "32", "changes requested": "31", "in review": "33"} as $color
+      | def line: "  \(.stage as $s | $s | pad(17) | c($color[$s] // "2"))"
+                  + "  \(.url | pad($w))  "
+                  + (if .author.login != $self then "@\(.author.login)  " else "" end) + .title;
     map(select(.seen | not)) as $new
-    | "# PR ledger: \($new | length) unseen",
+    | ("PR ledger: \($new | length) unseen · updated \($at) · last \($days) days · agent = authored by \($self)" | c("1")),
+      (if length >= 1000 then "GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS." | c("1;31") else empty end),
       "",
-      "updated \($at) · last \($days) days · agent = authored by \($self)",
-      "",
-      (if length >= 1000 then "**GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS.**", "" else empty end),
       (($new | map(select(.star)) | sort_by(.updatedAt) | reverse) as $s
-       | if ($s | length) > 0 then "## ★ others involved: \($s | length)", "", ($s[] | line), "" else empty end),
+       | if ($s | length) > 0 then ("★ others involved: \($s | length)" | c("1;33")), ($s[] | line), "" else empty end),
       ($new | map(select(.star | not)) | group_by(.repo.nameWithOwner)
        | sort_by(-length)[]
-       | "## \(.[0].repo.nameWithOwner | sub("^matsengrp/"; "")): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open",
-         "", (sort_by(.updatedAt) | reverse | .[] | line), "")
+       | ("\(.[0].repo.nameWithOwner | sub("^matsengrp/"; "")): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
+         (sort_by(.updatedAt) | reverse | .[] | line), "")
   ' "$cache" > "$tmp" && cat "$tmp" > "$out"
   rm -f "$tmp"
 }
@@ -113,24 +116,31 @@ case "${1:-}" in
   fetch) fetch; render ;;
   seen) shift; seen "$@" ;;
   pane)
-    style=${2:-auto}
+    pane=${TMUX_PANE:?pr-ledger pane runs in a tmux pane}
     fetch; render
-    # glow's TUI reloads the one file it views, so a background loop rewrites that
-    # file in place: a refetch every 5 min, a re-render when an ack lands.
+    # A background loop rewrites the file in place (a refetch every 5 min, a re-render
+    # when an ack lands) and, when the text changed, sends less `R` to re-read it;
+    # `less +F` can't follow a file rewritten in place. An `R` that lands while the user
+    # is typing a less search joins the search text, so it is sent only on a change.
+    # q relaunches less rather than closing the pane.
     (
-      last_fetch=$(date +%s) last_ack=""
+      set +e  # a failed fetch or send-keys must not end the loop
+      last_fetch=$(date +%s) last_ack="" shown=$(md5sum < "$out")
       while :; do
         sleep 5
         if [ $(( $(date +%s) - last_fetch )) -ge 300 ]; then
-          fetch || true; render; last_fetch=$(date +%s)
+          fetch && render
+          last_fetch=$(date +%s)
         fi
         sig=$(stat -c %Y "$acks")
         [ "$sig" = "$last_ack" ] || { last_ack=$sig; render; }
+        now=$(md5sum < "$out")
+        [ "$now" = "$shown" ] || { shown=$now; tmux send-keys -t "$pane" R; }
       done
     ) &
     loop=$!
     trap 'kill $loop 2>/dev/null' EXIT
-    glow -t -s "$style" -w 0 "$out"
+    while :; do less -S -R "$out"; done
     ;;
   *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
