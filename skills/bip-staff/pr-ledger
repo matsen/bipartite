@@ -8,16 +8,16 @@
 #
 # Covers org:matsengrp plus the other owners' repos in nexus sources.yml, for PRs
 # updated in the last $PR_LEDGER_DAYS days (default 7). Agent work posts from the
-# user's account, so a PR authored by $PR_LEDGER_SELF (default matsen) reads as an
+# user's account, so a PR authored by $PR_LEDGER_SELF (default: gh's login) reads as an
 # agent PR. A PR is starred when anyone else authored, reviewed, or commented on it.
 # An ack holds while the head SHA is unchanged and, for a starred PR, while no
 # comment or review is newer than the ack. State lives in $NEXUS/staff/_ignore:
 # pr-seen.jsonl (acks), pr-ledger.json (last fetch), pr-ledger.md (what glow shows).
 set -euo pipefail
-nexus=$(sed -n 's/^nexus_path: *//p' ~/.config/bip/config.yml)
+nexus=$(sed -n 's/^nexus_path: *//p' "${XDG_CONFIG_HOME:-$HOME/.config}/bip/config.yml")
 nexus=${nexus/#\~/$HOME}
 dir=${PR_LEDGER_DIR:-$nexus/staff/_ignore}
-self=${PR_LEDGER_SELF:-matsen}
+self=${PR_LEDGER_SELF:-$(gh api user -q .login)}
 days=${PR_LEDGER_DAYS:-7}
 acks=$dir/pr-seen.jsonl cache=$dir/pr-ledger.json out=$dir/pr-ledger.md
 mkdir -p "$dir"
@@ -28,17 +28,10 @@ fetch() {
   since=$(date -u -d "$days days ago" +%Y-%m-%d)
   extra=$(python3 -c '
 import sys, yaml
-seen = set()
-def walk(x):
-    if isinstance(x, dict):
-        for v in x.values(): walk(v)
-    elif isinstance(x, list):
-        for v in x: walk(v)
-    elif isinstance(x, str) and x.count("/") == 1 and " " not in x and not x.startswith("matsengrp/"):
-        seen.add(x)
 doc = yaml.safe_load(open(sys.argv[1]))
-walk([doc.get("code"), doc.get("writing")])
-print(" ".join("repo:" + r for r in sorted(seen)))' "$nexus/sources.yml" 2>/dev/null || true)
+repos = {e if isinstance(e, str) else e.get("repo")
+         for e in (doc.get("code") or []) + (doc.get("writing") or [])}
+print(" ".join("repo:" + r for r in sorted(r for r in repos if r and not r.startswith("matsengrp/"))))' "$nexus/sources.yml" 2>/dev/null || true)
   q="is:pr updated:>=$since org:matsengrp $extra"
   tmp=$(mktemp "$dir/.fetch.XXXXXX")
   gh api graphql --paginate -f q="$q" -f query='
@@ -77,8 +70,12 @@ annotate='
                     and (($p.star | not) or $a.at >= $p.last_event))}
     )'
 
+# Renders to a temp file and copies it in place on success: glow's watch survives an
+# in-place write, and a render that fails mid-ack keeps the last good view.
 render() {
   [ -s "$cache" ] || { printf '# PR ledger\n\n_no fetch yet_\n' > "$out"; return; }
+  local tmp
+  tmp=$(mktemp "$dir/.render.XXXXXX")
   jq -r --slurpfile acks "$acks" --arg self "$self" --arg days "$days" \
      --arg at "$(date -u -r "$cache" +%H:%MZ)" "$annotate"'
     | def line: "- \(.stage) · \(.title | if length > 60 then .[:59] + "…" else . end)"
@@ -94,7 +91,8 @@ render() {
        | sort_by(-length)[]
        | "## \(.[0].repo.nameWithOwner | sub("^matsengrp/"; "")): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open",
          "", (sort_by(.updatedAt) | reverse | .[] | line), "")
-  ' "$cache" > "$out"
+  ' "$cache" > "$tmp" && cat "$tmp" > "$out"
+  rm -f "$tmp"
 }
 
 seen() {
