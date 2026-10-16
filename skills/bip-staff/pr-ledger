@@ -130,7 +130,7 @@ case "${1:-}" in
     ) &
     loop=$!
     trap 'kill $loop 2>/dev/null' EXIT
-    glow -t -s "$style" "$out"
+    glow -t -s "$style" -w 0 "$out"
     ;;
   *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
