@@ -48,4 +48,4 @@ mkdir -p "$(dirname "$out")"
 loop=$!
 trap 'kill $loop 2>/dev/null' EXIT
 sleep 1
-glow -t -s "$style" "$out"
+glow -t -s "$style" -w 0 "$out"
