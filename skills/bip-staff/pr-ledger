@@ -140,7 +140,7 @@ case "${1:-}" in
     ) &
     loop=$!
     trap 'kill $loop 2>/dev/null' EXIT
-    while :; do less -S -R "$out"; done
+    while :; do less -S -R --shift=8 "$out"; done
     ;;
   *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
 esac
