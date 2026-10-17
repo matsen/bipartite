@@ -108,7 +108,7 @@ seen() {
   jq -c --slurpfile acks "$acks" --arg self "$self" --arg t "$target" --arg now "$now" "$annotate"'
     | map(select(.seen | not) | select(.key == $t or .repo.nameWithOwner == $t))
     | if length == 0 then ("nothing unseen matches \($t)\n" | halt_error(1)) else .[] end
-    | {repo: .repo.nameWithOwner, pr: .number, stage, head_sha: .headRefOid, at: $now}
+    | {repo: .repo.nameWithOwner, pr: .number, stage, at: $now}
   ' "$cache" >> "$acks"
   render
 }
