@@ -10,8 +10,9 @@
 # updated in the last $PR_LEDGER_DAYS days (default 7). Agent work posts from the
 # user's account, so a PR authored by $PR_LEDGER_SELF (default: gh's login) reads as an
 # agent PR. A PR is starred when anyone else authored, reviewed, or commented on it.
-# An ack holds while the head SHA is unchanged and, for a starred PR, while no
-# comment or review is newer than the ack. State lives in $NEXUS/staff/_ignore:
+# An ack holds while the PR's stage (draft, in review, approved, changes requested,
+# merged, closed) is unchanged and, for a starred PR, while no comment or review is
+# newer than the ack. A push alone doesn't bring a PR back. State lives in $NEXUS/staff/_ignore:
 # pr-seen.jsonl (acks), pr-ledger.json (last fetch), pr-ledger.txt (what less shows).
 set -euo pipefail
 nexus=$(sed -n 's/^nexus_path: *//p' "${XDG_CONFIG_HOME:-$HOME/.config}/bip/config.yml")
@@ -66,7 +67,7 @@ annotate='
                      elif .reviewDecision == "CHANGES_REQUESTED" then "changes requested"
                      else "in review" end)}
       | . as $p | ($ack[$p.key]) as $a
-      | . + {seen: ($a != null and $a.head_sha == $p.headRefOid
+      | . + {seen: ($a != null and $a.stage == $p.stage
                     and (($p.star | not) or $a.at >= $p.last_event))}
     )'
 
@@ -107,7 +108,7 @@ seen() {
   jq -c --slurpfile acks "$acks" --arg self "$self" --arg t "$target" --arg now "$now" "$annotate"'
     | map(select(.seen | not) | select(.key == $t or .repo.nameWithOwner == $t))
     | if length == 0 then ("nothing unseen matches \($t)\n" | halt_error(1)) else .[] end
-    | {repo: .repo.nameWithOwner, pr: .number, head_sha: .headRefOid, at: $now}
+    | {repo: .repo.nameWithOwner, pr: .number, stage, at: $now}
   ' "$cache" >> "$acks"
   render
 }
