@@ -40,7 +40,7 @@ print(" ".join("repo:" + r for r in sorted(r for r in repos if r and not r.start
       search(query: $q, type: ISSUE, first: 100, after: $endCursor) {
         pageInfo { hasNextPage endCursor }
         nodes { ... on PullRequest {
-          repo: repository { nameWithOwner } number title state isDraft
+          repo: repository { nameWithOwner } number title url state isDraft
           reviewDecision headRefOid updatedAt author { login __typename }
           reviews(last: 30) { nodes { author { login __typename } submittedAt } }
           comments(last: 30) { nodes { author { login __typename } createdAt } }
@@ -89,7 +89,7 @@ render() {
         def lines($full): (map(ref($full) | length) | max) as $w
           | .[] | "  \(.stage as $s | $short[$s] // $s | pad(8) | c($color[$s] // "2"))"
                   + "  \(ref($full) | pad($w))  "
-                  + (if .author.login != $self then "@\(.author.login)  " else "" end) + .title;
+                  + (if .author.login != $self then "@\(.author.login)  " else "" end) + .title + "  " + .url;
     map(select(.seen | not)) as $new
     | ("PR ledger: \($new | length) unseen · updated \($at) · last \($days) days" | c("1")),
       (if length >= 1000 then "GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS." | c("1;31") else empty end),
