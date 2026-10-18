@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# queue-pane <briefs-dir> [style]: live view of what waits on the user, for a tmux split.
+# queue-pane <briefs-dir>: live view of what waits on the user, for a tmux split.
 # Shows each brief's queue block (its lines above the first `---`), DECIDE
-# before DISCUSS, newest first, and redraws when a brief changes. The glow
-# style defaults to "auto", which follows the terminal's light or dark theme.
+# before DISCUSS, newest first, and redraws when a brief changes. The glow style
+# follows tmux's @theme, as glow-pane's does (docs/guides/theme.md).
 set -u
-dir=${1:?usage: queue-pane <briefs-dir> [style]}
-style=${2:-auto}
+dir=${1:?usage: queue-pane <briefs-dir>}
 
 render() {
   local files f kind n=0 body=""
@@ -48,4 +47,4 @@ mkdir -p "$(dirname "$out")"
 loop=$!
 trap 'kill $loop 2>/dev/null' EXIT
 sleep 1
-glow -t -s "$style" -w 0 "$out"
+"$(dirname "$(readlink -f "$0")")"/../lib/glow-pane --run "$out" -w 0

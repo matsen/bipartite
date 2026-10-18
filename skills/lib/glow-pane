@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# glow-pane <file>: show a markdown file in glow, in a split beside the calling tmux pane.
+# glow-pane --run <file> [glow flags]: run glow in this pane, as the split does.
+# glow reloads the file when it changes, so edit it in place. The style is tmux's
+# @theme (light or dark), else glow's auto; theme-follow respawns the pane when
+# @theme changes (docs/guides/theme.md).
+set -eu
+if [ "${1:-}" = --run ]; then
+  style=$(tmux show -gv @theme 2>/dev/null | grep -xE 'light|dark' || echo auto)
+  tmux set -p -t "$TMUX_PANE" @follow-theme "$style"
+  file=$2; shift 2
+  exec glow -t -s "$style" "$@" "$file"
+fi
+file=$(readlink -f "${1:?usage: glow-pane <file>}")
+tmux split-window -h -d -l 40% -t "${TMUX_PANE:?glow-pane runs in a tmux pane}" \
+  "$(printf '%q --run %q' "$(readlink -f "$0")" "$file")"

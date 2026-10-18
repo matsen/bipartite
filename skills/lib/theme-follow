@@ -1,0 +1,18 @@
+#!/bin/sh
+# theme-follow: make panes follow tmux's @theme (light or dark). Run it from tmux's
+# after-set-option hook (docs/guides/theme.md):
+# - window-style gets the background in @theme-bg-light / @theme-bg-dark, when set,
+#   so tmux answers a pane's colour queries even when the client's colours never
+#   reach it (mosh), and Claude Code's auto theme follows;
+# - a pane whose @follow-theme differs from @theme is respawned with its own
+#   command, which reads @theme again (glow-pane, bip-staff's queue-pane).
+mode=$(tmux show -gv @theme 2>/dev/null) || exit 0
+case $mode in light|dark) ;; *) exit 0 ;; esac
+bg=$(tmux show -gv "@theme-bg-$mode" 2>/dev/null) || bg=
+# Each set-option fires this hook again, so set only what differs.
+[ -z "$bg" ] || [ "$(tmux show -gwv window-style)" = "bg=$bg" ] || tmux set -gw window-style "bg=$bg"
+tmux list-panes -a -F '#{pane_id} #{@follow-theme}' |
+while read -r id follow; do
+  [ -n "$follow" ] && [ "$follow" != "$mode" ] || continue
+  tmux set -p -t "$id" @follow-theme "$mode" \; respawn-pane -k -t "$id"
+done
