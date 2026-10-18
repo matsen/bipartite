@@ -7,7 +7,7 @@
 set -eu
 if [ "${1:-}" = --run ]; then
   style=$(tmux show -gv @theme 2>/dev/null | grep -xE 'light|dark' || echo auto)
-  tmux set -p -t "$TMUX_PANE" @follow-theme "$style"
+  [ -z "${TMUX_PANE:-}" ] || tmux set -p -t "$TMUX_PANE" @follow-theme "$style" || true
   file=$2; shift 2
   exec glow -t -s "$style" "$@" "$file"
 fi
