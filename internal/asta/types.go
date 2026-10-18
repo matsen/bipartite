@@ -1,6 +1,8 @@
 // Package asta provides a client for the ASTA MCP (Model Context Protocol) API.
 package asta
 
+import "github.com/matsen/bipartite/internal/s2"
+
 // MCP Protocol Types (JSON-RPC 2.0)
 
 // MCPRequest is the JSON-RPC 2.0 request envelope for MCP tool calls.
@@ -50,18 +52,19 @@ type MCPError struct {
 
 // ASTAPaper represents a paper returned from ASTA searches.
 type ASTAPaper struct {
-	PaperID         string       `json:"paperId"`
-	Title           string       `json:"title"`
-	Abstract        string       `json:"abstract,omitempty"`
-	Authors         []ASTAAuthor `json:"authors,omitempty"`
-	Year            int          `json:"year,omitempty"`
-	Venue           string       `json:"venue,omitempty"`
-	PublicationDate string       `json:"publicationDate,omitempty"` // YYYY-MM-DD format
-	URL             string       `json:"url,omitempty"`
-	CitationCount   int          `json:"citationCount,omitempty"`
-	ReferenceCount  int          `json:"referenceCount,omitempty"`
-	IsOpenAccess    bool         `json:"isOpenAccess,omitempty"`
-	FieldsOfStudy   []string     `json:"fieldsOfStudy,omitempty"`
+	PaperID         string          `json:"paperId"`
+	Title           string          `json:"title"`
+	Abstract        string          `json:"abstract,omitempty"`
+	Authors         []ASTAAuthor    `json:"authors,omitempty"`
+	Year            int             `json:"year,omitempty"`
+	Venue           string          `json:"venue,omitempty"`
+	PublicationDate string          `json:"publicationDate,omitempty"` // YYYY-MM-DD format
+	URL             string          `json:"url,omitempty"`
+	CitationCount   int             `json:"citationCount,omitempty"`
+	ReferenceCount  int             `json:"referenceCount,omitempty"`
+	IsOpenAccess    bool            `json:"isOpenAccess,omitempty"`
+	FieldsOfStudy   []string        `json:"fieldsOfStudy,omitempty"`
+	ExternalIDs     *s2.ExternalIDs `json:"externalIds,omitempty"`
 }
 
 // ASTAAuthor represents author information from ASTA.
