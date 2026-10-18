@@ -12,7 +12,7 @@ set -g @theme-bg-dark  '#282c34'
 set-hook -g after-set-option 'run-shell -b ~/.claude/skills/lib/theme-follow'
 ```
 
-With the two background options set, it also sets `window-style` to the matching background. Then tmux answers a pane's colour queries itself (OSC 11, DSR 996), which it can't do while the client's colours never reach it. With those answers, glow's `auto` and Claude Code's `auto` theme both follow, Claude Code live in running sessions. Without the background options, theme-follow only respawns panes.
+With the two background options set, it also sets `window-style` to the matching background. Then tmux answers a pane's colour queries itself (OSC 11, DSR 996), which it can't do while the client's colours never reach it. With those answers, glow's `auto` and Claude Code's `auto` theme both follow, Claude Code live in running sessions. Without the background options, theme-follow only respawns panes. It acts only when `@theme` changes, so after changing a background option, run `tmux set -gu @theme-applied` and set `@theme` again.
 
 ## Setting `@theme`
 
