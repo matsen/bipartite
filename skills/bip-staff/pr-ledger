@@ -81,10 +81,11 @@ render() {
      --arg at "$(date -u -r "$cache" +%H:%MZ)" "$annotate"'
     | def c($code): "\u001b[\($code)m\(.)\u001b[0m";
       def pad($n): . + (" " * ([$n - length, 0] | max));
+      def short: sub("^matsengrp/"; "");
       {"merged": "35", "approved": "32", "changes requested": "31", "in review": "33"} as $color
       | {"changes requested": "changes", "in review": "review"} as $short
       # $full names the repo too, for the ★ section, which spans repos.
-      | def ref($full): (if $full then .repo.nameWithOwner | sub("^matsengrp/"; "") else "" end) + "#\(.number)";
+      | def ref($full): (if $full then .repo.nameWithOwner | short else "" end) + "#\(.number)";
         def lines($full): (map(ref($full) | length) | max) as $w
           | .[] | "  \(.stage as $s | $short[$s] // $s | pad(8) | c($color[$s] // "2"))"
                   + "  \(ref($full) | pad($w))  "
@@ -97,7 +98,7 @@ render() {
        | if ($s | length) > 0 then ("★ others involved: \($s | length)" | c("1;33")), ($s | lines(true)), "" else empty end),
       ($new | map(select(.star | not)) | group_by(.repo.nameWithOwner)
        | sort_by(-length)[]
-       | ("\(.[0].repo.nameWithOwner | sub("^matsengrp/"; "")): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
+       | ("\(.[0].repo.nameWithOwner | short): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
          (sort_by(.updatedAt) | reverse | lines(false)), "")
   ' "$cache" > "$tmp" && cat "$tmp" > "$out"
   rm -f "$tmp"
