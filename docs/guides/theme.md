@@ -16,7 +16,12 @@ With the two background options set, it also sets `window-style` to the matching
 
 ## Setting `@theme`
 
-On a direct terminal, tmux (3.6 and later) learns the mode itself: its `client-light-theme` and `client-dark-theme` hooks can run `set -g @theme light` or `set -g @theme dark`.
+On a direct terminal, tmux (3.6 and later) learns the mode itself, through its `client-light-theme` and `client-dark-theme` hooks. A command run from a hook fires no further hooks, so `after-set-option` misses the `set` there and each hook calls theme-follow too:
+
+```tmux
+set-hook -g client-light-theme 'set -g @theme light ; run-shell -b ~/.claude/skills/lib/theme-follow'
+set-hook -g client-dark-theme  'set -g @theme dark ; run-shell -b ~/.claude/skills/lib/theme-follow'
+```
 
 Under mosh, the terminal's colour queries never arrive, so something on the laptop has to push the mode. On a Mac, [`dark-notify`](https://github.com/cormacrelf/dark-notify) runs a command on every appearance change. Point it at:
 
