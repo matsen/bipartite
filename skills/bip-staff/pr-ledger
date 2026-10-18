@@ -40,7 +40,7 @@ print(" ".join("repo:" + r for r in sorted(r for r in repos if r and not r.start
       search(query: $q, type: ISSUE, first: 100, after: $endCursor) {
         pageInfo { hasNextPage endCursor }
         nodes { ... on PullRequest {
-          repo: repository { nameWithOwner } number title url state isDraft
+          repo: repository { nameWithOwner } number title state isDraft
           reviewDecision headRefOid updatedAt author { login __typename }
           reviews(last: 30) { nodes { author { login __typename } submittedAt } }
           comments(last: 30) { nodes { author { login __typename } createdAt } }
@@ -81,21 +81,25 @@ render() {
      --arg at "$(date -u -r "$cache" +%H:%MZ)" "$annotate"'
     | def c($code): "\u001b[\($code)m\(.)\u001b[0m";
       def pad($n): . + (" " * ([$n - length, 0] | max));
-      (map(.url | length) | max // 0) as $w
-      | {"merged": "35", "approved": "32", "changes requested": "31", "in review": "33"} as $color
-      | def line: "  \(.stage as $s | $s | pad(17) | c($color[$s] // "2"))"
-                  + "  \(.url | pad($w))  "
+      def short: sub("^matsengrp/"; "");
+      {"merged": "35", "approved": "32", "changes requested": "31", "in review": "33"} as $color
+      | {"changes requested": "changes", "in review": "review"} as $short
+      # $full names the repo too, for the ★ section, which spans repos.
+      | def ref($full): (if $full then .repo.nameWithOwner | short else "" end) + "#\(.number)";
+        def lines($full): (map(ref($full) | length) | max) as $w
+          | .[] | "  \(.stage as $s | $short[$s] // $s | pad(8) | c($color[$s] // "2"))"
+                  + "  \(ref($full) | pad($w))  "
                   + (if .author.login != $self then "@\(.author.login)  " else "" end) + .title;
     map(select(.seen | not)) as $new
-    | ("PR ledger: \($new | length) unseen · updated \($at) · last \($days) days · agent = authored by \($self)" | c("1")),
+    | ("PR ledger: \($new | length) unseen · updated \($at) · last \($days) days" | c("1")),
       (if length >= 1000 then "GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS." | c("1;31") else empty end),
       "",
       (($new | map(select(.star)) | sort_by(.updatedAt) | reverse) as $s
-       | if ($s | length) > 0 then ("★ others involved: \($s | length)" | c("1;33")), ($s[] | line), "" else empty end),
+       | if ($s | length) > 0 then ("★ others involved: \($s | length)" | c("1;33")), ($s | lines(true)), "" else empty end),
       ($new | map(select(.star | not)) | group_by(.repo.nameWithOwner)
        | sort_by(-length)[]
-       | ("\(.[0].repo.nameWithOwner | sub("^matsengrp/"; "")): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
-         (sort_by(.updatedAt) | reverse | .[] | line), "")
+       | ("\(.[0].repo.nameWithOwner | short): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
+         (sort_by(.updatedAt) | reverse | lines(false)), "")
   ' "$cache" > "$tmp" && cat "$tmp" > "$out"
   rm -f "$tmp"
 }
