@@ -52,7 +52,7 @@ In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches tho
 
 ## Adding to the library
 
-Give the user the DOI as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
+Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
 To import a Paperpile export, run `/bip-lit-import`.
 

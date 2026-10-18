@@ -29,7 +29,7 @@ const (
 	RateLimit = 10.0
 
 	// DefaultPaperFields are the fields requested by default for paper lookups.
-	DefaultPaperFields = "title,abstract,authors,year,venue,publicationDate,url,citationCount,referenceCount,isOpenAccess,fieldsOfStudy"
+	DefaultPaperFields = "title,abstract,authors,year,venue,publicationDate,url,citationCount,referenceCount,isOpenAccess,fieldsOfStudy,externalIds"
 
 	// DefaultAuthorFields are the fields requested by default for author lookups.
 	DefaultAuthorFields = "name,url,affiliations,paperCount,citationCount,hIndex"
