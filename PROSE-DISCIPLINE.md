@@ -18,13 +18,13 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 
 ## Showing a draft to the user
 
-Write the draft to a gitignored path inside the repo (e.g. `_ignore/<name>.md`), not a scratchpad: the user can't see a scratchpad path, and `glow` is a snap with a private `/tmp`. Open it beside this session's own pane, which `-t "$TMUX_PANE"` names (without it, tmux splits whichever pane the user is focused on), and leave focus where it is (`-d`):
+Write the draft to a gitignored path inside the repo (e.g. `_ignore/<name>.md`), not a scratchpad: the user can't see a scratchpad path, and `glow` is a snap with a private `/tmp`. Open it beside this session's own pane, in the user's light or dark theme (`docs/guides/theme.md`):
 
 ```bash
-tmux split-window -d -h -l 45% -t "$TMUX_PANE" -c <repo> "command glow -t -s dark _ignore/<name>.md"
+~/.claude/skills/lib/glow-pane _ignore/<name>.md
 ```
 
-Use `-s light` in daytime. The pane reloads when the file changes, so revise by editing the file; don't paste the draft inline or reopen the pane.
+The pane reloads when the file changes, so revise by editing the file; don't paste the draft inline or reopen the pane.
 
 ## Is the claim true?
 
