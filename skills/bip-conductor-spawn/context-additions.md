@@ -44,6 +44,10 @@ Snippets `/bip-conductor-spawn` Step 4 appends under `IMPORTANT CONTEXT:` when t
   land. Write outputs to /fh/fast as they finish; never pile them up in
   a host's /tmp, which is small and shared. Per-host scratch and limits:
   https://github.com/matsengrp/wiki/wiki/cluster
+- Pin every process a launch starts, idle shells included: run the
+  launching shell under `taskset -c <cpus>` so the whole tree inherits
+  it. The START note lists each PID with its `taskset -cp`, threads
+  included.
 ```
 
 **For experiments (Snakemake workflows):**
