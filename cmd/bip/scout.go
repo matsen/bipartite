@@ -10,7 +10,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var scoutServerFlag string
+var (
+	scoutServerFlag string
+	scoutColorFlag  bool
+)
 
 var scoutCmd = &cobra.Command{
 	Use:   "scout",
@@ -25,14 +28,12 @@ human-readable table (--human).`,
 
 func init() {
 	scoutCmd.Flags().StringVar(&scoutServerFlag, "server", "", "Check a specific server by name")
+	scoutCmd.Flags().BoolVar(&scoutColorFlag, "color", false, "Color the --human table (only when stdout is a terminal)")
 	rootCmd.AddCommand(scoutCmd)
 }
 
-// colorOutput reports whether stdout is a terminal and NO_COLOR is unset.
-func colorOutput() bool {
-	if os.Getenv("NO_COLOR") != "" {
-		return false
-	}
+// stdoutIsTerminal reports whether stdout is a character device.
+func stdoutIsTerminal() bool {
 	fi, err := os.Stdout.Stat()
 	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
@@ -84,7 +85,7 @@ func runScout(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if humanOutput {
-		opts := scout.FormatOptions{Color: colorOutput(), Me: sshClient.Username()}
+		opts := scout.FormatOptions{Color: scoutColorFlag && stdoutIsTerminal(), Me: sshClient.Username()}
 		fmt.Print(scout.FormatTable(result, opts))
 	} else {
 		if err := outputJSON(result); err != nil {

@@ -6,6 +6,7 @@ Check remote server CPU, memory, load, and GPU availability via SSH.
 
 ```bash
 bip scout --human          # Human-readable table
+bip scout --human --color  # ...colored (terminal only)
 bip scout                  # JSON output (default)
 bip scout --server orca42  # Check single server
 ```
@@ -87,7 +88,7 @@ beetle02  offline
 - Users (%CPU): top CPU users, where 100% is one fully busy core (the CPU column
   is a share of the whole machine)
 
-On a terminal (and with `NO_COLOR` unset) the table is colored:
+With `--color`, and stdout a terminal, the table is colored (`alias scout='bip scout --human --color'` makes that the habit):
 
 | | under 50% | 50–90% | 90% and up |
 |---|---|---|---|
