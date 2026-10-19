@@ -65,8 +65,11 @@ func TestBuildCommand_NoGPU(t *testing.T) {
 
 func TestBuildCommand_WithGPU(t *testing.T) {
 	cmd := BuildCommand(Server{Name: "test", HasGPU: true})
-	if !containsStr(cmd, "nvidia-smi") {
-		t.Error("command for GPU server should contain nvidia-smi")
+	if !containsStr(cmd, gpuAppsMarker) {
+		t.Error("command for GPU server should list GPU process owners")
+	}
+	if got := strings.Count(cmd, delimiter); got != sectionGPUApps {
+		t.Errorf("expected %d delimiters, got %d", sectionGPUApps, got)
 	}
 }
 
@@ -516,5 +519,42 @@ func TestParseGPUApps_UnknownGPU(t *testing.T) {
 func TestParseGPUApps_MissingMarker(t *testing.T) {
 	if _, err := parseGPUApps("GPU-a"); err == nil {
 		t.Error("expected error without the marker")
+	}
+}
+
+// gpuOutput builds ParseMetrics input for two GPUs with the given owners section.
+func gpuOutput(owners string) string {
+	return validSample() + delimiter + "26.1" + delimiter + " 5.41, 5.43, 5.20" + delimiter +
+		"100\n0" + delimiter + "17706, 20480\n0, 20480" + delimiter + owners
+}
+
+func TestParseMetrics_GPUOwnersFallback(t *testing.T) {
+	for name, owners := range map[string]string{
+		"no marker":      "GPU-a\nGPU-b",
+		"uuid count off": "GPU-a\nGPU-b\nGPU-c\n" + gpuAppsMarker + "\nGPU-a alice",
+		"unknown GPU":    "GPU-a\nGPU-b\n" + gpuAppsMarker + "\nGPU-z alice",
+	} {
+		t.Run(name, func(t *testing.T) {
+			metrics, err := ParseMetrics(gpuOutput(owners), true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(metrics.GPUs) != 2 {
+				t.Fatalf("expected GPU numbers kept, got %d GPUs", len(metrics.GPUs))
+			}
+			for i, g := range metrics.GPUs {
+				if g.Users != nil {
+					t.Errorf("GPU%d: expected no owners, got %v", i, g.Users)
+				}
+			}
+		})
+	}
+}
+
+func TestParseMetrics_GPUWithoutOwnersSection(t *testing.T) {
+	output := validSample() + delimiter + "26.1" + delimiter + " 5.41, 5.43, 5.20" + delimiter +
+		"100" + delimiter + "17706, 20480"
+	if _, err := ParseMetrics(output, true); err == nil {
+		t.Error("expected error for a GPU server missing the owners section")
 	}
 }

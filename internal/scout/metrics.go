@@ -11,10 +11,10 @@ import (
 // delimiter separates command outputs in a single SSH session.
 const delimiter = "___SCOUT_DELIM___"
 
-// maxConcurrent is the bounded semaphore size for parallel server checks. Each
-// check takes ~1.3 s, mostly SSH setup and the CPU sample's sleep, so it is set
-// above the number of configured servers to check them all in one round.
-const maxConcurrent = 32
+// maxConcurrent is the bounded semaphore size for parallel server checks. With a
+// ProxyJump every check opens a connection to the one proxy host, whose sshd
+// starts dropping unauthenticated connections past MaxStartups (default 10).
+const maxConcurrent = 10
 
 // procSampleSeconds is the gap between the two /proc snapshots. It must match the
 // `sleep` in procSampleCmd (both derive from it).
@@ -143,9 +143,9 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 		sections[i] = strings.TrimSpace(sections[i])
 	}
 
-	expectedSections := 3
+	expectedSections := sectionLoadAvg + 1
 	if hasGPU {
-		expectedSections = 6
+		expectedSections = sectionGPUApps + 1
 	}
 	if len(sections) < expectedSections {
 		return nil, fmt.Errorf("expected %d metric sections, got %d", expectedSections, len(sections))

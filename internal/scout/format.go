@@ -10,24 +10,21 @@ import (
 // FormatOptions controls the human-readable table.
 type FormatOptions struct {
 	Color bool   // add ANSI colors (callers set it only for a terminal)
-	Me    string // the user whose GPUs and CPU usage are highlighted
+	Me    string // SSH login name; its GPUs and Users entry are highlighted
 }
 
-// ANSI styles. In the GPU columns the text color says how busy each GPU is.
+// ANSI SGR codes. In the GPU columns the text color says how busy each GPU is.
 // Util %: white below halfUsed. Memory: white below halfUsed, yellow below
-// nearlyFull, red above. A white background marks GPUs running a process of
-// opts.Me in the util % column, and opts.Me in the Users column; text that would
-// be white or uncolored is black there. "offline" and "metrics error" are red.
+// nearlyFull, red from nearlyFull up. A white background marks GPUs running a
+// process of opts.Me in the util % column, and opts.Me in the Users column, with
+// black text. "offline" and "metrics error" are red.
 const (
-	ansiOffline = "\x1b[31m"
-	ansiReset   = "\x1b[0m"
-
+	bold     = "1"
 	fgLow    = "37" // white
 	fgHalf   = "33" // yellow
 	fgFull   = "31" // red
 	fgOnMine = "30" // black
 	bgMine   = "47" // white
-	boldCode = "1"
 )
 
 // Fractions at which GPU text stops being white (util % and memory), and at
@@ -40,38 +37,32 @@ const (
 // styler applies FormatOptions' colors to individual table values.
 type styler struct{ FormatOptions }
 
-func (st styler) paint(code, s string) string {
+// paint wraps s in the SGR codes, or returns it unchanged without Color.
+func (st styler) paint(s string, codes ...string) string {
 	if !st.Color {
 		return s
 	}
-	return code + s + ansiReset
+	return "\x1b[" + strings.Join(codes, ";") + "m" + s + "\x1b[0m"
 }
 
-// gpuCell styles one GPU sub-column value: bold text in color fg (none if empty),
-// on a white background if the GPU runs a process of opts.Me.
+// gpuCell styles one util % value: bold text in color fg (none if empty), or
+// black on white if the GPU runs a process of opts.Me.
 func (st styler) gpuCell(g GPUInfo, s string, fg string) string {
-	if (fg == "" || fg == fgLow) && st.isMine(g) {
-		fg = fgOnMine
+	switch {
+	case st.isMine(g):
+		return st.paint(s, bold, fgOnMine, bgMine)
+	case fg != "":
+		return st.paint(s, bold, fg)
 	}
-	codes := []string{}
-	if fg != "" {
-		codes = append(codes, fg)
-	}
-	if st.isMine(g) {
-		codes = append(codes, bgMine)
-	}
-	if len(codes) == 0 {
-		return s
-	}
-	return st.paint("\x1b["+boldCode+";"+strings.Join(codes, ";")+"m", s)
+	return s
 }
 
-// memColor is the GPU Mem text color for usedGB of totalGB.
-func memColor(usedGB, totalGB int) string {
+// memColor is the GPU Mem text color for usedMB of totalMB.
+func memColor(usedMB, totalMB int) string {
 	switch {
-	case float64(usedGB) >= nearlyFull*float64(totalGB):
+	case float64(usedMB) >= nearlyFull*float64(totalMB):
 		return fgFull
-	case float64(usedGB) >= halfUsed*float64(totalGB):
+	case float64(usedMB) >= halfUsed*float64(totalMB):
 		return fgHalf
 	}
 	return fgLow
@@ -89,7 +80,7 @@ func (st styler) isMine(g GPUInfo) bool {
 	return false
 }
 
-// FormatTable formats a ScoutResult as a human-readable table.
+// FormatTable formats a ScoutResult as a human-readable table, styled per opts.
 func FormatTable(result ScoutResult, opts FormatOptions) string {
 	st := styler{opts}
 
@@ -194,11 +185,11 @@ func gpuColumnParams(servers []ServerStatus) (int, int) {
 // formatRow formats a single server status as table cells.
 func formatRow(s ServerStatus, maxGPUs int, memSubWidth int, st styler) []string {
 	if s.Status == "offline" {
-		return []string{s.Name, st.paint(ansiOffline, "offline"), "", "", "", ""}
+		return []string{s.Name, st.paint("offline", fgFull), "", "", "", ""}
 	}
 
 	if s.Metrics == nil {
-		return []string{s.Name, st.paint(ansiOffline, "metrics error"), "", "", "", ""}
+		return []string{s.Name, st.paint("metrics error", fgFull), "", "", "", ""}
 	}
 
 	m := s.Metrics
@@ -257,7 +248,7 @@ func formatGPUMemory(gpus []GPUInfo, maxGPUs int, subWidth int, st styler) strin
 			g := gpus[i-offset]
 			used := int(math.Round(float64(g.MemoryUsedMB) / 1024))
 			total := int(math.Round(float64(g.MemoryTotalMB) / 1024))
-			parts[i] = st.paint("\x1b["+boldCode+";"+memColor(used, total)+"m", padLeft(fmt.Sprintf("%d/%d", used, total), subWidth))
+			parts[i] = st.paint(padLeft(fmt.Sprintf("%d/%d", used, total), subWidth), bold, memColor(g.MemoryUsedMB, g.MemoryTotalMB))
 		}
 	}
 	return strings.Join(parts, " ")
@@ -279,7 +270,7 @@ func formatUsers(users []UserCPU, st styler) string {
 	for i, u := range show {
 		parts[i] = fmt.Sprintf("%s(%d%%)", u.User, int(u.CPUPercent+0.5))
 		if u.User == st.Me {
-			parts[i] = st.paint("\x1b["+boldCode+";"+fgOnMine+";"+bgMine+"m", parts[i])
+			parts[i] = st.paint(parts[i], bold, fgOnMine, bgMine)
 		}
 	}
 	result := strings.Join(parts, " ")
@@ -340,15 +331,9 @@ func visibleLen(s string) int {
 }
 
 func padRight(s string, width int) string {
-	if visibleLen(s) >= width {
-		return s
-	}
-	return s + strings.Repeat(" ", width-visibleLen(s))
+	return s + strings.Repeat(" ", max(0, width-visibleLen(s)))
 }
 
 func padLeft(s string, width int) string {
-	if visibleLen(s) >= width {
-		return s
-	}
-	return strings.Repeat(" ", width-visibleLen(s)) + s
+	return strings.Repeat(" ", max(0, width-visibleLen(s))) + s
 }

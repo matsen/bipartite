@@ -153,7 +153,7 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 
 ## How It Works
 
-Scout connects to every server at once (up to 32) and runs:
+Scout connects to up to 10 servers at once and runs:
 
 ```bash
 # Per-user CPU and overall CPU (one shared 0.5s sample). The remote command only

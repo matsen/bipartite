@@ -1,9 +1,12 @@
 package scout
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
+
+const ansiReset = "\x1b[0m"
 
 func TestFormatTable_OnlineWithGPU(t *testing.T) {
 	result := ScoutResult{
@@ -470,19 +473,10 @@ func colorResult() ScoutResult {
 	}}}
 }
 
-func stripANSI(s string) string {
-	var sb strings.Builder
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\x1b' {
-			for i < len(s) && s[i] != 'm' {
-				i++
-			}
-			continue
-		}
-		sb.WriteByte(s[i])
-	}
-	return sb.String()
-}
+// sgrPattern matches SGR sequences independently of visibleLen's scanner.
+var sgrPattern = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+func stripANSI(s string) string { return sgrPattern.ReplaceAllString(s, "") }
 
 func TestFormatTable_ColorKeepsLayout(t *testing.T) {
 	plain := FormatTable(colorResult(), FormatOptions{Me: "me"})
@@ -522,11 +516,22 @@ func TestMemColor(t *testing.T) {
 		used, total int
 		want        string
 	}{
-		{0, 45, fgLow}, {1, 45, fgLow}, {22, 45, fgLow}, {23, 45, fgHalf}, {40, 45, fgHalf}, {41, 45, fgFull}, {45, 45, fgFull},
+		{0, 1000, fgLow}, {499, 1000, fgLow}, {500, 1000, fgHalf}, {899, 1000, fgHalf}, {900, 1000, fgFull}, {1000, 1000, fgFull},
 	} {
 		if got := memColor(tt.used, tt.total); got != tt.want {
 			t.Errorf("memColor(%d, %d) = %q, want %q", tt.used, tt.total, got, tt.want)
 		}
+	}
+}
+
+func TestFormatTable_MemColorUsesMB(t *testing.T) {
+	// 41779 of 46490 MB is 89.9% full: yellow. Rounded to whole GB it prints as
+	// 41/45, which is 91% and would be red.
+	gpu := GPUInfo{UtilizationPercent: 90, MemoryUsedMB: 41779, MemoryTotalMB: 46490}
+	result := ScoutResult{Servers: []ServerStatus{{Name: "orca01", Status: "online", Metrics: &ServerMetrics{GPUs: []GPUInfo{gpu}}}}}
+	out := FormatTable(result, FormatOptions{Color: true})
+	if !strings.Contains(out, "\x1b[1;33m41/45"+ansiReset) {
+		t.Errorf("expected yellow 41/45:\n%q", out)
 	}
 }
 
@@ -544,7 +549,7 @@ func TestFormatTable_OfflineIsRed(t *testing.T) {
 		{Name: "orca03", Status: "online", Error: "metrics parse error: x"},
 	}}
 	out := FormatTable(result, FormatOptions{Color: true})
-	for _, want := range []string{ansiOffline + "offline" + ansiReset, ansiOffline + "metrics error" + ansiReset} {
+	for _, want := range []string{"\x1b[31moffline" + ansiReset, "\x1b[31mmetrics error" + ansiReset} {
 		if !strings.Contains(out, want) {
 			t.Errorf("expected %q in output:\n%q", want, out)
 		}
