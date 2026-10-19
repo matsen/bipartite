@@ -126,7 +126,8 @@ func TestParseMetrics_WithGPU(t *testing.T) {
 		"26.1" + delimiter +
 		" 5.41, 5.43, 5.20" + delimiter +
 		"100\n100" + delimiter +
-		"17706, 20480\n17706, 20480"
+		"17706, 20480\n17706, 20480" + delimiter +
+		"GPU-aaa\nGPU-bbb\n" + gpuAppsMarker + "\nGPU-bbb charlie\nGPU-bbb alice\nGPU-bbb charlie"
 
 	metrics, err := ParseMetrics(output, true)
 	if err != nil {
@@ -147,6 +148,12 @@ func TestParseMetrics_WithGPU(t *testing.T) {
 	}
 	if metrics.GPUs[0].MemoryTotalMB != 20480 {
 		t.Errorf("GPU0 mem total: expected 20480, got %d", metrics.GPUs[0].MemoryTotalMB)
+	}
+	if metrics.GPUs[0].Users != nil {
+		t.Errorf("GPU0 users: expected none, got %v", metrics.GPUs[0].Users)
+	}
+	if got := strings.Join(metrics.GPUs[1].Users, ","); got != "alice,charlie" {
+		t.Errorf("GPU1 users: expected alice,charlie, got %s", got)
 	}
 	if len(metrics.TopUsers) != 1 {
 		t.Fatalf("expected 1 top user, got %d", len(metrics.TopUsers))
@@ -202,7 +209,8 @@ func TestParseMetrics_MissingGPUGraceful(t *testing.T) {
 		"26.1" + delimiter +
 		" 5.41, 5.43, 5.20" + delimiter +
 		"" + delimiter + // empty GPU util
-		"" // empty GPU mem
+		"" + delimiter + // empty GPU mem
+		"" // empty GPU apps
 
 	metrics, err := ParseMetrics(output, true)
 	if err != nil {
@@ -480,4 +488,33 @@ func TestCheckAllServers_BoundedConcurrency(t *testing.T) {
 		t.Errorf("expected 20 calls, got %d", len(client.callLog))
 	}
 	client.mu.Unlock()
+}
+
+func TestParseGPUApps(t *testing.T) {
+	// A process that exited before stat leaves a line with no user; it is skipped.
+	users, err := parseGPUApps("GPU-a\nGPU-b\nGPU-c\n" + gpuAppsMarker + "\nGPU-c bob\nGPU-a \nGPU-a alice")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := [][]string{{"alice"}, nil, {"bob"}}
+	if len(users) != len(want) {
+		t.Fatalf("expected %d GPUs, got %d", len(want), len(users))
+	}
+	for i := range want {
+		if strings.Join(users[i], ",") != strings.Join(want[i], ",") {
+			t.Errorf("GPU%d: expected %v, got %v", i, want[i], users[i])
+		}
+	}
+}
+
+func TestParseGPUApps_UnknownGPU(t *testing.T) {
+	if _, err := parseGPUApps("GPU-a\n" + gpuAppsMarker + "\nGPU-z bob"); err == nil {
+		t.Error("expected error for a process on a GPU not in the uuid list")
+	}
+}
+
+func TestParseGPUApps_MissingMarker(t *testing.T) {
+	if _, err := parseGPUApps("GPU-a"); err == nil {
+		t.Error("expected error without the marker")
+	}
 }

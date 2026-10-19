@@ -137,6 +137,11 @@ func (c *RealSSHClient) RunCommand(server Server, command string) (string, error
 }
 
 // Close releases SSH client resources including the agent connection.
+// Username is the account scout logs in as on every server.
+func (c *RealSSHClient) Username() string {
+	return c.username
+}
+
 func (c *RealSSHClient) Close() error {
 	if c.agentConn != nil {
 		return c.agentConn.Close()

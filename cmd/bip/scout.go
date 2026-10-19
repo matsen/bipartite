@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -25,6 +26,15 @@ human-readable table (--human).`,
 func init() {
 	scoutCmd.Flags().StringVar(&scoutServerFlag, "server", "", "Check a specific server by name")
 	rootCmd.AddCommand(scoutCmd)
+}
+
+// colorOutput reports whether stdout is a terminal and NO_COLOR is unset.
+func colorOutput() bool {
+	if os.Getenv("NO_COLOR") != "" {
+		return false
+	}
+	fi, err := os.Stdout.Stat()
+	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 func runScout(cmd *cobra.Command, args []string) error {
@@ -74,7 +84,8 @@ func runScout(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if humanOutput {
-		fmt.Print(scout.FormatTable(result))
+		opts := scout.FormatOptions{Color: colorOutput(), Me: sshClient.Username()}
+		fmt.Print(scout.FormatTable(result, opts))
 	} else {
 		if err := outputJSON(result); err != nil {
 			exitWithError(ExitError, "encoding JSON: %v", err)

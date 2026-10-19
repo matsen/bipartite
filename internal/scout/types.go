@@ -52,9 +52,10 @@ type ServerMetrics struct {
 
 // GPUInfo holds per-GPU metrics.
 type GPUInfo struct {
-	UtilizationPercent int `json:"utilization_percent"`
-	MemoryUsedMB       int `json:"memory_used_mb"`
-	MemoryTotalMB      int `json:"memory_total_mb"`
+	UtilizationPercent int      `json:"utilization_percent"`
+	MemoryUsedMB       int      `json:"memory_used_mb"`
+	MemoryTotalMB      int      `json:"memory_total_mb"`
+	Users              []string `json:"users,omitempty"` // owners of the processes on this GPU
 }
 
 // UserCPU holds aggregated CPU usage for a single user.

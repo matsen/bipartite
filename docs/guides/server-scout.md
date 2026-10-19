@@ -74,17 +74,29 @@ Host snail snail.fhcrc.org
 ### Human-Readable (`--human`)
 
 ```
-Server    Status  CPU    Mem    GPUs              GPU Mem (GB)      Users
---------  ------  -----  -----  ----------------  ----------------  ----------------
-orca42    online  12.3%  45.6%  10%  5%  0%  0%   8/48 8/48 0/48 0/48  alice(45%) bob(12%)
-beetle01  online  89.2%  78.1%  95% 92%           40/48 38/48       charlie(156%)
-ermine    online   5.1%  22.0%
+Server    GPUs                 GPU Mem (GB)             Users (%CPU)         CPU    Mem
+--------  -------------------  -----------------------  -------------------  -----  -----
+orca42     10%   5%   0%   0%   8/48  8/48  0/48  0/48  alice(45%) bob(12%)  12.3%  45.6%
+ermine                                                                        5.1%  22.0%
+beetle01             95%  92%              40/48 38/48  charlie(156%)        89.2%  78.1%
 beetle02  offline
 ```
 
 - Sorted by availability (least-loaded first, offline last)
 - GPU columns right-aligned, one sub-column per GPU
-- Top CPU users shown with aggregated CPU percentage
+- Users (%CPU): top CPU users, where 100% is one fully busy core (the CPU column
+  is a share of the whole machine)
+
+On a terminal (and with `NO_COLOR` unset) the table is colored:
+
+| | under 50% | 50–90% | 90% and up |
+|---|---|---|---|
+| GPUs (util %) | bold white | plain | plain |
+| GPU Mem | bold white | bold yellow | bold red |
+
+GPUs running one of your processes (the SSH login user) get a white background in
+the util % column, as does your name in Users (%CPU). `offline` and
+`metrics error` are red.
 
 ### JSON (default)
 
@@ -101,7 +113,7 @@ beetle02  offline
         "load_avg_5min": 1.8,
         "load_avg_15min": 1.5,
         "gpus": [
-          {"utilization_percent": 10, "memory_used_mb": 8192, "memory_total_mb": 49152}
+          {"utilization_percent": 10, "memory_used_mb": 8192, "memory_total_mb": 49152, "users": ["alice"]}
         ],
         "top_users": [
           {"user": "alice", "cpu_percent": 45.2}
@@ -141,7 +153,7 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 
 ## How It Works
 
-Scout connects to each server in parallel (max 5 concurrent) and runs:
+Scout connects to every server at once (up to 32) and runs:
 
 ```bash
 # Per-user CPU and overall CPU (one shared 0.5s sample). The remote command only
@@ -160,6 +172,10 @@ uptime | awk -F'load average:' '{print $2}' | sed 's/^[[:space:]]*//'
 # GPU metrics (only for has_gpu: true servers)
 nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits
 nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits
+# Owners of each GPU's processes: uuids in index order, then "<gpu_uuid> <user>"
+nvidia-smi --query-gpu=uuid --format=csv,noheader
+nvidia-smi --query-compute-apps=gpu_uuid,pid --format=csv,noheader |
+  while IFS=', ' read u p; do echo "$u $(stat -c %U /proc/$p)"; done
 ```
 
 `parseProcSample` (in `internal/scout/metrics.go`) does all the arithmetic in Go:
