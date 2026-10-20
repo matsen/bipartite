@@ -128,6 +128,10 @@ func printRefDetail(ref reference.Reference, notesFile string) {
 		fmt.Printf("DOI:      %s\n", doiURL(ref.DOI))
 	}
 
+	if ref.URL != "" {
+		fmt.Printf("URL:      %s\n", ref.URL)
+	}
+
 	// Tags
 	if len(ref.Tags) > 0 {
 		fmt.Printf("Tags:     %s\n", strings.Join(ref.Tags, ", "))

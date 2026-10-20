@@ -209,3 +209,17 @@ func TestMergeUpdate_NoChangeWhenIncomingMatchesExisting(t *testing.T) {
 		t.Errorf("identity merge changed bytes:\n  in:  %s\n  out: %s", a, b)
 	}
 }
+
+func TestMergeUpdate_URLKeptOnlyWithoutDOI(t *testing.T) {
+	existing := Reference{ID: "Cammarata2026-ax", Title: "Foo", URL: "https://example.org/essay"}
+
+	got := MergeUpdate(existing, Reference{ID: "Cammarata2026-ax", Title: "Foo"})
+	if got.URL != "https://example.org/essay" {
+		t.Errorf("URL without DOI lost: got %q", got.URL)
+	}
+
+	got = MergeUpdate(existing, Reference{ID: "Cammarata2026-ax", Title: "Foo", DOI: "10.1234/foo"})
+	if got.URL != "" {
+		t.Errorf("URL kept after a DOI arrived: got %q, want empty", got.URL)
+	}
+}

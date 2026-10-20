@@ -256,6 +256,7 @@ func TestToBibTeX_VolumeIssuePagesPMID(t *testing.T) {
 		Issue:     "16",
 		Pages:     "4980-4996.e8",
 		PMID:      "42248140",
+		URL:       "https://example.org/essay",
 	}
 
 	got := ToBibTeX(ref)
@@ -265,6 +266,7 @@ func TestToBibTeX_VolumeIssuePagesPMID(t *testing.T) {
 		"number = {16},",
 		"pages = {4980-4996.e8},",
 		"pmid = {42248140},",
+		"url = {https://example.org/essay},",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("ToBibTeX() missing %q, got:\n%s", want, got)
