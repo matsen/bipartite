@@ -3,6 +3,9 @@
 #   {"kind":"review-request", pr, title}   a review requested of the user, with
 #       no r<N>-* window, and not commented on or reviewed by the user since
 #       the PR's last commit (🤖 comments are agents', so they don't count).
+#   {"kind":"review-done", pr, slot, window, why}   an r<N>-<slot> window on
+#       this fleet's clones whose PR the user has reviewed since the window
+#       wrote _ignore/REVIEW-p<N>.md, or that is merged or closed.
 #   {"kind":"comment"|"review", pr, slot, author, at, state, url, body}
 #       a human's comment or review on a PR the fleet opened (authored by the
 #       user's account), newer than the last run; slot names the clone(s) on
@@ -31,6 +34,19 @@ for n in $(gh search prs --review-requested=@me --state=open --repo "$REPO" \
               | select(.author.login == $me and (.body | startswith("🤖") | not))
               | (.submittedAt // .createdAt) | select(. > $h)] | length == 0)
     | {kind: "review-request", pr: .number, title}'
+done
+
+# Review windows whose review is done.
+grep -E '^r[0-9]+-' <<<"$windows" | while read -r w; do
+  n=${w%%-*}; n=${n#r}; slot=${w#*-}
+  [ -d "$CLONE_ROOT/$slot" ] || continue   # another fleet's window
+  f="$CLONE_ROOT/$slot/_ignore/REVIEW-p$n.md"
+  wrote=$( [ -f "$f" ] && date -u -r "$f" +%FT%TZ || echo 9999 )   # no file yet: still reviewing
+  gh pr view "$n" -R "$REPO" --json state,reviews | jq -c --arg me "$ME" --arg w "$w" --arg s "$slot" --arg t "$wrote" --argjson n "$n" '
+    (if .state != "OPEN" then (.state | ascii_downcase)
+     elif [.reviews[] | select(.author.login == $me and .submittedAt > $t)] | length > 0 then "reviewed"
+     else empty end) as $why
+    | {kind: "review-done", pr: $n, slot: $s, window: $w, why: $why}'
 done
 
 # Human activity on the fleet's own PRs.
