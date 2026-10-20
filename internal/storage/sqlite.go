@@ -23,7 +23,7 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	pdf_path, source_type, source_id, supersedes,
 	authors_json, supplement_paths_json,
 	pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
-	volume, issue, pages`
+	volume, issue, pages, url`
 
 // Per-column relevance weights for ranking FTS matches, in refs_fts column
 // order (id, title, abstract, authors_text, pub_year, notes, tags_text). A
@@ -110,7 +110,8 @@ func createSchema(db execer) error {
 			tags_json TEXT,
 			volume TEXT,
 			issue TEXT,
-			pages TEXT
+			pages TEXT,
+			url TEXT
 		);
 
 		-- Index for DOI lookups
@@ -169,8 +170,8 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			pdf_path, source_type, source_id, supersedes,
 			authors_json, supplement_paths_json,
 			pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
-			volume, issue, pages
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			volume, issue, pages, url
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
@@ -216,7 +217,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
 			nullableStringValue(ref.Note), nullableString(tagsJSON),
 			nullableStringValue(ref.Volume), nullableStringValue(ref.Issue),
-			nullableStringValue(ref.Pages),
+			nullableStringValue(ref.Pages), nullableStringValue(ref.URL),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -543,7 +544,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	var authorsJSON, supplementJSON, tagsJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
 	var pmid, pmcid, arxivID, s2id, notes sql.NullString
-	var volume, issue, pages sql.NullString
+	var volume, issue, pages, url sql.NullString
 	var pubMonth, pubDay sql.NullInt64
 
 	err := s.Scan(
@@ -552,7 +553,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
 		&pmid, &pmcid, &arxivID, &s2id, &notes, &tagsJSON,
-		&volume, &issue, &pages,
+		&volume, &issue, &pages, &url,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -576,6 +577,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.Volume = volume.String
 	ref.Issue = issue.String
 	ref.Pages = pages.String
+	ref.URL = url.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)

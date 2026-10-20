@@ -45,6 +45,9 @@ func MergeUpdate(existing, incoming Reference) Reference {
 	if out.Note == "" {
 		out.Note = existing.Note
 	}
+	if out.URL == "" {
+		out.URL = existing.URL
+	}
 	if out.Published.Year == 0 {
 		out.Published = existing.Published
 	}

@@ -76,6 +76,7 @@ type PaperpileEntry struct {
 		Filename   string `json:"filename"`
 	} `json:"attachments"`
 	Note         string   `json:"note"`
+	URL          []string `json:"url"`
 	LabelsNamed  []string `json:"labelsNamed"`
 	FoldersNamed []string `json:"foldersNamed"`
 }
@@ -283,6 +284,7 @@ func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Ref
 		Pages:           entry.Pages,
 		PMID:            entry.PMID.String(),
 		Note:            entry.Note,
+		URL:             urlWithoutDOI(entry),
 		Tags:            tags,
 		Published:       pubDate,
 		PDFPath:         pdfPath,
@@ -304,4 +306,13 @@ func paperpileEntryToReference(entry PaperpileEntry, strict bool) (reference.Ref
 	}
 
 	return ref, warning, nil
+}
+
+// urlWithoutDOI returns the entry's first URL when it has no DOI, so a web
+// page stays reachable; a DOI already gives a link, so its URLs are dropped.
+func urlWithoutDOI(entry PaperpileEntry) string {
+	if entry.DOI != "" || len(entry.URL) == 0 {
+		return ""
+	}
+	return entry.URL[0]
 }

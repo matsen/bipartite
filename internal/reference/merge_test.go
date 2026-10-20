@@ -51,6 +51,7 @@ func TestMergeUpdate_PreservesVolumeIssuePages(t *testing.T) {
 		Volume: "189",
 		Issue:  "16",
 		Pages:  "4980-4996.e8",
+		URL:    "https://example.org/essay",
 	}
 	incoming := Reference{
 		ID:     "DeWitt2026-cw",
@@ -69,6 +70,9 @@ func TestMergeUpdate_PreservesVolumeIssuePages(t *testing.T) {
 	}
 	if got.Pages != "4980-4996.e8" {
 		t.Errorf("Pages lost: got %q, want 4980-4996.e8", got.Pages)
+	}
+	if got.URL != "https://example.org/essay" {
+		t.Errorf("URL lost: got %q, want https://example.org/essay", got.URL)
 	}
 }
 
