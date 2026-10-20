@@ -1,6 +1,6 @@
 ---
 name: bip-pr-review
-description: Run comprehensive pre-merge quality checklist for current branch's PR
+description: Run the comprehensive pre-merge quality checklist on the current branch's PR, your own or someone else's checked out for review. The user's choice for every PR review, in place of /code-review.
 ---
 
 # /bip-pr-review
@@ -14,13 +14,15 @@ Automatically detects project type and runs appropriate checks.
 /bip-pr-review
 ```
 
+To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`, and push nothing there. Whether to post, the Step 7 math comment included, follows `docs/guides/roles.md` ("Posting to GitHub"): another human's scientific PR gets the findings reported to the user, not posted.
+
 ## Workflow
 
 ### Step 0: Check for Project-Specific Checklist
 
 First, check for a project-specific checklist:
 1. Look for `PRE-MERGE-CHECKLIST.md` in the repo root
-2. If not found, read the project's `CLAUDE.md` and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
+2. If not found, read the project's `CLAUDE.md` (or `AGENTS.md`) and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
 
 **If a project-specific checklist is found, follow those steps exactly** instead of the generic workflow below.
 
@@ -101,6 +103,7 @@ Flag anything suspicious for user confirmation before proceeding.
 - Launch `clean-code-reviewer` agent on modified source files (not tests)
 - **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions.
   The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
+- Point both at experiment and script code too, and ask what the PR could drop: modes, arms, and scripts its final result no longer uses (not controls or arms its README reports, including null ones), and helpers copied rather than imported.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 

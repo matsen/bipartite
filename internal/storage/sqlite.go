@@ -23,7 +23,7 @@ const selectRefFields = `id, doi, title, abstract, venue,
 	pdf_path, source_type, source_id, supersedes,
 	authors_json, supplement_paths_json,
 	pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
-	volume, issue, pages`
+	volume, issue, pages, url`
 
 // Per-column relevance weights for ranking FTS matches, in refs_fts column
 // order (id, title, abstract, authors_text, pub_year, notes, tags_text). A
@@ -55,7 +55,8 @@ var ftsRankJoin = "JOIN (SELECT id AS mid, bm25(refs_fts, " + bm25Weights + ") A
 
 // OpenDB opens or creates a SQLite database at the given path.
 func OpenDB(path string) (*DB, error) {
-	db, err := sql.Open("sqlite", path)
+	// Wait for a lock held by another session instead of failing with SQLITE_BUSY.
+	db, err := sql.Open("sqlite", path+"?_pragma=busy_timeout(30000)")
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
@@ -77,8 +78,13 @@ func (d *DB) Close() error {
 	return d.db.Close()
 }
 
+// execer is satisfied by both *sql.DB and *sql.Tx.
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
 // createSchema creates the database schema if it doesn't exist.
-func createSchema(db *sql.DB) error {
+func createSchema(db execer) error {
 	schema := `
 		-- Main references table
 		CREATE TABLE IF NOT EXISTS refs (
@@ -104,7 +110,8 @@ func createSchema(db *sql.DB) error {
 			tags_json TEXT,
 			volume TEXT,
 			issue TEXT,
-			pages TEXT
+			pages TEXT,
+			url TEXT
 		);
 
 		-- Index for DOI lookups
@@ -120,14 +127,6 @@ func createSchema(db *sql.DB) error {
 			notes,
 			tags_text
 		);
-
-		-- Embedding metadata for semantic index staleness detection (Phase II)
-		CREATE TABLE IF NOT EXISTS embedding_metadata (
-			paper_id TEXT PRIMARY KEY,
-			model_name TEXT NOT NULL,
-			indexed_at INTEGER NOT NULL,
-			abstract_hash TEXT NOT NULL
-		);
 	`
 
 	_, err := db.Exec(schema)
@@ -142,36 +141,44 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		return 0, fmt.Errorf("reading JSONL: %w", err)
 	}
 
+	// One transaction: a failed or concurrent rebuild leaves the previous
+	// tables whole, and readers never see a half-filled one.
+	tx, err := d.db.Begin()
+	if err != nil {
+		return 0, fmt.Errorf("beginning rebuild: %w", err)
+	}
+	defer tx.Rollback()
+
 	// Drop and recreate the refs/refs_fts tables rather than DELETE-ing rows,
 	// so a rebuild also picks up schema changes (new columns) rather than
 	// failing against a stale table created by an older binary.
-	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs"); err != nil {
+	if _, err := tx.Exec("DROP TABLE IF EXISTS refs"); err != nil {
 		return 0, fmt.Errorf("dropping refs table: %w", err)
 	}
-	if _, err := d.db.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
+	if _, err := tx.Exec("DROP TABLE IF EXISTS refs_fts"); err != nil {
 		return 0, fmt.Errorf("dropping refs_fts table: %w", err)
 	}
-	if err := createSchema(d.db); err != nil {
+	if err := createSchema(tx); err != nil {
 		return 0, fmt.Errorf("recreating schema: %w", err)
 	}
 
 	// Prepare statements
-	refsStmt, err := d.db.Prepare(`
+	refsStmt, err := tx.Prepare(`
 		INSERT INTO refs (
 			id, doi, title, abstract, venue,
 			pub_year, pub_month, pub_day,
 			pdf_path, source_type, source_id, supersedes,
 			authors_json, supplement_paths_json,
 			pmid, pmcid, arxiv_id, s2_id, notes, tags_json,
-			volume, issue, pages
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			volume, issue, pages, url
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
 		return 0, fmt.Errorf("preparing refs insert: %w", err)
 	}
 	defer refsStmt.Close()
 
-	ftsStmt, err := d.db.Prepare(`
+	ftsStmt, err := tx.Prepare(`
 		INSERT INTO refs_fts (id, title, abstract, authors_text, pub_year, notes, tags_text)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`)
@@ -210,7 +217,7 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 			nullableStringValue(ref.ArXivID), nullableStringValue(ref.S2ID),
 			nullableStringValue(ref.Note), nullableString(tagsJSON),
 			nullableStringValue(ref.Volume), nullableStringValue(ref.Issue),
-			nullableStringValue(ref.Pages),
+			nullableStringValue(ref.Pages), nullableStringValue(ref.URL),
 		)
 		if err != nil {
 			return 0, fmt.Errorf("inserting ref %s: %w", ref.ID, err)
@@ -229,6 +236,9 @@ func (d *DB) RebuildFromJSONL(jsonlPath string) (int, error) {
 		}
 	}
 
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("committing rebuild: %w", err)
+	}
 	return len(refs), nil
 }
 
@@ -310,8 +320,8 @@ func (d *DB) SearchField(field, value string, limit int) ([]reference.Reference,
 	return truncated, total, nil
 }
 
-// limitRefs returns refs truncated to limit entries. limit <= 0 means unlimited.
-func limitRefs(refs []reference.Reference, limit int) []reference.Reference {
+// LimitRefs returns refs truncated to limit entries. limit <= 0 means unlimited.
+func LimitRefs(refs []reference.Reference, limit int) []reference.Reference {
 	if limit <= 0 || limit >= len(refs) {
 		return refs
 	}
@@ -321,7 +331,7 @@ func limitRefs(refs []reference.Reference, limit int) []reference.Reference {
 // splitByLimit truncates refs to limit entries and reports the total match
 // count before truncation. limit <= 0 means unlimited.
 func splitByLimit(refs []reference.Reference, limit int) ([]reference.Reference, int) {
-	return limitRefs(refs, limit), len(refs)
+	return LimitRefs(refs, limit), len(refs)
 }
 
 // SearchFilters contains optional filters for SearchWithFilters.
@@ -534,7 +544,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	var authorsJSON, supplementJSON, tagsJSON sql.NullString
 	var doi, abstract, venue, pdfPath, sourceID, supersedes sql.NullString
 	var pmid, pmcid, arxivID, s2id, notes sql.NullString
-	var volume, issue, pages sql.NullString
+	var volume, issue, pages, url sql.NullString
 	var pubMonth, pubDay sql.NullInt64
 
 	err := s.Scan(
@@ -543,7 +553,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 		&pdfPath, &ref.Source.Type, &sourceID, &supersedes,
 		&authorsJSON, &supplementJSON,
 		&pmid, &pmcid, &arxivID, &s2id, &notes, &tagsJSON,
-		&volume, &issue, &pages,
+		&volume, &issue, &pages, &url,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -567,6 +577,7 @@ func scanReference(s scanner) (*reference.Reference, error) {
 	ref.Volume = volume.String
 	ref.Issue = issue.String
 	ref.Pages = pages.String
+	ref.URL = url.String
 
 	if pubMonth.Valid {
 		ref.Published.Month = int(pubMonth.Int64)
@@ -641,77 +652,4 @@ func prepareFTSQuery(query string) string {
 	}
 
 	return query
-}
-
-// EmbeddingMetadata represents embedding metadata stored in the database.
-type EmbeddingMetadata struct {
-	PaperID      string
-	ModelName    string
-	IndexedAt    int64  // Unix timestamp
-	AbstractHash string // SHA256 of abstract
-}
-
-// SaveEmbeddingMetadata saves or updates embedding metadata for a paper.
-func (d *DB) SaveEmbeddingMetadata(meta EmbeddingMetadata) error {
-	_, err := d.db.Exec(`
-		INSERT OR REPLACE INTO embedding_metadata (paper_id, model_name, indexed_at, abstract_hash)
-		VALUES (?, ?, ?, ?)
-	`, meta.PaperID, meta.ModelName, meta.IndexedAt, meta.AbstractHash)
-	return err
-}
-
-// GetEmbeddingMetadata retrieves embedding metadata for a paper.
-func (d *DB) GetEmbeddingMetadata(paperID string) (*EmbeddingMetadata, error) {
-	var meta EmbeddingMetadata
-	err := d.db.QueryRow(`
-		SELECT paper_id, model_name, indexed_at, abstract_hash
-		FROM embedding_metadata
-		WHERE paper_id = ?
-	`, paperID).Scan(&meta.PaperID, &meta.ModelName, &meta.IndexedAt, &meta.AbstractHash)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &meta, nil
-}
-
-// ClearEmbeddingMetadata removes all embedding metadata.
-func (d *DB) ClearEmbeddingMetadata() error {
-	_, err := d.db.Exec("DELETE FROM embedding_metadata")
-	return err
-}
-
-// CountEmbeddingMetadata returns the number of papers with embedding metadata.
-func (d *DB) CountEmbeddingMetadata() (int, error) {
-	var count int
-	err := d.db.QueryRow("SELECT COUNT(*) FROM embedding_metadata").Scan(&count)
-	return count, err
-}
-
-// CountPapersWithAbstract returns the number of papers that have abstracts.
-func (d *DB) CountPapersWithAbstract(minLength int) (int, error) {
-	var count int
-	err := d.db.QueryRow("SELECT COUNT(*) FROM refs WHERE abstract IS NOT NULL AND LENGTH(abstract) >= ?", minLength).Scan(&count)
-	return count, err
-}
-
-// ListPaperIDsWithAbstract returns IDs of papers that have abstracts of sufficient length.
-func (d *DB) ListPaperIDsWithAbstract(minLength int) ([]string, error) {
-	rows, err := d.db.Query("SELECT id FROM refs WHERE abstract IS NOT NULL AND LENGTH(abstract) >= ?", minLength)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var ids []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids = append(ids, id)
-	}
-	return ids, rows.Err()
 }

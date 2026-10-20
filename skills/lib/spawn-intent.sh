@@ -337,7 +337,7 @@ mirror_worklogs() {
 # ⭐ WHY THESE ARE CHECKS AND NOT BETTER DOCUMENTATION. Both fields audited
 # here ALREADY HAVE an explicit stated rule in the worker-facing spawn prompt,
 # and both rules were broken anyway on 2026-09-14:
-#   - `bip-conductor-spawn/SKILL.md` lists the seven phases in the
+#   - `bip-conductor-spawn/worker-brief.txt` lists the seven phases in the
 #     second-person `.epic-status.json fields:` block, and THREE distinct
 #     off-spec values still appeared in one day.
 #   - Two lines below it, `updated_at` says "Never a placeholder, and never
@@ -689,7 +689,7 @@ mark_spawn_intent_consumed() {
 
 # post_merge_ceremony <clone-dir> <owner/repo> <pr-number>
 # For a slot whose PR has merged, says who owes the issue-lead's terminal
-# ceremony (agents/issue-lead.md Step 8), for bip-conductor's reclaim step
+# ceremony (agents/issue-lead.md Step 4), for bip-conductor's reclaim step
 # to act on BEFORE it preserves and checks out the
 # clone (issue #258). Prints exactly one line:
 #   CEREMONY RAN #<pr>             a terminal lead comment exists -- clean up
@@ -710,7 +710,7 @@ mark_spawn_intent_consumed() {
 # did, issue #260). The
 # pr-land marker is matched as the exact prefix /bip-pr-land posts, since
 # a hand-posted "EPIC worklog preserved" note can say the skill did NOT
-# run (phyz#2817). agents/issue-lead.md Step 8 carries the same pattern as
+# run (phyz#2817). agents/issue-lead.md Step 4 carries the same pattern as
 # a jq test(); TestTerminalMarkerPatternsAgree keeps the two identical.
 # A failed gh call
 # must not collapse into a count of 0 or of 1, so it is its own outcome.

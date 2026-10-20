@@ -57,7 +57,7 @@ Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot
 ### Step M: Replay the manifest
 
 ```bash
-"$HELPER" --manifest-list      # TSV: session, index, window, cwd, session_id, method, confidence, issue, candidates
+"$HELPER" --manifest-list      # TSV: session, index, window, cwd, session_id, method, confidence, issue, candidates, pane
 ```
 
 Present the plan grouped by session (real names, windows in order).
@@ -67,11 +67,11 @@ Then replay:
 
 ```bash
 "$HELPER" --manifest-resume \
-  ["<session>:<index>=<chosen-id>" ...] \    # one per ambiguous window the user resolved
+  ["<session>:<index>[.<pane>]=<chosen-id>" ...] \    # one per ambiguous pane the user resolved
   ["<session>:<index>=skip" ...]             # leave that window a plain shell
 ```
 
-This rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their ids, shell windows as bare shells — and reports "(from manifest)".
+This rebuilds **every** session by its real name with windows in order, split windows with their saved pane layout — Claude panes `--resume`'d to their ids, shell panes as bare shells — and reports "(from manifest)".
 Ambiguous windows not given an explicit pick are left as plain shells.
 On success it stamps the manifest consumed (renames it `manifest.<boot>.done`) so a later *unplanned* reboot does not replay a stale park.
 Then nudge resumed workers per **Step 5**.
@@ -128,12 +128,12 @@ Each becomes a window named `<issue>-<clone>` (workers) or the clone basename (m
 ### Step 5: Nudge resumed workers
 
 A resumed worker reloads its context but sits idle — the ralph-loop wakeup that would have driven the next iteration died with the process.
-After each worker window finishes loading, send a one-line nudge so it resumes forward motion:
+Once the resumed sessions appear in `ListAgents`, `SendMessage` each worker a one-line nudge so it resumes forward motion:
 
 > Host rebooted and this session was interrupted.
 > Re-read `.epic-status.json` and `.epic-worklog.md`, then continue from where you left off.
 
-Auto-`send-keys` timing against claude's resume-load is unreliable, so prompt the user to paste it (or do it interactively once the window is ready).
+An idle session acts on a message, so no keystrokes are needed. A worker not yet listed is still loading; message it once it is.
 Conductor/planning/discussion sessions usually need no nudge.
 
 ## Notes

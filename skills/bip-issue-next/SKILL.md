@@ -35,7 +35,7 @@ Parse `$ARGUMENTS` as whitespace-separated tokens:
   If the file is missing or empty, stop and report the error — do not fall back to candidate-picking.
 
 Duplicate-detection is the caller's responsibility — if called twice with the same focus, two issues will be filed.
-The issue-lead guards against this by checking the PR for its terminal comment (the `**Category**: completed` line, `agents/issue-lead.md` Step 8), so the terminal ceremony runs at most once per PR.
+The issue-lead guards against this by checking the PR for its terminal comment (the `**Category**: completed` line, `agents/issue-lead.md` Step 4), so the terminal ceremony runs at most once per PR.
 
 Then resolve the source, in this order:
 - If a PR URL or number was given, use it (`gh pr view <arg> --json number,title,body,comments,reviews,baseRefName,headRefName`)
@@ -80,7 +80,7 @@ Use the repo to fill in concrete details:
 1. **Code context**: Read key source files mentioned in the PR to understand current state after the PR merges
 2. **Experiment results**: If the PR includes benchmark numbers or experiment outcomes, note them as motivation / baseline
 3. **Existing issues**: Run `gh issue list -R <repo> --limit 20 --json number,title` to check for duplicates or related open issues
-4. **Project docs**: Check for `CONSTITUTION.md`, `DESIGN.md`, or `experiments/CLAUDE.md` in the repo for conventions
+4. **Project docs**: Check for `CONSTITUTION.md`, `DESIGN.md`, or `experiments/AGENTS.md`/`CLAUDE.md` in the repo for conventions
 
 ### Step 4: Draft the issue file
 

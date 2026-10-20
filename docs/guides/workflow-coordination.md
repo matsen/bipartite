@@ -81,6 +81,7 @@ Read and ingest Slack channel history:
 
 ```bash
 bip slack channels                              # List configured channels
+bip slack post <channel> "<text>"               # Post via the channel's webhook
 bip slack history fortnight-goals               # Last 14 days of messages
 bip slack history fortnight-goals --days 7      # Last week
 bip slack history fortnight-goals --since 2026-01-01
@@ -104,14 +105,9 @@ Requires a Slack bot token with `channels:history`, `channels:read`, and `users:
 | `/bip-checkin` | Interactive activity check-in |
 | `/bip-narrative <channel>` | Generate themed prose digest |
 | `/bip-digest` | Generate and post Slack digest |
-| `bip spawn` | Launch Claude session with context |
 | `/bip-board` | Project board operations |
 
-Skills are installed by symlinking from the bipartite repo:
-
-```bash
-ln -s $(pwd)/.claude/skills/* ~/.claude/skills/
-```
+`make install` symlinks the skills into `~/.claude/skills/` ([Getting Started](getting-started.md)).
 
 ## Configuration
 

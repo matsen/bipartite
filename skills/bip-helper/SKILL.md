@@ -54,7 +54,7 @@ Reach for a subagent when the work fits in one call and only you need the answer
 ```bash
 HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
 # $HELPERS/<short-id>.json   written by the primary at start:
-#   {"id","session_id","name","primary","home","dir","dir_kind":"home|worktree|held-clone","hold"}
+#   {"id","session_id","name","primary","home","dir","dir_kind":"worktree|held-clone","hold"}
 # $HELPERS/<name>/           the helper's home
 # $HELPERS/<name>/result.md  written by the helper, one appended section per round
 ```
@@ -72,15 +72,15 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    ```
 
 2. **Pick its working directory `DIR`.**
-   - Research, review, or messaging only: the home itself, `DIR="$HOME_DIR"`, `KIND=home`.
-   - Code changes: a detached worktree off `origin/main`, inside the home, `KIND=worktree`:
+   - Research, review, messaging, or code changes: a detached worktree of your own repo off `origin/main`, inside the home, `KIND=worktree`; tell a research-only helper the checkout is read-only.
+     Not the bare home: `claude --bg` refuses a directory Claude Code has never trusted ("Workspace not trusted"), and a fresh home is one, while a worktree of a trusted repo starts.
      ```bash
      git -C <repo> fetch -q origin
      DIR="$HOME_DIR/$(basename "$(git -C <repo> rev-parse --show-toplevel)")"
      git -C <repo> worktree add --detach "$DIR" origin/main
      ```
      It branches there itself (for example via `/bip-issue-work`), as the checkout's only session.
-   - Gates or builds that need a built environment (a `.pixi` env, a vendored binary), where a fresh worktree would pay a full install first: a conductor or epic session that manages a clone pool can lend it an `available` pooled clone (as `/bip-conductor` Step 5 classifies it), held so spawn selection and `bip spawn` skip it, `KIND=held-clone`:
+   - Gates or builds that need a built environment (a `.pixi` env, a vendored binary), where a fresh worktree would pay a full install first: a conductor or epic session that manages a clone pool can lend it an `available` pooled clone (as `/bip-conductor` Step 4 classifies it), held so spawn selection and `bip spawn` skip it, `KIND=held-clone`:
      ```bash
      source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
      CLONE_ROOT=$(resolve_clone_root .epic-config.json)
@@ -96,7 +96,7 @@ HELPERS="${XDG_STATE_HOME:-$HOME/.local/state}/bip/helpers"
    The helper starts with no other context.
    Beyond the task, the brief gives your name (it reports to you by `SendMessage`), its home and working directory as expanded paths, and these rules:
    - extra checkouts and anything it cites go under its home, never its scratchpad;
-   - after each round, append a timed section with findings and evidence paths to `result.md` (the durable record), then report to the primary; if that send fails, the primary was likely renamed on a restart — re-resolve it from `ListAgents` by name prefix and resend;
+   - after each round, append a timed section with findings and evidence paths to `result.md` (the durable record), then report to the primary; if that send fails, the primary was likely renamed on a restart — note it in `result.md` and don't resend; never guess the primary from a name prefix;
    - leave a held clone clean and on `main`;
    - no merging, no pushing to main, no other checkouts, no helpers of its own.
 

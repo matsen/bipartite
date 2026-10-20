@@ -13,10 +13,12 @@ The next session then rebuilds from committed truth, not from a degraded transcr
 
 So the prompt is not a summary of what happened.
 It is an orientation for what to do next, pointing at the durable state rather than restating it.
+It is good for keeping the next steps front of mind, but it is handoff: knowledge that must outlive the next session goes in its durable home, such as the EPIC body, the paper, or an issue.
 
 ## Canonical location
 
-`_ignore/CONTINUE-<role>.md`, where `<role>` is one of `ms`, `spawn`, `epic`, `conductor`, or `generic`, in the directory the next session will start in.
+`_ignore/CONTINUE-<role>.md`, where `<role>` is one of `ms`, `spawn`, `epic`, `conductor`, `staff`, or `generic`, in the directory the next session will start in.
+For `generic`, key it by this session's `ListAgents` name as well — `_ignore/CONTINUE-generic-<name>.md` — because several ad-hoc sessions can share a directory.
 The role suffix is not optional: an epic session and a conductor session routinely share one repo checkout, so a single `_ignore/CONTINUE.md` would let the second tuckin silently overwrite the first and the resume would pick up the wrong role.
 For an epic, key it by EPIC number as well — `_ignore/CONTINUE-epic-<N>.md` — because one checkout can host several epic sessions for different EPICs, and a bare `CONTINUE-epic.md` recreates the collision between them.
 It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks it).
@@ -25,9 +27,11 @@ It is gitignored (`_ignore/` is; add `_ignore/` to `.gitignore` if a repo lacks 
 
 `/bip-tuckin` and `/bip-continue` pick the role the same way, and never from what the session has been discussing — an epic session talks about slots and spawns all day, so activity misclassifies it:
 
-1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against the self-registered fleet files `$CLONE_ROOT/.epic-session` and `$CLONE_ROOT/.conductor-session`, each of which holds the name of the session in that role and is rewritten every cycle. A match is the role (`epic` or `conductor`).
-2. Else the **marker file** in the working directory: `.ms-config.json` → `ms`; `.epic-status.json` → `spawn` (a worker slot).
-3. Else **ask**, or fall back to `generic`.
+1. **This session's own name** — the "This session is `X`" row of `ListAgents` — against two records: the `Session: X` line of an `_ignore/CONTINUE-epic-<N>.md` in the working directory, which `/bip-epic` writes at cold start, so this one file is state as well as handoff (role `epic`, EPIC `N`); and `$CLONE_ROOT/.conductor-session`, which the conductor rewrites every cycle (role `conductor`).
+   A session named `staff` is the role `staff`.
+   A session that two records name holds two roles, which `docs/guides/roles.md` forbids: stop and ask.
+2. Else the **marker file** in the working directory: `.ms-config.json` → `ms`, but only when its `session` field is this session's name or is absent (a config `/bip-ms` hasn't stamped yet), since other sessions also run in manuscript trees; `.epic-status.json` → `spawn` (a worker slot).
+3. Else **ask**, or fall back to `generic` — but when `.ms-config.json` names a different session, ask, naming both: a `/rename` leaves the ms session's stamp stale.
 
 ## Shape
 
@@ -42,6 +46,9 @@ It carries only:
   A background task can outlive `/clear`, so an item that says to restart something checks first that it isn't still running (`pgrep -af '<cmd>'`).
   Not a general warning elsewhere — a resuming session runs the top imperative before it reads a caveat below it, so the check must sit on the item's own line.
 - **Anything still pending with the user** — an open question the session was waiting on; a resume that drops these loses them silently.
+  Write each user decision and open question from the user's latest words on it in this session, quoted, not from a note or comment written earlier: a later direction that answers an item, even with an option that was not offered, makes it a decision taken.
+  Write the session's own plan as the session's, never under the user's quote.
+  A durable note the tuckin finds behind the conversation gets corrected too.
 
 ```
 # written at <sha> <iso-time>
@@ -60,6 +67,7 @@ Point at the check, not the answer.
 ## Resuming from it
 
 In the next session, after `/clear`, run `/bip-continue`.
-It determines the role (above), reads the matching `_ignore/CONTINUE-<role>.md`, reports how stale the file is (its stamp against `git log -1` and the newest PR/issue activity), runs each in-flight item's inline check before acting, and hands off to the cold-start or resume skill the prompt names — which owns the role-specific work (re-registering `.epic-session`/`.conductor-session`, live-run and pooled-slot handling, surfacing standing traps).
+`/bip-cycle` does both steps itself, in tmux: it types `/clear`, and then `/bip-continue` into the fresh session.
+It determines the role (above), reads the matching `_ignore/CONTINUE-<role>.md`, reports how stale the file is (its stamp against `git log -1` and the newest PR/issue activity), runs each in-flight item's inline check before acting, and hands off to the cold-start or resume skill the prompt names — which owns the role-specific work (re-registering `.conductor-session` or the EPIC's `Owner:` line, live-run and pooled-slot handling, surfacing standing traps).
 
 `/bip-tuckin` is the matching entry point on the way out: it delegates to the right `/bip-*-tuckin` (or a generic fallback), each of which writes this prompt.

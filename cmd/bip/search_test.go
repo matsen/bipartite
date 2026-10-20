@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/matsen/bipartite/internal/reference"
+)
 
 func TestParseYearRange(t *testing.T) {
 	tests := []struct {
@@ -52,5 +56,22 @@ func TestParseYearRange(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSortByDateDesc(t *testing.T) {
+	refs := []reference.Reference{
+		{ID: "old", Published: reference.PublicationDate{Year: 2020, Month: 5}},
+		{ID: "newMonth", Published: reference.PublicationDate{Year: 2026, Month: 9}},
+		{ID: "noMonth", Published: reference.PublicationDate{Year: 2026}},
+		{ID: "newDay", Published: reference.PublicationDate{Year: 2026, Month: 9, Day: 12}},
+		{ID: "mid", Published: reference.PublicationDate{Year: 2026, Month: 1}},
+	}
+	sortByDateDesc(refs)
+	want := []string{"newDay", "newMonth", "mid", "noMonth", "old"}
+	for i, id := range want {
+		if refs[i].ID != id {
+			t.Fatalf("position %d: got %s, want %s (order %v)", i, refs[i].ID, id, refs)
+		}
 	}
 }

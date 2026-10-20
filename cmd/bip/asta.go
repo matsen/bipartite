@@ -18,7 +18,8 @@ powerful text snippet search capabilities.
 All commands output JSON by default for agent consumption.
 Use --human flag for human-readable output.
 
-Environment Variables (take precedence over asta_api_key in config.yml):
+Environment Variables (also read from ~/.config/bip/secrets.env, after the
+environment and before asta_api_key in config.yml):
   BIP_ASTA_API_KEY  Your ASTA API key (recommended, bip-scoped)
   ASTA_API_KEY      Your ASTA API key (fallback)
 

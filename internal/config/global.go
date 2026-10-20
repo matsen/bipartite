@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -18,6 +19,7 @@ type GlobalConfig struct {
 	GitHubToken   string            `yaml:"github_token,omitempty"`
 	SlackWebhooks map[string]string `yaml:"slack_webhooks,omitempty"`
 	SpawnAgent    string            `yaml:"spawn_agent,omitempty"`
+	NtfyTopic     string            `yaml:"ntfy_topic,omitempty"`
 
 	// Layout, when set, is the per-machine default for repo working-directory
 	// resolution. Read by flow.ResolveRepoPath. Optional; an absent block
@@ -30,6 +32,9 @@ const (
 	GlobalConfigDir = "bip"
 	// GlobalConfigFile is the config file name.
 	GlobalConfigFile = "config.yml"
+	// SecretsFile holds tokens as NAME=value lines, kept apart from
+	// config.yml because agents read that file routinely.
+	SecretsFile = "secrets.env"
 )
 
 // globalConfigCache caches the loaded global config.
@@ -83,17 +88,63 @@ func LoadGlobalConfig() (*GlobalConfig, error) {
 	return &cfg, nil
 }
 
-// ResetGlobalConfigCache clears the cached global config.
+// ResetGlobalConfigCache clears the cached global config and secrets.
 // Useful for testing.
 func ResetGlobalConfigCache() {
 	globalConfigCache = nil
+	secretsCache = nil
 }
 
-// firstEnvOrConfig returns the first non-empty environment variable named in
-// names, falling back to configValue. Empty env vars are treated as unset.
+// secretsCache caches the parsed secrets file.
+var secretsCache map[string]string
+
+// loadSecrets reads secrets.env beside config.yml: NAME=value lines, with
+// an optional leading "export ", optional quotes, and # comments. A missing
+// or unreadable file yields no secrets.
+func loadSecrets() map[string]string {
+	if secretsCache != nil {
+		return secretsCache
+	}
+	secretsCache = map[string]string{}
+	path := GlobalConfigPath()
+	if path == "" {
+		return secretsCache
+	}
+	data, err := os.ReadFile(filepath.Join(filepath.Dir(path), SecretsFile))
+	if err != nil {
+		return secretsCache
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		line = strings.TrimPrefix(line, "export ")
+		name, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if len(value) >= 2 && (value[0] == '"' || value[0] == '\'') && value[len(value)-1] == value[0] {
+			value = value[1 : len(value)-1]
+		}
+		secretsCache[strings.TrimSpace(name)] = value
+	}
+	return secretsCache
+}
+
+// firstEnvOrConfig returns the first non-empty value for names, looking in
+// the environment, then in secrets.env under the same names, and falling
+// back to configValue. Empty values are treated as unset.
 func firstEnvOrConfig(names []string, configValue string) string {
 	for _, name := range names {
 		if v := os.Getenv(name); v != "" {
+			return v
+		}
+	}
+	secrets := loadSecrets()
+	for _, name := range names {
+		if v := secrets[name]; v != "" {
 			return v
 		}
 	}
@@ -114,7 +165,8 @@ var ASTAAPIKeyEnvVars = []string{"BIP_ASTA_API_KEY", "ASTA_API_KEY"}
 // Precedence:
 //  1. $BIP_ASTA_API_KEY
 //  2. $ASTA_API_KEY
-//  3. asta_api_key in ~/.config/bip/config.yml
+//  3. the same names in ~/.config/bip/secrets.env
+//  4. asta_api_key in ~/.config/bip/config.yml
 //
 // Empty env vars are treated as unset.
 func GetASTAAPIKey() string {
@@ -143,7 +195,8 @@ var SlackBotTokenEnvVars = []string{"BIP_SLACK_TOKEN", "SLACK_BOT_TOKEN"}
 // Precedence:
 //  1. $BIP_SLACK_TOKEN
 //  2. $SLACK_BOT_TOKEN
-//  3. slack_bot_token in ~/.config/bip/config.yml
+//  3. the same names in ~/.config/bip/secrets.env
+//  4. slack_bot_token in ~/.config/bip/config.yml
 //
 // Empty env vars are treated as unset.
 func GetSlackBotToken() string {
@@ -161,7 +214,8 @@ func GetSlackBotToken() string {
 //  1. $BIP_GITHUB_TOKEN
 //  2. $GITHUB_TOKEN
 //  3. $GH_TOKEN
-//  4. github_token in ~/.config/bip/config.yml
+//  4. the same names in ~/.config/bip/secrets.env
+//  5. github_token in ~/.config/bip/config.yml
 //
 // Empty env vars are treated as unset.
 func GetGitHubToken() string {
@@ -193,13 +247,55 @@ func GetSpawnAgent() string {
 	return firstEnvOrConfig(SpawnAgentEnvVars, configValue)
 }
 
-// GetSlackWebhook returns the Slack webhook URL for a channel from global config.
+// NtfyTopicEnvVars lists the environment variables consulted by
+// GetNtfyTopic, in precedence order.
+var NtfyTopicEnvVars = []string{"BIP_NTFY_TOPIC"}
+
+// GetNtfyTopic returns the ntfy.sh topic that `bip page` posts to.
+//
+// Precedence:
+//  1. $BIP_NTFY_TOPIC
+//  2. ntfy_topic in ~/.config/bip/config.yml
+//
+// Empty env vars are treated as unset.
+func GetNtfyTopic() string {
+	cfg, _ := LoadGlobalConfig()
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.NtfyTopic
+	}
+	return firstEnvOrConfig(NtfyTopicEnvVars, configValue)
+}
+
+// SlackWebhookEnvVars lists the names consulted by GetSlackWebhook for a
+// channel, in precedence order: BIP_SLACK_WEBHOOK_<CHANNEL>, then
+// SLACK_WEBHOOK_<CHANNEL>. <CHANNEL> is the channel name upper-cased, with
+// every character other than a letter or digit replaced by '_', so that
+// "nonparam-f-matrix" becomes NONPARAM_F_MATRIX and the name is a valid
+// shell variable.
+func SlackWebhookEnvVars(channel string) []string {
+	suffix := strings.Map(func(r rune) rune {
+		switch {
+		case r >= 'a' && r <= 'z':
+			return r - 'a' + 'A'
+		case (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9'):
+			return r
+		}
+		return '_'
+	}, channel)
+	return []string{"BIP_SLACK_WEBHOOK_" + suffix, "SLACK_WEBHOOK_" + suffix}
+}
+
+// GetSlackWebhook returns the Slack webhook URL for a channel: the
+// SlackWebhookEnvVars names in the environment, then in secrets.env, then
+// slack_webhooks.<channel> in config.yml. Empty values are treated as unset.
 func GetSlackWebhook(channel string) string {
 	cfg, _ := LoadGlobalConfig()
-	if cfg.SlackWebhooks != nil {
-		return cfg.SlackWebhooks[channel]
+	configValue := ""
+	if cfg != nil {
+		configValue = cfg.SlackWebhooks[channel]
 	}
-	return ""
+	return firstEnvOrConfig(SlackWebhookEnvVars(channel), configValue)
 }
 
 // GetNexusPath returns the configured nexus path from global config.

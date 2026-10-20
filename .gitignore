@@ -7,7 +7,7 @@ AGENTS.md
 .env
 
 site/
-ISSUE-*.md
+/ISSUE-*.md
 
 # Go build artifacts
 /bip

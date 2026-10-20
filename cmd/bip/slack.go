@@ -15,12 +15,14 @@ const (
 var slackCmd = &cobra.Command{
 	Use:   "slack",
 	Short: "Slack channel integration commands",
-	Long: `Commands for reading from Slack channels.
+	Long: `Commands for reading from Slack channels, and for posting to them through
+their webhooks ('post').
 
 Fetch message history, list configured channels, and analyze team activity.
 Requires a Slack bot token with channels:history, channels:read, and
 users:read scopes. Sourced from BIP_SLACK_TOKEN (recommended) or
-SLACK_BOT_TOKEN, falling back to slack_bot_token in ~/.config/bip/config.yml.
+SLACK_BOT_TOKEN, in the environment or ~/.config/bip/secrets.env, falling back
+to slack_bot_token in ~/.config/bip/config.yml.
 
 The 'resolve' subcommand is a token-free stdin/stdout filter that rewrites
 channel-mention markup (<#CXXXX>) to #channel-name using sources.yml; pipe

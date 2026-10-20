@@ -123,15 +123,7 @@ func abbreviateAuthorName(name string) string {
 	}
 
 	lastName := parts[len(parts)-1]
-	firstName := parts[0]
-
-	// Use runes for proper Unicode handling
-	runes := []rune(firstName)
-	if len(runes) == 0 {
-		return lastName
-	}
-
-	return lastName + " " + string(runes[0])
+	return lastName + " " + firstRune(parts[0])
 }
 
 // formatASTAAuthors formats a list of ASTA authors for human display.
@@ -261,6 +253,9 @@ func formatPaperDetailsHuman(result any) {
 	fmt.Println()
 	if len(paper.FieldsOfStudy) > 0 {
 		fmt.Printf("Fields: %s\n", strings.Join(paper.FieldsOfStudy, ", "))
+	}
+	if paper.ExternalIDs != nil && paper.ExternalIDs.DOI != "" {
+		fmt.Printf("DOI: %s\n", doiURL(paper.ExternalIDs.DOI))
 	}
 	if paper.URL != "" {
 		fmt.Printf("URL: %s\n", paper.URL)

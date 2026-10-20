@@ -90,7 +90,7 @@ Check whether the issue's proposed code organization aligns with the repo's curr
 - Does the repo have a Python package?
   If so, does the issue put core logic there or in naked scripts?
 - Have new modules or patterns been established since the issue was written that the issue should follow?
-- Has the repo's CLAUDE.md or design documentation changed?
+- Has the repo's AGENTS.md/CLAUDE.md or design documentation changed?
 
 #### 2e: Infrastructure reuse check
 

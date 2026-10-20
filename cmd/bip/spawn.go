@@ -602,7 +602,7 @@ func buildPRPrompt(repo string, number int, data *ItemData) string {
 Do NOT approve, merge, comment, or make changes. Analysis only.`
 	} else {
 		taskSection = `Your task:
-1. Check @CLAUDE.md in this repo for PR review guidelines and follow them
+1. Check this repo's CLAUDE.md or AGENTS.md for PR review guidelines and follow them
 2. Start by summarizing the PR description — surface any results, benchmarks,
    or data the author included. Do not skip over this content.
 3. If no guidelines exist, review the PR for correctness, style, and potential issues

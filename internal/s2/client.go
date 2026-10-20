@@ -20,7 +20,7 @@ const (
 	BaseURL = "https://api.semanticscholar.org/graph/v1"
 
 	// DefaultFields are the fields requested by default for paper lookups.
-	DefaultFields = "paperId,externalIds,title,abstract,authors,year,venue,publicationDate,citationCount,referenceCount,isOpenAccess,fieldsOfStudy"
+	DefaultFields = "paperId,externalIds,title,abstract,authors,year,venue,publicationDate,citationCount,referenceCount,isOpenAccess,openAccessPdf,fieldsOfStudy"
 
 	// DefaultTimeout is the default HTTP request timeout.
 	DefaultTimeout = 30 * time.Second

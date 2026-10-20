@@ -29,7 +29,7 @@ The epic session does strategy, not fleet ops:
 - Flags dependency-direction conflicts and file-overlap collisions between open issues, before either gets spawned — by the time branches exist the cost of a collision is already sunk
 - Decides an issue is ready and drafts the spawn brief, but does not spawn it — that goes to `/bip-conductor` as intent, not action
 - Owns the user-facing topic channel: this is where scientific reasoning gets presented and where scientific decisions get made.
-  `/bip-conductor` narrates fleet state only and points here for substance (see that skill's "The fleet/topic line"), so expect a semantic question raised in the conductor's window to arrive here rather than be answered there.
+  `/bip-conductor` narrates fleet state only and points here for substance (see that skill's "Role"), so expect a semantic question raised in the conductor's window to arrive here rather than be answered there.
 - Never writes code, creates branches, or spawns tmux windows for numbered issues itself
 
 ## Conventions
@@ -38,8 +38,9 @@ The epic session does strategy, not fleet ops:
 - `i281` = issue #281, `p275` = PR #275.
   Never bare `#N`.
 - First mention in bullet lists: full URL inline.
+- When a live slot holds the work, add its tmux window, `p1344 (1343-peach)`, so the user can jump there with tmux's `find-window`.
 
-Tmux window naming, reboot recovery, and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns — see that skill's Conventions section.
+Tmux window naming and the live-worker `SendMessage` mechanics are `/bip-conductor` concerns (its Conventions section); reboot recovery is `/bip-conductor-prepare-reboot` and `/bip-conductor-recover`.
 
 ### Message economy
 
@@ -49,9 +50,10 @@ Cross-session messages are nudges, not transcripts: lead with the decision or th
 
 - **Before writing that the EPIC's question is answered**, quote the EPIC's own question and state which measured quantity closes it, and by how much. If it is a fraction of one stage at one fixture, say that.
 - **Run a skeptic subagent on your own artifacts**: before claiming a question answered, and before filing an issue you wrote yourself.
+  File every new issue through `/bip-issue-check`, never with raw `gh issue create`.
 - **Before repeating who found something**, check the attribution against the log or the PR; it is the part of a claim nobody tests.
 - **Before escalating a question to the user, ask whether its answers lead to different actions.** If both lead to the same action, do not escalate.
-  Put a question for the user as one line in your report, park only that item, and keep working the rest. Never use `AskUserQuestion` here: until the user answers, no peer message reaches you.
+  Put a question for the user as one line in your report, escalate it per `/bip-conductor`'s "Paging the user", park only that item, and keep working the rest.
 
 ## Configuration
 
@@ -75,17 +77,22 @@ cat .epic-config.json
 Check that the pull succeeded and never suppress its stderr. In a pooled clone it commonly fails because an untracked leftover collides with a path a later PR landed as tracked; move the blocker aside (it may be unpreserved work), pull again, and confirm `git rev-list --count HEAD..origin/main` is `0`.
 **Re-run the pull at the top of every fresh scan cycle**, not just at cold start: every `gh` read is correct regardless of the tree's age, so nothing else forces it, and a stale file written back is how an EPIC body or a skill acquires a reverted diff. `git fetch` alone does not update the working tree.
 
-Read every **tracked** subdirectory `CLAUDE.md` — only the repo-root one is auto-loaded, and this role works from the root:
+Read every **tracked** subdirectory `CLAUDE.md` or `AGENTS.md` — only the repo-root one is auto-loaded, and this role works from the root:
 
 ```sh
-git ls-files | /usr/bin/grep 'CLAUDE\.md$'
+git ls-files | /usr/bin/grep -E '(CLAUDE|AGENTS)\.md$'
 ```
 
 Use `git ls-files`, not `find`: vendored copies and stale nested clones also contain files named `CLAUDE.md`. Before claiming a measured number is new, grep the experiment's own README for it.
 
-**Self-register for completion pushes**: resolve `CLONE_ROOT` and write this session's own `ListAgents` name (the "This session is ..." row) as the sole line of `$CLONE_ROOT/.epic-session` — this is how the conductor finds the epic to push a `needs-human`/`completed` notification without guessing among `ListAgents` rows.
-See `/bip-conductor`'s Conventions section ("Completion pushes").
-Re-run this write every time `/bip-epic` starts a fresh cycle, since the address can drift mid-session.
+**Own the EPIC** (`docs/guides/roles.md`): this session owns this one EPIC and no other.
+At every cold start, make the body's `Owner:` line this session's exact `ListAgents` name (the "This session is ..." row) — workers and the conductor read it at send time.
+If it names another live session, stop and ask staff rather than take it over.
+Make `_ignore/CONTINUE-epic-<N>.md` carry the line `Session: <that name>`, creating the file if needed, so `/bip-tuckin` can tell this session is an epic before its first tuckin.
+Rule on how to test and on whether a result answers the EPIC; a claim that your own hypothesis holds goes into the body only once someone else has re-derived it, as the guide says, and the entry names the checker.
+Consult the papers in the `Feeds:` line before changing direction; each has a summary at `nexus/papers/ms-<owner>-<repo>.md`. Send each landed or reported result to the ms session named there as it arrives, marked checked, reported or provisional; it goes into that session's notes record even while the paper waits.
+When the result names a consumer outside this EPIC — a repo, a `<repo>#N`, or an owner — send it after merge to that EPIC's `Owner:` too, saying what the result licenses and what it doesn't; never infer a consumer the result doesn't name.
+The consumer's owner replies with the action it will take, so a misreading shows at once, and records it on the consumer issue.
 
 ### Step 2: Fan out scanners
 
@@ -198,6 +205,8 @@ Follow the **EPIC body update pattern** below.
 Do this whenever findings come in, items complete, or new work starts — not on a fixed cadence.
 
 **Prune on every write, not on a separate sweep.** Whenever you touch a body to add a finding or check a box, cut sections whose work is now fully complete in the same edit.
+In an EPIC body, when new text replaces old, delete the old in that edit rather than qualify it; grep the body for the item's other mentions and fix them together.
+When the deleted line was a RULED OUT or settled entry, tell the conductor, so it greps the live briefs as `/bip-conductor`'s "Citations" says.
 
 **Before writing a correction, a retraction, or a unification of two findings**, apply the checks in `EVIDENCE-DISCIPLINE.md` ("Before writing a correction or a unification").
 
@@ -216,13 +225,16 @@ Fleet *policy* (who lands PRs, whether CI exists, what a spawn prompt standardly
 Handoff artifacts (spawn intent, unfiled drafts) are the opposite category: authored deliberately, to a durable path outside git.
 
 **A user decision may be written into the EPIC body only against a `FINAL` shape.**
-When the session talking to the user is the conductor, the decision arrives here as a relay — see `/bip-conductor`'s "Decision relays: PROVISIONAL and FINAL".
-A `PROVISIONAL` relay is discussion in progress; write nothing into the body from it beyond noting that a decision is pending, and check `.epic-decisions.md` in the conductor cwd for the eventual `FINAL` entry.
+When the session talking to the user is the conductor or `staff`, the decision arrives here as a relay — see `/bip-conductor`'s "Decision relays: PROVISIONAL and FINAL".
+A `PROVISIONAL` relay is discussion in progress; write nothing into the body from it beyond noting that a decision is pending. The eventual `FINAL` arrives in `.epic-decisions.md` in the conductor cwd, or as a message from staff.
 Only a `FINAL` relay — or a decision reached directly in this session — authorizes the write, and the body should restate the decision's substance, not a paraphrase of the sentiment that led to it.
+Quote marks in a decision entry hold only the user's words; the owner's gloss goes outside the decision line, labelled as the owner's.
+Staff also sends two relays that carry no `FINAL` mark because they are not the user's words, and each is written as labelled: "staff applying <ruling, link>" (an existing user ruling applied) and "staff ruling" (staff's own call, recorded as "staff ruling (<date, link>)"). Neither is recorded as a new user decision.
 **An unmarked relay is not a decision, and not a cue to ask the user yourself** — reply asking the relaying session for the marked form.
 
 ### Step 6: Hand spawn intent to the conductor
 
+Before drafting a brief, run the PI questions (`docs/guides/pi-questions.md`) against the EPIC's current state.
 For each issue judged ready — unblocked per Step 3, no unresolved conflict per Step 4a/4b, **and holding no live slot in the conductor's occupancy table** — draft the semantic brief and write it to:
 
 ```bash
@@ -235,7 +247,7 @@ mkdir -p "$CLONE_ROOT/.spawn-prompts"
 `<this-skill's-base-directory>` is this skill's base directory as given at invocation (e.g. `/home/user/.claude/skills/bip-epic`); the shared helper lives at `lib/spawn-intent.sh`, a sibling of every skill directory.
 `clone_root` is tilde-form; `resolve_clone_root` expands it.
 
-**Every brief opens with an `EPIC: <N>` line.** `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
+**Every brief opens with an `EPIC: <owner/repo>#<N>` line**, cross-repo included. `/bip-conductor-spawn` requires it, and it is how the conductor counts live slots by EPIC.
 
 **Intersect the candidate set with the occupancy table as a discrete step**, and write "checked against conductor table of HH:MM" in the handoff; re-ask if the table is older than a cycle. In clone mode no downstream guard refuses the same issue spawned into a second idle clone.
 
@@ -311,6 +323,12 @@ rm -f /tmp/epic-pull.json
 # Edit the file (add findings, check boxes, cut finished sections)
 # ...
 
+# Ownership can move between pull and push; the conflict check below catches a body changed since the pull.
+LIVE=$(gh issue view <number> --json body -q .body) || { echo "ABORT: could not read the live body"; exit 1; }
+OWNER=$(printf '%s\n' "$LIVE" | grep -m1 '^Owner: ')
+[ -z "$OWNER" ] || [ "$OWNER" = "Owner: <this session's name>" ] || { echo "ABORT: $OWNER is not this session"; exit 1; }
+grep -q '^Owner: ' ISSUE-EPIC-<N>.md || { echo "ABORT: the draft lost its Owner: line"; exit 1; }
+
 # Before pushing: check if someone else edited since our pull.
 # Both values MUST be non-empty: an unreadable timestamp compares "" to "" and passes.
 CURRENT_AT=$(gh issue view <number> --json updatedAt -q .updatedAt)
@@ -330,7 +348,9 @@ Whenever a check gates something destructive or outward-facing:
 - **Verify the mutation happened, not that the command ran.** After a scripted edit, grep for the new text; after a commit, `git diff <base> HEAD -- <file>` should be exactly what you intended.
 - **Ask what the guard does when the thing it queries is unavailable.** If the answer is "the same as when everything is fine", it is not a guard.
 
-**Size limits.** GitHub rejects an issue body over 2^18 = 262,144 **bytes** (`GraphQL: Body is too long`). Measure with `wc -c`, not a character count. Past ~250 KB, every addition needs a cut in the same edit; the cheapest cuts are expired caveats and prose figures that have a live command. Comments of 131,076 characters have been accepted and 264,058 rejected; GitHub's own error text misstates the limit. Measure a stored body with `gh api repos/<org>/<repo>/issues/<n>` and `len(body.encode())` — `gh ... -q .body | wc -c` counts one extra newline.
+**Size limits.** GitHub rejects an issue body over 2^18 = 262,144 **bytes** (`GraphQL: Body is too long`). Measure with `wc -c`, not a character count. That cap is not the working limit: past 64 KB a body stops being re-read whole, so give it an archive pass (pattern below) between findings, not mid-edit.
+Move completed items, superseded findings and the Decisions history (`FINAL` quotes verbatim) to the archive comment, leaving a pointer where each was, since peers cite body text; keep live gates, open items and current Decisions.
+Never move `Owner:`, or a live landing exception or NEGATIVE that an in-flight brief cites. Past ~250 KB, every addition needs a cut in the same edit; the cheapest cuts are expired caveats and prose figures that have a live command. Comments of 131,076 characters have been accepted and 264,058 rejected; GitHub's own error text misstates the limit. Measure a stored body with `gh api repos/<org>/<repo>/issues/<n>` and `len(body.encode())` — `gh ... -q .body | wc -c` counts one extra newline.
 
 **Replacing a body while archiving the old one to a comment.** Posting the archive moves `updatedAt`, so run the conflict check *before* your own write, and let the verified archive — not a timestamp — authorise the replacement:
 
@@ -357,7 +377,7 @@ gh api repos/<org>/<repo>/issues/comments/"$CID" -q .body | tail -40 \
   | /usr/bin/grep -q '<a phrase from the archive'"'"'s final section>' \
   || { echo "ABORT: archive tail missing — truncated"; exit 1; }
 
-gh issue edit <N> --body-file new-body.md   # authorised by the verified copy
+gh issue edit <N> --body-file new-body.md   # authorised by the verified copy; new-body.md keeps the Owner:/Feeds: lines
 ```
 
 Do not add a third timestamp read after your write: `updatedAt` can lag a few seconds.

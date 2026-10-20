@@ -73,6 +73,11 @@ func ToBibTeX(ref reference.Reference) string {
 		b.WriteString(fmt.Sprintf("  pages = {%s},\n", ref.Pages))
 	}
 
+	// URL (optional; set only for references without a DOI)
+	if ref.URL != "" {
+		b.WriteString(fmt.Sprintf("  url = {%s},\n", ref.URL))
+	}
+
 	// PMID (optional)
 	if ref.PMID != "" {
 		b.WriteString(fmt.Sprintf("  pmid = {%s},\n", ref.PMID))

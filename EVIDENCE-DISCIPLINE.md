@@ -10,6 +10,7 @@ Apply these whenever you cite a number or write a correction: in an issue, PR, c
 - Check that it reaches a file a reader can open. Gitignored or local-only paths don't count.
 - For "which items have property P", derive the population from P, not from the items you already had. Re-derivation cannot find a missing member.
 - A partial result licenses no direction. Wait for the whole result, or report only what has arrived and say what hasn't.
+- A clock time is a measurement. Write one only from `date -u`, a log line, or a transcript timestamp read in this turn; a long session's sense of "now" drifts by tens of minutes.
 
 ## Name the question your check answers, not the one you asked
 
@@ -27,6 +28,7 @@ Apply these whenever you cite a number or write a correction: in an issue, PR, c
 ## A source read that stops at the first plausible boundary
 
 - Say where you stopped: "read X and Y; did not follow Z's callers".
+- An open issue's state is in its sub-issues, linked PRs and last comments, not its open flag. Read them before calling it stalled or asking its owner for status, and ask only about what they leave open.
 - For a claim that something is absent, search for the thing you say is missing instead of reading where it would be.
 - Mark an unverified verdict as provisional in the text itself, not only in a column heading.
 

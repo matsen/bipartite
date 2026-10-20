@@ -166,7 +166,7 @@ func outputReferencesHuman(result S2ReferencesResult) {
 			fmt.Printf("  [MISSING] %s (%d)\n", r.Title, r.Year)
 		}
 		if r.DOI != "" {
-			fmt.Printf("    DOI: %s\n", r.DOI)
+			fmt.Printf("    DOI: %s\n", doiURL(r.DOI))
 		}
 		fmt.Println()
 	}

@@ -20,16 +20,16 @@ Topic-side state (EPIC bodies, findings, decisions) is `/bip-epic-tuckin`'s job,
 
 ### Step 1: Verify role registration
 
-`$CLONE_ROOT/.conductor-session` and `$CLONE_ROOT/.epic-session` name the sessions currently holding those roles.
-They are written at cold start and at handover, and nothing else re-checks them — a tuckin is the moment they are most likely to be wrong, since a role often changes hands shortly before a context reset.
+`$CLONE_ROOT/.conductor-session` names the session currently holding the role.
+It is written at cold start and at handover, and nothing else re-checks it — a tuckin is the moment it is most likely to be wrong, since a role often changes hands shortly before a context reset.
 
 ```bash
 source "$(dirname "<this-skill's-base-directory>")/lib/spawn-intent.sh"
 CLONE_ROOT=$(resolve_clone_root .epic-config.json)
-for f in .conductor-session .epic-session; do echo "$f: $(cat "$CLONE_ROOT/$f" 2>/dev/null)"; done
+echo ".conductor-session: $(cat "$CLONE_ROOT/.conductor-session" 2>/dev/null)"
 ```
 
-Cross-check each name against `ListAgents`:
+Cross-check the name against `ListAgents`:
 
 - **Names a live session** — correct, leave it alone.
 - **Names this session under an old name** — rewrite it with the current name.
@@ -123,14 +123,14 @@ Before recording anything anywhere, run each candidate fleet-level finding throu
    A finding that produced an issue, PR, test, or doc needs no second copy.
 
 Only what survives both gates gets a destination:
-- A durable repo-level fact → a `CLAUDE.md`.
+- A durable repo-level fact → the repo's `CLAUDE.md` or `AGENTS.md`.
 - A workflow rule → a skill.
 - A finding → the test, doc, or issue it came from.
 - Nothing else fits → the Step 5 report below.
 
 ### Step 4b: Record approvals as `approved at <SHA>`, never as a state
 
-"Approved by both" is true when written and stops being true the moment anyone pushes. **An approval is scoped to the commit it was given for. Push after it and it no longer covers your branch — re-request, and wait.** Measured 2026-09-11: a worker landed a PR believing an earlier conductor approval still covered bytes rewritten minutes later; the content happened to be right, the form was not, and `gh pr view --json reviews` returned `[]` the whole time, so nothing on the record ever contradicted the belief.
+"Approved by both" is true when written and stops being true the moment anyone pushes. **An approval is scoped to the commit it was given for. Push after it and it no longer covers your branch — re-request, and wait.** The one exception is a group member's `APPROVED` review of shared code, which holds at any later head once every review comment after it is addressed (`/bip-conductor`, "Who may land"). Measured 2026-09-11: a worker landed a PR believing an earlier conductor approval still covered bytes rewritten minutes later; the content happened to be right, the form was not, and `gh pr view --json reviews` returned `[]` the whole time, so nothing on the record ever contradicted the belief.
 
 The falsifier rule this pairs with lives in `/bip-conductor-spawn`, not here — a tuckin report is read immediately by a human, so there is no reset gap for a stale imperative to survive. The spawn prompt is where that gap is real.
 

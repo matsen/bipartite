@@ -153,15 +153,8 @@ func runS2AddPdf(cmd *cobra.Command, args []string) error {
 	}
 
 	// Check for duplicates
-	if paper.ExternalIDs.DOI != "" {
-		if existingRef, found := resolver.FindByDOI(paper.ExternalIDs.DOI); found {
-			return outputAddPdfDuplicate(existingRef.ID, paper.ExternalIDs.DOI)
-		}
-	}
-
-	// Check by S2 ID
-	if existingRef, found := resolver.FindByS2ID(paper.PaperID); found {
-		return outputAddPdfDuplicate(existingRef.ID, "")
+	if existingRef, found := resolver.ExistsLocally(*paper); found {
+		return outputAddPdfDuplicate(existingRef.ID, paper.ExternalIDs.DOI)
 	}
 
 	// Generate unique ID
@@ -221,7 +214,7 @@ func outputAddPdfDuplicate(existingID, doi string) error {
 	if humanOutput {
 		fmt.Fprintf(os.Stderr, "Paper already exists: %s\n", existingID)
 		if doi != "" {
-			fmt.Fprintf(os.Stderr, "  DOI: %s\n", doi)
+			fmt.Fprintf(os.Stderr, "  DOI: %s\n", doiURL(doi))
 		}
 	} else {
 		outputJSON(result)
@@ -257,7 +250,7 @@ func outputAddPdfMultipleMatches(papers []s2.S2Paper) error {
 		for i, p := range papers {
 			fmt.Fprintf(os.Stderr, "  %d. %s (%d)\n", i+1, p.Title, p.Year)
 			if p.ExternalIDs.DOI != "" {
-				fmt.Fprintf(os.Stderr, "     DOI: %s\n", p.ExternalIDs.DOI)
+				fmt.Fprintf(os.Stderr, "     DOI: %s\n", doiURL(p.ExternalIDs.DOI))
 			}
 		}
 		fmt.Fprintf(os.Stderr, "\nUse 'bip s2 add DOI:...' with the correct DOI\n")

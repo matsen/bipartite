@@ -775,10 +775,10 @@ func TestEpicPhasesMatchDocs(t *testing.T) {
 			}
 			return out
 		}},
-		{"skills/bip-conductor-spawn/SKILL.md", "phase — one of:", func(rest string) []string {
+		{"skills/bip-conductor-spawn/worker-brief.txt", "phase — one of:", func(rest string) []string {
 			return strings.Split(rest, ",")
 		}},
-		{"skills/bip-conductor/SKILL.md", `"phase": "`, func(rest string) []string {
+		{"skills/bip-conductor/status-spec.md", `"phase": "`, func(rest string) []string {
 			return strings.Split(strings.SplitN(rest, `"`, 2)[0], "|")
 		}},
 	}
@@ -969,3 +969,116 @@ func TestFormatEventLineCollapsesWhitespace(t *testing.T) {
 
 // Ensure io.Writer interface compliance for syncBuffer at compile time.
 var _ io.Writer = (*syncBuffer)(nil)
+
+func TestCheckStallsFlagsUnloopedAwaitingOnce(t *testing.T) {
+	root := t.TempDir()
+	slot := func(name, phase string, loop bool) slotInfo {
+		p := filepath.Join(root, name, epicStatusName)
+		writeStatus(t, p, 7, phase, name)
+		if loop {
+			lp := filepath.Join(root, name, ralphLoopName)
+			if err := os.MkdirAll(filepath.Dir(lp), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(lp, nil, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return slotInfo{name: name, statusPath: p}
+	}
+	slots := []slotInfo{
+		slot("stuck", "awaiting-results", false),
+		slot("looped", "awaiting-results", true),
+		slot("coding", "coding", false),
+	}
+	old := time.Now().Add(-time.Hour)
+	for _, s := range slots {
+		if err := os.Chtimes(s.statusPath, old, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	logPath := filepath.Join(root, epicNotificationsName)
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer logFile.Close()
+	var out bytes.Buffer
+	waitingDirs := map[string]bool{}
+	cfg := watchConfig{slots: slots, stdout: &out, stderr: io.Discard,
+		waiting: func(dir string) bool { return waitingDirs[dir] }}
+	flagged := map[string]time.Time{}
+
+	// A background shell or monitor that will wake the slot is not a stall.
+	waitingDirs[filepath.Join(root, "stuck")] = true
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	if n := len(readLogEvents(t, logPath)); n != 0 {
+		t.Fatalf("a waiting slot was flagged: %d events", n)
+	}
+	waitingDirs = map[string]bool{}
+
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	evs := readLogEvents(t, logPath)
+	if len(evs) != 1 || evs[0].Slot != "stuck" || evs[0].Stalled == "" || evs[0].NewPhase != "awaiting-results" {
+		t.Fatalf("want one stall event for stuck, got %+v", evs)
+	}
+	if !strings.Contains(out.String(), "STALLED in awaiting-results") {
+		t.Errorf("stdout = %q", out.String())
+	}
+
+	// A fresh worklog write ends the quiet stretch; a later one re-arms it.
+	wl := filepath.Join(root, "stuck", ".epic-worklog.md")
+	if err := os.WriteFile(wl, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	checkStalls(cfg, flagged, time.Now(), logFile)
+	checkStalls(cfg, flagged, time.Now().Add(2*stallQuiet), logFile)
+	if n := len(readLogEvents(t, logPath)); n != 2 {
+		t.Fatalf("want a second event after a new quiet stretch, got %d", n)
+	}
+}
+
+func TestTurnLinePatterns(t *testing.T) {
+	for line, want := range map[string]bool{
+		"· Improvising… (11s · ↓ 513 tokens)":                         true,
+		"✻ Brewed… (1m 3s · esc to interrupt)":                        true,
+		"✻ Brewed for 35s · done 10:17 PM":                            false,
+		"     grep -n foo docs/x.md; zig build -… (4m 27s · 2 lines)": false,
+	} {
+		if got := turnActive.MatchString(line); got != want {
+			t.Errorf("turnActive(%q) = %v, want %v", line, got, want)
+		}
+	}
+	for line, want := range map[string]bool{
+		"  ⏵⏵ bypass permissions on · 2 shells · ← 1 agent":                      true,
+		"  ⏵⏵ bypass permissions on (shift+tab to cycle) · 1 shell":              true,
+		"  ? for shortcuts · 1 monitor · PR #12":                                 true,
+		"  ⏵⏵ bypass permissions on (shift+tab to cycle) · PR #1374 · ← 1 agent": false,
+		"✻ Baked for 1m 37s · done 8:40 PM · 2 shells still running":             false,
+	} {
+		if got := footerJobs.MatchString(line); got != want {
+			t.Errorf("footerJobs(%q) = %v, want %v", line, got, want)
+		}
+	}
+}
+
+func TestScreenWaitingReadsOnlyTheFooter(t *testing.T) {
+	const sep = "────────────────────"
+	for name, tc := range map[string]struct {
+		screen string
+		want   bool
+	}{
+		"footer shell": {"⏺ Waiting on the run.\n" + sep + "\n❯ \n" + sep +
+			"\n  Opus 5.5 (w) | repo [b]\n  ⏵⏵ bypass permissions on · 1 shell · ← 1 agent\n", true},
+		"quoted footer in transcript": {"  ⎿  its footer shows ⏵⏵ bypass permissions on · 2 shells · ← 1 agent\n" + sep +
+			"\n❯ \n" + sep + "\n  ⏵⏵ bypass permissions on · ← 1 agent\n", false},
+		"no separator": {"  ⏵⏵ bypass permissions on · 1 shell · ← 1 agent\n", false},
+		"turn-end still running": {"✻ Baked for 1m · done 8:40 PM · 2 shells still running\n" + sep +
+			"\n❯ \n" + sep + "\n  ⏵⏵ bypass permissions on\n", true},
+	} {
+		if got := screenWaiting(tc.screen); got != tc.want {
+			t.Errorf("%s: screenWaiting = %v, want %v", name, got, tc.want)
+		}
+	}
+}

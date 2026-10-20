@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -28,6 +30,13 @@ const (
 
 	defaultEpicWatchPhases = "needs-human,completed,awaiting-results,quality-gate"
 	defaultPollInterval    = "2s"
+
+	// A slot in awaiting-results with no ralph loop is woken by nothing, so
+	// it sits there after its jobs end without ever changing phase.
+	// stallQuiet is the conductor skill's "possibly stalled" threshold.
+	ralphLoopName = ".claude/ralph-loop.local.md"
+	stallQuiet    = 45 * time.Minute
+	stallEvery    = time.Minute
 )
 
 // epicPhases are the legal values of .epic-status.json's phase field.
@@ -64,6 +73,12 @@ event) and to stdout (one human-readable line per event).
 --phases selects which legal phases alert; other values are ignored with a
 warning. A transition into a phase that is not legal always alerts,
 whatever --phases says.
+
+Once a minute it also emits a STALLED event, once per quiet stretch, for a
+slot in awaiting-results with no .claude/ralph-loop.local.md, a tmux pane
+neither mid-turn nor showing a shell or monitor still running, and a status
+file and worklog that have both gone 45 minutes without a write: nothing
+will wake that slot when its jobs end, and it never changes phase.
 
 Reads .epic-config.json from the current working directory to discover
 slots. Watches each slot's parent directory using fsnotify, or falls back
@@ -119,6 +134,9 @@ type epicEvent struct {
 	OldPhase *string `json:"old_phase"`
 	NewPhase string  `json:"new_phase"`
 	Summary  string  `json:"summary"`
+	// Stalled is set on a stall event, which reports a slot that has NOT
+	// transitioned; old_phase and new_phase then both hold its phase.
+	Stalled string `json:"stalled,omitempty"`
 }
 
 // slotInfo identifies a single slot the watcher tracks.
@@ -140,6 +158,11 @@ type watchConfig struct {
 	// just before the event loop starts. Tests use this to synchronize
 	// on watcher startup so transition writes are not raced.
 	ready chan<- struct{}
+	// stallEvery is how often to check for stalled slots; 0 disables it.
+	stallEvery time.Duration
+	// waiting reports whether a session in clone dir is mid-turn or has a
+	// background shell or monitor that will wake it; nil means paneWaiting.
+	waiting func(dir string) bool
 }
 
 func runEpicWatch(cmd *cobra.Command, args []string) error {
@@ -201,6 +224,7 @@ func runEpicWatch(cmd *cobra.Command, args []string) error {
 		logPath:      logPath,
 		stdout:       os.Stdout,
 		stderr:       os.Stderr,
+		stallEvery:   stallEvery,
 	})
 }
 
@@ -427,6 +451,10 @@ func formatEventLine(ev epicEvent) string {
 	if ev.OldPhase != nil {
 		old = *ev.OldPhase
 	}
+	if ev.Stalled != "" {
+		return fmt.Sprintf("%s (i%d): STALLED in %s — %s — %s",
+			ev.Slot, ev.Issue, ev.NewPhase, ev.Stalled, summary)
+	}
 	return fmt.Sprintf("%s (i%d): %s → %s — %s",
 		ev.Slot, ev.Issue, old, ev.NewPhase, summary)
 }
@@ -546,10 +574,15 @@ func emitEvent(ev epicEvent, logFile *os.File, stdout, stderr io.Writer) {
 }
 
 func runFsnotifyEvents(ctx context.Context, w *fsnotify.Watcher, parentToSlots map[string][]slotInfo, cfg watchConfig, lastPhase map[string]string, logFile *os.File) error {
+	stallC, stopStall := stallTicker(cfg)
+	defer stopStall()
+	flagged := map[string]time.Time{}
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-stallC:
+			checkStalls(cfg, flagged, time.Now(), logFile)
 		case ev, ok := <-w.Events:
 			if !ok {
 				return nil
@@ -577,15 +610,140 @@ func runFsnotifyEvents(ctx context.Context, w *fsnotify.Watcher, parentToSlots m
 func runPollLoop(ctx context.Context, cfg watchConfig, lastPhase map[string]string, logFile *os.File) error {
 	ticker := time.NewTicker(cfg.pollInterval)
 	defer ticker.Stop()
+	stallC, stopStall := stallTicker(cfg)
+	defer stopStall()
+	flagged := map[string]time.Time{}
 
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
+		case <-stallC:
+			checkStalls(cfg, flagged, time.Now(), logFile)
 		case <-ticker.C:
 			for _, s := range cfg.slots {
 				processStatus(s, lastPhase, cfg, logFile)
 			}
 		}
 	}
+}
+
+// stallTicker returns the channel that paces checkStalls, which never fires
+// when cfg.stallEvery is 0, and its stop function.
+func stallTicker(cfg watchConfig) (<-chan time.Time, func()) {
+	if cfg.stallEvery <= 0 {
+		return nil, func() {}
+	}
+	t := time.NewTicker(cfg.stallEvery)
+	return t.C, t.Stop
+}
+
+// checkStalls emits one stall event for each slot in awaiting-results that
+// has no ralph loop, no background shell or monitor to wake it, and whose
+// status file and worklog have both been quiet for stallQuiet. flagged records the newest write seen at each emission, so
+// a slot is reported once per quiet stretch and again only after it writes.
+func checkStalls(cfg watchConfig, flagged map[string]time.Time, now time.Time, logFile *os.File) {
+	for _, s := range cfg.slots {
+		status, err := readStatus(s.statusPath)
+		if err != nil || status.Phase != "awaiting-results" {
+			continue
+		}
+		dir := filepath.Dir(s.statusPath)
+		if _, err := os.Stat(filepath.Join(dir, ralphLoopName)); err == nil {
+			continue
+		}
+		var last time.Time
+		for _, name := range []string{epicStatusName, ".epic-worklog.md"} {
+			if fi, err := os.Stat(filepath.Join(dir, name)); err == nil && fi.ModTime().After(last) {
+				last = fi.ModTime()
+			}
+		}
+		quiet := now.Sub(last)
+		if quiet < stallQuiet || flagged[s.name].Equal(last) {
+			continue
+		}
+		waiting := cfg.waiting
+		if waiting == nil {
+			waiting = paneWaiting
+		}
+		if waiting(dir) {
+			continue
+		}
+		flagged[s.name] = last
+		phase := status.Phase
+		emitEvent(epicEvent{
+			Ts:       now.UTC().Format(time.RFC3339),
+			Slot:     s.name,
+			Issue:    status.Issue,
+			OldPhase: &phase,
+			NewPhase: phase,
+			Summary:  status.Summary,
+			Stalled:  fmt.Sprintf("no ralph loop, status and worklog quiet %dm", int(quiet.Minutes())),
+		}, logFile, cfg.stdout, cfg.stderr)
+	}
+}
+
+// turnDone matches the line Claude Code prints when a turn ends, e.g.
+// "✻ Brewed for 3s · done 9:03 PM · 2 monitors still running".
+var turnDone = regexp.MustCompile(` · done .*`)
+
+// turnActive matches the spinner line of a turn in progress, e.g.
+// "· Improvising… (11s · ↓ 513 tokens)".
+var turnActive = regexp.MustCompile(`^\S \S+… \(\d+[hms]`)
+
+// footerJobs matches the always-visible footer's count of background jobs,
+// e.g. "⏵⏵ bypass permissions on · 2 shells · ← 1 agent". The turn-end
+// line can scroll off the captured screen; the footer cannot.
+var footerJobs = regexp.MustCompile(`· \d+ (?:shell|monitor)s?(?: ·|\s*$)`)
+
+// paneWaiting reports whether any tmux pane under dir is mid-turn, or its
+// footer or newest turn-end line says a shell or monitor is still running. Those
+// re-invoke the session when they exit, so the slot is waiting, not stalled; a
+// forgotten long-lived shell (a tail -F, a server) therefore hides a stall. Any failure
+// reads as not waiting, so the stall is reported rather than hidden.
+func paneWaiting(dir string) bool {
+	out, err := exec.Command("tmux", "list-panes", "-a", "-F", "#{pane_id}\t#{pane_current_path}").Output()
+	if err != nil {
+		return false
+	}
+	for _, row := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		id, path, ok := strings.Cut(row, "\t")
+		if !ok || (path != dir && !strings.HasPrefix(path, dir+"/")) {
+			continue
+		}
+		screen, err := exec.Command("tmux", "capture-pane", "-p", "-t", id).Output()
+		if err != nil {
+			continue
+		}
+		if screenWaiting(string(screen)) {
+			return true
+		}
+	}
+	return false
+}
+
+// screenWaiting applies paneWaiting's test to one captured screen. footerJobs
+// is checked only below the last "────" separator, so transcript text that
+// quotes a footer cannot hide a stall.
+func screenWaiting(screen string) bool {
+	lines := strings.Split(screen, "\n")
+	footer := len(lines)
+	last := ""
+	for i, line := range lines {
+		if turnActive.MatchString(line) {
+			return true
+		}
+		if turnDone.MatchString(line) {
+			last = line
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "────") {
+			footer = i + 1
+		}
+	}
+	for _, line := range lines[footer:] {
+		if footerJobs.MatchString(line) {
+			return true
+		}
+	}
+	return strings.Contains(last, "still running")
 }

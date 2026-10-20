@@ -1,0 +1,151 @@
+#!/usr/bin/env bash
+# pr-ledger: one line per recently updated PR the user hasn't seen, for a tmux split.
+#
+#   pr-ledger pane             fetch every 5 min, render, and show it in less -S
+#   pr-ledger fetch            fetch and render once
+#   pr-ledger seen <repo>      ack every unseen PR in <repo> at its current state
+#   pr-ledger seen <repo>#<N>  ack one PR
+#
+# Covers org:matsengrp plus the other owners' repos in nexus sources.yml, for PRs
+# updated in the last $PR_LEDGER_DAYS days (default 7). Agent work posts from the
+# user's account, so a PR authored by $PR_LEDGER_SELF (default: gh's login) reads as an
+# agent PR. A PR is starred when anyone else authored, reviewed, or commented on it.
+# An ack holds while the PR's stage (draft, in review, approved, changes requested,
+# merged, closed) is unchanged and, for a starred PR, while no comment or review is
+# newer than the ack. A push alone doesn't bring a PR back. State lives in $NEXUS/staff/_ignore:
+# pr-seen.jsonl (acks), pr-ledger.json (last fetch), pr-ledger.txt (what less shows).
+set -euo pipefail
+nexus=$(sed -n 's/^nexus_path: *//p' "${XDG_CONFIG_HOME:-$HOME/.config}/bip/config.yml")
+nexus=${nexus/#\~/$HOME}
+dir=${PR_LEDGER_DIR:-$nexus/staff/_ignore}
+self=${PR_LEDGER_SELF:-$(gh api user -q .login)}
+days=${PR_LEDGER_DAYS:-7}
+acks=$dir/pr-seen.jsonl cache=$dir/pr-ledger.json out=$dir/pr-ledger.txt
+mkdir -p "$dir"
+touch "$acks"
+
+fetch() {
+  local since extra q tmp
+  since=$(date -u -d "$days days ago" +%Y-%m-%d)
+  extra=$(python3 -c '
+import sys, yaml
+doc = yaml.safe_load(open(sys.argv[1]))
+repos = {e if isinstance(e, str) else e.get("repo")
+         for e in (doc.get("code") or []) + (doc.get("writing") or [])}
+print(" ".join("repo:" + r for r in sorted(r for r in repos if r and not r.startswith("matsengrp/"))))' "$nexus/sources.yml" 2>/dev/null || true)
+  q="is:pr updated:>=$since org:matsengrp $extra"
+  tmp=$(mktemp "$dir/.fetch.XXXXXX")
+  gh api graphql --paginate -f q="$q" -f query='
+    query($q: String!, $endCursor: String) {
+      search(query: $q, type: ISSUE, first: 100, after: $endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { ... on PullRequest {
+          repo: repository { nameWithOwner } number title url state isDraft
+          reviewDecision headRefOid updatedAt author { login __typename }
+          reviews(last: 30) { nodes { author { login __typename } submittedAt } }
+          comments(last: 30) { nodes { author { login __typename } createdAt } }
+        } }
+      }
+    }' --jq '.data.search.nodes[]' > "$tmp" || { rm -f "$tmp"; return 1; }
+  jq -s . "$tmp" > "$cache" && rm -f "$tmp"
+}
+
+# Each PR in the cache with its stage, star, and whether an ack covers it.
+annotate='
+  def human: . != null and .__typename != "Bot" and .login != $self;
+  ($acks | map({key: "\(.repo)#\(.pr)", value: .}) | from_entries) as $ack
+  | map(
+      ([.reviews.nodes[] | {who: .author, at: .submittedAt}]
+       + [.comments.nodes[] | {who: .author, at: .createdAt}]) as $ev
+      | . + {
+        key: "\(.repo.nameWithOwner)#\(.number)",
+        star: ((.author | human) or any($ev[]; .who | human)),
+        last_event: ([$ev[].at] | max // "")
+      }
+      | . + {stage: (if .state == "MERGED" then "merged" elif .state == "CLOSED" then "closed"
+                     elif .isDraft then "draft" elif .reviewDecision == "APPROVED" then "approved"
+                     elif .reviewDecision == "CHANGES_REQUESTED" then "changes requested"
+                     else "in review" end)}
+      | . as $p | ($ack[$p.key]) as $a
+      | . + {seen: ($a != null and $a.stage == $p.stage
+                    and (($p.star | not) or $a.at >= $p.last_event))}
+    )'
+
+# Renders to a temp file and copies it in place on success, so a render that fails
+# mid-ack keeps the last good view.
+render() {
+  [ -s "$cache" ] || { echo 'PR ledger: no fetch yet' > "$out"; return; }
+  local tmp
+  tmp=$(mktemp "$dir/.render.XXXXXX")
+  jq -r --slurpfile acks "$acks" --arg self "$self" --arg days "$days" \
+     --arg at "$(date -u -r "$cache" +%H:%MZ)" "$annotate"'
+    | def c($code): "\u001b[\($code)m\(.)\u001b[0m";
+      def pad($n): . + (" " * ([$n - length, 0] | max));
+      def short: sub("^matsengrp/"; "");
+      {"merged": "35", "approved": "32", "changes requested": "31", "in review": "33"} as $color
+      | {"changes requested": "changes", "in review": "review"} as $short
+      # $full names the repo too, for the ★ section, which spans repos.
+      | def ref($full): (if $full then .repo.nameWithOwner | short else "" end) + "#\(.number)";
+        def lines($full): (map(ref($full) | length) | max) as $w
+          | .[] | "  \(.stage as $s | $short[$s] // $s | pad(8) | c($color[$s] // "2"))"
+                  + "  \(ref($full) | pad($w))  "
+                  + (if .author.login != $self then "@\(.author.login)  " else "" end) + .title + "  " + .url;
+    map(select(.seen | not)) as $new
+    | ("PR ledger: \($new | length) unseen · updated \($at) · last \($days) days" | c("1")),
+      (if length >= 1000 then "GitHub search stops at 1000 results, so some PRs are missing: lower PR_LEDGER_DAYS." | c("1;31") else empty end),
+      "",
+      (($new | map(select(.star)) | sort_by(.updatedAt) | reverse) as $s
+       | if ($s | length) > 0 then ("★ others involved: \($s | length)" | c("1;33")), ($s | lines(true)), "" else empty end),
+      ($new | map(select(.star | not)) | group_by(.repo.nameWithOwner)
+       | sort_by(-length)[]
+       | ("\(.[0].repo.nameWithOwner | short): \(map(select(.stage == "merged")) | length) merged, \(map(select(.state == "OPEN")) | length) open" | c("1")),
+         (sort_by(.updatedAt) | reverse | lines(false)), "")
+  ' "$cache" > "$tmp" && cat "$tmp" > "$out"
+  rm -f "$tmp"
+}
+
+seen() {
+  local target=${1:?usage: pr-ledger seen <repo> | <repo>#<N>} now
+  [ -s "$cache" ] || fetch
+  [[ $target == */* ]] || target=matsengrp/$target
+  now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  jq -c --slurpfile acks "$acks" --arg self "$self" --arg t "$target" --arg now "$now" "$annotate"'
+    | map(select(.seen | not) | select(.key == $t or .repo.nameWithOwner == $t))
+    | if length == 0 then ("nothing unseen matches \($t)\n" | halt_error(1)) else .[] end
+    | {repo: .repo.nameWithOwner, pr: .number, stage, at: $now}
+  ' "$cache" >> "$acks"
+  render
+}
+
+case "${1:-}" in
+  fetch) fetch; render ;;
+  seen) shift; seen "$@" ;;
+  pane)
+    pane=${TMUX_PANE:?pr-ledger pane runs in a tmux pane}
+    fetch; render
+    # A background loop rewrites the file in place (a refetch every 5 min, a re-render
+    # when an ack lands) and, when the text changed, sends less `R` to re-read it;
+    # `less +F` can't follow a file rewritten in place. An `R` that lands while the user
+    # is typing a less search joins the search text, so it is sent only on a change.
+    # q relaunches less rather than closing the pane.
+    (
+      set +e  # a failed fetch or send-keys must not end the loop
+      last_fetch=$(date +%s) last_ack="" shown=$(md5sum < "$out")
+      while :; do
+        sleep 5
+        if [ $(( $(date +%s) - last_fetch )) -ge 300 ]; then
+          fetch && render
+          last_fetch=$(date +%s)
+        fi
+        sig=$(stat -c %Y "$acks")
+        [ "$sig" = "$last_ack" ] || { last_ack=$sig; render; }
+        now=$(md5sum < "$out")
+        [ "$now" = "$shown" ] || { shown=$now; tmux send-keys -t "$pane" R; }
+      done
+    ) &
+    loop=$!
+    trap 'kill $loop 2>/dev/null' EXIT
+    while :; do less -S -R --shift=8 "$out"; done
+    ;;
+  *) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;;
+esac

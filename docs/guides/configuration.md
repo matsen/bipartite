@@ -23,29 +23,43 @@ The config file follows the XDG Base Directory specification:
 mkdir -p ~/.config/bip
 cat > ~/.config/bip/config.yml << 'EOF'
 nexus_path: ~/re/nexus
-asta_api_key: your-asta-key
-github_token: ghp_your-github-token
-slack_bot_token: xoxb-your-slack-bot-token
-slack_webhooks:
-  channel-name: https://hooks.slack.com/services/...
 EOF
 ```
+
+Keep the tokens out of `config.yml`: agents read it routinely, so a secret in it ends up in a session transcript.
+Put them in `~/.config/bip/secrets.env` beside it, which bip reads itself, so they never enter a shell's environment:
+
+```bash
+( umask 077; cat > ~/.config/bip/secrets.env << 'EOF'
+BIP_ASTA_API_KEY=your-asta-key
+BIP_GITHUB_TOKEN=ghp_your-github-token
+BIP_SLACK_TOKEN=xoxb-your-slack-bot-token
+BIP_SLACK_WEBHOOK_CHANNEL_NAME=https://hooks.slack.com/services/...
+EOF
+)
+```
+
+Each token is looked up as an environment variable first, then under the same name in `secrets.env`, then in `config.yml`.
+Lines may start with `export ` and values may be quoted.
+Slack webhook URLs are secrets too: anyone holding one can post to the channel.
+Each goes in `secrets.env` as `BIP_SLACK_WEBHOOK_<CHANNEL>`, where `<CHANNEL>` is the channel name upper-cased with every character other than a letter or digit replaced by `_` (`nonparam-f-matrix` → `BIP_SLACK_WEBHOOK_NONPARAM_F_MATRIX`).
 
 ### Configuration Options
 
 | Field | Description |
 |-------|-------------|
 | `nexus_path` | Default bipartite repository path. Allows running bip commands from anywhere. |
-| `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Also accepts env vars: `BIP_ASTA_API_KEY`, `ASTA_API_KEY` (in that order). |
-| `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Also accepts env vars: `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, `GH_TOKEN` (in that order). |
-| `slack_bot_token` | Slack bot token for reading channel history. Also accepts env vars: `BIP_SLACK_TOKEN`, `SLACK_BOT_TOKEN` (in that order). |
-| `slack_webhooks` | Slack webhook URLs keyed by channel name |
+| `asta_api_key` | AI2 API key ([register here](https://allenai.org/asta/resources/mcp)), used for both the ASTA MCP API and the Semantic Scholar Graph API — AI2 issues one key for both. Prefer `BIP_ASTA_API_KEY` in `secrets.env`; looked up as `BIP_ASTA_API_KEY`, then `ASTA_API_KEY`. |
+| `github_token` | GitHub personal access token ([setup guide](#github-authentication)). Prefer `BIP_GITHUB_TOKEN` in `secrets.env`; looked up as `BIP_GITHUB_TOKEN`, `GITHUB_TOKEN`, then `GH_TOKEN`. |
+| `slack_bot_token` | Slack bot token for reading channel history. Prefer `BIP_SLACK_TOKEN` in `secrets.env`; looked up as `BIP_SLACK_TOKEN`, then `SLACK_BOT_TOKEN`. |
+| `slack_webhooks` | Slack webhook URLs keyed by channel name. Prefer `BIP_SLACK_WEBHOOK_<CHANNEL>` in `secrets.env`; looked up as `BIP_SLACK_WEBHOOK_<CHANNEL>`, then `SLACK_WEBHOOK_<CHANNEL>`. |
 | `spawn_agent` | Default agent runner for `bip spawn` (`claude` or `agy`, default: `claude`). Also accepts env var: `BIP_SPAWN_AGENT`. |
+| `ntfy_topic` | ntfy.sh topic `bip page` pushes to; subscribe to it in the ntfy app. Also accepts env var: `BIP_NTFY_TOPIC`. |
 
-> **Note:** Environment variables, when set, take precedence over the
-> corresponding `config.yml` field. This lets you keep secrets out of
-> plaintext on disk by sourcing them from a secrets manager (e.g.
-> 1Password `op run`). Empty env vars are treated as unset.
+> **Note:** For the three tokens and the webhooks, each name is looked up in the environment,
+> then in `secrets.env`, and only then is the `config.yml` field used.
+> For other fields, an environment variable overrides the field.
+> Empty values are treated as unset.
 
 ### Example: Running bip from Anywhere
 
@@ -85,9 +99,9 @@ Verify your authentication:
 gh auth status
 ```
 
-### Step 2: Add a Personal Access Token to bip config
+### Step 2: Give bip a Personal Access Token
 
-bip's Go HTTP client uses a separate token from its config file for repository metadata fetching and higher rate limits. To create one:
+bip's Go HTTP client uses a separate token of its own for repository metadata fetching and higher rate limits. To create one:
 
 1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) (Profile photo → Settings → Developer settings → Personal access tokens)
 2. Choose **Fine-grained tokens** (recommended) or **Tokens (classic)**
@@ -120,25 +134,15 @@ If you prefer classic tokens or need compatibility with older GitHub Enterprise 
    - **`project`** — Read/write GitHub project boards
 4. Click **Generate token** and copy the value
 
-#### Add the token to config
+#### Supply the token via an environment variable
 
-```yaml
-# ~/.config/bip/config.yml
-github_token: ghp_your-token-here   # classic token
-# or
-github_token: github_pat_your-token-here  # fine-grained token
-```
-
-#### Or supply the token via an environment variable
-
-Environment variables take precedence over `config.yml`, which lets you keep
-the token out of plaintext on disk (e.g., when sourced from a secrets manager
-like 1Password `op run`). bip consults, in order:
+Set `BIP_GITHUB_TOKEN` in `~/.config/bip/secrets.env` (see [Creating the Config File](#creating-the-config-file)), or in the environment from a secrets manager like 1Password `op run`. bip consults, in order:
 
 1. `BIP_GITHUB_TOKEN` (recommended)
 2. `GITHUB_TOKEN`
 3. `GH_TOKEN`
-4. `github_token` in `~/.config/bip/config.yml`
+4. the same names in `~/.config/bip/secrets.env`
+5. `github_token` in `~/.config/bip/config.yml`
 
 The `BIP_`-prefixed name is recommended when a globally-exported `GITHUB_TOKEN`
 (e.g., for the `gh` CLI) might have different scopes than what you want bip
@@ -158,7 +162,7 @@ op run --env-file=<(echo 'BIP_GITHUB_TOKEN=op://Private/bip-github-pat/token') -
 | `bip board list/add/move/remove` | `gh` CLI | Reads/writes GitHub project boards (needs `project` scope) |
 | `bip spawn` | `gh` CLI | Fetches issue/PR details for tmux sessions |
 | `bip digest` | `gh` CLI | Generates activity summaries |
-| `bip repo add/refresh` | `github_token` | Fetches repository metadata |
+| `bip repo add/refresh` | `BIP_GITHUB_TOKEN` | Fetches repository metadata |
 
 ### Troubleshooting
 
@@ -215,8 +219,8 @@ Tip: Create ~/.config/bip/config.yml to set a default nexus:
 To verify your config is being read correctly:
 
 ```bash
-# Check if config file exists
-cat ~/.config/bip/config.yml
+# Show the non-secret settings bip read
+bip config
 
 # Test by running a simple command
 bip --version

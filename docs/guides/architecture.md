@@ -16,8 +16,7 @@ my-nexus/
 │   ├── repos.jsonl           # Tracked repositories
 │   ├── config.yml            # Local settings (PDF paths, etc.)
 │   └── cache/                # Ephemeral, gitignored
-│       ├── refs.db           # SQLite FTS index
-│       └── semantic.gob      # Embedding vectors
+│       └── refs.db           # SQLite FTS index
 │
 ├── servers.yml               # Remote servers for bip scout
 ├── sources.yml               # GitHub repos for activity tracking

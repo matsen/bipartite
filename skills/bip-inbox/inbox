@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# inbox [epic-config]: one JSON line per GitHub item a conductor must act on.
+#   {"kind":"review-request", pr, title}   a review requested of the user, with
+#       no r<N>-* window, and not commented on or reviewed by the user since
+#       the PR's last commit (🤖 comments are agents', so they don't count).
+#   {"kind":"comment"|"review", pr, slot, author, at, state, url, body}
+#       a human's comment or review on a PR the fleet opened (authored by the
+#       user's account), newer than the last run; slot names the clone(s) on
+#       that PR's branch, comma-separated, or is null; body is cut at 2000.
+# The last-run time per PR is kept in $CLONE_ROOT/.inbox-seen.json; a PR first
+# seen starts 24 h back.
+set -euo pipefail
+cfg=${1:-.epic-config.json}
+REPO=$(jq -r .github_repo "$cfg")
+CLONE_ROOT=$(jq -r .clone_root "$cfg"); CLONE_ROOT=${CLONE_ROOT/#\~/$HOME}
+ME=$(gh api user -q .login)
+SINCE=$(date -u -d '30 days ago' +%F)   # user, 2026-10-14: "30 days is fine"
+now=$(date -u +%FT%TZ)   # read first, so an item posted during the run is caught next time
+seen=${INBOX_SEEN:-$CLONE_ROOT/.inbox-seen.json}
+exec 9>"$seen.lock"; flock 9   # a scan and the Monitor must not both act on one item
+[ -f "$seen" ] || echo '{}' > "$seen"
+
+# Review requests.
+windows=$(tmux list-windows -a -F '#W' 2>/dev/null || true)
+for n in $(gh search prs --review-requested=@me --state=open --repo "$REPO" \
+             --updated ">=$SINCE" --sort updated --limit 100 --json number -q '.[].number'); do
+  grep -q "^r$n-" <<<"$windows" && continue
+  gh pr view "$n" -R "$REPO" --json number,title,commits,comments,reviews | jq -c --arg me "$ME" '
+    .commits[-1].committedDate as $h
+    | select([(.comments[], .reviews[])
+              | select(.author.login == $me and (.body | startswith("🤖") | not))
+              | (.submittedAt // .createdAt) | select(. > $h)] | length == 0)
+    | {kind: "review-request", pr: .number, title}'
+done
+
+# Human activity on the fleet's own PRs.
+slots='{}'
+for d in "$CLONE_ROOT"/*/; do
+  b=$(git -C "$d" branch --show-current 2>/dev/null) || continue
+  [ -n "$b" ] && [ "$b" != main ] || continue
+  slots=$(jq -c --arg b "$b" --arg s "$(basename "$d")" '.[$b] = ((.[$b] // []) + [$s])' <<<"$slots")
+done
+default=$(date -u -d '24 hours ago' +%FT%TZ)
+prs=$(gh pr list -R "$REPO" --author @me --state all --search "updated:>=$SINCE sort:updated-desc" -L 200 \
+   --json number,url,headRefName,comments,reviews)
+jq -c --arg me "$ME" --argjson seen "$(cat "$seen")" --argjson slots "$slots" --arg d "$default" '
+    .[] | . as $p | ($seen[($p.number|tostring)] // $d) as $last
+    | ( ($p.comments[] | {kind: "comment", at: .createdAt, url, state: null, author: (.author.login // ""), body}),
+        ($p.reviews[]  | {kind: "review", at: .submittedAt, url: $p.url, state, author: (.author.login // ""), body}) )
+    | select(.author != "" and .author != $me and (.author | endswith("[bot]") | not) and .at > $last)
+    | {kind, pr: $p.number, slot: (($slots[$p.headRefName] // []) | join(",") | if . == "" then null else . end), author, at, state, url, body: ((.body // "")[0:2000])}' <<<"$prs"
+
+# Mark every listed PR seen up to the start of this run.
+jq --arg now "$now" --argjson seen "$(cat "$seen")" \
+   'reduce (.[].number | tostring) as $n ($seen; .[$n] = $now)' <<<"$prs" > "$seen.tmp" && mv "$seen.tmp" "$seen"

@@ -1,379 +1,68 @@
 ---
 name: bip-lit
-description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, managing the library, or exploring literature via S2/ASTA.
+description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), managing the library, or exploring literature via S2/ASTA.
 ---
 
 # Bip Reference Library
 
-A CLI tool for managing academic references with local storage and external paper search.
+The library (~6000 papers) lives in the nexus repo (`nexus_path` in `~/.config/bip/config.yml`); most relevant papers are already there.
+`bip <cmd> --help` is the reference for flags, ID formats, and output modes; this skill carries only what the help can't.
+An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped) is the query for the steps below.
 
-**Repository**: Configured via `nexus_path` in `~/.config/bip/config.yml`
+## Find a paper, answer a question about one
 
-**Issues**: https://github.com/matsen/bipartite/issues
-
-## ⚠️ CRITICAL: Local-First, Paper-First Policy
-
-**ALWAYS search locally before using external APIs.
-NEVER call ASTA without explicit user permission.**
-
-**When answering questions about papers, READ THE ACTUAL PAPER PDF.**
-Do not rely on abstracts, S2 metadata, or ASTA when the paper is in the local library.
-Reach for the right reader for the job:
-
-- **Text and search → pdf-navigator MCP (MuPDF).**
-  Use `search_pdf_text` to jump to the relevant pages, then `read_pdf_text` / `read_pdf_page`.
-  MuPDF keeps reading order across columns and inline math intact, and the text is searchable.
-  This is the default.
-- **Figures, panels, rendered equations, tables → built-in `Read` with a narrow `pages` range.**
-  The built-in reader renders pages as *images* (token-heavy, not searchable), so use it only for the 1–3 pages that hold the visual you need — never the whole paper.
-
-The nexus library has ~6000 papers.
-Most relevant papers are already there.
-
-### Required Search Order
-
-1. **Local search FIRST** (always do this):
+1. **Search locally first**, always with `--human` (the default JSON is easy to mis-scan):
    ```bash
-   bip search -a "LastName" "keyword" --human
+   bip search "BME Felsenstein likelihood" -a "Gascuel" --human
    ```
-**Always use `--human`** — the default JSON output is verbose and easy to mis-scan.
+   If it errors (e.g. `no such column`), run `bip rebuild` and retry; the SQLite layer is rebuilt from JSONL.
+2. **Found it → read the PDF**, not the abstract or S2/ASTA metadata.
+   The path is `bip config pdf-root --human` (per machine; `$BIP_PDF_ROOT` overrides) plus the `PDF:` field of `bip get <id> --human`.
+   An entry with a `URL:` and no `PDF:` is a web page (an essay or blog post with no DOI): read it at that URL.
+   Read the `Supplements:` it lists too: methods numbers (data size, training budget, per-condition tables) are often only there.
+   A listed PDF missing from disk is usually the Linux rclone mount's stale directory cache: `systemctl --user kill -s HUP <mount service>` (on pax, `rclone-gdrive.service`), then look again; an `Input/output error` on the first read after a HUP is transient, so retry once.
+   If `rclone lsf "<remote>:<dir>"` lists it but the mount still won't serve it, `rclone copyto "<remote>:<dir>/<file>" <scratchpad>/<file>` and read that copy, which is the journal version.
+   If `rclone lsf` doesn't list it either, or the paper isn't in the library, read a legal open-access copy: `bip s2 lookup <id> --fields openAccessPdf` (the library key, or `DOI:`/`ARXIV:` for a paper not in it) gives its URL and status, and an arXiv preprint is at `https://arxiv.org/pdf/<id>`.
+   Note which version you read (published, author manuscript, preprint) and cite its sections rather than journal pages; this is for reading only, and Paperpile stays the library of record.
+   Fall back to the abstract only if neither exists, say the note is abstract-only, and give the user the DOI link to add the paper.
+   - Text: pdf-navigator MCP — `search_pdf_text` to find the page, then `read_pdf_text`. Keeps column order and inline math, and is searchable; `pdftotext` interleaves two-column text, so a correct quote can fail to match.
+     To check a quote and its page, search a phrase of five words or fewer from within one line of it: an exact search misses across a line-break hyphen ("se- quence").
+   - Figures, panels, rendered equations, tables: built-in `Read` on the 1–3 pages that hold them. It renders pages as images, so never the whole paper.
+   If `bip get` shows `Paper notes:`, read that shared nexus file first and go to the PDF only for what it doesn't answer.
+   The group's in-progress manuscripts are not in the library; each has a summary at `nexus/papers/ms-<owner>-<repo>.md`, kept by its ms session. Read it before the TeX.
+   Whatever you learn from the paper goes into `nexus/papers/<id>.md` (create it if absent; format in `papers/README.md` there), not only into your project's notes; commit and push nexus.
+3. **Before concluding it's absent**, run an exact-match check (`-a "LastName"` or `--doi`) rather than another keyword permutation.
+   No truncation notice (`showing M`) means you saw every match for those tokens, not that the paper is absent.
+4. **Not found, or the search needs to be wider → ASTA**, without asking: `bip asta search` or `mcp__asta__*`.
+   Broaden by dropping terms and trying synonyms, then trace citations of a related paper (`bip asta citations <id>`).
 
-2. **If `bip search` fails** (e.g., schema error), rebuild the database:
-   ```bash
-   bip rebuild
-   ```
-Then retry the search.
+### Writing queries
 
-3. **If found locally, READ THE PAPER** to answer the question:
-   ```bash
-   bip get <id> --human   # Get PDF path
-   ```
-Then use `mcp__pdf-navigator__search_pdf_text` (jump to the page) and `mcp__pdf-navigator__read_pdf_text` to find the answer directly in the paper.
-For a figure or equation you need to *see*, use the built-in `Read` tool on a narrow `pages` range instead.
-Get the PDF base path from `bip config pdf-root --human` rather than hardcoding it — it differs per machine (a Google Drive path on macOS, an rclone mount such as `~/gdrive/Paperpile` on Linux) and `$BIP_PDF_ROOT` may override the configured value.
+`bip search` is exact-token AND matching, unstemmed, so one inflected or half-remembered word zeroes out a query.
+Keep queries short and use distinctive method names (`"WEIGHBOR"`, `"FASTME"`), not descriptions.
+In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches those tokens in any field, while `-a "Yu" -a "Bloom"` matches last names.
 
-4. **Before concluding a paper is absent, try an exact-match check** — `bip search -a "LastName"` or `bip search --doi "..."` — rather than another keyword permutation.
-   `bip search` reports when results are truncated (`Found N references (showing M; ...)`), so a plain "not found" is trustworthy, but a truncated keyword search on its own is not proof of absence.
+## S2, ASTA, NCBI
 
-5. **Only if not found locally AND user confirms**, use ASTA:
-   ```
-   "I couldn't find that paper in the local library. Would you like me to search Semantic Scholar (ASTA)?"
-   ```
+- `bip asta` for exploration: read-only, 10 req/s, and the only one with snippet search.
+- `bip s2` for lookups and `bip s2 gaps` (papers your collection cites but lacks); 1 req/s with the key, ~0.33 without.
+- `bip ncbi` for PMCIDs (e.g. NIH RPPR); S2 and ASTA don't return them reliably. NCBI only knows papers in PMC, so a missing PMCID doesn't mean a missing paper.
 
-**DO NOT** call `bip asta`, `mcp__asta__*`, or any external API without asking first.
+`bip asta snippet` often times out ("context deadline exceeded"): use `--limit 5`, or `mcp__asta__snippet_search` with a small limit, retry once, then fall back to `bip asta search`.
 
-**DO NOT** rely on abstracts or S2 metadata when you have access to the actual paper PDF.
+## Adding to the library
 
-## Argument Handling
+Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
+Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
+To import a Paperpile export, run `/bip-lit-import`.
 
-When invoked with arguments like `/bip-lit find <query>` or `/bip-lit <query>`:
+## Opening an S2 paper page in a browser
 
-1. **Always search local library first** with `bip search "<query>" --human`
-2. If local search fails with an error, rebuild the database and retry
-3. **If found locally and answering a question, read the paper PDF** using pdf-navigator tools
-4. **Only after exhausting local options**, ask user if they want to search externally
-5. For title searches, use the full title; for topic searches, use key terms
-
-## Quick Reference
-
-| Task | Command |
-|------|---------|
-| Search local library | `bip search "query" --human` (searches title, abstract, authors, notes) |
-| Search by author | `bip search -a "LastName" --human` |
-| Search by title | `bip search -t "keywords" --human` |
-| Search by year | `bip search --year 2024 --human` |
-| Search by note | `bip search "AlphaSeq" --human` (user notes from Paperpile are indexed) |
-| Search by venue | `bip search --venue "Nature" --human` |
-| Lookup by DOI | `bip search --doi "10.1234/..." --human` |
-| Combined search | `bip search "topic" -a "Author" --year 2020: --human` |
-| Limit results | `bip search "topic" --limit 100 --human` (default 50, ranked by relevance) |
-| Unlimited results | `bip search "topic" --limit 0 --human` (`-1` also works) |
-| Semantic search | `bip semantic "query"` |
-| Get paper details | `bip get <id>` |
-| Export to BibTeX | `bip export --bibtex <id>...` |
-| Append to .bib file | `bip export --bibtex --append main.bib <id>...` |
-| Add paper to collection | `bip s2 add DOI:10.1234/...` |
-| Find literature gaps | `bip s2 gaps` |
-| Backfill missing PMCIDs from NCBI | `bip ncbi backfill --dry-run` |
-| One-off PMCID lookup | `bip ncbi pmcid DOI:10.1234/...` |
-| Fast paper search (external) | `bip asta search "query"` |
-| Find text snippets | `bip asta snippet "query"` |
-| Import projects from config | `bip project import <file>` |
-
-## Search Strategy
-
-### Field-Specific Search Flags
-
-Use `--author` and `--year` flags for precise filtering:
+Resolve the ID to the 40-char S2 paper ID and open the website URL.
+The `api.semanticscholar.org` redirect often gives the browser JSON, and `semanticscholar.org/paper/CorpusID:...` 404s.
 
 ```bash
-# Search by author (exact last name matching to avoid false positives)
-bip search --author "Yu" --author "Bloom"    # Last names only
-bip search -a "Tim Yu" -a "Bloom"            # First + last name
-bip search -a "Yu, Timothy"                  # Last, First format
-
-# Filter by year
-bip search --year 2024           # exact year
-bip search --year 2020:2024      # range (inclusive)
-bip search --year 2022:          # 2022 and later
-bip search --year :2020          # 2020 and earlier
-
-# Combine keyword + filters
-bip search "deep mutational scanning" --author "Bloom" --year 2023:
+pid=$(curl -s "https://api.semanticscholar.org/graph/v1/paper/DOI:10.1093/sysbio/syy032?fields=title" \
+  | sed -n 's/.*"paperId": *"\([^"]*\)".*/\1/p')   # or CorpusId:236964352
+xdg-open "https://www.semanticscholar.org/paper/$pid"   # macOS: open
 ```
-
-**Multiple authors use AND logic** - all must appear in the paper.
-
-**Author matching rules:**
-- Single word (e.g., `-a "Yu"`) → exact last name match (won't match "Yujia")
-- Two+ words (e.g., `-a "Tim Yu"`) → exact last name + first name prefix
-- Comma format (e.g., `-a "Yu, Tim"`) → same as above
-
-### Query Formulation Tips
-
-**Keep queries short and specific** - long conceptual queries are a correctness hazard, not just slow: `bip search` uses exact-token AND matching, so one inflected or half-remembered word (e.g. plural vs. singular) can zero out an otherwise-matching query:
-- Bad: `"correlation between BME criterion and Felsenstein likelihood around correct tree"`
-- Good: `"BME Felsenstein likelihood phylogeny"` or `"Bruno WEIGHBOR likelihood"`
-
-**Use --author flag instead of embedding names in query** - Precise last name matching:
-- Good: `bip search -a "Yu" -a "Bloom" --year 2022:` (exact last name match)
-- Good: `bip search -a "Tim Yu" -a "Bloom"` (first prefix + exact last name)
-- Bad: `bip search "Tim Yu Bloom"` (keyword search is substring-based)
-
-**Use specific method/algorithm names**:
-- `"WEIGHBOR"`, `"FASTME"`, `"neighbor joining"` rather than general descriptions
-
-### Systematic Search Workflow
-
-For finding a specific paper or result:
-
-1. **Local library first** (fastest, already curated):
-   ```bash
-   # Use flags for author/year filtering (most reliable)
-   bip search -a "AuthorName" --year 2020: --human
-   bip search "topic" -a "Author" --human
-
-   # Or plain keyword search (use -a for authors when possible)
-   bip search "distinctive title words" --human
-   bip semantic "conceptual description"  # for topic-heavy queries
-   ```
-
-2. **If found, read the paper** to get authoritative answers:
-   ```bash
-   bip get <id> --human  # Get PDF path
-   # Then use pdf-navigator to search/read the PDF
-   ```
-
-3. **External keyword search** (only if not found locally, with permission):
-   ```bash
-   bip asta search "AuthorName keyword1 keyword2" --limit 20 --human
-   ```
-
-4. **Broaden if needed** - remove author, try synonyms:
-   ```bash
-   bip asta search "minimum evolution likelihood" --human
-   bip asta search "distance method maximum likelihood phylogeny" --human
-   ```
-
-5. **Citation tracing** - if you find a related paper, check what cites it:
-   ```bash
-   bip asta citations DOI:10.xxxx/yyyy --limit 50 --human
-   ```
-
-6. **MCP tools directly** - for more control over fields and filters:
-   ```
-   mcp__asta__search_papers_by_relevance with specific date ranges
-   mcp__asta__get_citations with publication_date_range filter
-   ```
-
-### Snippet Search Caveats
-
-The `bip asta snippet` command can be **slow and unreliable** (timeouts are common).
-Alternatives:
-- Use keyword search first to find candidate papers
-- Use MCP `mcp__asta__snippet_search` directly with smaller limits
-- If snippet times out, fall back to `bip asta search`
-
-## S2 vs ASTA vs NCBI: When to Use Which
-
-S2 and ASTA both access Semantic Scholar; NCBI is a separate ID-resolution service:
-
-| Use Case | Command | Why |
-|----------|---------|-----|
-| Add paper to collection | `bip s2 add` | Only S2 can modify local library |
-| Find literature gaps | `bip s2 gaps` | Analyzes your collection |
-| Explore without adding | `bip asta *` | Faster, read-only |
-| Find text snippets in papers | `bip asta snippet` | Unique to ASTA |
-| Fast paper search | `bip asta search` | 10x faster rate limit |
-| Get citations/references | Either S2 or ASTA | ASTA is faster |
-| Backfill PMCIDs (e.g., for NIH RPPR) | `bip ncbi backfill` | NCBI is the canonical source; S2/ASTA do not return PMCIDs reliably |
-
-**Rule of thumb**: Use `bip asta` for exploration, `bip s2` when you want to modify your library, `bip ncbi` for authoritative PMCID resolution.
-NCBI only knows PMCIDs for papers actually in PMC — absence is not a signal that the paper is missing.
-
-See [api-guide.md](api-guide.md) for detailed comparison.
-
-## Common Workflows
-
-### Find a Paper / Answer a Question About a Paper
-
-1. **Search local library first**:
-   ```bash
-   bip search "Schmidler phylogenetics" --human
-   # or for topic-heavy queries:
-   bip semantic "importance sampling MCMC"
-   ```
-
-2. **Get PDF path** for a result:
-   ```bash
-   bip get <id> --human
-   # full path = `bip config pdf-root --human` + the pdf_path field
-   ```
-
-3. **Read the actual paper** to answer questions:
-   ```bash
-   # Text: search to the relevant page (MuPDF — searchable, clean reading order)
-   mcp__pdf-navigator__search_pdf_text(file_path, "phage display")
-   mcp__pdf-navigator__read_pdf_text(file_path, 2, 3)
-   ```
-For a **figure, panel, or rendered equation** you need to *see*, use the built-in `Read` tool on a narrow page range instead (it renders pages as images — token-heavy, so read only the page(s) with the visual):
-   ```
-   Read(file_path, pages="4")
-   ```
-**Always prefer reading the paper over relying on abstracts or external metadata.**
-
-4. **Only if not in library**, search externally (with user permission):
-   ```bash
-   bip asta search "phylogenetic inference"
-   ```
-
-### Update Library from Paperpile
-
-1. Export from Paperpile (JSON format) to ~/Downloads
-2. Find the export file:
-   ```bash
-   ls -t ~/Downloads/Paperpile*.json | head -1
-   ```
-3. Import:
-   ```bash
-   bip import --format paperpile "<path>"
-   ```
-4. Rebuild the search index:
-   ```bash
-   bip rebuild
-   ```
-5. Optionally delete the export file after confirming success
-
-### Explore Literature
-
-1. **Search by topic**:
-   ```bash
-   bip asta search "variational inference phylogenetics" --limit 20
-   ```
-
-2. **Find specific text passages**:
-   ```bash
-   bip asta snippet "Bayesian phylogenetic inference"
-   ```
-
-3. **Trace citations**:
-   ```bash
-   bip asta citations DOI:10.1093/sysbio/syy032
-   bip asta references DOI:10.1093/sysbio/syy032
-   ```
-
-4. **Add interesting papers** to your collection:
-   ```bash
-   bip s2 add DOI:10.1093/sysbio/syy032
-   ```
-
-See [workflows.md](workflows.md) for detailed workflow instructions.
-
-## Output Format
-
-All commands output JSON by default.
-Add `--human` for readable format:
-
-```bash
-bip asta search "phylogenetics" --human
-bip s2 lookup DOI:10.1234/example --human
-```
-
-## Paper ID Formats
-
-Both S2 and ASTA accept these identifier formats:
-- `DOI:10.1093/sysbio/syy032`
-- `ARXIV:2106.15928`
-- `PMID:19872477`
-- `CorpusId:215416146`
-- Raw Semantic Scholar ID (40-char hex)
-
-### Opening a paper page in the browser
-
-The reliable way to open an S2 paper page in Chrome is to resolve the identifier to the 40-char paper ID, then open the **website** URL.
-The `https://api.semanticscholar.org/...` redirect form is NOT reliable — Chrome often gets a JSON/non-navigable response instead of the rendered page.
-
-```bash
-# From a DOI: resolve to paperId, then open the website page
-doi="10.1093/sysbio/syy032"
-pid=$(curl -s "https://api.semanticscholar.org/graph/v1/paper/DOI:$doi?fields=title" \
-  | sed -n 's/.*"paperId": *"\([^"]*\)".*/\1/p')
-open -a "Google Chrome" "https://www.semanticscholar.org/paper/$pid"
-
-# If you already have the 40-char SHA paper ID, open it directly:
-open -a "Google Chrome" "https://www.semanticscholar.org/paper/<sha>"
-```
-
-Note: the bare `https://www.semanticscholar.org/paper/CorpusID:...` form does NOT resolve (404s) — you must use the SHA paper ID.
-To resolve a CorpusId instead of a DOI, swap `DOI:$doi` above for `CorpusId:236964352`.
-
-## Troubleshooting
-
-### Snippet Search Timeouts
-
-`bip asta snippet` frequently times out with "context deadline exceeded".
-Workarounds:
-
-1. **Reduce limit**: `--limit 5` instead of default
-2. **Use MCP directly**: `mcp__asta__snippet_search` with small limit
-3. **Fall back to keyword search**: `bip asta search` is more reliable
-4. **Retry once** - sometimes it's transient
-
-### No Results Found
-
-If searches return nothing relevant:
-
-1. **Check spelling** of author names and technical terms
-2. **Simplify query** - fewer terms, more common synonyms
-3. **Try both local and external**:
-   ```bash
-   bip search "topic" --human # local
-   bip semantic "topic"      # local semantic
-   bip asta search "topic"   # external
-   ```
-4. **Check date filters** - paper may be too old/new for range
-
-### Paper Not Found by ID
-
-If `bip get <id>` or `bip asta paper <id>` fails:
-
-1. **Verify ID format**: `DOI:10.xxxx/yyyy` (include prefix)
-2. **Try alternate IDs**: Same paper may have DOI, PMID, arXiv ID
-3. **Search by title instead**: `bip asta search "exact paper title"`
-
-### SQL Schema Errors
-
-If you see errors like `no such column: pmid` or similar schema mismatches:
-
-```bash
-bip rebuild
-```
-
-The SQLite database is ephemeral and rebuilt from the JSONL source of truth.
-Schema changes require deleting and rebuilding.
-
-### Slow Performance
-
-- `bip s2` commands are rate-limited to 1 req/sec
-- Use `bip asta` for bulk exploration (10 req/sec)
-- Run searches in parallel when independent

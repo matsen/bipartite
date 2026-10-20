@@ -50,29 +50,20 @@ If new result paths were discovered but not added to `fetch_cmds`, note them for
 
 Everything below lives in the repo.
 
-1. **`misc/session-onboarding.md`** (create it if the repo has none — see the copies in
-   `protein-dasm-tex` and `superfamily-pcp-tex` for the shape).
-   This is what a fresh session reads on its first turn, so it carries only what is needed
-   *before* acting: what the paper is and is not, the peer sessions and their remits, the
-   working disciplines that cost a round to learn, environment gotchas, and the open items.
-   Update it when any of those changed this session. Prefer pointing at the file that holds
-   a fact over restating the fact, so it stays short and cannot go stale on its own.
-   It is a standing document, not a log: **edit the lines that are now wrong rather than
-   appending**, and delete an item when it closes.
-
-   Its **live-threads section** carries what each open thread would *mean for the paper* —
-   the reading that does not go stale — including analyses requested on PRs/issues this
-   session, open scientific questions, and what each is waiting on, so the next session
-   resumes the orchestration and not just the manuscript. (A thread that has *completed* is
-   what triggers a paper update; one still open stays here.) **Never record
-   open/merged/closed status**: GitHub is the source of truth and a status line is wrong
-   within hours.
+1. **`misc/session-onboarding.md`** (create it if the repo has none).
+   A fresh session reads its top and index whole and the rest only by grep, so it has three parts.
+   The **top** carries what is needed *before* acting: what the paper is and is not, hazards, the peer sessions and their remits, and the working disciplines, one line per rule; an incident story goes in the commit message, not here.
+   The **live-thread index** has one line per open thread, carrying its grep handles (issue and PR numbers, ledger id or `\label`, never a line number) and a pointer to where its evidence lives.
+   Below the index, each thread's **detail** carries what it would *mean for the paper*, the analyses requested, and what it is waiting on; a ruling is quoted verbatim, never paraphrased.
+   Prefer pointing at the file that holds a fact over restating it; a number that sits in a `%PROV` or `notes/` file is not copied here.
+   It is a standing document, not a log: **edit the lines that are now wrong rather than appending**.
+   When a thread closes, move any guard it carries ("no exposure", "do not restore") into a `%PROV` beside the sentence it protects, then delete the thread.
+   **Never record open/merged/closed status**: GitHub is the source of truth and a status line is wrong within hours.
 
 2. **Keep it to ONE file.** If the repo has both an onboarding doc and a separate notes
    file, merge them and delete the loser. Two documents with overlapping jobs is how state
    goes stale: the one you are looking at stays true and the other quietly lies, and
-   whoever reads the wrong one has no way to tell. `protein-dasm-tex` had exactly this and
-   merged into `misc/session-onboarding.md` on 2026-09-18.
+   whoever reads the wrong one has no way to tell.
 
 3. **The `%PROV` / `%TODO` markers in the manuscript** are the primary memory for anything
    attached to a specific number or sentence, and they beat both files above because they
@@ -82,10 +73,15 @@ Everything below lives in the repo.
    correction does not neutralize the original claim further down.
 
 4. If Erick corrected an approach or confirmed a non-obvious choice, put it where it will
-   be enforced: a durable project fact in `CLAUDE.md`, a workflow rule in a
+   be enforced: a durable project fact in `CLAUDE.md`/`AGENTS.md`, a workflow rule in a
    `~/re/bipartite/skills/` skill, a finding in the test, doc, or issue it concerns.
 
 Only update what changed. Do not rewrite unchanged files.
+
+### Step 4b: Update the nexus summary
+
+If the paper changed in substance since the commit that `nexus/papers/ms-<owner>-<repo>.md` records, or the file doesn't exist, rewrite it from a pushed commit (format in nexus `papers/README.md`): the paper's own evidence status first (a do-not-cite banner, first-pass numbers), then the main claims, each with its section or `\label`; what is settled and what is open; which of the group's earlier papers it builds on.
+Cite only the remote and the commit, never a local path. Delete superseded claims rather than qualifying them. Commit and push nexus.
 
 ### Step 5: Verify build
 

@@ -105,7 +105,7 @@ When an EPIC body has new findings (numbered items in the Key Findings section t
 2. Read the relevant PR or experiment that produced it (full body, not a truncated read).
 3. Present the key points as a **bullet-point summary**, with your read on whether the result holds up, what it means, and how it sits against what the manuscript already claims.
 4. Decide with the user what happens next.
-   Usually this is orchestration — request a follow-up analysis on the PR, draft an issue for a gap (via the Issue quality gate), or log an open question — because the paper is updated when a thread of research *completes*, not per finding.
+   Usually this is orchestration — request a follow-up analysis on the PR, draft an issue for a gap (via `/bip-issue-check`), or log an open question — because the paper is updated when a thread of research *completes*, not per finding.
 5. **Only when a thread is complete**, draft it into the manuscript: propose placement, write the LaTeX, run the `@scientific-tex-editor` agent on the new text, and present the edited draft for final approval.
 
 ### Issue creation

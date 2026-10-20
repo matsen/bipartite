@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# queue-pane <briefs-dir>: live view of what waits on the user, for a tmux split.
+# Shows each brief's queue block (its lines above the first `---`), DECIDE
+# before DISCUSS, newest first, and redraws when a brief changes. The glow style
+# follows tmux's @theme, as glow-pane's does (docs/guides/theme.md).
+set -u
+dir=${1:?usage: queue-pane <briefs-dir>}
+
+render() {
+  local files f kind n=0 body=""
+  for kind in DECIDE DISCUSS OTHER; do
+    for f in $(ls -t "$dir"/*.md 2>/dev/null); do
+      head=$(grep -m1 '^#' "$f")
+      case "$head" in
+        "# DECIDE:"*) k=DECIDE ;; "# DISCUSS:"*) k=DISCUSS ;; *) k=OTHER ;;
+      esac
+      [ "$k" = "$kind" ] || continue
+      n=$((n + 1))
+      if grep -qx -- '---' "$f"; then
+        body+=$(sed '/^---$/q' "$f" | sed '$d' | sed '1s/^# /## /')
+      else
+        body+="## ${head#\# }"$'\n\n'"_(no queue block)_"
+      fi
+      body+=$'\n\n'"\`$(basename "$f")\`"$'\n\n'
+    done
+  done
+  printf '# Waiting on you: %d\n\nupdated %s\n\n%s' "$n" "$(newest=$(ls -t "$dir"/*.md 2>/dev/null | head -1); [ -n "$newest" ] && date -u -r "$newest" +%H:%MZ)" "$body"
+}
+
+# glow's TUI views one file and reloads it on change, so a background loop
+# recomposes that file when a brief changes. It lives beside the briefs, not
+# in /tmp (snap glow has a private /tmp), and is written in place because a
+# rename can drop glow's watch.
+out="$dir/../_ignore/queue.md"
+mkdir -p "$(dirname "$out")"
+(
+  last=""
+  while :; do
+    sig=$(stat -c '%n %Y' "$dir" "$dir"/*.md 2>/dev/null | md5sum)
+    if [ "$sig" != "$last" ]; then
+      last=$sig
+      render > "$out"
+    fi
+    sleep 2
+  done
+) &
+loop=$!
+trap 'kill $loop 2>/dev/null' EXIT
+sleep 1
+"$(dirname "$(readlink -f "$0")")"/../lib/glow-pane --run "$out" -w 0

@@ -14,7 +14,19 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 - **Drop options nobody would contest.** If you'd recommend A, propose A. Mention B only if a reviewer would ask "why not B?"
 - **A test plan lists bugs, not invariants.** List tests that catch implementation mistakes, not identities that are true by construction.
 - **The body is the final state of the diff, not a changelog.** Describe the finished artifact once, in the present tense. Don't write "Reviewer follow-up:", "Update:", a History section, or "originally X, now Y". When the story has settled, rewrite the body from scratch instead of patching it.
-- **A label drifts silently from what it labels, and the label is what gets read.** When you change a section, re-read its heading, caption, commit subject or title against the new content.
+- **A label drifts silently from what it labels, and the label is what gets read.** When you change a section, re-read its heading, caption, the body's opening paragraph, commit subject or title against the new content.
+
+## Showing a draft to the user
+
+Write the draft to a gitignored path inside the repo (e.g. `_ignore/<name>.md`), not a scratchpad: the user can't see a scratchpad path, and `glow` is a snap with a private `/tmp`. Open it beside this session's own pane, in the user's light or dark theme (`docs/guides/theme.md`):
+
+```bash
+~/.claude/skills/lib/glow-pane _ignore/<name>.md
+```
+
+The pane reloads when the file changes, so revise by editing the file; don't paste the draft inline or reopen the pane.
+
+Text the user will paste somewhere themselves (a Slack message, a DM) goes inline in the reply instead, as plain lines set off by blank lines, with no `>` and no code fence. The user copies by Shift-selecting in this session's pane, which doesn't reach a side pane; and the user doesn't want a blockquote's left-hand bar.
 
 ## Is the claim true?
 

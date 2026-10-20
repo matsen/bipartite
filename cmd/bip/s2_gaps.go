@@ -204,7 +204,7 @@ func outputGapsHuman(result S2GapsResult) {
 	for _, g := range result.Gaps {
 		fmt.Printf("  %s (%d)\n", g.Title, g.Year)
 		if g.DOI != "" {
-			fmt.Printf("    DOI: %s\n", g.DOI)
+			fmt.Printf("    DOI: %s\n", doiURL(g.DOI))
 		}
 		if g.Venue != "" {
 			fmt.Printf("    Venue: %s\n", g.Venue)

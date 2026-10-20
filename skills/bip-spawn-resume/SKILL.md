@@ -60,7 +60,7 @@ A few things carry over regardless of what they ask for:
 - Same branch, same PR — don't open a new branch or a second PR unless told to.
 - Apply the DEFERRAL RULE from `/bip-conductor-spawn` if scope creep comes up (fold small related fixes in; only defer clearly out-of-scope work).
 - Before pushing changes back out, re-run `/bip-pr-check` and `/bip-pr-review`, same REVIEW TRIAGE as `/bip-conductor-spawn`.
-- Replying to or resolving someone else's review thread is a visible GitHub action — draft it and confirm before posting/resolving, per the standing GitHub Action Sequencing rule.
+- Replying to or resolving someone else's review thread follows `docs/guides/roles.md` ("Posting to GitHub"); on another human's scientific PR, draft the reply and confirm before posting or resolving.
 - If this is an EPIC slot and the change is small and bounded, update `.epic-status.json`/`.epic-worklog.md` directly rather than restarting the ralph-loop.
   Only fall back to `/bip-conductor-spawn`'s RECOVERING CONTEXT + ralph-loop protocol if the user actually wants ongoing autonomous iteration, not just this one fix.
 

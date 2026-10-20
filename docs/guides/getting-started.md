@@ -161,8 +161,7 @@ my-nexus/
 │   ├── repos.jsonl           # Tracked repositories
 │   ├── config.yml            # (optional) Local paths, API keys
 │   └── cache/                # (gitignored, ephemeral)
-│       ├── refs.db           # SQLite FTS index
-│       └── semantic.gob      # Embedding vectors
+│       └── refs.db           # SQLite FTS index
 │
 ├── servers.yml               # (optional) Remote servers for bip scout
 ├── sources.yml               # (optional) GitHub repos for activity tracking
@@ -184,13 +183,12 @@ These files are the source of truth. They're plain text, git-friendly, and desig
 The `.bipartite/cache/` subdirectory contains:
 
 - **refs.db** — SQLite full-text search index
-- **semantic.gob** — Embedding vectors for semantic search
 
 Only `cache/` is gitignored — the JSONL files above it are tracked. The cache is rebuilt from those source files via `bip rebuild`, so you can delete it and rebuild anytime.
 
 ### Configuration Files (Optional)
 
-- **.bipartite/config.yml** — Local paths (PDF root), Ollama settings
+- **.bipartite/config.yml** — Local paths (PDF root)
 - **servers.yml** — Remote servers for `bip scout`
 - **sources.yml** — GitHub repos and boards for `bip checkin`, `bip digest`
 

@@ -38,7 +38,7 @@ Before recording anything anywhere, run each candidate topic-level finding throu
    A finding that already produced an issue, PR, or EPIC body update needs no second copy either.
 
 Only what survives both gates gets a destination:
-- A durable repo-level fact → a `CLAUDE.md`.
+- A durable repo-level fact → the repo's `CLAUDE.md` or `AGENTS.md`.
 - A workflow rule → a skill.
 - A cross-EPIC pattern or key decision not yet captured anywhere → the EPIC body it's most relevant to, or the Step 3 report below if none fits.
 - Nothing else fits → the Step 3 report.
@@ -55,7 +55,7 @@ Only what survives both gates gets a destination:
 - **What is in flight**, per worker, and what each one's next decision point is.
 - **Housekeeping**: EPIC body headroom, known recurring conflicts, skill changes landed this session.
 
-**The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user.
+**The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user. Keep its `Session: <this session's ListAgents name>` line: role resolution reads it.
 Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; the next session loads it with `/bip-continue`.
 On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
 

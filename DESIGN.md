@@ -21,8 +21,7 @@ Go SQLite), golang.org/x/crypto/ssh (native SSH). No C dependencies.
 
 Core functionality works offline with local data. External APIs
 (Semantic Scholar, ASTA, GitHub, Slack) are optional enrichment.
-Embeddings via local Ollama, not cloud embedding services. bip never
-phones home.
+bip never phones home.
 
 ## IV. Nexus Pattern
 

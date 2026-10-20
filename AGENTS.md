@@ -1,4 +1,4 @@
-# bipartite — Claude guidance
+# bipartite — agent guidance
 
 ## What this file is
 
@@ -19,11 +19,9 @@ facts no skill carries.
 ## Stack & layout
 
 - Go (min version in `go.mod`). CLI: spf13/cobra. Storage: modernc.org/sqlite (pure Go, no
-  CGO). Embeddings: Ollama (local), pure-Go vector storage. External refs: Semantic Scholar
-  (`internal/s2`).
-- Data model: JSONL is the source of truth → ephemeral SQLite, rebuilt on `bip rebuild`. The
-  vector index is GOB-serialized, ephemeral, gitignored.
-- `cmd/` CLI commands · `internal/` packages (s2, store, index, flow, …) · `testdata/`
+  CGO). External refs: Semantic Scholar (`internal/s2`).
+- Data model: JSONL is the source of truth → ephemeral SQLite, rebuilt on `bip rebuild`.
+- `cmd/` CLI commands · `internal/` packages (s2, store, flow, …) · `testdata/`
   fixtures · `tests/` integration tests.
 
 ## Build & style
@@ -50,12 +48,10 @@ new schema silently won't take.
 ## Repo facts
 
 - Agents decide and land changes here without asking the user, under downward pressure on size: a peer's suggested addition is a proposal to weigh, not a fix to apply, and deleting beats adding (`CONSTITUTION.md` Article VII).
+- Every PR gets `/bip-pr-review` before it lands, skill-only PRs included; peer sessions' acks don't replace it. Skip the steps that don't apply and say so in the report.
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE-<role>.md` (gitignored); never commit. Written by `/bip-tuckin`, read by `/bip-continue`; see `docs/guides/continuation-prompt.md`.
-- Secrets: `config.GetGitHubToken()` / `config.GetSlackBotToken()` consult env vars before
-  `~/.config/bip/config.yml`. Order — GitHub: `BIP_GITHUB_TOKEN` → `GITHUB_TOKEN` → `GH_TOKEN`
-  → config; Slack: `BIP_SLACK_TOKEN` → `SLACK_BOT_TOKEN` → config. Prefer the `BIP_*` names,
-  sourced from a secrets manager (e.g. 1Password `op run` / `op read`).
+- Secrets: the token and webhook getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, `BIP_SLACK_WEBHOOK_<CHANNEL>`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`. `config.yml` should hold no secrets, but an older one may still carry tokens or `slack_webhooks`, so don't print it whole: read the field you need.
 - Per-issue git worktrees are opt-in via a `layout:` block in `~/.config/bip/config.yml`
   (per-repo overrides in `sources.yml`). Absent block = today's clone-per-repo behavior.
   Schema and precedence: `docs/guides/layout.md`. The resolver is `flow.ResolveRepoPath`.
@@ -68,9 +64,10 @@ Search locally first:
 grep -i "name|keyword" "$NEXUS_PATH/.bipartite/refs.jsonl" | jq -r '.id + " - " + .title'
 ```
 
-~6000 papers are already imported, so most relevant work is present. **Ask before any ASTA MCP
-call** — ASTA is only for papers confirmed absent locally, citation/reference discovery, or
-topic search with no local hit. Add via `./bip s2 add DOI:...` when rate limits allow.
+~6000 papers are already imported, so every search starts there (and reads the local PDF of a
+known paper). ASTA needs no permission; go on to it for wide searches and citation/reference
+discovery. To add a paper, ask the user to put it in Paperpile; adding it yourself
+(`bip s2 add`) needs the user's word.
 
 ## Docs conventions
 
@@ -79,5 +76,3 @@ topic search with no local hit. Add via `./bip s2 add DOI:...` when rate limits 
   `docs/guides/`. Skills live in `./skills/` (not `./.claude/skills/`).
 - When a change adds or alters a command, run `./bip <cmd> --help` and make the skill docs
   match the real flags and workflow.
-- The pre-PR process *is* the `/bip-pr-review` skill (with `/bip-pr-check` as a quick gate) —
-  don't restate the checklist here.

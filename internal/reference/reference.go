@@ -16,6 +16,7 @@ type Reference struct {
 	Issue    string   `json:"issue,omitempty"`
 	Pages    string   `json:"pages,omitempty"`
 	Note     string   `json:"note,omitempty"` // User note (e.g., from Paperpile)
+	URL      string   `json:"url,omitempty"`  // Link for a reference with no DOI (e.g., a web page)
 
 	// Publication Date
 	Published PublicationDate `json:"published"`

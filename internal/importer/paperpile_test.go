@@ -909,3 +909,36 @@ func refsEqual(a, b reference.Reference) bool {
 	}
 	return true
 }
+
+func TestParsePaperpile_URLKeptOnlyWithoutDOI(t *testing.T) {
+	data := []byte(`[{
+		"_id": "a",
+		"citekey": "Cammarata2026-ax",
+		"title": "Neural Networks Are Already Clean",
+		"url": ["https://already-clean.goodfire.com/", "https://example.org/mirror"],
+		"published": {"year": "2026"},
+		"author": [{"first": "Nick", "last": "Cammarata"}]
+	}, {
+		"_id": "b",
+		"citekey": "Smith2026-ab",
+		"doi": "10.1234/test",
+		"title": "Test Paper",
+		"url": ["http://dx.doi.org/10.1234/test"],
+		"published": {"year": "2026"},
+		"author": [{"first": "John", "last": "Smith"}]
+	}]`)
+
+	refs, _, errs := ParsePaperpile(data, true)
+	if len(errs) > 0 {
+		t.Fatalf("ParsePaperpile() returned errors: %v", errs)
+	}
+	if len(refs) != 2 {
+		t.Fatalf("ParsePaperpile() returned %d refs, want 2", len(refs))
+	}
+	if refs[0].URL != "https://already-clean.goodfire.com/" {
+		t.Errorf("URL without DOI = %q, want the first url", refs[0].URL)
+	}
+	if refs[1].URL != "" {
+		t.Errorf("URL with DOI = %q, want empty", refs[1].URL)
+	}
+}

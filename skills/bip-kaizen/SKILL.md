@@ -54,7 +54,7 @@ Determine where the fix belongs:
 
 | Target | When | Example |
 |--------|------|---------|
-| **CLAUDE.md** (current project) | Agent lacked project-specific context | Missing build command, file path, convention |
+| **CLAUDE.md or AGENTS.md** (current project — edit whichever exists; a CLAUDE.md anywhere between the working directory and an AGENTS.md stops that AGENTS.md loading, so mixed trees symlink `CLAUDE.md -> AGENTS.md`) | Agent lacked project-specific context | Missing build command, file path, convention |
 | **CLAUDE.md** (global `~/.claude/CLAUDE.md`) | Agent lacked cross-project context | Personal workflow preference, tool config |
 | **Skill file** (bipartite `skills/`) | A `/skill` gave wrong or incomplete guidance | Missing flag, outdated workflow, bad example |
 | **Code/docs in current repo** | Missing README, help text, or inline docs | CLI `--help` text doesn't match behavior |
@@ -126,7 +126,7 @@ Then show the specific change—either as a diff, a new section to add, or a des
 Present options:
 
 1. **Apply now** — Make the edit directly (for small CLAUDE.md or skill changes)
-2. **Create a PR** — For changes to the bipartite repo (skills, code)
+2. **Send to the `bipartite` session** — For changes to the bipartite repo (skills, code), when a session by that name is live (`ListAgents`): send the diagnosis and the proposed edit as feedback, and it places, lands, and reports back. Otherwise, create a PR (Step 5)
 3. **Write an issue** — For larger improvements that need discussion
 4. **Skip** — User disagrees with the diagnosis
 
@@ -169,9 +169,7 @@ git commit -m "kaizen: <description>"
 gh pr create --title "kaizen: <description>" --body "..."
 ```
 
-**Write an issue** (using /bip-issue-file pattern):
-- Create `ISSUE-kaizen-<topic>.md` in the current repo
-- Use the `/bip-issue-file` workflow to submit
+**Write an issue**: create `ISSUE-kaizen-<topic>.md` in the current repo and submit it with `/bip-issue-check`.
 
 ## Guidelines
 
