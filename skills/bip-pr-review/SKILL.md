@@ -15,6 +15,7 @@ Automatically detects project type and runs appropriate checks.
 ```
 
 To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`, and push nothing there. Whether to post, the Step 7 math comment included, follows `docs/guides/roles.md` ("Posting to GitHub"): another human's scientific PR gets the findings reported to the user, not posted.
+Don't report textual merge or rebase conflicts with sibling PRs, since whoever lands second rebases. Report a collision only when it is semantic: two PRs that give one symbol different names, or that make contradictory claims.
 In an `r<N>-<slot>` review window, once the review is complete (posted, by `/bip-review-post` or otherwise, or the user says it's done), message the conductor named in `$CLONE_ROOT/.conductor-session` to preserve `_ignore/REVIEW-p<N>.md`, close this window, and reclaim `<slot>`, unless the user has said to keep the window.
 
 ## Workflow
