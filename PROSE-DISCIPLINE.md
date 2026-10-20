@@ -26,6 +26,8 @@ Write the draft to a gitignored path inside the repo (e.g. `_ignore/<name>.md`),
 
 The pane reloads when the file changes, so revise by editing the file; don't paste the draft inline or reopen the pane.
 
+Text the user will paste somewhere themselves (a Slack message, a DM) goes inline in the reply instead, as plain lines set off by blank lines, with no `>` and no code fence. The user copies by Shift-selecting in this session's pane, which doesn't reach a side pane; and the user doesn't want a blockquote's left-hand bar.
+
 ## Is the claim true?
 
 Checking the claims is a separate discipline, in `EVIDENCE-DISCIPLINE.md`. Apply it whenever you cite a number, not only when you draft.
