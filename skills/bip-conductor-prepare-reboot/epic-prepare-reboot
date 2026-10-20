@@ -285,6 +285,17 @@ printf '%s\n' "${ROWS[@]}" | jq -R -s --arg host "$host" --arg parked "$parked_a
 echo "Wrote $MANIFEST ($(jq '.sessions|length' "$MANIFEST") sessions, $nwin windows)."
 
 if [ "$SHUTDOWN" = 1 ]; then
+  # Every tmux window dies next, so the way back has to live outside tmux.
+  cat > "$RECOVER_DIR/RECOVER.txt" <<EOF
+Recover the tmux workspace on $host, parked at $parked_at.
+In a terminal outside tmux: start tmux the usual way (e.g. eval \$(keychain --eval id_rsa) && tmux), detach, then run claude and paste:
+
+/bip-conductor-recover — replay the planned-restart manifest at $MANIFEST.
+EOF
+  echo
+  cat "$RECOVER_DIR/RECOVER.txt"
+  echo
+  echo "(Saved to $RECOVER_DIR/RECOVER.txt.)"
   echo "Manifest on disk — killing the tmux server(s) now."
   for sock in "${SOCKETS[@]}"; do tmux -S "$sock" kill-server; done
 fi
