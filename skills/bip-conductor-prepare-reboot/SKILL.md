@@ -102,11 +102,12 @@ When you are ready to reboot, either reboot the box yourself, or let the helper 
 ```
 
 `--shutdown` never kills the server before the manifest write succeeds.
+Before the kill it prints the recovery prompt and saves it to `~/.epic-recover/RECOVER.txt`, outside tmux. Every window, this one included, dies with the server, so give the user that path before running it.
 
 ### Step 5: After the reboot
 
-On the rebooted box, run `/bip-conductor-recover`.
-It detects the manifest (parked before the current boot, not yet consumed), rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their exact ids, plain windows as bare shells — reports "(from manifest)", and asks about any `ambiguous` windows.
+After a reboot, or a tmux restart with no reboot, run `/bip-conductor-recover` from a `claude` outside tmux, as `RECOVER.txt` says.
+It detects the manifest (parked before the tmux server started, not yet consumed), rebuilds **every** session by its real name with windows in order — Claude windows `--resume`'d to their exact ids, plain windows as bare shells — reports "(from manifest)", and asks about any `ambiguous` windows.
 After a successful replay it stamps the manifest consumed so a later *unplanned* reboot falls back to the jsonl scan instead of replaying a stale park.
 
 ## The manifest (what recover consumes)

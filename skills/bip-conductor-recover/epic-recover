@@ -51,10 +51,11 @@ command -v mapfile >/dev/null 2>&1 || {
 mtime() { stat -c %Y "$1" 2>/dev/null || stat -f %m "$1" 2>/dev/null; }
 enc() { printf '%s' "$1" | sed 's#/#-#g'; }
 
-# cutoff = boot - SINCE_HOURS. boot via `uptime -s` (Linux) or kern.boottime (macOS); else now.
+# cutoff = boot - SINCE_HOURS. boot via /proc/uptime (Linux) or kern.boottime (macOS); else now.
+# Not `uptime -s`: on pax (kernel 7.0) it prints the current time.
 boot_epoch() {
   local b
-  if b=$(uptime -s 2>/dev/null) && [ -n "$b" ]; then "$DATE" -d "$b" +%s; return; fi
+  if [ -r /proc/uptime ] && b=$(cut -d. -f1 /proc/uptime) && [ -n "$b" ]; then echo $(( $(date +%s) - b )); return; fi
   if b=$(sysctl -n kern.boottime 2>/dev/null); then  # "{ sec = N, usec = M } ..." — anchor on sec, not usec
     printf '%s\n' "$b" | sed -n 's/^{ *sec *= *\([0-9][0-9]*\).*/\1/p'; return
   fi
@@ -62,21 +63,30 @@ boot_epoch() {
 }
 
 # ---------------------------------------------------------------------------
+# The latest restart: the tmux server's start, which is never before boot, or
+# now when no server runs (it was killed). A tmux restart without a reboot
+# counts, so replaying it needs no boot-time workaround.
+restart_epoch() {
+  local s
+  s=$(tmux list-sessions -F '#{start_time}' 2>/dev/null | head -1)
+  [ -n "$s" ] && echo "$s" || "$DATE" +%s
+}
+
 # MANIFEST mode (planned-reboot replay) — project-agnostic, host-wide.
 # ---------------------------------------------------------------------------
 
 # Is there a manifest worth replaying? Echoes a verdict; exit 0 if VALID else 1.
-# Valid = parseable, parked_at strictly before the current boot, and not yet
-# consumed (a consumed manifest was renamed to manifest.<boot>.done).
+# Valid = parseable, parked_at strictly before the latest restart (reboot or
+# tmux restart), and not yet consumed (renamed to manifest.<restart>.done).
 manifest_status() {
   [ -f "$MANIFEST" ] || { echo "none: no manifest at $MANIFEST"; return 1; }
-  local parked boot parked_e
+  local parked restart parked_e
   parked=$(jq -r '.parked_at // empty' "$MANIFEST" 2>/dev/null) || { echo "invalid: $MANIFEST is not valid JSON"; return 1; }
   [ -n "$parked" ] || { echo "invalid: $MANIFEST has no parked_at"; return 1; }
   parked_e=$("$DATE" -d "$parked" +%s 2>/dev/null) || { echo "invalid: unparseable parked_at '$parked'"; return 1; }
-  boot=$(boot_epoch)
-  if [ -n "$boot" ] && [ "$parked_e" -ge "$boot" ]; then
-    echo "stale: parked_at ($parked) is not before this boot ($("$DATE" -d @"$boot" '+%Y-%m-%dT%H:%M:%SZ')) — ignoring; use the scan instead"
+  restart=$(restart_epoch)
+  if [ "$parked_e" -ge "$restart" ]; then
+    echo "stale: parked_at ($parked) is not before the tmux server's start ($("$DATE" -u -d @"$restart" '+%Y-%m-%dT%H:%M:%SZ')) — ignoring; use the scan instead"
     return 1
   fi
   local ns nw na
@@ -179,11 +189,11 @@ manifest_resume() {
   done
 
   # Stamp consumed so a later unplanned reboot doesn't replay this stale park.
-  local boot; boot=$(boot_epoch)
-  mv "$MANIFEST" "$RECOVER_DIR/manifest.${boot}.done"
+  local restart; restart=$(restart_epoch)
+  mv "$MANIFEST" "$RECOVER_DIR/manifest.${restart}.done"
   echo
-  echo "Rebuilt $nsess session(s) from manifest (from manifest). Marked consumed: manifest.${boot}.done"
-  echo "Attach: tmux attach -t $(jq -r '.sessions[0].name' "$RECOVER_DIR/manifest.${boot}.done")"
+  echo "Rebuilt $nsess session(s) from manifest (from manifest). Marked consumed: manifest.${restart}.done"
+  echo "Attach: tmux attach -t $(jq -r '.sessions[0].name' "$RECOVER_DIR/manifest.${restart}.done")"
 }
 
 # ---------------------------------------------------------------------------

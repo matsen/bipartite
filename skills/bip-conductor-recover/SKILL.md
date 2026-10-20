@@ -48,9 +48,9 @@ Otherwise fall back to the jsonl **scan** below, which infers the live-at-reboot
 "$HELPER" --manifest-status
 ```
 
-- **Exit 0 (`VALID …`)** — a manifest exists, was parked *before* the current boot, and is not yet consumed.
+- **Exit 0 (`VALID …`)** — a manifest exists, was parked *before* the running tmux server started (a reboot or a tmux restart), and is not yet consumed.
   Use the **manifest path** (Step M) and skip the scan entirely.
-- **Exit 1 (`none` / `stale` / `invalid`)** — no usable manifest (none written, parked *after* this boot, already consumed, or unparseable).
+- **Exit 1 (`none` / `stale` / `invalid`)** — no usable manifest (none written, parked *after* the tmux server started, already consumed, or unparseable).
   Fall through to the **scan path** (Step 1).
   This is project-specific, so `cd` to the project's main clone first.
 
@@ -73,7 +73,7 @@ Then replay:
 
 This rebuilds **every** session by its real name with windows in order, split windows with their saved pane layout — Claude panes `--resume`'d to their ids, shell panes as bare shells — and reports "(from manifest)".
 Ambiguous windows not given an explicit pick are left as plain shells.
-On success it stamps the manifest consumed (renames it `manifest.<boot>.done`) so a later *unplanned* reboot does not replay a stale park.
+On success it stamps the manifest consumed (renames it `manifest.<restart>.done`) so a later *unplanned* reboot does not replay a stale park.
 Then nudge resumed workers per **Step 5**.
 
 ## Scan path (no usable manifest)
@@ -152,7 +152,7 @@ Conductor/planning/discussion sessions usually need no nudge.
 The manifest data paths are pure JSON logic and worth exercising after a change; the live-tmux/process parts of the partner skill are verified the same way (see `bip-conductor-prepare-reboot`).
 Both helpers ship without a unit-test suite, matching this repo's shell-helper convention.
 
-1. **Staleness** — a manifest whose `parked_at` is *after* the current boot → `--manifest-status` reports `stale` and exits 1 (recover falls back to the scan).
-2. **Consumed** — after `--manifest-resume`, the manifest is renamed `manifest.<boot>.done`; a fresh `--manifest-status` reports `none`.
+1. **Staleness** — a manifest whose `parked_at` is *after* the tmux server's start → `--manifest-status` reports `stale` and exits 1 (recover falls back to the scan).
+2. **Consumed** — after `--manifest-resume`, the manifest is renamed `manifest.<restart>.done`; a fresh `--manifest-status` reports `none`.
 3. **Fallback** — with no manifest, `--manifest-status` exits 1 and the scan path behaves exactly as before.
 4. **Ambiguity** — an `ambiguous` window is left a plain shell unless an explicit `<session>:<index>=<id>` pick resumes it.
