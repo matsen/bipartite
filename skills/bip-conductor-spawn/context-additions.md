@@ -44,6 +44,10 @@ Snippets `/bip-conductor-spawn` Step 4 appends under `IMPORTANT CONTEXT:` when t
   land. Write outputs to /fh/fast as they finish; never pile them up in
   a host's /tmp, which is small and shared. Per-host scratch and limits:
   https://github.com/matsengrp/wiki/wiki/cluster
+- On a shared host (not inside a SLURM job, whose allocation already
+  confines it), pin every process a launch starts, idle shells included:
+  start the launching shell under `taskset -c <cpus>` so the whole tree
+  inherits it, and check with `taskset -cp <pid>`.
 ```
 
 **For experiments (Snakemake workflows):**
