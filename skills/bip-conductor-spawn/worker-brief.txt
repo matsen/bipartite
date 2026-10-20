@@ -57,6 +57,11 @@ human interrupts to ask, discuss, or redirect, PAUSE the loop first
 then engage. When it resolves, restart the loop with a prompt reflecting
 the new direction, or confirm completion and wind down.
 
+COMPUTE GATES: a compute gate your conductor relays (e.g. wait for infra's
+GO) covers every process on a remote host or cluster submission, setup and
+CPU-only steps included; read-only inspection (squeue, ls, tail, rsync
+pulls) is not a launch. An EPIC owner's science go does not lift it.
+
 AWAITING RESULTS — if you launch a long-running experiment:
 1. Set phase to awaiting-results and the awaiting field. If the work runs
    on a host that does not share this filesystem, check_files cannot name
