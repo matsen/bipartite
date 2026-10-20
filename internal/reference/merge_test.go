@@ -51,7 +51,6 @@ func TestMergeUpdate_PreservesVolumeIssuePages(t *testing.T) {
 		Volume: "189",
 		Issue:  "16",
 		Pages:  "4980-4996.e8",
-		URL:    "https://example.org/essay",
 	}
 	incoming := Reference{
 		ID:     "DeWitt2026-cw",
@@ -70,9 +69,6 @@ func TestMergeUpdate_PreservesVolumeIssuePages(t *testing.T) {
 	}
 	if got.Pages != "4980-4996.e8" {
 		t.Errorf("Pages lost: got %q, want 4980-4996.e8", got.Pages)
-	}
-	if got.URL != "https://example.org/essay" {
-		t.Errorf("URL lost: got %q, want https://example.org/essay", got.URL)
 	}
 }
 
@@ -211,5 +207,19 @@ func TestMergeUpdate_NoChangeWhenIncomingMatchesExisting(t *testing.T) {
 	b, _ := json.Marshal(got)
 	if string(a) != string(b) {
 		t.Errorf("identity merge changed bytes:\n  in:  %s\n  out: %s", a, b)
+	}
+}
+
+func TestMergeUpdate_URLKeptOnlyWithoutDOI(t *testing.T) {
+	existing := Reference{ID: "Cammarata2026-ax", Title: "Foo", URL: "https://example.org/essay"}
+
+	got := MergeUpdate(existing, Reference{ID: "Cammarata2026-ax", Title: "Foo"})
+	if got.URL != "https://example.org/essay" {
+		t.Errorf("URL without DOI lost: got %q", got.URL)
+	}
+
+	got = MergeUpdate(existing, Reference{ID: "Cammarata2026-ax", Title: "Foo", DOI: "10.1234/foo"})
+	if got.URL != "" {
+		t.Errorf("URL kept after a DOI arrived: got %q, want empty", got.URL)
 	}
 }

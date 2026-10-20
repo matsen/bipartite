@@ -45,7 +45,8 @@ func MergeUpdate(existing, incoming Reference) Reference {
 	if out.Note == "" {
 		out.Note = existing.Note
 	}
-	if out.URL == "" {
+	// A URL is kept only for a reference without a DOI, so it lapses once a DOI arrives.
+	if out.URL == "" && out.DOI == "" {
 		out.URL = existing.URL
 	}
 	if out.Published.Year == 0 {
