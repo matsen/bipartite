@@ -136,6 +136,14 @@ Once the resumed sessions appear in `ListAgents`, `SendMessage` each worker a on
 An idle session acts on a message, so no keystrokes are needed. A worker not yet listed is still loading; message it once it is.
 Conductor/planning/discussion sessions usually need no nudge.
 
+## tmux survived, the Claude processes didn't
+
+When panes still exist but show bare shells (a mass `respawn-pane`, killed `claude` processes), resume in place instead of building windows; the helper doesn't cover this.
+1. The killed sessions' jsonls share one last-write time: select on that, host-wide, not on a time window.
+2. Map each jsonl to its pane by its `custom-title` against the window name, plus the cwd; one with no title, by its first human prompt (as scan Step 2 labels). Where several share a cwd, guess by pane order and confirm in step 4.
+3. In each pane that maps to a killed jsonl (others stay shells), `tmux send-keys -t <pane> "claude --dangerously-skip-permissions --resume <id>" Enter`, about 2 s apart.
+4. Check the titles in the status lines.
+
 ## Notes
 
 - `--list`, `--manifest-status`, and `--manifest-list` mutate nothing; only `--resume`, `--manifest-resume`, and the bare interactive mode create tmux windows.
