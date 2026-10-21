@@ -11,8 +11,10 @@ import (
 // delimiter separates command outputs in a single SSH session.
 const delimiter = "___SCOUT_DELIM___"
 
-// maxConcurrent is the bounded semaphore size for parallel server checks.
-const maxConcurrent = 5
+// maxConcurrent is the bounded semaphore size for parallel server checks. With a
+// ProxyJump every check opens a connection to the one proxy host, whose sshd
+// starts dropping unauthenticated connections past MaxStartups (default 10).
+const maxConcurrent = 10
 
 // procSampleSeconds is the gap between the two /proc snapshots. It must match the
 // `sleep` in procSampleCmd (both derive from it).
@@ -73,6 +75,20 @@ const (
 	sectionLoadAvg = 2
 	sectionGPUUtil = 3
 	sectionGPUMem  = 4
+	sectionGPUApps = 5 // owners of GPU processes (parseGPUApps)
+)
+
+// gpuAppsMarker separates the two blocks of gpuAppsCmd's output.
+const gpuAppsMarker = "@@SCOUT_GPUAPPS@@"
+
+// gpuAppsCmd lists every GPU's uuid in index order, then one "<gpu_uuid> <user>"
+// line per compute process (user from stat(1), as in procSampleCmd). A process
+// that exits between the two calls prints no user, and parseGPUApps skips it.
+var gpuAppsCmd = fmt.Sprintf(
+	`nvidia-smi --query-gpu=uuid --format=csv,noheader; echo '%s'; `+
+		`nvidia-smi --query-compute-apps=gpu_uuid,pid --format=csv,noheader | `+
+		`while IFS=', ' read u p; do echo "$u $(stat -c %%U /proc/$p 2>/dev/null)"; done`,
+	gpuAppsMarker,
 )
 
 // BuildCommand constructs the combined command string for a server.
@@ -93,6 +109,8 @@ func BuildCommand(server Server) string {
 			`nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits`,
 			// GPU memory
 			`nvidia-smi --query-gpu=memory.used,memory.total --format=csv,noheader,nounits`,
+			// Who owns the processes on each GPU
+			gpuAppsCmd,
 		)
 	}
 
@@ -125,9 +143,9 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 		sections[i] = strings.TrimSpace(sections[i])
 	}
 
-	expectedSections := 3
+	expectedSections := sectionLoadAvg + 1
 	if hasGPU {
-		expectedSections = 5
+		expectedSections = sectionGPUApps + 1
 	}
 	if len(sections) < expectedSections {
 		return nil, fmt.Errorf("expected %d metric sections, got %d", expectedSections, len(sections))
@@ -196,6 +214,12 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 				MemoryTotalMB:      gpuMems[i][1],
 			}
 		}
+		// Owners are a nicety: if the listing doesn't parse, keep the GPU numbers.
+		if users, err := parseGPUApps(sections[sectionGPUApps]); err == nil && len(users) == len(gpus) {
+			for i := range gpus {
+				gpus[i].Users = users[i]
+			}
+		}
 		metrics.GPUs = gpus
 	}
 
@@ -244,6 +268,46 @@ func parseGPUMemory(output string) ([][2]int, error) {
 		vals[i] = [2]int{used, total}
 	}
 	return vals, nil
+}
+
+// parseGPUApps parses gpuAppsCmd's output into, for each GPU in index order, the
+// sorted distinct users with a process on it (nil for a GPU with none).
+func parseGPUApps(section string) ([][]string, error) {
+	blocks := strings.Split(section, gpuAppsMarker)
+	if len(blocks) != 2 {
+		return nil, fmt.Errorf("expected 2 blocks separated by %q, got %d", gpuAppsMarker, len(blocks))
+	}
+	uuids := splitNonEmpty(blocks[0])
+	if len(uuids) == 0 {
+		return nil, fmt.Errorf("no GPU uuids")
+	}
+	index := make(map[string]int, len(uuids))
+	for i, u := range uuids {
+		index[u] = i
+	}
+	seen := make([]map[string]bool, len(uuids))
+	for _, line := range splitNonEmpty(blocks[1]) {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue // process exited before stat, so no user
+		}
+		i, ok := index[fields[0]]
+		if !ok {
+			return nil, fmt.Errorf("process on unknown GPU %q", fields[0])
+		}
+		if seen[i] == nil {
+			seen[i] = make(map[string]bool)
+		}
+		seen[i][fields[1]] = true
+	}
+	users := make([][]string, len(uuids))
+	for i, set := range seen {
+		for u := range set {
+			users[i] = append(users[i], u)
+		}
+		sort.Strings(users[i])
+	}
+	return users, nil
 }
 
 // procStat is the subset of a /proc/<pid>/stat line we care about.
