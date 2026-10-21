@@ -140,8 +140,8 @@ Conductor/planning/discussion sessions usually need no nudge.
 
 When panes still exist but show bare shells (a mass `respawn-pane`, killed `claude` processes), resume in place instead of building windows; the helper doesn't cover this.
 1. The killed sessions' jsonls share one last-write time: select on that, host-wide, not on a time window.
-2. Map each jsonl to its pane by its `custom-title` against the window name, plus the cwd; where several share a cwd, pane order matches.
-3. In each pane showing a shell, `tmux send-keys -t <pane> "claude --dangerously-skip-permissions --resume <id>" Enter`, about 2 s apart.
+2. Map each jsonl to its pane by its `custom-title` against the window name, plus the cwd; one with no title, by its first human prompt (as scan Step 2 labels). Where several share a cwd, guess by pane order and confirm in step 4.
+3. In each pane that maps to a killed jsonl (others stay shells), `tmux send-keys -t <pane> "claude --dangerously-skip-permissions --resume <id>" Enter`, about 2 s apart.
 4. Check the titles in the status lines.
 
 ## Notes
