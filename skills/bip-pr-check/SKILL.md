@@ -127,6 +127,9 @@ If the body looks like historical commit noise, revision-history accumulation, o
    For a revision-history body specifically, also read the current body in full — later sections usually contain results/conclusions (recomputed numbers, resolved bugs, reconciled findings) that supersede earlier ones and must carry over into the rewrite; only the per-round framing gets dropped, not the substance.
 2. Draft a clean replacement body in this format:
    ```
+   [An experiment PR first: **Result.** in plain language, as one line
+   (PROSE-DISCIPLINE.md, "Open with a plain-language paragraph")]
+
    ## Summary
    [1-2 sentences of context: the problem or question this addresses, for
    a reader who knows the project but hasn't seen this issue]
