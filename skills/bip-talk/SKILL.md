@@ -13,6 +13,7 @@ The current deck is the project's best statement of where things stand, the way 
 ## Role
 
 The session owns `talks/` and the talk branch: decks, figures and their scripts, `feedback.md`, and `feedback-scripts/`; no one else commits there.
+There is one talk branch and PR at a time, holding every talk since the last landing; it stays draft until the user asks to land it, and its body is the session's to keep current. Landing steps are in the repo's `talks/AGENTS.md`.
 The project's EPIC session rules on numbers and files issues (it runs `/bip-issue-check`); send it a draft path, not a filed issue.
 Unlike `/bip-ms`, this session runs the computations behind its responses, itself or through a helper, under the compute rules in `~/.claude/CLAUDE.md` and any gate its conductor relays.
 Questions for the user go as `~/.claude/CLAUDE.md` says ("Asking the user").
@@ -26,7 +27,7 @@ Everything here holds across repos.
   A deck is the record of the talk as given, apart from notes marked as added afterwards; later work goes into the next talk.
 - **Speaker notes cover each slide completely**: how to read the figure, how each statistic is computed, the numbers behind it, and links to scripts and issues. The slides carry little text.
 - **`feedback.md`** has two `#` groups, **Quick answers** and **For follow-up**.
-  One `##` per point, phrased as a question, with the asker in parentheses (the user's own points last); then a `**Response.**` paragraph in full prose, which may push back.
+  One `##` per point, phrased as a question, with the asker in parentheses (the user's own points last); then a `**Response.**` paragraph in full prose, which may push back: the take-home and "see slide N", with the long version in `feedback-scripts/`.
   Each follow-up ends with `**For an issue.**`, saying what work would answer it, for the EPIC session to file.
 - **`feedback-scripts/qN-<topic>/`** keeps every computed response reproducible: the scripts that ran, small outputs with `outputs.sha256`, `run.sh` (host or job id, code commit, input paths, as runnable commands), and `evidence.md` (the question, the response, and the source of each number). No home or scratchpad paths, no large files; scripts need to run, not to be polished.
 - **Figures iterate on the talk branch without review.** Once one carries a claim the project will keep making, ask the EPIC session for an issue that ports its script to main with tests and review; the talk keeps its copy, and its notes point at main once the port lands.
@@ -36,14 +37,21 @@ Everything here holds across repos.
 - Put a skeptic (`surprising-conclusion-skeptic`) on each follow-up candidate before drafting its issue: it catches misattributions and duplicates of open issues.
 - Re-derive every number a peer sends before it reaches a slide, and keep PROVISIONAL numbers off slides.
 - Keep a hold list (never present X until issue Y reads), each hold with its FIRST CHECK command, in the continuation file.
-- A number that touches a review finding goes to this session and the EPIC session before it changes.
+- When a port's review changes a number, the slide and its notes change only after the EPIC session rules on it.
+
+## The cycle
+
+1. After a talk, the user relays the audience's questions, and the session writes `feedback.md`: quick answers first.
+2. Then the follow-ups, slowly, one candidate at a time, with a skeptic early. Each ends filed (through the EPIC session), answered by an existing issue or PR, converged to no experiment (the user confirms no-file), dropped as a duplicate, or gated on another issue's read.
+3. What is settled goes into the next talk's deck, and the user reviews the rebuilt deck where it is served.
+4. The user signs off on `feedback.md` and on the figures.
 
 ## Cold start
 
-1. Read `talks/AGENTS.md`, the current talk's source and `feedback.md`, and the talk PR's body.
+1. Check out and pull the talk branch; read `talks/AGENTS.md`, the current talk's source and `feedback.md`, and the talk PR's body.
 2. Read the EPIC body for the project's current state.
 3. Run each hold's FIRST CHECK; report what has read and what still holds.
-4. List the open follow-up points without a filed issue, and what the next talk needs.
+4. Take the continuation file's in-flight items, if any, as the user's direction; otherwise list the follow-ups not yet settled and what the next talk needs.
 
 Tuck in with `/bip-tuckin` (the generic fallback), naming `/bip-talk` as the cold-start in the continuation file.
 
