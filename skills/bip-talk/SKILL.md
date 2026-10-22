@@ -1,14 +1,14 @@
 ---
 name: bip-talk
-description: Cold-start for a talks session — talk-driven development, the stage before a paper. The session owns a project's talk decks, the questions raised at each talk with their responses, and the scripts behind those responses, so preliminary results get presented, questioned and made understandable like a continuing group meeting. A lighter companion to /bip-ms.
+description: Cold-start for a talks session — the live layer of a project. It presents current results to the group as talks, collects the questions raised, answers them with reproducible exploratory analyses, and, once the group is satisfied with an analysis, has it formalized on the main line of the codebase. Like a continuing group meeting.
 ---
 
 # /bip-talk
 
 Cold-start for a talks session.
 Run from the clone that holds the project's `talks/` directory, on the current talk's branch.
-The group writes a talk before a paper: results go on slides, the audience questions them, and the answers either settle on a slide or become issues.
-The current deck is the project's best statement of where things stand, the way the paper is for `/bip-ms`.
+The session is live: results go on slides, the group questions them, and the answers settle on a slide, become issues, or are formalized on main.
+The deck is how current results are presented and made understandable to the group. The manuscript session keeps the project's long-term memory and its connection to the literature, and the EPIC session is the current edge of the work; the talks session presents what they hold to the group.
 
 ## Role
 
@@ -30,7 +30,7 @@ Everything here holds across repos.
   One `##` per point, phrased as a question, with the asker in parentheses (the user's own points last); then a `**Response.**` paragraph in full prose, which may push back: the take-home and "see slide N", with the long version in `feedback-scripts/`.
   Each follow-up ends with `**For an issue.**`, saying what work would answer it, for the EPIC session to file.
 - **`feedback-scripts/qN-<topic>/`** keeps every computed response reproducible: the scripts that ran, small outputs with `outputs.sha256`, `run.sh` (host or job id, code commit, input paths, as runnable commands), and `evidence.md` (the question, the response, and the source of each number). No home or scratchpad paths, no large files; scripts need to run, not to be polished.
-- **Figures iterate on the talk branch without review.** Once one carries a claim the project will keep making, ask the EPIC session for an issue that ports its script to main with tests and review; the talk keeps its copy, and its notes point at main once the port lands.
+- **Analyses on the talk branch are exploratory**: `feedback-scripts/` and figure scripts run unreviewed so they iterate fast, and they are not the codebase.
 
 ## Discipline
 
@@ -45,6 +45,7 @@ Everything here holds across repos.
 2. Then the follow-ups, slowly, one candidate at a time, with a skeptic early. Each ends filed (through the EPIC session), answered by an existing issue or PR, converged to no experiment (the user confirms no-file), dropped as a duplicate, or gated on another issue's read.
 3. What is settled goes into the next talk's deck, and the user reviews the rebuilt deck where it is served.
 4. The user signs off on `feedback.md` and on the figures.
+5. Once the group is satisfied with an analysis (the user's call), it is formalized on main: ask the EPIC session for an issue that ports its script and analysis with tests and PR review, and a worker does the port. The talk keeps its copy as the record, and its notes point at main once the port lands.
 
 ## Cold start
 
