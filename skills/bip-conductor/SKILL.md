@@ -326,8 +326,9 @@ So also watch merged PRs (`gh pr list` orders by creation, hence the `sort:`) an
 
 ```bash
 M() { gh pr list --state merged -L10 --search 'sort:updated-desc' --json number,mergedAt \
-        -q 'max_by(.mergedAt) | "#\(.number) \(.mergedAt)"'; }   # a comment on an old merge must not count
-last=$(M)
+        -q 'if length==0 then empty else max_by(.mergedAt) | "#\(.number) \(.mergedAt)" end'; }
+# max_by, not list order: a comment on an old merge bumps it. Empty when GitHub's search returns [].
+until last=$(M) && [ -n "$last" ]; do sleep 60; done
 while :; do
   sleep 600
   out=$(<inbox> .epic-config.json 2>&1) || { echo "inbox failed: $out"; break; }
