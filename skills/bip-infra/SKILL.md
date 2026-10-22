@@ -43,6 +43,13 @@ When the situation changes (a host returns, the pause lifts), notify the same li
 
 Conductors report what they run where. Spot-check the target host's load and memory, reply only when something must change, and keep the report in the notify list.
 
+## Decisions that aren't infra's
+
+Whether a run is worth its cost, what is in scope, and which of several acceptable hosts to use are not infra's calls.
+Escalate them to `staff`: the question, the measured numbers, the options with infra's recommendation, and the owner waiting on the answer.
+Staff rules or escalates to the user; don't hold them open with the user, who rarely reads this session.
+Footprint acks (does this fit the host, under what guard) stay infra's.
+
 ## Rechecking
 
 While a host is down, recheck it on a schedule (`/loop`, a few hours apart). Stop once the cause and a return estimate are known, and say so.
