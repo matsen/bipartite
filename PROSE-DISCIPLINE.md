@@ -4,7 +4,8 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 
 ## Rules
 
-- **Lead with the deliverable, but don't skip context.** The first sentence says what will exist afterwards. Then give one or two sentences of why, written for a reader who knows the project but not this thread. Link related issues if you already know them.
+- **Open with a plain-language paragraph.** An issue opens with **Goal.**, an experiment PR with **Result.**: three to five sentences for a scientist who knows the field but not the project, with no symbols, issue numbers or project jargon unless a sentence can't stand without them. The goal says what we'll be able to do afterwards, not what the issue measures; the result says what we learned before giving any number. On GitHub, write the paragraph as one line, since a single newline renders as a line break.
+- **Then lead with the deliverable, but don't skip context.** The technical body's first sentence says what will exist afterwards. Then give one or two sentences of why, written for a reader who knows the project but not this thread. Link related issues if you already know them.
 - **When asking someone to decide, lead with the decisive reason.** For each reason, ask whether it would still settle the question if the reader rejected all the others. Lead with the ones that pass, and label the rest as corroboration. The reason you measured yourself feels strongest, and that is not the same as being decisive.
 - **State each fact once.** Put it in its strongest location and nowhere else. Have one success-criteria section.
 - **A value that can change appears exactly once. A durable rule may be restated where it applies.** Host state, SHAs, line numbers, counts and flags go stale in one copy and not the other. Put the value in the runnable command, and have the prose point at the command.
