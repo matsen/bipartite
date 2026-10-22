@@ -9,6 +9,7 @@ This page names the roles; the skills carry the procedures.
 | Conductor | one per fleet (repo + clone pool) | ops: slots, spawns, hosts, landing mechanics | `/bip-conductor` |
 | Epic | one per live EPIC, one EPIC each | the EPIC: its body, its direction, the current edge of its topic | `/bip-epic <N>` |
 | Manuscript (ms) | one per paper | the paper: broad perspective, literature, what the results mean for it | `/bip-ms` |
+| Talks | one per project that gives talks | the talk decks, the audience's questions and responses, the scripts behind them | `/bip-talk` |
 | Staff | one per site | adjudication, the user's rulings, paging the user | `/bip-staff` |
 | Worker | one per issue in flight | one issue's branch and PR | spawned by the conductor |
 
