@@ -322,12 +322,12 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also watch merged PRs (`gh pr list` orders by creation, hence the `sort:`) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
+So also watch merged PRs (sorted by update, since a PR merges long after it is created) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
 
 ```bash
-M() { gh pr list --state merged -L10 --search 'sort:updated-desc' --json number,mergedAt \
-        -q 'if length==0 then empty else max_by(.mergedAt) | "#\(.number) \(.mergedAt)" end'; }
-# max_by, not list order: a comment on an old merge bumps it. Empty when GitHub's search returns [].
+M() { gh api 'repos/{owner}/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=20' \
+        -q '[.[] | select(.merged_at)] | if length==0 then empty else max_by(.merged_at) | "#\(.number) \(.merged_at)" end'; }
+# REST, not `gh pr list --search`: the search index intermittently returns []. max_by, not list order: a comment on an old merge bumps it.
 until last=$(M) && [ -n "$last" ]; do sleep 60; done
 while :; do
   sleep 600
