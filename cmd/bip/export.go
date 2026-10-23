@@ -92,7 +92,7 @@ func runExport(cmd *cobra.Command, args []string) error {
 
 	warnSuspectPages(refs)
 	warnAllCapsTitles(refs)
-	lex := mustTitleLexicon(db)
+	lex := titleLexicon(db, refs, len(ids) == 0)
 
 	// Handle --append mode
 	if exportAppend != "" {
@@ -117,11 +117,15 @@ func warnSuspectPages(refs []reference.Reference) {
 	}
 }
 
-// mustTitleLexicon learns title proper nouns from the whole library, whatever subset is exported.
-func mustTitleLexicon(db *storage.DB) *export.Lexicon {
-	all, err := db.ListAll(0)
-	if err != nil {
-		exitWithError(ExitError, "listing references: %v", err)
+// titleLexicon learns title proper nouns from the whole library, whatever
+// subset is exported; refs is the whole library when isAll.
+func titleLexicon(db *storage.DB, refs []reference.Reference, isAll bool) *export.Lexicon {
+	all := refs
+	if !isAll {
+		var err error
+		if all, err = db.ListAll(0); err != nil {
+			exitWithError(ExitError, "listing references: %v", err)
+		}
 	}
 	titles := make([]string, len(all))
 	for i, ref := range all {
@@ -134,7 +138,7 @@ func mustTitleLexicon(db *storage.DB) *export.Lexicon {
 // in capitals: the style will lowercase all of it, acronyms included.
 func warnAllCapsTitles(refs []reference.Reference) {
 	for _, ref := range refs {
-		if _, allCaps := export.ProtectTitle(ref.Title, nil); allCaps {
+		if export.IsAllCapsTitle(ref.Title) {
 			fmt.Fprintf(os.Stderr, "warning: %s: title is in capitals, so nothing in it is protected from lowercasing — check acronyms and proper nouns\n", ref.ID)
 		}
 	}

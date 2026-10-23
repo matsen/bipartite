@@ -35,8 +35,7 @@ func ToBibTeX(ref reference.Reference, lex *Lexicon) string {
 	}
 
 	// Title
-	title, _ := ProtectTitle(ref.Title, lex)
-	b.WriteString(fmt.Sprintf("  title = {%s},\n", title))
+	b.WriteString(fmt.Sprintf("  title = {%s},\n", ProtectTitle(ref.Title, lex)))
 
 	// Venue
 	if ref.Venue != "" {
@@ -155,4 +154,18 @@ func escapeLatex(s string) string {
 		"^", `\textasciicircum{}`,
 	)
 	return replacer.Replace(s)
+}
+
+// escapeField escapes a field's text for BibTeX, passing balanced {...} groups
+// and $...$ math through unchanged.
+func escapeField(s string) string {
+	var b strings.Builder
+	for _, sp := range splitTitle(s) {
+		if sp.verbatim {
+			b.WriteString(sp.text)
+		} else {
+			b.WriteString(escapeLatex(sp.text))
+		}
+	}
+	return b.String()
 }

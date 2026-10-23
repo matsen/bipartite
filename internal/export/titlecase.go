@@ -21,7 +21,7 @@ func NewLexicon(titles []string) *Lexicon {
 	lowCount := map[string]int{}
 	for _, t := range titles {
 		segs := splitTitle(t)
-		if classifyTitle(segs) != sentenceCase {
+		if classifyTitle(segs) != styleSentence {
 			continue
 		}
 		for _, s := range segs {
@@ -45,7 +45,7 @@ func NewLexicon(titles []string) *Lexicon {
 		for _, n := range forms {
 			total += n
 		}
-		if lowCount[key] > total/4 {
+		if lowCount[key]*4 > total {
 			continue
 		}
 		for form := range forms {
@@ -55,12 +55,12 @@ func NewLexicon(titles []string) *Lexicon {
 	return lex
 }
 
-type titleCase int
+type titleStyle int
 
 const (
-	sentenceCase titleCase = iota
-	titleCaseWords
-	allCaps
+	styleSentence titleStyle = iota
+	styleTitle               // Title Case
+	styleAllCaps
 )
 
 // span is one piece of a title: a word, the text between words, or a $...$ or
@@ -75,8 +75,7 @@ type span struct {
 }
 
 // splitTitle cuts a title into spans. Balanced {...} groups and $...$ math
-// (no spaces, or containing a backslash) are verbatim; everything else is
-// words and the text between them.
+// are verbatim; everything else is words and the text between them.
 func splitTitle(t string) []span {
 	var spans []span
 	r := []rune(t)
@@ -98,7 +97,7 @@ func splitTitle(t string) []span {
 		}
 		if isWordRune(r[i]) {
 			j := i
-			for j < len(r) && (isWordRune(r[j]) || (r[j] == '-' || r[j] == '\'') && j+1 < len(r) && isWordRune(r[j+1])) {
+			for j < len(r) && (isWordRune(r[j]) || strings.ContainsRune("-'’", r[j]) && j+1 < len(r) && isWordRune(r[j+1])) {
 				j++
 			}
 			flushGap()
@@ -138,16 +137,20 @@ func verbatimEnd(r []rune, i int) int {
 	case '$':
 		for j := i + 1; j < len(r); j++ {
 			if r[j] == '$' {
-				body := string(r[i+1 : j])
-				if j > i+1 && (!strings.ContainsAny(body, " \t") || strings.Contains(body, `\`)) {
-					return j + 1
+				// A body starting with a digit is math only if it is a number
+				// ($2$), so "$100-$200" stays text.
+				body := r[i+1 : j]
+				if len(body) == 0 || unicode.IsDigit(body[0]) && strings.IndexFunc(string(body), notDigit) >= 0 {
+					return i
 				}
-				return i
+				return j + 1
 			}
 		}
 	}
 	return i
 }
+
+func notDigit(c rune) bool { return !unicode.IsDigit(c) }
 
 func isWordRune(c rune) bool { return unicode.IsLetter(c) || unicode.IsDigit(c) }
 
@@ -175,15 +178,17 @@ func needsBraces(w string) bool {
 
 // minorWord lists the words Title Case leaves lowercase, so they say nothing
 // about which case a title is in.
-var minorWord = map[string]bool{}
-
-func init() {
+var minorWord = func() map[string]bool {
+	m := map[string]bool{}
 	for _, w := range strings.Fields("a an the and but or nor for so yet as at by in of off on per to up via with from into onto over than that upon vs versus is are be its") {
-		minorWord[w] = true
+		m[w] = true
 	}
-}
+	return m
+}()
 
-func classifyTitle(spans []span) titleCase {
+// classifyTitle says how a title was capitalized: mostly capital letters is all
+// caps; at least three quarters of its telling words capitalized is Title Case.
+func classifyTitle(spans []span) titleStyle {
 	letters, upper := 0, 0
 	major, majorCap := 0, 0
 	for _, s := range spans {
@@ -209,20 +214,24 @@ func classifyTitle(spans []span) titleCase {
 	}
 	switch {
 	case letters > 15 && upper*10 > letters*9:
-		return allCaps
+		return styleAllCaps
 	case major >= 1 && majorCap*4 >= major*3:
-		return titleCaseWords
+		return styleTitle
 	}
-	return sentenceCase
+	return styleSentence
+}
+
+// IsAllCapsTitle reports a title written in capitals. It carries no evidence of
+// which words to keep, so ProtectTitle leaves it for the style to lowercase.
+func IsAllCapsTitle(title string) bool {
+	return classifyTitle(splitTitle(title)) == styleAllCaps
 }
 
 // ProtectTitle escapes a title for BibTeX and braces the words whose capitals
-// a lowercasing style must keep. lex may be nil. allCapsTitle reports a title
-// written in capitals, which carries no evidence of which words to keep and is
-// left for the style to lowercase.
-func ProtectTitle(title string, lex *Lexicon) (out string, allCapsTitle bool) {
+// a lowercasing style must keep. lex may be nil.
+func ProtectTitle(title string, lex *Lexicon) string {
 	spans := splitTitle(title)
-	kind := classifyTitle(spans)
+	style := classifyTitle(spans)
 	var b strings.Builder
 	for _, s := range spans {
 		switch {
@@ -231,38 +240,24 @@ func ProtectTitle(title string, lex *Lexicon) (out string, allCapsTitle bool) {
 			b.WriteString("{" + s.text + "}")
 		case s.verbatim:
 			b.WriteString(s.text)
-		case s.word != "" && kind != allCaps && protect(s, kind, lex):
+		case s.word != "" && style != styleAllCaps && protect(s, style, lex):
 			b.WriteString("{" + escapeLatex(s.word) + "}")
 		default:
 			b.WriteString(escapeLatex(s.text))
 		}
 	}
-	return b.String(), kind == allCaps
+	return b.String()
 }
 
-func protect(s span, kind titleCase, lex *Lexicon) bool {
+func protect(s span, style titleStyle, lex *Lexicon) bool {
 	if needsBraces(s.word) {
 		return true
 	}
 	if !isCapitalized(s.word) || s.segStart {
 		return false
 	}
-	if kind == sentenceCase {
+	if style == styleSentence {
 		return true
 	}
 	return lex != nil && lex.proper[s.word]
-}
-
-// escapeField escapes a field's text for BibTeX, passing balanced {...} groups
-// and $...$ math through unchanged.
-func escapeField(s string) string {
-	var b strings.Builder
-	for _, sp := range splitTitle(s) {
-		if sp.verbatim {
-			b.WriteString(sp.text)
-		} else {
-			b.WriteString(escapeLatex(sp.text))
-		}
-	}
-	return b.String()
 }

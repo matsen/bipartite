@@ -18,6 +18,12 @@ func TestProtectTitle(t *testing.T) {
 		name, title, want string
 		allCaps           bool
 	}{
+		{"currency is not math",
+			"Costs $100-$200 per test",
+			`Costs \$100-\$200 per test`, false},
+		{"math with spaces",
+			"When $AB = 0$ holds",
+			"When {$AB = 0$} holds", false},
 		{"sentence case keeps its own capitals",
 			"A nascent peptide code for translational control of mRNA stability in Drosophila cells",
 			"A nascent peptide code for translational control of {mRNA} stability in {Drosophila} cells", false},
@@ -60,7 +66,7 @@ func TestProtectTitle(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, allCaps := ProtectTitle(tt.title, lex)
+			got, allCaps := ProtectTitle(tt.title, lex), IsAllCapsTitle(tt.title)
 			if got != tt.want || allCaps != tt.allCaps {
 				t.Errorf("ProtectTitle(%q) = %q, %v; want %q, %v", tt.title, got, allCaps, tt.want, tt.allCaps)
 			}
