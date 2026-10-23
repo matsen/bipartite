@@ -17,5 +17,6 @@ if [ "${1:-}" = --run ]; then
   exec glow -t -s "$style" "$@" "$file"
 fi
 file=$(readlink -f "${1:?usage: glow-pane <file>}")
-tmux split-window -h -d -l 40% -t "${TMUX_PANE:?glow-pane runs in a tmux pane}" \
+pane=$("$(dirname "$(readlink -f "$0")")/own-pane") || { echo "glow-pane runs in a tmux pane" >&2; exit 1; }
+tmux split-window -h -d -l 40% -t "$pane" \
   "$(printf '%q --run %q' "$(readlink -f "$0")" "$file")"
