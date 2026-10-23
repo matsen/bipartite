@@ -111,6 +111,8 @@ bip export --bibtex Smith2024-ab Lee2024-cd            # Export specific papers
 bip export --bibtex --append refs.bib Smith2024-ab     # Append with deduplication
 ```
 
+Titles keep their capitals under styles that lowercase them. Words with inner capitals or digits (`{mRNA}`, `{SARS-CoV-2}`) and `$...$` math are braced. So are the words a sentence-case title capitalizes mid-title. In a Title Case title, only the proper nouns the library's sentence-case titles capitalize are braced (`{Bayesian}`, `{Markov}`). An all-caps title is left for the style to lowercase, with a warning on stderr.
+
 ## Collaboration
 
 The library is designed for multi-user workflows via git:
