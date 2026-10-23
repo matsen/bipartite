@@ -20,7 +20,7 @@ Questions for the user go as `~/.claude/CLAUDE.md` says ("Asking the user").
 
 ## Conventions
 
-The repo's own `talks/AGENTS.md` holds what is particular to it: the build command, where decks are served, the title scheme, render gotchas.
+The repo's own `talks/AGENTS.md` holds what is particular to it: the build command, where decks are served, the title scheme, the slide style for figures, render gotchas.
 Everything here holds across repos.
 
 - **One dated directory per talk** (`YYYY-MM-DD-<name>/`): slide source, built deck and PDF, `figures/` (copies, so the record stands alone), `notes/`, `feedback.md`, `feedback-scripts/`.
@@ -35,6 +35,7 @@ Everything here holds across repos.
 ## Discipline
 
 - Put a skeptic (`surprising-conclusion-skeptic`) on each follow-up candidate before drafting its issue: it catches misattributions and duplicates of open issues.
+- A new or changed figure is drawn in the slide style the repo's `talks/AGENTS.md` names, and gets a `plot-reviewer` pass before it goes in a deck. Give the reviewer the script, the rendered figure, and the slide as rendered in the deck PDF, since it has to judge the size the figure is projected at.
 - Re-derive every number a peer sends before it reaches a slide, and keep PROVISIONAL numbers off slides.
 - Keep a hold list (never present X until issue Y reads), each hold with its FIRST CHECK command, in the continuation file.
 - When a port's review changes a number, the slide and its notes change only after the EPIC session rules on it.
@@ -58,4 +59,4 @@ Tuck in with `/bip-tuckin` (the generic fallback), naming `/bip-talk` as the col
 
 ## A new project's talks/
 
-Copy `talks/tools/` from a repo that has one (matsengrp/dasm2-experiments: a pandoc reveal.js build with a DeckTape PDF and an index page), and write `talks/AGENTS.md` with that repo's build, serving and title facts.
+Copy `talks/tools/` from a repo that has one (matsengrp/dasm2-experiments: a pandoc reveal.js build with a DeckTape PDF and an index page), and write `talks/AGENTS.md` with that repo's build, serving, title and slide-style facts.
