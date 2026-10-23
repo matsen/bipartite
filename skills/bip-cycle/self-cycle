@@ -20,12 +20,12 @@ if [ "${1:-}" != --detached ]; then
 		echo "self-cycle: resume command must be /bip-continue or /bip-librarian, got '$resume'" >&2
 		exit 1
 	fi
-	if [ -z "${TMUX_PANE:-}" ]; then
+	if ! pane=$("$(dirname "$(readlink -f "$0")")/../lib/own-pane"); then
 		echo "self-cycle: not in tmux; run /clear then $resume yourself" >&2
 		exit 1
 	fi
-	log=${TMPDIR:-/tmp}/self-cycle-${TMUX_PANE#%}.log
-	setsid nohup "$0" --detached "$TMUX_PANE" "$PWD" "$resume" >"$log" 2>&1 </dev/null &
+	log=${TMPDIR:-/tmp}/self-cycle-${pane#%}.log
+	setsid nohup "$0" --detached "$pane" "$PWD" "$resume" >"$log" 2>&1 </dev/null &
 	echo "self-cycle: /clear queued for when this turn ends; $resume follows (log: $log)"
 	exit 0
 fi
