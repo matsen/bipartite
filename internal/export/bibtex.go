@@ -21,8 +21,9 @@ func SuspectPages(ref reference.Reference) bool {
 	return suspectPagesRe.MatchString(ref.Pages) && ref.Volume == ""
 }
 
-// ToBibTeX converts a reference to BibTeX format.
-func ToBibTeX(ref reference.Reference) string {
+// ToBibTeX converts a reference to BibTeX format. lex, which may be nil,
+// supplies the proper nouns to brace in a Title Case title (see ProtectTitle).
+func ToBibTeX(ref reference.Reference, lex *Lexicon) string {
 	entryType := determineEntryType(ref)
 	var b strings.Builder
 
@@ -34,7 +35,8 @@ func ToBibTeX(ref reference.Reference) string {
 	}
 
 	// Title
-	b.WriteString(fmt.Sprintf("  title = {%s},\n", escapeLatex(ref.Title)))
+	title, _ := ProtectTitle(ref.Title, lex)
+	b.WriteString(fmt.Sprintf("  title = {%s},\n", title))
 
 	// Venue
 	if ref.Venue != "" {
@@ -42,7 +44,7 @@ func ToBibTeX(ref reference.Reference) string {
 		if entryType == "inproceedings" {
 			fieldName = "booktitle"
 		}
-		b.WriteString(fmt.Sprintf("  %s = {%s},\n", fieldName, escapeLatex(ref.Venue)))
+		b.WriteString(fmt.Sprintf("  %s = {%s},\n", fieldName, escapeField(ref.Venue)))
 	}
 
 	// Year
@@ -85,7 +87,7 @@ func ToBibTeX(ref reference.Reference) string {
 
 	// Abstract (optional, if present)
 	if ref.Abstract != "" {
-		b.WriteString(fmt.Sprintf("  abstract = {%s},\n", escapeLatex(ref.Abstract)))
+		b.WriteString(fmt.Sprintf("  abstract = {%s},\n", escapeField(ref.Abstract)))
 	}
 
 	b.WriteString("}\n")
@@ -94,10 +96,10 @@ func ToBibTeX(ref reference.Reference) string {
 }
 
 // ToBibTeXList converts multiple references to BibTeX format.
-func ToBibTeXList(refs []reference.Reference) string {
+func ToBibTeXList(refs []reference.Reference, lex *Lexicon) string {
 	var entries []string
 	for _, ref := range refs {
-		entries = append(entries, ToBibTeX(ref))
+		entries = append(entries, ToBibTeX(ref, lex))
 	}
 	return strings.Join(entries, "\n")
 }

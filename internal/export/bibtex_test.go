@@ -21,7 +21,7 @@ func TestToBibTeX_BasicArticle(t *testing.T) {
 		Published: reference.PublicationDate{Year: 2026, Month: 3},
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	// Check entry type and key
 	if !strings.HasPrefix(got, "@article{Smith2026-ab,") {
@@ -80,7 +80,7 @@ func TestToBibTeX_Inproceedings(t *testing.T) {
 		Published: reference.PublicationDate{Year: 2026},
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	if !strings.HasPrefix(got, "@inproceedings{Conference2026,") {
 		t.Errorf("ToBibTeX() conference paper should be @inproceedings, got:\n%s", got)
@@ -214,7 +214,7 @@ func TestToBibTeX_OptionalFields(t *testing.T) {
 		Published: reference.PublicationDate{Year: 2026},
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	// Should NOT contain optional fields
 	if strings.Contains(got, "doi = ") {
@@ -259,7 +259,7 @@ func TestToBibTeX_VolumeIssuePagesPMID(t *testing.T) {
 		URL:       "https://example.org/essay",
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	for _, want := range []string{
 		"volume = {189},",
@@ -284,7 +284,7 @@ func TestToBibTeX_SpecialCharactersInTitle(t *testing.T) {
 		Published: reference.PublicationDate{Year: 2026},
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	// Title should have special chars escaped
 	if !strings.Contains(got, `title = {A Study of α \& β: 100\% Complete}`) {
@@ -308,7 +308,7 @@ func TestToBibTeXList(t *testing.T) {
 		},
 	}
 
-	got := ToBibTeXList(refs)
+	got := ToBibTeXList(refs, nil)
 
 	// Should contain both entries
 	if !strings.Contains(got, "@article{First2026,") {
@@ -326,7 +326,7 @@ func TestToBibTeXList(t *testing.T) {
 }
 
 func TestToBibTeXList_Empty(t *testing.T) {
-	got := ToBibTeXList([]reference.Reference{})
+	got := ToBibTeXList([]reference.Reference{}, nil)
 	if got != "" {
 		t.Errorf("ToBibTeXList([]) should return empty string, got: %q", got)
 	}
@@ -340,7 +340,7 @@ func TestToBibTeX_NoAuthors(t *testing.T) {
 		Published: reference.PublicationDate{Year: 2026},
 	}
 
-	got := ToBibTeX(ref)
+	got := ToBibTeX(ref, nil)
 
 	// Should not include author field if empty
 	if strings.Contains(got, "author = ") {
