@@ -9,7 +9,6 @@ A GitHub issue, PR description, or review verdict is read once, by someone who n
 - **When asking someone to decide, lead with the decisive reason.** For each reason, ask whether it would still settle the question if the reader rejected all the others. Lead with the ones that pass, and label the rest as corroboration. The reason you measured yourself feels strongest, and that is not the same as being decisive.
 - **State each fact once.** Put it in its strongest location and nowhere else. Have one success-criteria section.
 - **A value that can change appears exactly once. A durable rule may be restated where it applies.** Host state, SHAs, line numbers, counts and flags go stale in one copy and not the other. Put the value in the runnable command, and have the prose point at the command.
-- **Write sentences about 80% of the way to ASD-STE100** (Simplified Technical English). Put one fact in each sentence, use the active voice, use the same word for the same thing throughout, and keep sentences under about 25 words. Keep the technical terms the reader needs; STE's approved-word list does not apply.
 - **Bullets for enumerations, prose for arguments.** Options, files and steps are bullets. "X fails because Y" is prose.
 - **Show the change site, not its surroundings.** Quote the exact line or signature being changed, not the whole enclosing function.
 - **Don't write a count of an adjacent list.** "Three instances below" has no test keeping it true, so delete the count instead of maintaining it.
