@@ -24,6 +24,13 @@
 # session named for the project. MANIFEST mode always builds named sessions.
 set -euo pipefail
 
+# Run from a Claude session, a fresh tmux server takes this process's env as its
+# global env, and every claude later launched in its panes inherits that
+# session's id and messaging socket.
+for v in $(compgen -e); do
+  case $v in CLAUDECODE | CLAUDE_PID | CLAUDE_JOB_DIR | CLAUDE_CODE_* | GIT_EDITOR | COREPACK_ENABLE_AUTO_PIN) unset "$v" ;; esac
+done
+
 SINCE_HOURS=${EPIC_RECOVER_SINCE_HOURS:-36}
 CLAUDE="claude --dangerously-skip-permissions"
 PROJ=$HOME/.claude/projects
