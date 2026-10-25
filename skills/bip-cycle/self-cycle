@@ -20,11 +20,18 @@ if [ "${1:-}" != --detached ]; then
 		echo "self-cycle: resume command must be /bip-continue or /bip-librarian, got '$resume'" >&2
 		exit 1
 	fi
-	if ! pane=$("$(dirname "$(readlink -f "$0")")/../lib/own-pane"); then
+	# A `claude --bg` session runs under the Claude daemon, outside any pane,
+	# even when it inherited a TMUX_PANE; it gets typed into through a
+	# `claude attach` client in a hidden tmux session.
+	if [ -n "${CLAUDE_JOB_DIR:-}" ] && command -v tmux >/dev/null; then
+		pane=job:$(basename "$CLAUDE_JOB_DIR")
+	elif pane=$("$(dirname "$(readlink -f "$0")")/../lib/own-pane"); then
+		:
+	else
 		echo "self-cycle: not in tmux; run /clear then $resume yourself" >&2
 		exit 1
 	fi
-	log=${TMPDIR:-/tmp}/self-cycle-${pane#%}.log
+	log=${TMPDIR:-/tmp}/self-cycle-${pane//[%:]/}.log
 	setsid nohup "$0" --detached "$pane" "$PWD" "$resume" >"$log" 2>&1 </dev/null &
 	echo "self-cycle: /clear queued for when this turn ends; $resume follows (log: $log)"
 	exit 0
@@ -35,6 +42,16 @@ pane=$2 cwd=$3 resume=$4
 # one may already hold a /clear record from an earlier reset, so it can't count.
 before=$(mktemp)
 find ~/.claude/projects -maxdepth 2 -name '*.jsonl' 2>/dev/null | sort >"$before"
+if [[ $pane == job:* ]]; then
+	job=${pane#job:} pane=self-cycle-${pane#job:}
+	tmux new-session -d -s "$pane" -x 200 -y 50 "claude attach $job" || exit 1
+	trap 'tmux kill-session -t "$pane" 2>/dev/null' EXIT
+	# Keys sent before the attach client draws its prompt are lost.
+	for _ in $(seq 1 30); do
+		tmux capture-pane -p -t "$pane" | grep -q '❯' && break
+		sleep 1
+	done
+fi
 type_line() {
 	tmux send-keys -t "$pane" -l "$1" && sleep 1 && tmux send-keys -t "$pane" Enter
 }
