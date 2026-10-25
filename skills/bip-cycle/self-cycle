@@ -1,6 +1,7 @@
 #!/bin/bash
 # Reset the calling Claude session and resume it: type `/clear` into its own
-# tmux pane, wait for the fresh session, then type `/bip-continue`.
+# tmux pane (or, for a `claude --bg` job, into a `claude attach` client in a
+# hidden tmux session), wait for the fresh session, then type `/bip-continue`.
 #
 # Usage:  self-cycle            # from a Bash tool call, as the last act of a turn
 #         self-cycle /bip-librarian  # resume with a stateless role's skill instead
@@ -20,17 +21,44 @@ if [ "${1:-}" != --detached ]; then
 		echo "self-cycle: resume command must be /bip-continue or /bip-librarian, got '$resume'" >&2
 		exit 1
 	fi
-	if ! pane=$("$(dirname "$(readlink -f "$0")")/../lib/own-pane"); then
+	# A `claude --bg` session runs under the Claude daemon, outside any pane,
+	# even when it inherited a TMUX_PANE; it gets typed into through a
+	# `claude attach` client in a hidden tmux session.
+	if [ -n "${CLAUDE_JOB_DIR:-}" ] && command -v tmux >/dev/null; then
+		pane=job:$(basename "$CLAUDE_JOB_DIR")
+		if ! [[ $pane =~ ^job:[A-Za-z0-9_-]+$ ]]; then
+			echo "self-cycle: unexpected CLAUDE_JOB_DIR '$CLAUDE_JOB_DIR'; run /clear then $resume yourself" >&2
+			exit 1
+		fi
+	elif pane=$("$(dirname "$(readlink -f "$0")")/../lib/own-pane"); then
+		:
+	else
 		echo "self-cycle: not in tmux; run /clear then $resume yourself" >&2
 		exit 1
 	fi
-	log=${TMPDIR:-/tmp}/self-cycle-${pane#%}.log
+	log=${TMPDIR:-/tmp}/self-cycle-${pane//[%:]/}.log
 	setsid nohup "$0" --detached "$pane" "$PWD" "$resume" >"$log" 2>&1 </dev/null &
 	echo "self-cycle: /clear queued for when this turn ends; $resume follows (log: $log)"
 	exit 0
 fi
 
 pane=$2 cwd=$3 resume=$4
+if [[ $pane == job:* ]]; then
+	job=${pane#job:}
+	# "=": the exact session name, not a prefix; the trailing ":" makes it a pane target.
+	session=self-cycle-$job pane="=self-cycle-$job:"
+	tmux kill-session -t "=$session" 2>/dev/null # left by a crashed earlier run
+	tmux new-session -d -s "$session" -x 200 -y 50 "claude attach $job" || exit 1
+	# The pause lets the client pass on the last Enter before it is killed.
+	trap 'sleep 2; tmux kill-session -t "=$session" 2>/dev/null' EXIT
+	# Keys sent before the attach client draws its input box are lost. The
+	# glyph also marks redrawn history, so wait a little past its first sight.
+	for i in $(seq 1 30); do
+		tmux capture-pane -p -t "$pane" | grep -q '❯' && sleep 2 && break
+		[ "$i" = 30 ] && echo "self-cycle: claude attach $job drew no prompt in 30 s; nothing sent" >&2 && exit 1
+		sleep 1
+	done
+fi
 # Transcripts that exist now. The fresh session's is a new file; the current
 # one may already hold a /clear record from an earlier reset, so it can't count.
 before=$(mktemp)
@@ -39,7 +67,11 @@ type_line() {
 	tmux send-keys -t "$pane" -l "$1" && sleep 1 && tmux send-keys -t "$pane" Enter
 }
 
-type_line /clear
+if ! type_line /clear; then
+	rm -f "$before"
+	echo "self-cycle: could not type into $pane; nothing sent" >&2
+	exit 1
+fi
 
 # The fresh session's transcript is a new file that starts with the /clear record.
 for _ in $(seq 1 600); do
@@ -49,9 +81,12 @@ for _ in $(seq 1 600); do
 		xargs -r grep -l -F "\"cwd\":\"$cwd\"" 2>/dev/null | head -1)
 	if [ -n "$new" ]; then
 		sleep 3
-		type_line "$resume"
-		echo "self-cycle: cleared ($new); sent $resume"
 		rm -f "$before"
+		if ! type_line "$resume"; then
+			echo "self-cycle: cleared ($new); could not type $resume" >&2
+			exit 1
+		fi
+		echo "self-cycle: cleared ($new); sent $resume"
 		exit 0
 	fi
 done
