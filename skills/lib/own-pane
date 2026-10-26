@@ -1,0 +1,20 @@
+#!/bin/bash
+# own-pane: print the id of the tmux pane this process runs in, e.g. %5.
+# $TMUX_PANE when set; otherwise the pane whose pane_pid is one of this process's
+# ancestors, since a Claude session started from another process's shell can run
+# in a pane without inheriting TMUX_PANE. Exits 1 when no pane holds it.
+set -u
+if [ -n "${TMUX_PANE:-}" ]; then
+	echo "$TMUX_PANE"
+	exit 0
+fi
+declare -A anc
+pid=$$
+while [ "${pid:-0}" -gt 1 ]; do
+	anc[$pid]=1
+	pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+done
+while read -r id ppid; do
+	[ -n "${anc[$ppid]:-}" ] && echo "$id" && exit 0
+done < <(tmux list-panes -a -F '#{pane_id} #{pane_pid}' 2>/dev/null)
+exit 1

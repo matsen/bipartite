@@ -16,7 +16,7 @@ The two coordinate over `SendMessage` and `$CLONE_ROOT/.spawn-prompts/`.
 - The **slot protocol** (`.epic-status.json`, `.epic-worklog.md`, the issue-lead loop, `bip fleet watch`) applies to every spawn, whatever its source; the `.epic-` prefix is legacy.
 - **Epic-originated** work arrives as a brief in `.spawn-prompts/`: the epic has judged it worth a slot, so check only mechanics — gates, staleness, host and slot availability, collisions.
 - A **code review of someone else's PR** is a spawn too (user, 2026-10-09): claim a clone, `gh pr checkout <N>`, run `/bip-pr-review`, never `/code-review`. Nothing is pushed; posting follows `docs/guides/roles.md` ("Posting to GitHub").
-  A review for the user needs a GitHub review request to the user on that PR, or the user's own words; a peer's or staff's ask alone is not enough (user, 2026-10-14). Name the window `r<N>-<slot>`; it writes its findings to `_ignore/REVIEW-p<N>.md`, opens it beside itself with `~/.claude/skills/lib/glow-pane _ignore/REVIEW-p<N>.md`, and stays open for the user (user, 2026-10-17). Hold the clone in `.holds/` while the window lives. The user posts from it with `/bip-review-post`, which messages you to close the window. Once the window is gone, copy `REVIEW-p<N>.md` (and `REVIEW-p<N>-post.md`, if any) to `.preserved/r<N>-<date>/` (the next spawn's reset deletes `_ignore/`), delete the local copy of the author's branch, and reclaim the clone by hand.
+  A review for the user needs a GitHub review request to the user on that PR, or the user's own words; a peer's or staff's ask alone is not enough (user, 2026-10-14). Name the window `r<N>-<slot>`; it writes its findings to `_ignore/REVIEW-p<N>.md`, opens it beside itself with `~/.claude/skills/lib/glow-pane _ignore/REVIEW-p<N>.md`, and stays open for the user (user, 2026-10-17). Hold the clone in `.holds/` while the window lives. When the review is complete, the window messages you to close it (`/bip-pr-review`; `/bip-review-post` does the same), unless the user has said to keep it. Once the window is gone, copy `REVIEW-p<N>.md` (and `REVIEW-p<N>-post.md`, if any) to `.preserved/r<N>-<date>/` (the next spawn's reset deletes `_ignore/`), delete the local copy of the author's branch, and reclaim the clone by hand.
 - **User-originated** work may have no EPIC.
   Never reject, defer, or route it to the epic for lacking one.
 
@@ -322,12 +322,13 @@ esac
 
 It emits `needs-human`, `completed`, `awaiting-results` and `quality-gate` by default, any illegal phase always, and `STALLED` for an `awaiting-results` slot with no ralph loop, no turn, shell or monitor running, and status and worklog quiet 45 min.
 It is silent when a slot never transitions (the staleness checks catch that), for phases held at its start (a restart re-baselines, so re-run `/bip-conductor`; clones added later are never seen), and when a slot **lands** — `/bip-pr-land` deletes the status file.
-So also watch merged PRs (`gh pr list` orders by creation, hence the `sort:`) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
+So also watch merged PRs (sorted by update, since a PR merges long after it is created) and the inbox, and the notifications log. Run each as a Bash `run_in_background` loop that exits on its first event, with no timeout, so an idle night costs nothing; act on what it printed, then start it again:
 
 ```bash
-M() { gh pr list --state merged -L10 --search 'sort:updated-desc' --json number,mergedAt \
-        -q 'max_by(.mergedAt) | "#\(.number) \(.mergedAt)"'; }   # a comment on an old merge must not count
-last=$(M)
+M() { gh api 'repos/{owner}/{repo}/pulls?state=closed&sort=updated&direction=desc&per_page=20' \
+        -q '[.[] | select(.merged_at)] | if length==0 then empty else max_by(.merged_at) | "#\(.number) \(.merged_at)" end'; }
+# REST, not `gh pr list --search`: the search index intermittently returns []. max_by, not list order: a comment on an old merge bumps it.
+until last=$(M) && [ -n "$last" ]; do sleep 60; done
 while :; do
   sleep 600
   out=$(<inbox> .epic-config.json 2>&1) || { echo "inbox failed: $out"; break; }

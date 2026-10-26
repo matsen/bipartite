@@ -8,6 +8,7 @@ import (
 
 	"github.com/matsen/bipartite/internal/export"
 	"github.com/matsen/bipartite/internal/reference"
+	"github.com/matsen/bipartite/internal/storage"
 	"github.com/spf13/cobra"
 )
 
@@ -90,14 +91,16 @@ func runExport(cmd *cobra.Command, args []string) error {
 	}
 
 	warnSuspectPages(refs)
+	warnAllCapsTitles(refs)
+	lex := titleLexicon(db, refs, len(ids) == 0)
 
 	// Handle --append mode
 	if exportAppend != "" {
-		return runExportAppend(refs, exportAppend)
+		return runExportAppend(refs, exportAppend, lex)
 	}
 
 	// Standard export to stdout (no JSON wrapper)
-	bibtex := export.ToBibTeXList(refs)
+	bibtex := export.ToBibTeXList(refs, lex)
 	fmt.Print(bibtex)
 
 	return nil
@@ -114,7 +117,34 @@ func warnSuspectPages(refs []reference.Reference) {
 	}
 }
 
-func runExportAppend(refs []reference.Reference, outputPath string) error {
+// titleLexicon learns title proper nouns from the whole library, whatever
+// subset is exported; refs is the whole library when isAll.
+func titleLexicon(db *storage.DB, refs []reference.Reference, isAll bool) *export.Lexicon {
+	all := refs
+	if !isAll {
+		var err error
+		if all, err = db.ListAll(0); err != nil {
+			exitWithError(ExitError, "listing references: %v", err)
+		}
+	}
+	titles := make([]string, len(all))
+	for i, ref := range all {
+		titles[i] = ref.Title
+	}
+	return export.NewLexicon(titles)
+}
+
+// warnAllCapsTitles prints a stderr warning for each reference whose title is
+// in capitals: the style will lowercase all of it, acronyms included.
+func warnAllCapsTitles(refs []reference.Reference) {
+	for _, ref := range refs {
+		if export.IsAllCapsTitle(ref.Title) {
+			fmt.Fprintf(os.Stderr, "warning: %s: title is in capitals, so nothing in it is protected from lowercasing — check acronyms and proper nouns\n", ref.ID)
+		}
+	}
+}
+
+func runExportAppend(refs []reference.Reference, outputPath string, lex *export.Lexicon) error {
 	// Make path absolute for output
 	absPath, err := filepath.Abs(outputPath)
 	if err != nil {
@@ -140,7 +170,7 @@ func runExportAppend(refs []reference.Reference, outputPath string) error {
 
 	// Append non-duplicate entries
 	if len(toExport) > 0 {
-		bibtex := export.ToBibTeXList(toExport)
+		bibtex := export.ToBibTeXList(toExport, lex)
 		if err := export.AppendToBibFile(absPath, bibtex); err != nil {
 			exitWithError(ExitError, "cannot write to file: %s\n  Hint: Check file has write permissions", outputPath)
 		}

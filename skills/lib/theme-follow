@@ -11,8 +11,13 @@ case $mode in light|dark) ;; *) exit 0 ;; esac
 # Every set below fires this hook again; @theme-applied makes those runs exit here.
 [ "$(tmux show -gv @theme-applied 2>/dev/null)" != "$mode" ] || exit 0
 tmux set -g @theme-applied "$mode"
-tmux list-panes -a -F '#{pane_id} #{@follow-theme}' |
-while read -r id follow; do
+# Read @follow-theme at pane level: a #{@option} format inherits from window,
+# session and global, so one stray global value would respawn every pane. And
+# never respawn a Claude pane, which would come back as a bare shell.
+tmux list-panes -a -F '#{pane_id} #{pane_current_command}' |
+while read -r id cmd; do
+  [ "$cmd" != claude ] || continue
+  follow=$(tmux show -pqv -t "$id" @follow-theme)
   [ -n "$follow" ] && [ "$follow" != "$mode" ] || continue
   tmux set -p -t "$id" @follow-theme "$mode" \; respawn-pane -k -t "$id"
 done
