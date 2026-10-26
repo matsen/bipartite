@@ -48,7 +48,7 @@ All figure and deck work goes through one long-lived `/bip-helper`, never inline
 - Each round, the helper runs `git fetch && git reset --hard origin/<talk-branch>`, does the work, and pushes a fresh helper branch.
 - The session fast-forwards or cherry-picks that branch onto the talk branch, pushes, rebuilds the served deck, and deletes the helper's remote branch. Deleting it lets the next round push without force after the session commits on its own.
 - The helper's worktree is under `~/.local`, which snap chromium cannot read, so a DeckTape PDF build there fails. The helper renders from a copy under `~/`.
-- For a clean context, run `/bip-helper` stop steps 1–2 only, so the home and worktree stay. Then run its start steps 3–5 on the same `DIR` with the brief.
+- For a clean context, run `/bip-helper` stop steps 1–2 and 6, so the home and worktree stay but the old record goes. Then run its start steps 3–5 on the same `DIR` with the brief.
 
 ## The cycle
 
