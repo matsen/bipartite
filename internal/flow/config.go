@@ -50,7 +50,6 @@ func StatePath(nexusPath string) string {
 // It handles the mixed array format where entries can be strings or objects.
 type sourcesYAML struct {
 	Slack    SlackConfig       `yaml:"slack"`
-	Boards   map[string]string `yaml:"boards"`
 	Context  map[string]string `yaml:"context"`
 	Code     []interface{}     `yaml:"code"`
 	Writing  []interface{}     `yaml:"writing"`
@@ -84,16 +83,12 @@ func parseSourcesFile(path string) (*Sources, error) {
 
 	sources := &Sources{
 		Slack:   raw.Slack,
-		Boards:  raw.Boards,
 		Context: raw.Context,
 	}
 
 	// Initialize maps if nil
 	if sources.Slack.Channels == nil {
 		sources.Slack.Channels = make(map[string]SlackChannelConfig)
-	}
-	if sources.Boards == nil {
-		sources.Boards = make(map[string]string)
 	}
 	if sources.Context == nil {
 		sources.Context = make(map[string]string)
@@ -264,90 +259,6 @@ func ListChannels(nexusPath string) ([]string, error) {
 	}
 	sort.Strings(channels)
 	return channels, nil
-}
-
-// GetDefaultBoard returns the first board from sources.yml.
-// Deprecated: Use GetAllBoards or GetBoardForRepo instead.
-func GetDefaultBoard(nexusPath string) (string, error) {
-	sources, err := LoadSources(nexusPath)
-	if err != nil {
-		return "", err
-	}
-
-	for _, boardKey := range sources.Boards {
-		return boardKey, nil
-	}
-	return "", errors.New("no boards configured in sources.yml")
-}
-
-// GetAllBoards returns all unique board keys from sources.yml.
-func GetAllBoards(nexusPath string) ([]string, error) {
-	sources, err := LoadSources(nexusPath)
-	if err != nil {
-		return nil, err
-	}
-
-	seen := make(map[string]bool)
-	var boards []string
-	for _, boardKey := range sources.Boards {
-		if !seen[boardKey] {
-			seen[boardKey] = true
-			boards = append(boards, boardKey)
-		}
-	}
-
-	if len(boards) == 0 {
-		return nil, errors.New("no boards configured in sources.yml")
-	}
-
-	return boards, nil
-}
-
-// GetBoardForRepo returns the board key for a repo by looking up its channel.
-// Returns an error if the repo has no channel or the channel has no board mapping.
-func GetBoardForRepo(nexusPath, repo string) (string, error) {
-	sources, err := LoadSources(nexusPath)
-	if err != nil {
-		return "", err
-	}
-
-	// Find the repo's channel
-	channel := ""
-	for _, entry := range sources.Code {
-		if entry.Repo == repo {
-			channel = entry.Channel
-			break
-		}
-	}
-	if channel == "" {
-		for _, entry := range sources.Writing {
-			if entry.Repo == repo {
-				channel = entry.Channel
-				break
-			}
-		}
-	}
-
-	if channel == "" {
-		return "", fmt.Errorf("repo %s has no channel configured in sources.yml", repo)
-	}
-
-	// Look up the channel's board
-	boardKey, ok := sources.Boards[channel]
-	if !ok {
-		return "", fmt.Errorf("channel %q has no board mapping in sources.yml", channel)
-	}
-
-	return boardKey, nil
-}
-
-// GetBoardsMapping returns the full channel → board mapping.
-func GetBoardsMapping(nexusPath string) (map[string]string, error) {
-	sources, err := LoadSources(nexusPath)
-	if err != nil {
-		return nil, err
-	}
-	return sources.Boards, nil
 }
 
 // LoadConfig loads config.yml from the given nexus directory.

@@ -33,7 +33,7 @@ var rootCmd = &cobra.Command{
 
 Core features:
   - Academic reference library (papers, projects, repos)
-  - GitHub project tracking (issues, PRs, boards, activity digests)
+  - GitHub project tracking (issues, PRs, activity digests)
   - Slack integration for team updates
   - Remote server availability checking
 

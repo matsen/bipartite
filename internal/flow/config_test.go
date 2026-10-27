@@ -90,6 +90,7 @@ func TestLoadSourcesIntegration(t *testing.T) {
 	tmpDir := t.TempDir()
 	sourcesPath := filepath.Join(tmpDir, "sources.yml")
 
+	// A leftover boards key, from before bip board was removed, must still parse.
 	sourcesContent := `boards:
   matsengrp/30: test-bead
 context:
@@ -110,11 +111,6 @@ writing:
 	sources, err := LoadSources(tmpDir)
 	if err != nil {
 		t.Fatalf("LoadSources() error: %v", err)
-	}
-
-	// Verify boards
-	if sources.Boards["matsengrp/30"] != "test-bead" {
-		t.Errorf("Boards['matsengrp/30'] = %q, want 'test-bead'", sources.Boards["matsengrp/30"])
 	}
 
 	// Verify context

@@ -190,7 +190,7 @@ Only `cache/` is gitignored — the JSONL files above it are tracked. The cache 
 
 - **.bipartite/config.yml** — Local paths (PDF root)
 - **servers.yml** — Remote servers for `bip scout`
-- **sources.yml** — GitHub repos and boards for `bip checkin`, `bip digest`
+- **sources.yml** — GitHub repos for `bip checkin`, `bip digest`
 
 ## Adding Your First Paper
 

@@ -81,17 +81,13 @@ bip uses GitHub through two independent authentication paths. You need **both** 
 
 ### Step 1: Authenticate the `gh` CLI
 
-Most bip commands (`checkin`, `board`, `spawn`, `digest`) call the GitHub API through the [`gh` CLI](https://cli.github.com/). You must authenticate it first:
+Most bip commands (`checkin`, `spawn`, `digest`) call the GitHub API through the [`gh` CLI](https://cli.github.com/). You must authenticate it first:
 
 ```bash
 gh auth login
 ```
 
-Follow the interactive prompts. When asked about scopes, the defaults (`repo`, `read:org`) cover most bip features. However, for **project board** commands (`bip board list/add/move/remove`), you also need the `project` scope:
-
-```bash
-gh auth refresh --scopes project
-```
+Follow the interactive prompts. When asked about scopes, the defaults (`repo`, `read:org`) cover bip's features.
 
 Verify your authentication:
 
@@ -118,9 +114,7 @@ Fine-grained tokens are more secure because you scope them to specific repositor
    - **Issues**: Read-only
    - **Pull requests**: Read-only
    - **Metadata**: Read-only (automatically selected)
-6. Under **Permissions → Organization permissions** (if you use org project boards):
-   - **Projects**: Read and write
-7. Click **Generate token** and copy the value
+6. Click **Generate token** and copy the value
 
 #### Classic token
 
@@ -130,8 +124,7 @@ If you prefer classic tokens or need compatibility with older GitHub Enterprise 
 2. Set a descriptive name and expiration
 3. Select these scopes:
    - **`repo`** — Read access to repositories (issues, PRs, comments)
-   - **`read:org`** — Read organization membership (needed for org project boards)
-   - **`project`** — Read/write GitHub project boards
+   - **`read:org`** — Read organization membership
 4. Click **Generate token** and copy the value
 
 #### Supply the token via an environment variable
@@ -159,7 +152,6 @@ op run --env-file=<(echo 'BIP_GITHUB_TOKEN=op://Private/bip-github-pat/token') -
 | Command | Auth method | What it does |
 |---------|-------------|--------------|
 | `bip checkin` | `gh` CLI | Fetches issues, PRs, comments across repos |
-| `bip board list/add/move/remove` | `gh` CLI | Reads/writes GitHub project boards (needs `project` scope) |
 | `bip spawn` | `gh` CLI | Fetches issue/PR details for tmux sessions |
 | `bip digest` | `gh` CLI | Generates activity summaries |
 | `bip repo add/refresh` | `BIP_GITHUB_TOKEN` | Fetches repository metadata |
@@ -167,8 +159,6 @@ op run --env-file=<(echo 'BIP_GITHUB_TOKEN=op://Private/bip-github-pat/token') -
 ### Troubleshooting
 
 **"gh: not logged in"** — Run `gh auth login`.
-
-**403 on project board commands** — You need the `project` scope: `gh auth refresh --scopes project`.
 
 **Rate limiting on `bip repo` commands** — Add `github_token` to your config file. Without a token, these requests are unauthenticated and limited to 60/hour.
 

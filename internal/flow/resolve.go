@@ -75,7 +75,7 @@ func ResolveRepoPath(nexusPath, orgRepo string, ctx ResolveContext) (ResolvedPat
 
 	// Locate the repo entry. Writing is checked first to match the existing
 	// GetRepoLocalPath order — a regression here would silently break
-	// every read-only consumer (bip checkin, bip board, bip scout).
+	// every read-only consumer (bip checkin, bip scout).
 	entry, categoryRoot, ok := findRepoEntry(sources, cfg, orgRepo)
 	if !ok {
 		return ResolvedPath{}, fmt.Errorf("%w: %s", ErrRepoNotInSources, orgRepo)
