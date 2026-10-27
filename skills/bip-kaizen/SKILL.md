@@ -10,7 +10,6 @@ Reflect on friction from the current session and propose one concrete improvemen
 
 ## Step 1: Diagnose
 
-Look for confusion (files searched in the wrong place), failed commands, missing context (a convention or path the agent didn't know), a skill that gave wrong or incomplete guidance, work figured out more than once, and clunky handoffs.
 Name the root cause, not the symptom: "the agent couldn't find the database" is a symptom; "the database path isn't in AGENTS.md" is the cause.
 
 ## Step 2: Pick the target
@@ -43,7 +42,7 @@ List every other file that restates the rule, and update each one or say why not
 Adding without deleting needs an answer to "what does this supersede?" (`CONSTITUTION.md` Article VII). State the size of your change in words, since this corpus writes one paragraph per line:
 
 ```bash
-git diff origin/main -- '*.md' | grep '^+' | grep -v '^+++' | wc -w
+git diff HEAD -- '*.md' | grep '^+' | grep -v '^+++' | wc -w
 ```
 
 A rule nobody can cite an instance of is a candidate for deletion, not for shortening.
@@ -66,19 +65,18 @@ One improvement per run; name any others in a line.
 
 Stop and ask the user which to do:
 
-1. **Apply now**: edit the target directly. This is for a file outside bipartite: a project's AGENTS.md, its code or docs.
+1. **Apply now**: edit a target outside bipartite directly.
 2. **Send to the `bipartite` session**: for anything in the bipartite repo, when `ListAgents` shows a session by that name. Send the diagnosis and the proposed edit; it places, lands, and reports back.
    With no such session, open a PR from a worktree of your own, since `~/re/bipartite` is shared by every session on the machine:
    ```bash
    git -C ~/re/bipartite fetch -q origin
    git -C ~/re/bipartite worktree add ../bipartite-wt-kaizen-<x> -b kaizen/<x> origin/main
    ```
-3. **Write an issue**: draft `_ignore/ISSUE-kaizen-<topic>.md` and submit it with `/bip-issue-check`.
+   Commit a pointer and its target together, push, open the PR with `gh pr create`, and run `/bip-pr-review` on it.
+3. **Write an issue**: draft `ISSUE-kaizen-<topic>.md` in the current repo and submit it with `/bip-issue-check`.
 4. **Skip**: the user disagrees with the diagnosis.
 
 ## Guidelines
 
 - Propose the smallest change that fixes the problem; don't refactor nearby text.
-- Follow the target file's existing structure and conventions.
-- Don't document what the code already makes obvious.
 - Spend emphasis (⭐ ⛔ ⚠, ALL-CAPS bold) only if the passage outranks every marker already in the file; a marker every few lines marks nothing.
