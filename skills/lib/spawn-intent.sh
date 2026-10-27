@@ -340,8 +340,8 @@ mirror_worklogs() {
 #   - `bip-conductor-spawn/worker-brief.txt` lists the seven phases in the
 #     second-person `.epic-status.json fields:` block, and THREE distinct
 #     off-spec values still appeared in one day.
-#   - Two lines below it, `updated_at` says "Never a placeholder, and never
-#     local time with a `Z` appended" -- and a future-dated value appeared.
+#   - The same block says `updated_at` is the verbatim output of `date -u`,
+#     never typed or local time -- and a future-dated value appeared.
 # ⚠ Incidentally that same line rules out the obvious diagnosis: pax is UTC-7,
 # so local-time-with-Z reads 7 hours BEHIND, not 62 minutes ahead. The
 # documented failure mode has the wrong sign for what was observed.
