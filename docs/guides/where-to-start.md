@@ -10,7 +10,7 @@ Bipartite can be adopted in three steps. Each step adds sessions and tooling to 
 
 ## Tier 1: one session
 
-Use the [skills-starter](https://github.com/matsengrp/skills-starter) template. Its install script adds three skills and turns off Claude Code's auto memory, which otherwise saves notes nobody reviews:
+If you don't have Claude Code yet, [install it and log in](https://code.claude.com/docs/en/setup) first. Then use the [skills-starter](https://github.com/matsengrp/skills-starter) template. Its install script adds three skills and turns off Claude Code's auto memory, which otherwise saves notes nobody reviews:
 
 - `/kaizen` turns friction into a committed fix: a line in a project's `AGENTS.md`, a line in your `CLAUDE.md`, or a new skill.
 - `/tuckin` and `/continue` carry a session across `/clear`.
@@ -23,7 +23,7 @@ You do not need bipartite for tier 1. Move on when you find yourself with two or
 
 ## Tier 2: named sessions
 
-Install bipartite ([Getting Started](getting-started.md)). Then run a few sessions side by side, each in its own terminal, and give each a name for its job: `claude -n <name>` at start, or `/rename <name>` later. A session lists the others by name and sends them messages with Claude Code's `SendMessage` tool. This works in any terminal, including VS Code's.
+Install bipartite ([Getting Started](getting-started.md)). Then run a few sessions side by side, each in its own terminal, and give each a name for its job: `claude -n <name>` at start, or `/rename <name>` later. A session lists the others by name and sends them messages with Claude Code's `SendMessage` tool. This works in any terminal, including VS Code's. Start every session in the same permission mode: a session holds a message from a session in a different mode until you approve it there, so the message looks lost.
 
 A typical set for one project:
 
