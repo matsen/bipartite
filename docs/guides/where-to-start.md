@@ -17,7 +17,7 @@ If you don't have Claude Code yet, [install it and log in](https://code.claude.c
 
 The idea to take away from this tier: Claude learns by changing files you can read and delete, not by accumulating memories.
 
-The starter's README also suggests a second session, named `skills`, that lands the fixes `/kaizen` sends it. It is optional at this tier: without it, `/kaizen` edits your skills repo directly.
+The starter's README also suggests a second session, named `skills`, that lands the fixes `/kaizen` sends it. It is recommended: it keeps your skills repo in one session's hands, so fixes from different sessions don't collide. Without it, `/kaizen` edits your skills repo directly.
 
 You do not need bipartite for tier 1. Move on when you find yourself with two or more Claude sessions open on one project and copying text between them.
 
