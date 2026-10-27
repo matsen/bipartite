@@ -39,6 +39,10 @@ The library backing `/bip-lit` is an agent-first reference manager with JSON out
 
 Guide: [Reference Management](https://matsen.github.io/bipartite/guides/reference-management/)
 
+## Where to Start
+
+You can adopt bipartite in three tiers: one Claude session with the [skills-starter](https://github.com/matsengrp/skills-starter) skills, then several named sessions that message each other, then a tmux fleet. [Where to Start](https://matsen.github.io/bipartite/guides/where-to-start/) says what each tier needs.
+
 ## Installation
 
 ### Full Installation (recommended)
@@ -94,6 +98,7 @@ See the [Getting Started guide](https://matsen.github.io/bipartite/guides/gettin
 
 ## Documentation
 
+- [Where to Start](https://matsen.github.io/bipartite/guides/where-to-start/): the three tiers, from one session to a fleet
 - [Getting Started](https://matsen.github.io/bipartite/guides/getting-started/): full setup
 - [Configuration](https://matsen.github.io/bipartite/guides/configuration/): every config option and token
 - [Agent Roles](https://matsen.github.io/bipartite/guides/roles/): the session roles and what each owns

@@ -59,6 +59,7 @@ site_dir: site
 nav:
   - Home: index.md
   - Guides:
+    - Where to Start: guides/where-to-start.md
     - Getting Started: guides/getting-started.md
     - Configuration: guides/configuration.md
     - Reference Management: guides/reference-management.md
