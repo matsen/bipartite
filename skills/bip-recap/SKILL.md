@@ -9,7 +9,7 @@ Set `DAYS` to `$ARGUMENTS`, or 14 if it is empty.
 Agents post as the user, so `--author @me` covers their work too.
 
 ```bash
-d=$(date -d "$DAYS days ago" +%F)
+d=$(date -d "$DAYS days ago" +%F 2>/dev/null || date -v-"$DAYS"d +%F)   # GNU, then BSD/macOS
 gh search prs --author @me --merged-at ">=$d" --limit 1000 --json repository,title,url
 gh search issues --author @me --created ">=$d" --limit 1000 --json repository,title,url,state
 ```
