@@ -31,7 +31,7 @@ Cross-cutting tools that span both sides of the workflow: a conductor's GitHub i
 
 Key skills: `/bip-inbox`, `/bip-scout`
 
-Standalone: `/bip-helper` (a long-lived background session for side work), `/bip-decay-audit` (whole-repo decay check), `/bip-marimo` (marimo notebooks), `/bip-tuckin` and `/bip-continue` (carry a session across a context reset)
+Standalone: `/bip-helper` (a long-lived background session for side work), `/bip-recap` (what you did in the last two weeks), `/bip-decay-audit` (whole-repo decay check), `/bip-marimo` (marimo notebooks), `/bip-tuckin` and `/bip-continue` (carry a session across a context reset)
 
 ### Reference Management
 
