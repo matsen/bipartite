@@ -5,8 +5,7 @@ description: Run the comprehensive pre-merge quality checklist on the current br
 
 # /bip-pr-review
 
-Run a comprehensive quality checklist before merging a PR.
-Automatically detects project type and runs appropriate checks.
+Run the pre-merge quality checklist on the current branch's PR.
 
 ## Usage
 
@@ -14,23 +13,17 @@ Automatically detects project type and runs appropriate checks.
 /bip-pr-review
 ```
 
-To code-review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`, and push nothing there. Whether to post, the Step 7 math comment included, follows `docs/guides/roles.md` ("Posting to GitHub"): another human's scientific PR gets the findings reported to the user, not posted.
-Don't report textual merge or rebase conflicts with sibling PRs, since whoever lands second rebases. Report a collision only when it is semantic: two PRs that give one symbol different names, or that make contradictory claims.
+To review someone else's PR, run it in a claimed fleet clone after `gh pr checkout <N>`, and push nothing there. Whether to post, the Step 7 math comment included, follows `docs/guides/roles.md` ("Posting to GitHub"): another human's scientific PR gets the findings reported to the user, not posted.
+Don't report textual merge or rebase conflicts with sibling PRs; whoever lands second rebases. Report a collision only when it is semantic: two PRs that give one symbol different names, or make contradictory claims.
 In an `r<N>-<slot>` review window, once the review is complete (posted, by `/bip-review-post` or otherwise, or the user says it's done), message the conductor named in `$CLONE_ROOT/.conductor-session` to preserve `_ignore/REVIEW-p<N>.md`, close this window, and reclaim `<slot>`, unless the user has said to keep the window.
 
 ## Workflow
 
 ### Step 0: Check for Project-Specific Checklist
 
-First, check for a project-specific checklist:
-1. Look for `PRE-MERGE-CHECKLIST.md` in the repo root
-2. If not found, read the project's `CLAUDE.md` (or `AGENTS.md`) and look for a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section
-
-**If a project-specific checklist is found, follow those steps exactly** instead of the generic workflow below.
+Look for `PRE-MERGE-CHECKLIST.md` in the repo root, else a "Pre-PR Quality Checklist" or "Pre-Merge Checklist" section in the project's `CLAUDE.md` or `AGENTS.md`. If one exists, follow it exactly instead of the generic workflow below.
 
 ### Step 1: Detect Project Type
-
-Examine the repository to determine what checks apply:
 
 | Indicator | Project Type | Agents to Use |
 |-----------|--------------|---------------|
@@ -40,30 +33,19 @@ Examine the repository to determine what checks apply:
 | `go.mod` | Go project | `clean-code-reviewer` + `code-reuse-reviewer` |
 | `package.json` | Node.js project | `clean-code-reviewer` + `code-reuse-reviewer` |
 
-The two reviewers operate in **different modes** and complement each other — run them in parallel:
-
-- `clean-code-reviewer` reads the diff and evaluates each hunk against clean-code principles (naming, function size, single responsibility, DRY-within-hunk).
-- `code-reuse-reviewer` surveys the surrounding codebase *first*, then audits the diff for missed reuse of existing constants, helpers, conventions, and patterns.
-  Its mandatory output tables (inline-import audit vs `pyproject.toml`; function-pair overlap audit) catch things a diff-only reviewer cannot see.
-
-Multiple types can apply (e.g., Snakemake + Python).
+Several types can apply. `clean-code-reviewer` judges each diff hunk; `code-reuse-reviewer` surveys the codebase first, then finds missed reuse of existing constants, helpers, and conventions.
 
 ### Step 1.5: Fetch and determine base branch
-
-Always fetch first so comparisons are against the true remote state, not a stale local branch:
 
 ```bash
 git fetch origin
 ```
 
-Determine the base branch from the PR (if one exists), otherwise default to `main` or `master`:
-
 ```bash
 gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "main"
 ```
 
-Use `origin/<base>` (not local `<base>`) for all diffs below.
-This avoids false positives from a stale local main.
+Diff against `origin/<base>`, not local `<base>`, which may be stale.
 
 ### Step 2: Identify Changed Files
 
@@ -71,54 +53,32 @@ This avoids false positives from a stale local main.
 git diff origin/<base>...HEAD --name-only
 ```
 
-Focus review on changed files, not the entire codebase.
-
 ### Step 3: Check for Large Files and Cruft
 
-Scan changed files for artifacts that typically shouldn't be committed:
-
-**Suspicious file types** (flag for user review):
-- HTML files from notebook execution (`.html` in output directories)
-- Image files (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.pdf`) unless in expected locations like `docs/` or `assets/`
-- Binary files and archives (`.zip`, `.tar`, `.gz`, `.pkl`, `.pickle`, `.npy`, `.npz`)
-- Large data files (`.csv`, `.tsv`, `.parquet`) over 100KB
+Flag for user confirmation before proceeding:
+- HTML from notebook execution (`.html` in output directories)
+- Images (`.png`, `.jpg`, `.jpeg`, `.gif`, `.svg`, `.pdf`) outside expected places like `docs/` or `assets/`
+- Binaries and archives (`.zip`, `.tar`, `.gz`, `.pkl`, `.pickle`, `.npy`, `.npz`)
+- Data files (`.csv`, `.tsv`, `.parquet`) over 100KB
 - Cache/build artifacts (`__pycache__/`, `.pyc`, `node_modules/`, `dist/`, `build/`)
 
-**Acceptable** (don't flag):
-- Small JSON result files (< 100KB)
-- Config files (`.json`, `.yml`, `.yaml` in root or config directories)
-- Test fixtures in `testdata/` or `tests/fixtures/`
+Don't flag small JSON results (< 100KB), config files (`.json`, `.yml`, `.yaml` in root or config directories), or fixtures in `testdata/` or `tests/fixtures/`.
 
-**Check file sizes:**
 ```bash
 git diff origin/<base>...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && stat -f "%z %N" "{}" 2>/dev/null || stat --format="%s %n" "{}" 2>/dev/null' | awk '$1 > 102400 {print}'
 ```
 
-Flag anything suspicious for user confirmation before proceeding.
-
 ### Step 4: Run Agent Reviews (in parallel when possible)
 
-**For Snakemake projects:**
-- Launch `snakemake-pipeline-expert` agent to review workflow structure, rule organization, and best practices
-
-**For all projects with code changes:**
-- Launch `clean-code-reviewer` agent on modified source files (not tests)
-- **In parallel**, launch `code-reuse-reviewer` agent on the same branch — it surveys the surrounding codebase first to catch missed reuse of existing patterns, constants, helpers, and conventions.
-  The two agents have different mandates (clean-code principles vs. pattern adherence) and report independently.
+- Snakemake: launch `snakemake-pipeline-expert` on workflow structure and rule organization.
+- All code changes: launch `clean-code-reviewer` on modified source files (not tests) and, in parallel, `code-reuse-reviewer` on the same branch. They report independently.
 - Point both at experiment and script code too, and ask what the PR could drop: modes, arms, and scripts its final result no longer uses (not controls or arms its README reports, including null ones), and helpers copied rather than imported.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 
-**Always run this detection step.**
-Examine the PR title, body, and diff for signals that the PR reports a scientific conclusion or experimental result:
+Always check the PR title, body, and diff for a scientific conclusion: benchmark or comparison tables, win/loss rates or accuracy metrics, language like "outperforms", "fails to", "never beats", claims about method effectiveness or limitations, or surprising or strong negative results (0% or 100% rates).
 
-- Benchmark results or comparison tables
-- Win/loss rates, accuracy numbers, or performance metrics
-- Language like "outperforms", "worse than", "fails to", "never beats", "always prefers"
-- Claims about method effectiveness, algorithmic limitations, or model comparisons
-- Surprising or strong negative results (e.g., 0% or 100% rates)
-
-**If any scientific conclusion is detected**, launch the `surprising-conclusion-skeptic` agent (Opus model) with this prompt:
+If one is found, launch the `surprising-conclusion-skeptic` agent (Opus model) in parallel with Step 4, without waiting on it:
 
 ```
 Review PR #<number> on branch <branch> for scientific credibility.
@@ -135,14 +95,11 @@ not just the description.
 Report your findings with Claim / Confidence / Concerns / Recommended Checks / Verdict.
 ```
 
-This step runs **in parallel** with the agent reviews in Step 4.
-Do not wait for it to complete before proceeding.
-
-**If no scientific conclusion is detected**, skip this step and note "No scientific claims detected — skeptic review skipped" in the final report.
+If none is found, note "No scientific claims detected — skeptic review skipped" in the report.
 
 ### Step 4.6: Cold read of a rendered notebook (conditional)
 
-When the diff adds or changes a committed notebook render, launch one `general-purpose` agent per render in parallel with Step 4. Key on the changed `.html` files themselves, since a render need not share its notebook's stem. Give the agent the render's path, plus the intended audience if the issue names one, and nothing else: no issue, PR, or thread, because every session that wrote or reviewed the PR already knows what the notebook was meant to say.
+When the diff adds or changes a committed notebook render, launch one `general-purpose` agent per render in parallel with Step 4. Key on the changed `.html` files, since a render need not share its notebook's stem. Give the agent only the render's path and the intended audience if the issue names one: no issue, PR, or thread, because every session that wrote or reviewed the PR already knows what the notebook meant to say.
 
 ```
 Read <path to .html> as its intended reader (<audience, if named>) would, knowing nothing else.
@@ -152,11 +109,9 @@ Read <path to .html> as its intended reader (<audience, if named>) would, knowin
    and every result whose statement is interrupted by caveats.
 ```
 
-A reader who cannot state the answer from the first screen is the finding. If the diff touches a notebook but commits no render, note "no render committed — cold read skipped".
+A reader who cannot state the answer from the first screen is the finding. If the diff touches a notebook but commits no render, note "no render in diff — skipped".
 
 ### Step 5: Run Automated Checks
-
-Detect and run available quality tools:
 
 | Tool Indicator | Check to Run |
 |----------------|--------------|
@@ -170,16 +125,7 @@ Detect and run available quality tools:
 
 ### Step 6: Test Audit
 
-Run a thorough test quality review using an agent.
-Grepping alone is insufficient—tests need semantic analysis to detect:
-
-- Placeholder tests (empty bodies, just `pass`, meaningless assertions)
-- Inappropriate use of mocks (if project forbids mocking)
-- Tests that don't actually test anything (`assert True`, trivial assertions)
-- Tests with `pytest.skip` that should have real implementations
-- Tests that silently catch exceptions instead of letting them propagate
-
-**Launch a `clean-code-reviewer` agent specifically for test files:**
+Grepping is not enough; launch a `clean-code-reviewer` agent on the test files:
 
 ```
 Review the test files in tests/ for test quality issues:
@@ -193,44 +139,18 @@ Review the test files in tests/ for test quality issues:
 Focus on tests for changed code. Report specific file:line references.
 ```
 
-Report findings with severity (blocking vs advisory).
+Report findings as blocking or advisory.
 
 ### Step 7: Mathematical Documentation (for mathematical PRs)
 
-**Skip this step** if the PR doesn't involve mathematical/statistical computation.
+Run this step when the changed source has formulas in docstrings, scientific computation (matrix operations, distributions, statistical models), or algorithms with a mathematical foundation.
 
-**Detect mathematical PR**: Check if the changed source files contain:
-- Mathematical formulas in docstrings (Greek letters, summations, matrix notation)
-- Scientific computation (matrix operations, probability distributions, statistical models)
-- Algorithm implementations with mathematical foundations
+1. Look in `gh pr view` comments for an existing math specification (LaTeX blocks or math notation).
+2. If none exists, back-translate the implementation into LaTeX, documenting the actual computation rather than the intent. Post it as a PR comment with the 🤖 prefix and report "Posted mathematical specification to PR".
+3. If one exists, compare it against the implementation. Check for formula errors, missing steps, and outdated notation; post a correction comment and flag any discrepancy; otherwise report "Mathematical specification verified".
+4. For formulas from established literature, verify against the source paper. Search the local library first (`bip search "method name"` or `bip search -a "Author"`); if the paper is not there, ask the user before searching externally. Read the paper with the pdf-navigator tools, put the bip paper ID in the math comment, and flag any mismatch with the literature as blocking.
 
-**If mathematical**, check the PR for an existing mathematical specification comment:
-
-1. **Check for existing math comment on the PR**: Use `gh pr view` and look for comments containing LaTeX code blocks or mathematical notation
-
-2. **If no math comment exists**:
-   - Back-translate the implementation directly into mathematical notation
-   - Use LaTeX code blocks for formulas
-   - Document the actual computation, not perceived intent
-   - Post as a comment on the PR with 🤖 prefix
-   - Include in report: "Posted mathematical specification to PR"
-
-3. **If math comment already exists**:
-   - Re-read the implementation carefully
-   - Compare against the existing mathematical specification
-   - Check for discrepancies (formula errors, missing steps, outdated notation)
-   - If discrepancies found: post a correction comment and flag in report
-   - If accurate: note "Mathematical specification verified" in report
-
-4. **Literature verification for pre-existing formulas**:
-   - If the implementation uses formulas from established literature (standard models, known algorithms, published methods), verify against the source paper
-   - **Search local bip library first**: `bip search "method name"` or `bip search -a "Author"`
-   - The reference paper should already be in our library; if not found locally, ask user before searching externally
-   - Use pdf-navigator tools to read the actual paper and verify the implementation matches the published definition
-   - Include the bip paper ID in the math comment to demonstrate correctness
-   - Flag any discrepancies between implementation and literature as blocking issues
-
-**Mathematical comment format**:
+Comment format:
 ```markdown
 🤖 Mathematical specification back-translated from the implementation in PR #XXX:
 
@@ -246,8 +166,6 @@ Report findings with severity (blocking vs advisory).
 ```
 
 ### Step 8: Generate Report
-
-Present a checklist summary:
 
 ```markdown
 ## Pre-Merge Quality Report
@@ -288,13 +206,4 @@ Present a checklist summary:
 
 ## Error Handling
 
-- **Not on a branch**: Warn that this should be run from a feature branch
-- **No changes from main**: Note that branch appears to be up-to-date with main
-- **Missing tools**: Skip checks for tools not installed, note in report
-- **Agent failures**: Report the failure but continue with other checks
-
-## Notes
-
-- This skill coordinates multiple agents and tools; it may take a few minutes
-- Agent reviews focus on changed files to keep feedback relevant
-- The skill adapts to each project's tooling automatically
+Not on a feature branch: warn. No changes from base: say so. Missing tool: skip that check and note it. Agent failure: report it and continue.
