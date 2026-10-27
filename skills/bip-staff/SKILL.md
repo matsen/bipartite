@@ -56,7 +56,7 @@ A defect that moves no number this week still fails the second test.
 Only this session pages the user; others escalate here (`/bip-conductor`'s "Paging the user").
 Before paging, strike every ask that is the owner's call. One page carries every open ask, each with one recommendation and the evidence; never a status report.
 Results that need nothing from the user go into the brief. The queue pane lists what is open, so no reply restates an open ask. A turn answering a peer ends with one line on what changed, or "nothing changed"; a reply to the user says what changed since their last turn.
-When an ask needs context outside the brief (a PR review, a spec), the session holding it exists before the page and the ask names its window; for a PR, start without asking a review spawn the reviews ruling allows. The page lists every such window still waiting.
+When an ask needs context outside the brief (a PR review, a spec), the session holding it exists before the page and the ask names its window; for a PR, that is a review spawn the reviews ruling allows, started without asking. The page lists every such window still waiting.
 Write for the PI reading cold: each number says what it compares; each item says what is already done.
 `bip page --from staff --link <brief or issue URL> "<one-line ask>"`; one ring per wait, `bip page --cancel --from staff "<why>"` if it resolves first.
 When the user rules, quote the words into `rulings.md` (general) or to the owner for its EPIC body (topic), delete the brief, and tell the owner, quoting, not paraphrasing into actions.
