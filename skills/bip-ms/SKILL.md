@@ -31,6 +31,7 @@ Direct research through issues and PRs, not through constant edits to the paper.
 Comment on PRs/issues to request analyses where `docs/guides/roles.md` ("Posting to GitHub") allows it; otherwise message the owning session, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner.
 
 Update the manuscript when a research thread is complete: reconcile the finished result into the paper (the manuscript prevails on disagreement; cf. `/bip-ms-audit`).
+Until then, keep findings in notes, not in the paper; the paper stays the stable context.
 
 Out of scope, as a safety boundary: running experiments.
 Guiding, scoping, and requesting that work is in scope, and so is reading code and results in tracked repos, yourself or through a subagent.
@@ -201,11 +202,11 @@ Tell the user which notebook opened and which EPIC/issue produced it; after revi
 5. Run the `@scientific-tex-editor` agent on the new text.
 6. Present the edited draft for approval before inserting it.
 
-Prose you write into the paper follows these rules from the start:
+Prose you write into the paper, drafted or edited, follows these rules from the start:
 - Lead every paragraph with its claim sentence; support follows.
 - No This/That/Such or "The consequence" as a sentence-opening subject.
 - Split any sentence past ~40 words or with two clauses joined by comma plus and/so/since/while/where.
-- No em-dashes; use a period, comma, colon, or parenthetical.
+- Em-dashes: per `@scientific-tex-editor`'s rule.
 - No clefts ("it is X that", "what P cannot tell us is") and no "there is/are ... that".
 - Avoid inert main verbs (is, has, offers, provides, represents, constitutes).
 - Replace vague verbs (emits, captures, encodes, leverages) with the precise relation (estimates, predicts, assigns, defines).
