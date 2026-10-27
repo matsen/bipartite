@@ -48,13 +48,17 @@ type ServerMetrics struct {
 	LoadAvg15     float64   `json:"load_avg_15min"`
 	GPUs          []GPUInfo `json:"gpus,omitempty"`
 	TopUsers      []UserCPU `json:"top_users,omitempty"`
+	// GPUOwnersUnknown is set when the GPU numbers parsed but the owner listing
+	// did not: every GPU then has no users, which must not read as "free".
+	GPUOwnersUnknown bool `json:"gpu_owners_unknown,omitempty"`
 }
 
 // GPUInfo holds per-GPU metrics.
 type GPUInfo struct {
-	UtilizationPercent int `json:"utilization_percent"`
-	MemoryUsedMB       int `json:"memory_used_mb"`
-	MemoryTotalMB      int `json:"memory_total_mb"`
+	UtilizationPercent int      `json:"utilization_percent"`
+	MemoryUsedMB       int      `json:"memory_used_mb"`
+	MemoryTotalMB      int      `json:"memory_total_mb"`
+	Users              []string `json:"users,omitempty"` // owners of the processes on this GPU
 }
 
 // UserCPU holds aggregated CPU usage for a single user.

@@ -137,6 +137,12 @@ func (c *RealSSHClient) RunCommand(server Server, command string) (string, error
 	return string(output), nil
 }
 
+// Username is the session-default login name. RunCommand uses it for every
+// server whose ~/.ssh/config entry sets no User of its own.
+func (c *RealSSHClient) Username() string {
+	return c.username
+}
+
 // Close releases SSH client resources including the agent connection.
 func (c *RealSSHClient) Close() error {
 	if c.agentConn != nil {

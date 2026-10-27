@@ -60,7 +60,8 @@ The JSON output has this structure:
           {
             "utilization_percent": 85,
             "memory_used_mb": 30720,
-            "memory_total_mb": 49152
+            "memory_total_mb": 49152,
+            "users": ["alice"]
           }
         ],
         "top_users": [
@@ -96,7 +97,9 @@ Common question types:
 | "Is server X available?" | Check that specific server's status and metrics |
 | "What's the GPU memory on Y?" | Report per-GPU memory used/total for that server |
 | "Which servers are idle?" | Find servers with CPU < 20% and memory < 50% |
-| "Who is using server X?" | Report top_users with their CPU percentages |
+| "Who is using server X?" | Report top_users with their CPU percentages (100% = one core), and each GPU's `users` |
+
+A GPU with no `users` is free only if the server's `metrics` has no `gpu_owners_unknown: true`. That flag means the owner listing failed, so every GPU on that server shows no users whether or not it is in use.
 
 **Formatting guidelines:**
 - Use a markdown table for multi-server summaries

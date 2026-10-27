@@ -1,9 +1,12 @@
 package scout
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
+
+const ansiReset = "\x1b[0m"
 
 func TestFormatTable_OnlineWithGPU(t *testing.T) {
 	result := ScoutResult{
@@ -30,13 +33,14 @@ func TestFormatTable_OnlineWithGPU(t *testing.T) {
 		},
 	}
 
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 
 	if !strings.Contains(output, "mantis") {
 		t.Error("expected server name in output")
 	}
-	if !strings.Contains(output, "online") {
-		t.Error("expected online status in output")
+	header := strings.Fields(strings.SplitN(output, "\n", 2)[0])
+	if got := strings.Join(header, " "); got != "Server GPUs GPU Mem (GB) Users (%CPU) CPU Mem" {
+		t.Errorf("unexpected header order: %q", got)
 	}
 	if !strings.Contains(output, "9.8%") {
 		t.Error("expected CPU percentage in output")
@@ -78,7 +82,7 @@ func TestFormatTable_OnlineWithoutGPU(t *testing.T) {
 		},
 	}
 
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 
 	// Data line should have no GPU data (blank GPU columns)
@@ -99,7 +103,7 @@ func TestFormatTable_Offline(t *testing.T) {
 		},
 	}
 
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	if len(lines) < 3 {
 		t.Fatal("expected at least 3 lines (header + underline + data)")
@@ -145,7 +149,7 @@ func TestFormatTable_ColumnAlignment(t *testing.T) {
 		},
 	}
 
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	if len(lines) != 4 {
 		t.Fatalf("expected 4 lines (header + underline + 2 data), got %d", len(lines))
@@ -204,7 +208,7 @@ func TestFormatTable_GPUColumnAlignment(t *testing.T) {
 		},
 	}
 
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 	// Use TrimRight to only strip the final newline, preserving trailing spaces on lines
 	lines := strings.Split(strings.TrimRight(output, "\n"), "\n")
 	if len(lines) != 5 {
@@ -291,7 +295,7 @@ func TestSortByAvailability(t *testing.T) {
 
 func TestFormatTable_Empty(t *testing.T) {
 	result := ScoutResult{}
-	output := FormatTable(result)
+	output := FormatTable(result, FormatOptions{})
 	if !strings.Contains(output, "No servers") {
 		t.Error("expected empty message")
 	}
@@ -335,7 +339,7 @@ func TestFormatGPUUsage(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatGPUUsage(tt.gpus, tt.maxGPUs)
+			got := formatGPUUsage(tt.gpus, tt.maxGPUs, styler{})
 			if got != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
@@ -386,7 +390,7 @@ func TestFormatGPUMemory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatGPUMemory(tt.gpus, tt.maxGPUs, tt.subWidth)
+			got := formatGPUMemory(tt.gpus, tt.maxGPUs, tt.subWidth, styler{})
 			if got != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
@@ -444,10 +448,132 @@ func TestFormatUsers(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatUsers(tt.users)
+			got := formatUsers(tt.users, styler{})
 			if got != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, got)
 			}
 		})
+	}
+}
+
+// colorResult has one GPU held by "me" at 0%, one idle, and one used by someone else.
+func colorResult() ScoutResult {
+	return ScoutResult{Servers: []ServerStatus{{
+		Name:   "orca01",
+		Status: "online",
+		Metrics: &ServerMetrics{
+			GPUs: []GPUInfo{
+				{UtilizationPercent: 0, MemoryUsedMB: 30000, MemoryTotalMB: 46000, Users: []string{"me"}},
+				{UtilizationPercent: 0, MemoryUsedMB: 0, MemoryTotalMB: 46000},
+				{UtilizationPercent: 80, MemoryUsedMB: 20000, MemoryTotalMB: 46000, Users: []string{"other"}},
+				{UtilizationPercent: 50, MemoryUsedMB: 10000, MemoryTotalMB: 46000, Users: []string{"me"}},
+			},
+			TopUsers: []UserCPU{{User: "other", CPUPercent: 50}, {User: "me", CPUPercent: 20}},
+		},
+	}}}
+}
+
+// sgrPattern matches SGR sequences independently of visibleLen's scanner.
+var sgrPattern = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+func stripANSI(s string) string { return sgrPattern.ReplaceAllString(s, "") }
+
+func TestFormatTable_ColorKeepsLayout(t *testing.T) {
+	plain := FormatTable(colorResult(), FormatOptions{Me: "me"})
+	colored := FormatTable(colorResult(), FormatOptions{Color: true, Me: "me"})
+	if plain == colored {
+		t.Fatal("expected color codes in colored output")
+	}
+	if strings.Contains(plain, "\x1b") {
+		t.Error("expected no color codes without Color")
+	}
+	if stripANSI(colored) != plain {
+		t.Errorf("colored output without its codes should equal plain output:\n%s\nvs\n%s", stripANSI(colored), plain)
+	}
+}
+
+func TestFormatTable_ColorRoles(t *testing.T) {
+	out := FormatTable(colorResult(), FormatOptions{Color: true, Me: "me"})
+	for _, want := range []string{
+		"\x1b[1;30;47m  0%" + ansiReset, // my GPU at 0%: black on white
+		"\x1b[1;30;47m 50%" + ansiReset, // my busy GPU: black on white
+		"\x1b[1;37m  0%" + ansiReset,    // idle GPU, not mine: white
+		" 80% ",                         // someone else's GPU at 80%: plain
+		"\x1b[1;33m29/45" + ansiReset,   // my GPU's memory, 64% full: yellow, no background
+		"\x1b[1;37m 0/45" + ansiReset,   // idle GPU's memory: white
+		"\x1b[1;37m20/45" + ansiReset,   // someone else's GPU memory, 44% full: white
+		"\x1b[1;37m10/45" + ansiReset,   // my GPU's memory, 22% full: white, no background
+		"\x1b[1;30;47mme(20%)" + ansiReset,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in output:\n%q", want, out)
+		}
+	}
+}
+
+func TestMemColor(t *testing.T) {
+	for _, tt := range []struct {
+		used, total int
+		want        string
+	}{
+		{0, 1000, fgLow}, {499, 1000, fgLow}, {500, 1000, fgHalf}, {899, 1000, fgHalf}, {900, 1000, fgFull}, {1000, 1000, fgFull},
+	} {
+		if got := memColor(tt.used, tt.total); got != tt.want {
+			t.Errorf("memColor(%d, %d) = %q, want %q", tt.used, tt.total, got, tt.want)
+		}
+	}
+}
+
+func TestFormatTable_MemColorUsesMB(t *testing.T) {
+	// 41779 of 46490 MB is 89.9% full: yellow. Rounded to whole GB it prints as
+	// 41/45, which is 91% and would be red.
+	gpu := GPUInfo{UtilizationPercent: 90, MemoryUsedMB: 41779, MemoryTotalMB: 46490}
+	result := ScoutResult{Servers: []ServerStatus{{Name: "orca01", Status: "online", Metrics: &ServerMetrics{GPUs: []GPUInfo{gpu}}}}}
+	out := FormatTable(result, FormatOptions{Color: true})
+	if !strings.Contains(out, "\x1b[1;33m41/45"+ansiReset) {
+		t.Errorf("expected yellow 41/45:\n%q", out)
+	}
+}
+
+func TestFormatTable_MetricsError(t *testing.T) {
+	result := ScoutResult{Servers: []ServerStatus{{Name: "orca02", Status: "online", Error: "metrics parse error: x"}}}
+	lines := strings.Split(FormatTable(result, FormatOptions{}), "\n")
+	if !strings.HasPrefix(lines[2], "orca02  metrics error") {
+		t.Errorf("expected left-aligned note after the name, got %q", lines[2])
+	}
+}
+
+func TestFormatTable_OwnersUnknownMarked(t *testing.T) {
+	gpus := []GPUInfo{{UtilizationPercent: 0, MemoryUsedMB: 0, MemoryTotalMB: 20480}}
+	users := []UserCPU{{User: "alice", CPUPercent: 50}}
+	for name, tc := range map[string]struct {
+		unknown bool
+		top     []UserCPU
+		want    string
+	}{
+		"unknown, with users":    {true, users, "? alice(50%)"},
+		"unknown, without users": {true, nil, "?"},
+		"known":                  {false, users, "alice(50%)"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := &ServerMetrics{GPUs: gpus, TopUsers: tc.top, GPUOwnersUnknown: tc.unknown}
+			row := formatRow(ServerStatus{Name: "orca02", Status: "online", Metrics: m}, 1, 4, styler{})
+			if row[3] != tc.want {
+				t.Errorf("Users cell: expected %q, got %q", tc.want, row[3])
+			}
+		})
+	}
+}
+
+func TestFormatTable_OfflineIsRed(t *testing.T) {
+	result := ScoutResult{Servers: []ServerStatus{
+		{Name: "orca02", Status: "offline", Error: "connection timed out"},
+		{Name: "orca03", Status: "online", Error: "metrics parse error: x"},
+	}}
+	out := FormatTable(result, FormatOptions{Color: true})
+	for _, want := range []string{"\x1b[31moffline" + ansiReset, "\x1b[31mmetrics error" + ansiReset} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected %q in output:\n%q", want, out)
+		}
 	}
 }

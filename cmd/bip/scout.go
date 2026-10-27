@@ -9,7 +9,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var scoutServerFlag string
+var (
+	scoutServerFlag string
+	scoutColorFlag  bool
+)
 
 var scoutCmd = &cobra.Command{
 	Use:   "scout",
@@ -24,6 +27,7 @@ human-readable table (--human).`,
 
 func init() {
 	scoutCmd.Flags().StringVar(&scoutServerFlag, "server", "", "Check a specific server by name")
+	scoutCmd.Flags().BoolVar(&scoutColorFlag, "color", false, "Color the --human table")
 	rootCmd.AddCommand(scoutCmd)
 }
 
@@ -74,7 +78,8 @@ func runScout(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if humanOutput {
-		fmt.Print(scout.FormatTable(result))
+		opts := scout.FormatOptions{Color: scoutColorFlag, Me: sshClient.Username()}
+		fmt.Print(scout.FormatTable(result, opts))
 	} else {
 		if err := outputJSON(result); err != nil {
 			exitWithError(ExitError, "encoding JSON: %v", err)
