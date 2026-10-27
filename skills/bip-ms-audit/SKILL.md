@@ -6,14 +6,11 @@ allowed-tools: Agent, Bash, Read, Glob, Grep, Edit, Write
 
 # /bip-ms-audit
 
-Audit a manuscript against its implementation(s).
-Find places where the **paper claims one thing** and the **code does another** — wrong tensor dimensions, formulas that disagree between paper and code, complexity claims that don't match the algorithm, parameter values out of step with config files, etc.
+Find places where the paper claims one thing and the code does another: tensor dimensions, formulas, complexity claims, parameter values against config files.
+Not a proofreader (`@scientific-tex-editor`), a diff reviewer (`@clean-code-reviewer`), or a PR check (`/bip-pr-review`).
 
-This is **not** a paper proofreader (`@scientific-tex-editor`, `@tex-grammar-checker`), **not** a code reviewer for a diff (`@clean-code-reviewer`), and **not** a PR check (`/bip-pr-review`).
-It is the cross-cutting check that nobody runs because each side feels like someone else's job — yet it's where the worst bugs hide, because each side looks internally consistent.
-
-Run from a **TeX repository** with `.ms-config.json` configured (see `/bip-ms`).
-The skill reads the paper, reads the tracked code repo(s), and reports mismatches.
+Run from a TeX repository with `.ms-config.json` (see `/bip-ms`).
+The output is a report: change the paper or code, or file an issue, only when the user says to.
 
 ## Usage
 
@@ -25,20 +22,6 @@ The skill reads the paper, reads the tracked code repo(s), and reports mismatche
 /bip-ms-audit --no-skeptic          # skip the skeptic confirmation step (faster, less reliable)
 ```
 
-## Core principle
-
-**Trust nothing.
-Read both sides.**
-A surprising mismatch ("the paper says $f^u_b$ but the code uses $f^d_b$") is exactly the kind of finding that is most often either a real bug or a misreading on one side.
-Either outcome is valuable, but never report it without a skeptic agent independently verifying.
-
-The two failure modes are symmetric and both cost the user trust:
-
-- **False positive**: report a "bug" that isn't, sending the user on a wild-goose chase.
-  Avoid by running `@surprising-conclusion-skeptic` before propagating any non-trivial finding.
-- **False negative**: skim the formulas, miss the bug.
-  Avoid by reading the actual implementation file with `Read`, not just grepping for keywords.
-
 ## Workflow
 
 ### Step 1: Load config and identify scope
@@ -47,13 +30,11 @@ The two failure modes are symmetric and both cost the user trust:
 cat .ms-config.json
 ```
 
-Determine:
-- **Paper file**: from `.manuscript` field (e.g., `main.tex`).
-- **Tracked code repos**: from `.tracked_repos[].local_path` — these are the implementations to audit against.
-- **Audit scope**: from the user's argument.
-  Default to the full Methods/Algorithms section of the paper.
+- Paper file: `.manuscript` (e.g., `main.tex`).
+- Code to audit against: `.tracked_repos[].local_path`.
+- Scope: the user's argument; default is the full Methods/Algorithms section.
 
-If `.ms-config.json` is missing, ask the user for the paper path and code repo path(s) and offer to create the config (see `/bip-ms`).
+If `.ms-config.json` is missing, ask for the paper and code paths and offer to create the config (see `/bip-ms`).
 
 ### Step 1b: Provenance check (when `provenance.yaml` sits beside the paper)
 
@@ -62,41 +43,32 @@ bip prov check --human --main <paper-file>
 ```
 
 It runs every mechanical check against git objects of the ledger's repos and exits nonzero on any `error`.
-The audit scope is then only its `error` and `review` findings, not the whole paper: each finding names a tag id, its `file:line` and the entry's `scope`.
+The audit scope is then only its `error` and `review` findings: each names a tag id, its `file:line` and the entry's `scope`.
 Give each subagent the sentence, the entry, and its `scope`, and have it judge whether the sentence says what the source shows for that population and stage.
 `info` findings (`unsourced` entries, unused entries, runs whose producing commit is HEAD at collection, code claims that no longer hold at origin/main) go to the report without a subagent.
-If the check reports nothing at `error` or `review`, there is nothing to audit; skip to the report.
+If nothing is at `error` or `review`, skip to the report.
 
-The check cannot see a change in a neighbouring sentence that alters a number's meaning, a flag overridden elsewhere (`params/*.yml` over `nextflow.config`), or a superseded result file still present.
-A periodic full audit, run without the check's scope limit, covers those.
+The check cannot see a neighbouring-sentence change that alters a number's meaning, a flag overridden elsewhere (`params/*.yml` over `nextflow.config`), or a superseded result file still present.
+A periodic full audit without the scope limit covers those.
 
 ### Step 2: Partition the scope and fan out
 
-The primary partitions the audit scope into independent chunks, then dispatches one `general-purpose` subagent per chunk **in parallel** — single message, multiple `Agent` tool calls.
-Follow the dispatch pattern in `SUBAGENT-SCAN.md` (bipartite repo root).
+Partition the scope and dispatch one `general-purpose` subagent per chunk in parallel (one message, several `Agent` calls), following `SUBAGENT-SCAN.md` (bipartite repo root).
 
-Partitioning rules:
-- **Whole paper** (default): one subagent per top-level Methods / Algorithms section.
-- **One section** (`/bip-ms-audit Methods`): one subagent per subsection, or per claim cluster (formula + its surrounding text) if subsections are missing.
-- **One formula or label** (`/bip-ms-audit --formula eq:loss`): one subagent.
+- Whole paper: one subagent per top-level Methods / Algorithms section.
+- One section: one per subsection, or per claim cluster (formula plus its text) if there are no subsections.
+- One formula or label: one subagent.
 
-Brief for each audit subagent (the **line-by-line investigation** framing is mandatory — this is what separates an audit from a skim):
+Brief for each subagent:
 
 > **Line-by-line investigation** of paper section `<section>` against tracked code repo(s) `<local_path(s)>`.
 > This is not a scan.
-> For every checkable claim in scope, you must read the implementation file in full with the `Read` tool — not a grep excerpt — and cite the specific paper line and code line that back your verdict.
+> For every checkable claim in scope, read the implementation file in full with `Read` — not a grep excerpt — and cite the paper line and code line behind your verdict.
 > A verdict without a `file:line` citation on both sides will be rejected and re-dispatched.
 >
-> Tasks:
-> 1. Read the paper section with `Read`.
->    List every checkable, falsifiable claim: tensor/array dimensions, formulas (`align`/`equation`/display math), algorithm steps, hyperparameter values, counts/complexity, variable bindings, loss/metric definitions, data pipeline steps, theorem statements.
->    Skip subjective claims ("our results suggest…").
->    Record paper `file:line` for each.
-> 2. For each claim, locate the code-side counterpart.
->    Use `rg` to find files, but then `Read` the file.
->    Common keyword maps: tensor dims → `torch.zeros`/`np.zeros`/`torch.full`; formulas → `forward`/`loss`/aggregation; hyperparameters → `config.yaml`/`Snakefile`/CLI defaults; loss/mask → training loop; data filtering → preprocessing pipeline/snakemake rules.
->    If a claim has multiple implementations (e.g., vectorized batch path + tree-iteration reference path), check **both** — that's a frequent source of divergence.
-> 3. For each claim, classify with a verdict:
+> 1. Read the paper section. List every falsifiable claim with its `file:line`: dimensions, formulas, algorithm steps, hyperparameter values, counts/complexity, variable bindings, loss/metric definitions, data pipeline steps, theorem statements. Skip subjective claims ("our results suggest…").
+> 2. Locate each claim's code counterpart: `rg` to find the file, then `Read` it. Common keyword maps: tensor dims → `torch.zeros`/`np.zeros`/`torch.full`; formulas → `forward`/`loss`/aggregation; hyperparameters → `config.yaml`/`Snakefile`/CLI defaults; loss/mask → training loop; data filtering → preprocessing pipeline/snakemake rules. If a claim has several implementations (e.g., a vectorized batch path and a tree-iteration reference path), check each; they often diverge from each other.
+> 3. Give each claim a verdict:
 >    - `MATCH` — paper and code agree
 >    - `MISMATCH` — disagree on a substantive, falsifiable point
 >    - `AMBIGUOUS` — paper is unclear/underspecified; code makes a specific choice
@@ -104,56 +76,37 @@ Brief for each audit subagent (the **line-by-line investigation** framing is man
 >    - `STALE PAPER` — paper describes an earlier code version
 >    - `STALE CODE` — paper describes a fix code hasn't picked up
 >
-> **MATCH is the default.**
-> Most claims are correct.
-> If your report is mostly `MISMATCH`, you are misreading the code — stop and re-check the worst offenders before returning.
+> `MATCH` is the default. If your report is mostly `MISMATCH`, you are misreading the code; re-check the worst before returning.
+> Also check that a symbol means the same thing on both sides, not only that each side is plausible.
 >
-> Return under 500 words, structured:
-> - `findings`: one entry per non-`MATCH` claim with:
->   - paper quote + `file:line`
->   - code quote + `file:line` (use Read, not grep excerpts)
->   - verdict
->   - one-sentence rationale (why they disagree)
-> - `matches`: count of `MATCH` verdicts (no quotes needed)
-> - `surprises`: claims you couldn't certify a `file:line` for, variable names that mean different things in different places, `RECOMMEND DEEPER LOOK` flags
+> Return under 500 words:
+> - `findings`: per non-`MATCH` claim, paper quote + `file:line`, code quote + `file:line`, verdict, one-sentence rationale
+> - `matches`: count of `MATCH` verdicts
+> - `surprises`: claims you couldn't cite a `file:line` for, names that mean different things in different places, `RECOMMEND DEEPER LOOK` flags
 
-If a subagent returns a finding without both `file:line` citations, re-dispatch with a narrower brief covering just that finding.
+Re-dispatch any finding missing either citation with a brief narrowed to that finding.
 
 ### Step 3: Primary consolidates findings
 
-The primary collects all subagent reports and assembles a single working list of non-`MATCH` findings, sorted by verdict severity (`MULTIPLE IMPLS DISAGREE` and `MISMATCH` first).
-No prose pasted verbatim from subagents — quote only the paper and code line excerpts they cited.
+Merge the non-`MATCH` findings into one list, `MULTIPLE IMPLS DISAGREE` and `MISMATCH` first.
+Quote only the paper and code excerpts the subagents cited.
+If a subagent reports many findings (say >5 in a 10-claim section), re-dispatch it with the instruction to read the full implementation file before classifying each claim.
 
-If any subagent's report has many findings (say >5 in a 10-claim section), treat that as the "everything looks like a mismatch" failure mode and re-dispatch the subagent with explicit instruction to verify each claim by reading the full implementation file before classifying.
+### Step 4: Skeptic confirmation
 
-### Step 4: Skeptic confirmation for non-trivial findings
+Unless the user passed `--no-skeptic`, spawn `@surprising-conclusion-skeptic` on every non-`MATCH` finding to try to refute it.
+Give it the paper claim with line number, the code `file:line`, the mismatch, and the simpler explanations to rule out:
+- "Maybe I misread the paper."
+- "Maybe I misread the code."
+- "Maybe the two code paths are actually equivalent because of [specific construction]."
+- "Maybe one of them is dead code."
+- "Maybe the variable names mean something different in this context than I think."
 
-For any finding that is **not** a `MATCH`, spawn `@surprising-conclusion-skeptic` to independently verify before reporting it.
-Skip this step only if the user passed `--no-skeptic`.
-
-Brief the skeptic with:
-- The exact paper claim (with line number)
-- The exact code location (file:line)
-- The mismatch you believe you found
-- An explicit list of simpler explanations you want them to rule out:
-  - "Maybe I misread the paper."
-  - "Maybe I misread the code."
-  - "Maybe the two code paths are actually equivalent because of [specific construction]."
-  - "Maybe one of them is dead code."
-  - "Maybe the variable names mean something different in this context than I think."
-
-The skeptic's job is to **try to refute** the finding.
-If they confirm it survives scrutiny, escalate it.
-If they refute it, drop it from the report.
-If they say "partially," report with the qualification.
-
-This step is the difference between a useful audit and one that cries wolf.
-Do not skip it.
+Confirmed: report it. Refuted: drop it. Partial: report it with the qualification.
 
 ### Step 5: Write the report
 
-Produce a markdown report in the manuscript repo as `MS-AUDIT-<ISO-date>.md`.
-Format:
+Write `MS-AUDIT-<ISO-date>.md` in the manuscript repo, grouped by verdict with `MULTIPLE IMPLS DISAGREE` and `MISMATCH` first:
 
 ```markdown
 # Manuscript audit — <paper title> — <ISO date>
@@ -195,71 +148,9 @@ Allocates `max_n_nodes` ≈ 2n-2 entries, indexed by every non-root node — pap
 ...
 ```
 
-For each finding include: paper quote + line, code quote + line, skeptic verdict, suggested action.
-Group by verdict, with `MULTIPLE IMPLS DISAGREE` and `MISMATCH` first.
-
 ### Step 6: Hand off
 
-Show the report path.
-Offer:
-1. Open the report (`zed <path>` or `tmux display-popup -E -- less <path>`).
-2. For each `MISMATCH` finding, ask whether to draft a paper edit, file a code issue (via `/bip-issue-check` → `/bip-issue-file`), or both.
-3. Do not auto-edit the paper or auto-file issues.
-   The user decides.
-4. With a `provenance.yaml`, once every finding is resolved, set its `audited_through` to the paper commit the audit read and commit it; the next check then marks only sentences changed since.
-
-## Guidelines
-
-- **Read the actual files.**
-  Every reported finding must have a `Read` (not just a `grep`) backing it on both sides.
-- **Default to MATCH.**
-  Most claims are correct.
-  A report with 30 mismatches in a 40-claim audit is almost certainly the auditor misreading.
-- **Always run the skeptic on non-MATCH findings** unless the user explicitly waives it.
-  Surprising bug reports cost user trust when wrong; the skeptic round trip is cheap insurance.
-- **Cite both sides with line numbers.**
-  Future-you (or the authors) need to be able to jump straight to both the paper line and the code line.
-  `main.tex:296` and `dpvt/wrapper.py:228` — never just "around line 200ish."
-- **Don't fix anything.**
-  This skill produces a report.
-  Edits to the paper and changes to the code happen in separate, explicit steps.
-- **Two implementations of the same thing are a high-yield search target.**
-  When a repo has both a vectorized batch path and a tree-iteration reference path of the same algorithm, they are an excellent place to find bugs even when neither side disagrees with the paper individually.
-- **Hyperparameter drift is real.**
-  Paper says lr=$5 \times 10^{-5}$; config says lr=$1 \times 10^{-4}$ because someone tuned and forgot to update the paper.
-  Cheap to check, often wrong.
-- **Beware notation that seems internally consistent.**
-  A formula using $v$ for a node and $v$ for a function is a warning sign; check that the paper's $v$ in storage matches the code's `v` in storage and not just both being plausible.
-
-## When to use this vs siblings
-
-| Need | Skill |
-|---|---|
-| Cold-start a manuscript session | `/bip-ms` |
-| Persist manuscript session state | `/bip-ms-tuckin` |
-| Repo-wide code-health weather check | `/bip-decay-audit` |
-| Per-PR review against guidelines | `/bip-pr-review` |
-| Fact-check a reviewer's comment against code | `/bip-comment-check` |
-| **Cross-check paper claims against code** | **this skill** |
-
-## Why this shape
-
-- **Reads paper as source of truth for *intent*, code as source of truth for *behavior*.**
-  Either can be wrong; the audit's job is to surface the gap.
-- **Skeptic step is non-optional by default.**
-  Without it the skill is a false-positive machine; with it the skill earns its place.
-  The skeptic exists precisely for "the paper says X but the code says Y" claims, and this skill is its highest-yield caller.
-- **Output is a markdown report, not auto-applied edits.**
-  A bad finding propagated as a paper edit is much more expensive than the same finding in a markdown report.
-  The user reads, decides, and dispatches.
-- **No state directory.**
-  Unlike `/bip-decay-audit`, this skill keeps no baseline of its own; the only state is a ledger's `audited_through`, committed in the paper repo.
-  Re-run as needed; the report is the artifact.
-
-## References
-
-- Sibling skills: `/bip-ms`, `/bip-ms-tuckin`, `/bip-decay-audit`, `/bip-comment-check`, `/bip-pr-review`.
-- Subagents used: `@surprising-conclusion-skeptic` (mandatory for non-MATCH findings).
-- Optional subagents: `@scientific-tex-editor` for follow-up paper edits; `@clean-code-reviewer` for follow-up code review on the code-side of a mismatch.
-- Precipitating case: `dpvt` audit 2026-05-06 — paper said tensor was `(n-3) × N × 4` but code allocated `(2n-2, N, 4)`; vectorized RNN path used both downward features for the downward pass while paper and tree-based path used downward+upward.
-  Both bugs sat in `main.tex` and `models.py` for months because no one read them in parallel.
+Show the report path, then:
+1. Offer to open it (`zed <path>` or `tmux display-popup -E -- less <path>`).
+2. For each `MISMATCH`, ask whether to draft a paper edit, file a code issue (`/bip-issue-check` → `/bip-issue-file`), or both.
+3. With a `provenance.yaml`, once every finding is resolved, set its `audited_through` to the paper commit the audit read and commit it; the next check then marks only sentences changed since.
