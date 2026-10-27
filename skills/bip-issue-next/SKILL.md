@@ -111,7 +111,7 @@ No "fast", "scalable", "robust" without numbers.
 
 **Apply prose discipline.**
 Read `PROSE-DISCIPLINE.md` at the bipartite repo root before drafting and apply its rules. Apply `EVIDENCE-DISCIPLINE.md` to every number the draft cites.
-Defaults toward shorter: open with a plain-language **Goal.**, then lead with the deliverable, state each fact once, bullets for enumerations, show the change site (not its surroundings), drop non-contested options, list bug-catching tests (not invariants).
+Defaults toward shorter: open with **Background.**, **Goal.** and **Design.**, state each fact once, bullets for enumerations, show the change site (not its surroundings), drop non-contested options, list bug-catching tests (not invariants).
 
 **No hard-wrapping.**
 Write each paragraph as a single long line.

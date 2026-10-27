@@ -128,7 +128,7 @@ If the body looks like historical commit noise, revision-history accumulation, o
 2. Draft a clean replacement body in this format:
    ```
    [An experiment PR first: **Result.** in plain language, as one line
-   (PROSE-DISCIPLINE.md, "Open with a plain-language paragraph")]
+   (PROSE-DISCIPLINE.md, "Open a PR with what it delivers")]
 
    ## Summary
    [1-2 sentences of context: the problem or question this addresses, for
