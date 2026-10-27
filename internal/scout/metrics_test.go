@@ -1,6 +1,7 @@
 package scout
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -157,6 +158,9 @@ func TestParseMetrics_WithGPU(t *testing.T) {
 	}
 	if got := strings.Join(metrics.GPUs[1].Users, ","); got != "alice,charlie" {
 		t.Errorf("GPU1 users: expected alice,charlie, got %s", got)
+	}
+	if metrics.GPUOwnersUnknown {
+		t.Error("expected owners known")
 	}
 	if len(metrics.TopUsers) != 1 {
 		t.Fatalf("expected 1 top user, got %d", len(metrics.TopUsers))
@@ -547,7 +551,39 @@ func TestParseMetrics_GPUOwnersFallback(t *testing.T) {
 					t.Errorf("GPU%d: expected no owners, got %v", i, g.Users)
 				}
 			}
+			if !metrics.GPUOwnersUnknown {
+				t.Error("expected owners marked unknown when the listing does not parse")
+			}
 		})
+	}
+}
+
+func TestParseMetrics_GPUsWithNoProcesses(t *testing.T) {
+	// The common case: the owner listing parses but no process runs on any GPU.
+	// That must read as "no owners", not "owners unknown".
+	metrics, err := ParseMetrics(gpuOutput("GPU-a\nGPU-b\n"+gpuAppsMarker+"\n"), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(metrics.GPUs) != 2 {
+		t.Fatalf("expected 2 GPUs, got %d", len(metrics.GPUs))
+	}
+	for i, g := range metrics.GPUs {
+		if g.Users != nil {
+			t.Errorf("GPU%d: expected no owners, got %v", i, g.Users)
+		}
+	}
+	if metrics.GPUOwnersUnknown {
+		t.Error("expected owners known when the listing parses with no processes")
+	}
+	raw, err := json.Marshal(metrics)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"users"`, `"gpu_owners_unknown"`} {
+		if strings.Contains(string(raw), key) {
+			t.Errorf("expected no %s in JSON, got %s", key, raw)
+		}
 	}
 }
 

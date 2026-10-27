@@ -99,6 +99,8 @@ Common question types:
 | "Which servers are idle?" | Find servers with CPU < 20% and memory < 50% |
 | "Who is using server X?" | Report top_users with their CPU percentages (100% = one core), and each GPU's `users` |
 
+A GPU with no `users` is free only if the server's `metrics` has no `gpu_owners_unknown: true`. That flag means the owner listing failed, so every GPU on that server shows no users whether or not it is in use.
+
 **Formatting guidelines:**
 - Use a markdown table for multi-server summaries
 - Convert GPU memory from MB to GB for readability (divide by 1024)

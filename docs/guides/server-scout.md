@@ -6,7 +6,7 @@ Check remote server CPU, memory, load, and GPU availability via SSH.
 
 ```bash
 bip scout --human          # Human-readable table
-bip scout --human --color  # ...colored (terminal only)
+bip scout --human --color  # ...colored
 bip scout                  # JSON output (default)
 bip scout --server orca42  # Check single server
 ```
@@ -87,8 +87,10 @@ beetle02  offline
 - GPU columns right-aligned, one sub-column per GPU
 - Users (%CPU): top CPU users, where 100% is one fully busy core (the CPU column
   is a share of the whole machine)
+- A `?` at the start of Users means the GPU owners could not be read on that
+  server, so its GPUs have no owner highlight even where they are in use
 
-With `--color`, and stdout a terminal, the table is colored (`alias scout='bip scout --human --color'` makes that the habit):
+With `--color` the table is colored (`alias scout='bip scout --human --color'` makes that the habit; `bip scout --human --color | less -R` keeps the colors in a pager):
 
 | | under 50% | 50–90% | 90% and up |
 |---|---|---|---|
@@ -130,6 +132,8 @@ the util % column, as does your name in Users (%CPU). `offline` and
 }
 ```
 
+A server whose GPU numbers parsed but whose GPU owner listing did not has `"gpu_owners_unknown": true` in `metrics`. Its GPUs then have no `users` whether or not they are in use, so don't read them as free.
+
 ## Claude Code Skill
 
 Use `/bip-scout` for interactive server queries:
@@ -154,7 +158,7 @@ The skill runs `bip scout`, parses the JSON, and answers questions by reasoning 
 
 ## How It Works
 
-Scout connects to up to 10 servers at once and runs:
+Scout connects to up to 5 servers at once and runs:
 
 ```bash
 # Per-user CPU and overall CPU (one shared 0.5s sample). The remote command only

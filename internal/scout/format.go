@@ -9,7 +9,7 @@ import (
 
 // FormatOptions controls the human-readable table.
 type FormatOptions struct {
-	Color bool   // add ANSI colors (callers set it only for a terminal)
+	Color bool   // add ANSI colors
 	Me    string // SSH login name; its GPUs and Users entry are highlighted
 }
 
@@ -203,10 +203,19 @@ func formatRow(s ServerStatus, maxGPUs int, memSubWidth int, st styler) []string
 		gpuMemory = formatGPUMemory(m.GPUs, maxGPUs, memSubWidth, st)
 	}
 
-	return []string{s.Name, gpuUsage, gpuMemory, formatUsers(m.TopUsers, st), cpu, mem}
+	users := formatUsers(m.TopUsers, st)
+	if m.GPUOwnersUnknown {
+		users = strings.TrimSuffix(st.paint(ownersUnknownMark, fgFull)+" "+users, " ")
+	}
+
+	return []string{s.Name, gpuUsage, gpuMemory, users, cpu, mem}
 }
 
 const gpuUtilSubWidth = 4 // enough for "100%"
+
+// ownersUnknownMark starts the Users cell of a server whose GPU owners could not
+// be read, so its unhighlighted GPUs are not taken as free.
+const ownersUnknownMark = "?"
 
 // formatGPUUsage formats per-GPU utilization as fixed-width sub-columns.
 // Each slot is right-aligned to gpuUtilSubWidth chars, separated by spaces.

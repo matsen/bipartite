@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/matsen/bipartite/internal/config"
@@ -28,14 +27,8 @@ human-readable table (--human).`,
 
 func init() {
 	scoutCmd.Flags().StringVar(&scoutServerFlag, "server", "", "Check a specific server by name")
-	scoutCmd.Flags().BoolVar(&scoutColorFlag, "color", false, "Color the --human table (only when stdout is a terminal)")
+	scoutCmd.Flags().BoolVar(&scoutColorFlag, "color", false, "Color the --human table")
 	rootCmd.AddCommand(scoutCmd)
-}
-
-// stdoutIsTerminal reports whether stdout is a character device.
-func stdoutIsTerminal() bool {
-	fi, err := os.Stdout.Stat()
-	return err == nil && fi.Mode()&os.ModeCharDevice != 0
 }
 
 func runScout(cmd *cobra.Command, args []string) error {
@@ -85,7 +78,7 @@ func runScout(cmd *cobra.Command, args []string) error {
 
 	// Output result
 	if humanOutput {
-		opts := scout.FormatOptions{Color: scoutColorFlag && stdoutIsTerminal(), Me: sshClient.Username()}
+		opts := scout.FormatOptions{Color: scoutColorFlag, Me: sshClient.Username()}
 		fmt.Print(scout.FormatTable(result, opts))
 	} else {
 		if err := outputJSON(result); err != nil {

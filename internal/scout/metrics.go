@@ -12,9 +12,11 @@ import (
 const delimiter = "___SCOUT_DELIM___"
 
 // maxConcurrent is the bounded semaphore size for parallel server checks. With a
-// ProxyJump every check opens a connection to the one proxy host, whose sshd
-// starts dropping unauthenticated connections past MaxStartups (default 10).
-const maxConcurrent = 10
+// ProxyJump every check opens a connection to the one proxy host. sshd's default
+// MaxStartups (10:30:100) starts dropping unauthenticated connections at 10, and
+// CheckServer reports any SSH error, a dropped connection included, as offline,
+// so staying well under 10 avoids false outages.
+const maxConcurrent = 5
 
 // procSampleSeconds is the gap between the two /proc snapshots. It must match the
 // `sleep` in procSampleCmd (both derive from it).
@@ -214,11 +216,14 @@ func ParseMetrics(output string, hasGPU bool) (*ServerMetrics, error) {
 				MemoryTotalMB:      gpuMems[i][1],
 			}
 		}
-		// Owners are a nicety: if the listing doesn't parse, keep the GPU numbers.
+		// If the owner listing doesn't parse, keep the GPU numbers but mark the
+		// owners unknown, so missing users are not read as idle GPUs.
 		if users, err := parseGPUApps(sections[sectionGPUApps]); err == nil && len(users) == len(gpus) {
 			for i := range gpus {
 				gpus[i].Users = users[i]
 			}
+		} else {
+			metrics.GPUOwnersUnknown = true
 		}
 		metrics.GPUs = gpus
 	}

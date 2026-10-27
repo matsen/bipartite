@@ -543,6 +543,28 @@ func TestFormatTable_MetricsError(t *testing.T) {
 	}
 }
 
+func TestFormatTable_OwnersUnknownMarked(t *testing.T) {
+	gpus := []GPUInfo{{UtilizationPercent: 0, MemoryUsedMB: 0, MemoryTotalMB: 20480}}
+	users := []UserCPU{{User: "alice", CPUPercent: 50}}
+	for name, tc := range map[string]struct {
+		unknown bool
+		top     []UserCPU
+		want    string
+	}{
+		"unknown, with users":    {true, users, "? alice(50%)"},
+		"unknown, without users": {true, nil, "?"},
+		"known":                  {false, users, "alice(50%)"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := &ServerMetrics{GPUs: gpus, TopUsers: tc.top, GPUOwnersUnknown: tc.unknown}
+			row := formatRow(ServerStatus{Name: "orca02", Status: "online", Metrics: m}, 1, 4, styler{})
+			if row[3] != tc.want {
+				t.Errorf("Users cell: expected %q, got %q", tc.want, row[3])
+			}
+		})
+	}
+}
+
 func TestFormatTable_OfflineIsRed(t *testing.T) {
 	result := ScoutResult{Servers: []ServerStatus{
 		{Name: "orca02", Status: "offline", Error: "connection timed out"},
