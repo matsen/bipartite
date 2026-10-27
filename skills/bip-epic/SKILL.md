@@ -281,7 +281,7 @@ For any check that gates something destructive or outward-facing:
 - Verify the mutation, not the command: grep for the new text; after a commit, `git diff <base> HEAD -- <file>` shows exactly what you intended.
 - A guard that behaves the same when its query target is unavailable as when all is fine is not a guard.
 
-**Size limits.** GitHub rejects a body over 2^18 = 262,144 bytes (`GraphQL: Body is too long`; its error text misstates the limit). Past 64 KB a body stops being re-read whole, so give it an archive pass between findings, not mid-edit.
+**Size limits.** GitHub rejects a body over 2^18 = 262,144 bytes (`GraphQL: Body is too long`; its error text misstates the limit). That cap is for the body; comments of 131,076 characters have been accepted and 264,058 rejected, so size an archive comment against those. Past 64 KB a body stops being re-read whole, so give it an archive pass between findings, not mid-edit.
 - Move completed items, superseded findings and Decisions history (`FINAL` quotes verbatim) to the archive comment, leaving a pointer where each was, since peers cite body text. Keep live gates, open items and current Decisions.
 - Never move `Owner:`, or a live landing exception or NEGATIVE that an in-flight brief cites.
 - Past ~250 KB, every addition needs a cut in the same edit; cut expired caveats and prose figures that have a live command first.
