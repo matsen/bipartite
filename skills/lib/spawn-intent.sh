@@ -525,8 +525,7 @@ PY
 # file was deleted is also correctly skipped -- it is on `main` and clean, with
 # nothing at risk.
 #
-# `rev-parse`, never `test -d .git`: in a WORKTREE `.git` is a FILE, and that
-# exact false negative is recorded in `skills/bip-epic/SKILL.md`.
+# `rev-parse`, never `test -d .git`: in a WORKTREE `.git` is a FILE.
 audit_durability() {
     local clone_root="$1" cfg="${2:-.epic-config.json}" rc=0 d c b ahead dirty up gd names
     clone_root_has_clones "$clone_root" || return 0

@@ -252,9 +252,6 @@ for d in "$ROOT"/*/; do
   # `$d/.git/<rebase-dir>` does not resolve and `[ -d "$d/.git" ]` is FALSE.
   # Both of the weird-state paths below would then silently skip a worktree --
   # reinstating, in a supported mode, the exact gap they exist to close.
-  # `skills/bip-epic/SKILL.md` already records this trap ("in a worktree
-  # `.git` is a file, not a directory"), where it produced a correct verdict
-  # on a false premise and nearly authorised deleting two branches.
   # `--absolute-git-dir` is the one form that works in both layouts.
   gd=$(git -C "$d" rev-parse --absolute-git-dir 2>/dev/null)
   if [ -z "$b" ] && [ -n "$gd" ]; then
