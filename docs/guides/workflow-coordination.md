@@ -1,6 +1,6 @@
 # Workflow Coordination
 
-Bipartite provides visibility across your team's GitHub repositories, Slack channels, and project boards — without checking each one individually.
+Bipartite provides visibility across your team's GitHub repositories and Slack channels — without checking each one individually.
 
 ## Check-ins
 
@@ -38,31 +38,6 @@ bip digest --repos org/a,org/b --channel x  # Override repos to scan
 
 Channels are defined in `sources.yml` via the `"channel"` field on repos. The digest organizes work by research theme rather than by repository.
 
-### Narrative Digests
-
-For prose-style summaries organized by research themes, use the Claude Code skill:
-
-```
-/bip-narrative dasm2
-/bip-narrative dasm2 --since 2w --verbose
-```
-
-Output goes to `narrative/{channel}/{YYYY-MM-DD}.md`.
-
-## Project Boards
-
-Sync with GitHub project boards:
-
-```bash
-bip board list                    # View board items by status
-bip board add org/repo#123        # Add issue to board
-bip board move org/repo#123 Done  # Move to different status
-bip board remove org/repo#123     # Remove from board
-bip board refresh-cache           # Refresh cached board metadata
-```
-
-Boards are configured in `sources.yml` under the `"boards"` key. Use `--board owner/number` to target a specific board if you have multiple.
-
 ## Spawning Sessions
 
 Launch a Claude Code session with issue context pre-loaded:
@@ -98,26 +73,12 @@ bip slack ingest fortnight-goals --store goals --create-store  # Create store if
 
 Requires a Slack bot token with `channels:history`, `channels:read`, and `users:read` scopes — sourced from `BIP_SLACK_TOKEN` (recommended) or `SLACK_BOT_TOKEN`, falling back to `slack_bot_token` in `~/.config/bip/config.yml`.
 
-## Claude Code Skills
-
-| Skill | Description |
-|-------|-------------|
-| `/bip-checkin` | Interactive activity check-in |
-| `/bip-narrative <channel>` | Generate themed prose digest |
-| `/bip-digest` | Generate and post Slack digest |
-| `/bip-board` | Project board operations |
-
-`make install` symlinks the skills into `~/.claude/skills/` ([Getting Started](getting-started.md)).
-
 ## Configuration
 
 Coordination commands read from files in your nexus repo:
 
-- `sources.yml` — Repository list, channel mappings, and board config
+- `sources.yml` — Repository list and channel mappings
 - `config.yml` — Local path configuration
-- `context/` — Project context files for narrative generation
-- `narrative/preferences.md` — Shared formatting rules for narrative digests
-- `narrative/{channel}.md` — Per-channel themes and repo context
 
 ### Environment Variables
 
@@ -134,4 +95,4 @@ If neither is set, `slack_bot_token` from `~/.config/bip/config.yml` is used.
 
 **Bernadetta**, the PI, pulls the changes and runs `bip rebuild`. Her agent scans the additions against her manuscripts and adds relevant papers to the references.
 
-**Friday afternoon**, an agent runs `/bip-narrative` to generate a themed digest of the week's work across all repos. Bernadetta reviews it and posts to Slack with `bip digest --post`.
+**Friday afternoon**, `bip digest --channel dasm2` previews a digest of the week's work across the channel's repos. Bernadetta reviews it and posts it to Slack with `--post`.

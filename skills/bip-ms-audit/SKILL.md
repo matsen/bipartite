@@ -236,7 +236,6 @@ Offer:
 | Need | Skill |
 |---|---|
 | Cold-start a manuscript session | `/bip-ms` |
-| Mid-session check for new results | `/bip-ms-poll` |
 | Persist manuscript session state | `/bip-ms-tuckin` |
 | Repo-wide code-health weather check | `/bip-decay-audit` |
 | Per-PR review against guidelines | `/bip-pr-review` |
@@ -259,7 +258,7 @@ Offer:
 
 ## References
 
-- Sibling skills: `/bip-ms`, `/bip-ms-poll`, `/bip-ms-tuckin`, `/bip-decay-audit`, `/bip-comment-check`, `/bip-pr-review`.
+- Sibling skills: `/bip-ms`, `/bip-ms-tuckin`, `/bip-decay-audit`, `/bip-comment-check`, `/bip-pr-review`.
 - Subagents used: `@surprising-conclusion-skeptic` (mandatory for non-MATCH findings).
 - Optional subagents: `@scientific-tex-editor` for follow-up paper edits; `@clean-code-reviewer` for follow-up code review on the code-side of a mismatch.
 - Precipitating case: `dpvt` audit 2026-05-06 — paper said tensor was `(n-3) × N × 4` but code allocated `(2n-2, N, 4)`; vectorized RNN path used both downward features for the downward pass while paper and tree-based path used downward+upward.

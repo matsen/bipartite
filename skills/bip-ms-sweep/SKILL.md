@@ -247,7 +247,6 @@ Re-dispatch any scan whose output is empty or shorter than 50 words — that's t
 | Need | Skill |
 |---|---|
 | Cold-start a manuscript session (monitor EPICs and code repos) | `/bip-ms` |
-| Mid-session check for new experiment results | `/bip-ms-poll` |
 | Persist manuscript session state | `/bip-ms-tuckin` |
 | Cross-check paper claims against the code that ran the experiments | `/bip-ms-audit` |
 | **Pre-share / pre-submission polish sweep of the paper itself** | **this skill** |
@@ -276,7 +275,7 @@ Re-dispatch any scan whose output is empty or shorter than 50 words — that's t
 
 ## References
 
-- Sibling skills: `/bip-ms`, `/bip-ms-poll`, `/bip-ms-tuckin`, `/bip-ms-audit`, `/bip-comment-check`, `/bip-pr-review`.
+- Sibling skills: `/bip-ms`, `/bip-ms-tuckin`, `/bip-ms-audit`, `/bip-comment-check`, `/bip-pr-review`.
 - Subagents used: `@scientific-tex-editor`, `@journal-submission-checker`, `general-purpose`, `Explore`.
   None mandatory.
 - Subagent dispatch pattern: `SUBAGENT-SCAN.md` (bipartite repo root).

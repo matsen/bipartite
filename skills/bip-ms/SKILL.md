@@ -11,7 +11,6 @@ The manuscript is the **source of truth** about the project: one should be able 
 The session is the project's resource for answering questions and guiding the work, from everything the project and the field know; writing the paper follows from that perspective, not the reverse.
 
 Use this at **session start** to establish context.
-For mid-session updates, use `/bip-ms-poll`.
 
 ## Conventions
 

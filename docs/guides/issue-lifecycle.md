@@ -14,8 +14,6 @@ flowchart LR
 ## 1. Draft
 
 - `/bip-issue-next` drafts `ISSUE-<slug>.md` in the repo root from a PR's follow-ups, a focus file, or the current conversation, then hands it to `/bip-issue-check`.
-- `/bip-issue-iterate` works through a draft paragraph by paragraph with you over many rounds, for one that needs to get smaller and more correct first.
-- `/bip-remove-metaspeak` cuts reasoning-out-loud residue from a draft that has been through several rounds.
 
 `ISSUE-*.md` files are drafts and are never committed.
 

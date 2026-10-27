@@ -21,8 +21,7 @@ my-nexus/
 ├── servers.yml               # Remote servers for bip scout
 ├── sources.yml               # GitHub repos for activity tracking
 │
-├── context/                  # Project context files
-└── narrative/                # Generated digest output
+└── context/                  # Project context files
 ```
 
 **Key principle:** JSONL files are the source of truth. The `.bipartite/cache/` directory is ephemeral and rebuilt via `bip rebuild`.
@@ -58,11 +57,7 @@ Skills are prompt templates that invoke `bip` commands with appropriate context.
 ```
 ~/.claude/skills/
 ├── bip-lit/                  # /bip-lit - Search, add papers, library guidance
-├── bip-checkin/              # /bip-checkin - GitHub activity check
-├── bip-digest/               # /bip-digest - Activity digests
-├── bip-board/                # /bip-board - Project boards
-├── bip-scout/                # /bip-scout - Server availability
-└── bip-narrative/            # /bip-narrative - Prose digests
+└── bip-scout/                # /bip-scout - Server availability
 ```
 
 Skills are symlinked from the bipartite repo:
@@ -77,8 +72,6 @@ ln -s ~/re/bipartite/skills/* ~/.claude/skills/
 |------|-----|-------|
 | Paper search | `bip search "topic"` | `/bip` (local-first policy) |
 | Add a paper | `bip s2 add DOI:...` | `/bip` (guides S2 vs ASTA) |
-| Daily check-in | `bip checkin` | `/bip-checkin` (adds context) |
-| Generate digest | `bip digest --channel x` | `/bip-digest` (interactive) |
 | Spawn issue session | `bip spawn org/repo#123` | — |
 
 Skills add value when context matters — they read project files, understand your workflow, and guide the interaction.

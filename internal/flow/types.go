@@ -1,5 +1,5 @@
 // Package flow provides functionality for GitHub activity management.
-// It implements the flowc commands (checkin, board, spawn, digest)
+// It implements the flowc commands (checkin, spawn, digest)
 // as part of the bip CLI.
 package flow
 
@@ -12,7 +12,6 @@ import (
 // Sources represents the sources.yml configuration file.
 type Sources struct {
 	Slack   SlackConfig       `yaml:"slack"`   // Slack channel configuration
-	Boards  map[string]string `yaml:"boards"`  // "channel" -> "owner/N" board key
 	Context map[string]string `yaml:"context"` // repo -> context file path
 	Code    []RepoEntry       `yaml:"code"`
 	Writing []RepoEntry       `yaml:"writing"`
@@ -88,21 +87,6 @@ type GitHubComment struct {
 	IssueURL  string     `json:"issue_url,omitempty"`
 	PRURL     string     `json:"pull_request_url,omitempty"`
 	HTMLURL   string     `json:"html_url"`
-}
-
-// BoardItem represents an item on a GitHub project board.
-type BoardItem struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Status  string `json:"status"`
-	Content BoardContent
-}
-
-// BoardContent represents the content of a board item.
-type BoardContent struct {
-	Type       string `json:"type"` // "Issue" or "PullRequest"
-	Repository string `json:"repository"`
-	Number     int    `json:"number"`
 }
 
 // ItemDetails contains detailed information about an issue or PR.

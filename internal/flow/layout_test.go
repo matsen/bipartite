@@ -95,7 +95,7 @@ func TestResolveRepoPath_WritingTakesPrecedenceOverCode(t *testing.T) {
 	// A repo listed under writing must resolve to paths.writing, not
 	// paths.code, even when also (hypothetically) shadowed by a code entry.
 	// This preserves the GetRepoLocalPath ordering that read-only callers
-	// (checkin, board, scout) depend on.
+	// (checkin, scout) depend on.
 	sourcesYAML := `code:
   - repo: matsen/notes
 writing:
