@@ -16,12 +16,11 @@ Squash-merge the current branch's PR and clean up.
 
 ## Worktree mode
 
-If `bip spawn` created the working tree as a linked git worktree (because the user opted into the global `layout: { mode: worktree }` block in `~/.config/bip/config.yml`), this skill detects that in Step 7a and performs the base-branch pull from the primary clone, then removes the worktree in Step 8 before deleting the branch.
-In the common clone-mode case (no `layout:` block) every step runs as it always has — the worktree detection is a no-op.
+If `bip spawn` made the working tree as a linked worktree (`layout: { mode: worktree }` in `~/.config/bip/config.yml`), Step 7a detects it and pulls from the primary clone, and Step 8 removes the worktree before deleting the branch. In clone mode the detection is a no-op.
 
 ## Where to stand
 
-This skill moves `HEAD` (Steps 7 and 8) and preserves the state files of the directory it runs in (Step 7a). Never run it in a clone another live session is working in. To land a PR checked out in another session's clone, don't run this skill: run Step 6's guard from any checkout of the repo, against the PR head instead of `HEAD`, so nothing moves:
+This skill moves `HEAD` (Steps 7 and 8) and preserves the state files of its directory (Step 7a). Never run it in a clone another live session works in. To land a PR checked out in another session's clone, don't run this skill: run Step 6's guard from any checkout, against the PR head, so nothing moves:
 
 ```bash
 git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
@@ -31,9 +30,9 @@ git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
   && gh pr merge <N> --squash --match-head-commit "$sha" --body "closes #<issue>"
 ```
 
-If the ancestor test fails (the base moved, e.g. mid-batch), the default is to rebase `refs/pr/<N>` onto `origin/<base>` in a scratch worktree, `git push --force-with-lease origin HEAD:<headRefName>`, run the repo's gate on the rebased head (CI per Step 5.5; in a repo with no CI, the local gate its CLAUDE.md names, since Step 5.5 then checks nothing), and re-run the guard. Merging a stale head without the rebase is your call when you can say why it is safe (e.g. its files are disjoint from what landed since it branched); say so in a PR comment.
+If the ancestor test fails, by default rebase `refs/pr/<N>` onto `origin/<base>` in a scratch worktree, `git push --force-with-lease origin HEAD:<headRefName>`, run the repo's gate on the rebased head (CI per Step 5.5; with no CI, the local gate its CLAUDE.md names), and re-run the guard. You may merge a stale head without the rebase only when you can say why it is safe (e.g. its files are disjoint from what landed since); say so in a PR comment.
 
-Do this only for a worker that has ended (`stop_reason: awaiting-human-merge`, session idle). A live worker holding a landing delegation lands its own PR. If that clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
+Do this only for a worker that has ended (`stop_reason: awaiting-human-merge`, session idle). A live worker holding a landing delegation lands its own PR. If the clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
 
 Check for co-tenancy:
 
@@ -41,7 +40,7 @@ Check for co-tenancy:
 for p in $(pgrep -x claude); do readlink /proc/$p/cwd; done | /usr/bin/grep -cE "^$PWD(/|$)"
 ```
 
-More than 1 means co-tenancy. The count is a floor: it cannot see a session that `cd`s into this clone inside its Bash calls. For read-only inspection of a PR, prefer `git show <sha>:<path>` with `gh pr view <N> --json headRefOid`; `git fetch origin pull/N/head:<branch>` silently leaves an existing local branch at its old SHA (use `-f`).
+More than 1 means co-tenancy. The count is a floor: it misses a session that `cd`s into this clone inside its Bash calls. To inspect a PR read-only, prefer `git show <sha>:<path>` with `gh pr view <N> --json headRefOid`; `git fetch origin pull/N/head:<branch>` silently leaves an existing local branch at its old SHA (use `-f`).
 
 ## Workflow
 
@@ -52,22 +51,10 @@ git status --porcelain
 git diff --stat
 ```
 
-If there are uncommitted changes or untracked files, you MUST resolve each one explicitly — **never stash and move on**:
-
-1. **Identify every dirty file.**
-   For each one, read enough of the diff or file content to understand what it is and why it exists.
-2. **Categorize each file:**
-   - **Belongs to this PR** (e.g. forgotten formatting fix, test update): stage and commit with a short message.
-   - **Unclear**: show the user the file and diff, explain what you see, and ask whether to commit it with the PR or move it aside.
-   - **Unrelated / stray**: move it to `_ignore/$(date -I)-landing/` so main stays clean.
-     Create the directory if needed.
-     Tell the user what you moved and why.
-3. **Never use `git stash`.**
-   Stashing hides work and risks losing it.
-   Every file must be either committed or moved to `_ignore/`.
-4. **Ask the user if unsure.**
-   If you can't confidently categorize a file, ask.
-   A quick question is always better than guessing wrong.
+Resolve every dirty or untracked file; never `git stash`. Read enough of each to know what it is, then:
+- Belongs to this PR: commit it.
+- Unrelated: move it to `_ignore/$(date -I)-landing/` (mkdir -p first) and tell the user.
+- Unclear: show the user the diff and ask.
 
 ### Step 2: Identify the PR
 
@@ -79,14 +66,11 @@ BRANCH=$(git branch --show-current)
 gh pr view "$BRANCH" --json number,title,state,baseRefName
 ```
 
-If no PR found, abort: "No PR found for branch `$BRANCH`."
-If PR is not open, abort: "PR is already `$STATE`."
-
-Save the base branch name (usually `main` or `master`) from `baseRefName`.
+Abort if there is no PR or it is not open. Save `baseRefName` as `<base>`.
 
 ### Step 3: Log and proceed
 
-Print the PR summary line, then continue without waiting for confirmation:
+Print the summary line and continue without waiting for confirmation:
 
 ```
 Landing: #42 "Add feature X" (branch: my-feature → main)
@@ -99,8 +83,7 @@ git fetch origin
 git rebase origin/<base>
 ```
 
-If rebase has conflicts, stop and report.
-Do not force-push or auto-resolve.
+On conflicts, stop and report. Do not force-push or auto-resolve.
 
 ### Step 5: Force-push rebased branch
 
@@ -110,35 +93,27 @@ git push --force-with-lease
 
 ### Step 5.5: Wait for CI to pass
 
-Check whether the PR has any CI checks configured, and if so, block until they all pass:
-
 ```bash
 gh pr checks "$BRANCH" --json name,state,conclusion
 ```
 
-- **No checks configured** (empty array, and the repo has no `.github/workflows/`): proceed immediately.
-  An empty array right after a push, in a repo with workflows, means CI hasn't registered yet: wait until checks appear (`until [ "$(gh pr checks "$BRANCH" --json name | jq length)" -gt 0 ]; do sleep 5; done`), then continue below.
-- **Checks present**: wait until all required checks are `COMPLETED` with conclusion `SUCCESS` (or `NEUTRAL`/`SKIPPED`).
-  Use `gh pr checks "$BRANCH" --watch --fail-fast` to block.
-  `SKIPPED` passes only if a check that builds or tests concluded `SUCCESS` at this head: a gate job can succeed while skipping the tests it gates (e.g. on a branch behind `main`), leaving every check green with nothing run. If so, rebase and wait for the tests.
-- **Any check fails**: abort with the failing check name and a link via `gh pr view --web`.
-  Do **not** merge.
-  Report to user and stop.
-
-Never merge a PR with failing or pending required checks.
-If checks are still queued/in progress, wait — do not assume they will pass.
+- Empty array and no `.github/workflows/`: proceed.
+  Empty array in a repo with workflows means CI hasn't registered yet: wait (`until [ "$(gh pr checks "$BRANCH" --json name | jq length)" -gt 0 ]; do sleep 5; done`), then continue below.
+- Checks present: block with `gh pr checks "$BRANCH" --watch --fail-fast` until all required checks conclude `SUCCESS`, `NEUTRAL` or `SKIPPED`.
+  `SKIPPED` passes only if a check that builds or tests concluded `SUCCESS` at this head: a gate job can succeed while skipping the tests it gates. If so, rebase and wait for the tests.
+- Any check fails: do not merge. Report the failing check (`gh pr view --web`) and stop.
 
 ### Step 6: Squash merge via gh
 
-First ask GitHub which issues the PR will close — its own parse, which handles code spans and word boundaries:
+Ask GitHub which issues the PR will close:
 
 ```bash
 gh pr view <N> --json closingIssuesReferences --jq '.closingIssuesReferences[].number'
 ```
 
-Empty is a defect if the PR has an issue. The field is eventually consistent, so re-read before concluding an edit to the body did not take.
+Empty is a defect if the PR has an issue. The field is eventually consistent, so re-read before concluding a body edit did not take.
 
-Merge with the guard **inside** the same command, so the base cannot move between check and merge (`--match-head-commit` makes GitHub refuse if the head moved), and always pass `--body` — without it `gh` concatenates every branch commit body into the squash message, and GitHub closes any issue a closing keyword in there names, negated or quoted or not:
+Keep the guard inside the merge command so the base cannot move between check and merge. Always pass `--body`: without it `gh` concatenates every commit body into the squash message, and GitHub closes any issue a closing keyword there names, negated or quoted or not.
 
 ```bash
 test "$(git rev-parse HEAD)" = "$(gh pr view <N> --json headRefOid -q .headRefOid)" \
@@ -147,11 +122,11 @@ test "$(git rev-parse HEAD)" = "$(gh pr view <N> --json headRefOid -q .headRefOi
   && gh pr merge --squash --match-head-commit "$(git rev-parse HEAD)" --body "closes #<issue>"   # or --body "" if it closes nothing
 ```
 
-If the guard fails, the base moved or HEAD differs from the pushed head: go back to Step 4. An approval names a SHA, so a moved base voids it.
+If the guard fails, go back to Step 4. A moved base voids an approval.
 
 ### Step 7a: Preserve EPIC state, then detect worktree mode
 
-Run this as **one** Bash invocation: shell variables do not survive between calls, and the delete of the originals must be conditional on the preserve having verified. It must run before Step 8, which in worktree mode removes the whole directory.
+Run this as one Bash call (shell variables do not survive between calls, and the delete must depend on the verified preserve), before Step 8.
 
 ```bash
 LAND_DIR=$(pwd -P)
@@ -185,12 +160,9 @@ if PRIMARY=$(bip worktree primary 2>/dev/null); then
 fi
 ```
 
-The destination is always `<clone_root>/.preserved/`, never inside the clone. If this step printed STOP, resolve it before continuing. The PR comment is how a conductor tells a preserved land from a bypassed one.
+The destination is `<clone_root>/.preserved/`, never inside the clone. Resolve any STOP before continuing. The PR comment is how a conductor tells a preserved land from a bypassed one.
 
-`bip worktree primary` exits 0 and prints the primary clone path **only** when the current directory is a linked worktree.
-In every other case (primary clone, non-bip checkout, non-git directory) it exits non-zero with no stdout — `$PRIMARY` remains empty and the `cd` is skipped.
-
-If `$PRIMARY` was set, Steps 7 and 7.5 below run in the primary clone; otherwise they run in `$LAND_DIR` exactly as today.
+`bip worktree primary` prints the primary clone path only in a linked worktree; elsewhere it exits non-zero with no output. If `$PRIMARY` is set, Steps 7 and 7.5 run in the primary clone, else in `$LAND_DIR`.
 
 ### Step 7: Return to base branch and pull
 
@@ -207,23 +179,16 @@ test "$(git rev-parse HEAD^{tree})" = "$(git rev-parse <gated-sha>^{tree})"
 
 ### Step 7.5: Sync the primary clone (clone-mode only)
 
-**Skip this step if Step 7a already `cd`'d to the primary** — Step 7 has already pulled it.
+Skip if Step 7a already `cd`'d to the primary.
 
-If you landed from a scratch clone (EPIC worker, `bip spawn` without worktree mode, or any working copy that isn't the canonical one in `sources.yml`), the primary clone is now behind `origin/<base>`.
-Pull it forward so the canonical checkout matches `main`.
+If you landed from a scratch clone (EPIC worker, `bip spawn` in clone mode, or any copy that isn't the canonical one in `sources.yml`), pull the primary forward:
 
-1. Resolve the primary clone path the way `bip spawn` does (mirrors `flow.ResolveRepoPath`: `nexus_path` from `~/.config/bip/config.yml`, repo from `git remote get-url origin`, then `sources.yml` + `config.yml` paths).
-   If `$(pwd -P)` already equals it, or the repo isn't listed, skip this step.
-
-2. `git -C "$PRIMARY" pull --ff-only`.
-   On failure, warn with the error and continue — the merge is already upstream, nothing is lost.
-   Never stash.
-
-3. Report what you did in Step 10.
+1. Resolve the primary path as `flow.ResolveRepoPath` does: `nexus_path` from `~/.config/bip/config.yml`, repo from `git remote get-url origin`, then `sources.yml` + `config.yml` paths. Skip if `$(pwd -P)` already equals it or the repo isn't listed.
+2. `git -C "$PRIMARY" pull --ff-only`. On failure, warn and continue; never stash.
 
 ### Step 8: Remove worktree (if applicable) and delete branch
 
-If Step 7a found that you were landing from a linked worktree, remove the worktree **before** deleting its branch — git refuses to delete a branch that still has a worktree checked out on it:
+Remove a linked worktree before deleting its branch; git refuses to delete a branch checked out in a worktree:
 
 ```bash
 if [ -n "$PRIMARY" ] && [ -n "$LAND_DIR" ] && [ "$LAND_DIR" != "$PRIMARY" ]; then
@@ -231,15 +196,13 @@ if [ -n "$PRIMARY" ] && [ -n "$LAND_DIR" ] && [ "$LAND_DIR" != "$PRIMARY" ]; the
 fi
 ```
 
-`bip worktree remove` defaults to `--force`, which is required because the squash-merge leaves the worktree carrying commits unreachable from the merged branch.
-Then delete the local branch:
+`bip worktree remove` defaults to `--force`, which the squash-merge's unreachable commits require. Then:
 
 ```bash
 git branch -d <branch>
 ```
 
-The remote branch is already deleted by `gh pr merge` (GitHub default).
-If not, also run: `git push origin --delete <branch>`
+`gh pr merge` normally deletes the remote branch. If not: `git push origin --delete <branch>`
 
 ### Step 9: Ensure clean main
 
@@ -247,18 +210,11 @@ If not, also run: `git push origin --delete <branch>`
 git status --porcelain
 ```
 
-If any untracked or modified files remain on main:
-- Move them to `_ignore/$(date -I)-landing/` (create the directory if needed)
-- Report what was moved
-
-The goal is a **totally clean `git status`** on main when landing is done.
+Move any leftover files to `_ignore/$(date -I)-landing/` and report them. End with a clean `git status` on main.
 
 ### Step 10: Confirm
 
 Report: "Landed #42.
 On `<base>`, up to date, worktree clean.
 Branch `<branch>` deleted."
-If any files were moved to `_ignore/`, list them.
-If the primary clone was synced in Step 7.5, say so: "Primary clone `<path>` pulled."
-If Step 8 removed a linked worktree, say so: "Worktree `<path>` removed."
-If Step 7a preserved EPIC state, say so: "Worklog preserved to `<DEST>`, noted on the PR."
+Also list, when they happened: files moved to `_ignore/`; "Primary clone `<path>` pulled." (Step 7.5); "Worktree `<path>` removed." (Step 8); "Worklog preserved to `<DEST>`, noted on the PR." (Step 7a).
