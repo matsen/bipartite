@@ -21,8 +21,7 @@ my-nexus/
 ├── servers.yml               # Remote servers for bip scout
 ├── sources.yml               # GitHub repos for activity tracking
 │
-├── context/                  # Project context files
-└── narrative/                # Generated digest output
+└── context/                  # Project context files
 ```
 
 **Key principle:** JSONL files are the source of truth. The `.bipartite/cache/` directory is ephemeral and rebuilt via `bip rebuild`.

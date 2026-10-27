@@ -3,7 +3,7 @@
 A context layer for research groups: connecting your internal world (projects, repos, coordination) to the external academic world (papers, citations, authors).
 
 - **Go CLI** for querying literature, GitHub activity, and your group's projects and repos
-- **Claude Code skills** for synthesis: narrative digests, check-ins, spawning sessions with context
+- **Claude Code skills** for orchestrating agent sessions, manuscripts and literature
 - **Git-backed storage** — JSONL source of truth, private by default, shareable by design
 
 ## Guides
@@ -13,7 +13,7 @@ A context layer for research groups: connecting your internal world (projects, r
 - **[Issue Lifecycle](guides/issue-lifecycle.md)** — Which skill to run at each step from draft issue to landed PR
 - **[Reference Management](guides/reference-management.md)** — Search, import, cite, and collaborate on a git-backed paper library
 - **[Projects, Repos, and Stores](guides/projects-and-stores.md)** — Track projects and repositories, and keep custom records in generic stores
-- **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, boards, and Slack integration across repos
+- **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, and Slack integration across repos
 - **[Worktree Layout](guides/layout.md)** — Opt-in per-issue git worktrees for `bip spawn`
 - **[Continuation Prompt](guides/continuation-prompt.md)** — Carrying a session across a context reset with `/bip-tuckin` and `/bip-continue`
 - **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
