@@ -16,7 +16,6 @@ The literature is in a dashed box, because it is knowledge, not a person or an a
 ![Talk-driven development: four layers of knowledge, from research up to the field, with a support layer below](../images/tier4/talk-driven-development.svg)
 
 Read upward, each layer is a wider circle that has to understand and accept a result.
-These are layers of knowledge, not of authority.
 
 - **Research.** The agents produce results. The EPIC session (`/bip-epic`) holds the current edge of one research question. The conductor (`/bip-conductor`) spawns a worker for each issue. The manuscript session (`/bip-ms`) stores each result with how it relates to prior work.
 - **You.** Most of the work happens here, between you and the talks session (`/bip-talk`). Together you turn results into slides, and you have to understand each result well enough to explain it. A `/bip-helper` does the figure and deck work, so the talks session stays free to answer you.
