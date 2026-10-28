@@ -8,7 +8,7 @@ It builds on the manuscript-driven development of the [June post](https://matsen
 Talks match how scientists already work, and they bring people back into the room.
 
 This page has four diagrams. The first shows the whole system. The other three zoom in on an issue, a worker, and a fix to the skills.
-In all four, people are in a humanist face with a purple outline, and agents are in typewriter.
+In all four, people are in a <span class="face-person">humanist face</span> with a purple outline, and agents are in <span class="face-agent">typewriter</span>.
 The literature is in a dashed box, because it is knowledge, not a person or an agent.
 
 ## The whole system

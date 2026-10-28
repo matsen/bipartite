@@ -1,0 +1,3 @@
+/* The faces the driving-science diagrams use for people and for agents. */
+.face-person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 1.1em; }
+.face-agent { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; }
