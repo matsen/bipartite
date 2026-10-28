@@ -25,7 +25,7 @@ Everything here holds across repos.
 
 - **One dated directory per talk** (`YYYY-MM-DD-<name>/`): slide source, built deck and PDF, `figures/` (copies, so the record stands alone), `notes/`, `feedback.md`, `feedback-scripts/`.
   A deck is the record of the talk as given, apart from notes marked as added afterwards; later work goes into the next talk.
-- **Speaker notes cover each slide completely**: how to read the figure, how each statistic is computed, the numbers behind it, and links to scripts and issues. The slides carry little text.
+- **Define each new term on a slide, before its first use.** A new statistic, model or term gets its own lead-in slide. Write a regression out in full, with one bullet per symbol. Explain a derived quantity (such as a per-target level) as step-by-step bullets revealed one at a time, each with a one-sentence gloss. Name each quantity for what it computes ("the slope on log codon count", not "tilt"), and settle the names before building the slides that use them. Speaker notes are not enough for a definition; they hold how to read each figure, the numbers behind it, and links to scripts and issues.
 - **`feedback.md`** has two `#` groups, **Quick answers** and **For follow-up**.
   One `##` per point, phrased as a question, with the asker in parentheses (the user's own points last); then a `**Response.**` paragraph in full prose, which may push back: the take-home and "see slide N", with the long version in `feedback-scripts/`.
   Each follow-up ends with `**For an issue.**`, saying what work would answer it, for the EPIC session to file.
