@@ -58,7 +58,7 @@
 <text class="serif note" x="208" y="286" text-anchor="start">old file against new</text>
 <rect class="agent" x="376" y="266" width="110" height="32" rx="3"/>
 <text class="name" x="431.0" y="282.0">the sender</text>
-<text class="serif note" x="498" y="286" text-anchor="start">acks the diff</text>
+<text class="serif note" x="498" y="286" text-anchor="start">approves the diff</text>
 <text class="serif label" x="56" y="330" text-anchor="start">CI green at the head, then land</text>
 <line class="arrow" x1="330" y1="350" x2="330" y2="404"/>
 <text class="serif note" x="340" y="373" text-anchor="start">skills are symlinked, so the next</text>

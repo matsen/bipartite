@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" width="780" height="600" role="img" aria-labelledby="title desc">
 <title id="title">The life of an issue</title>
-<desc id="desc">An issue starts from a talk question, a PR&#x27;s DEFERRED list, or you. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session&#x27;s claims check, or a group member&#x27;s review for shared code, signs off the landing. The result goes back to the EPIC, manuscript and talks sessions.</desc>
+<desc id="desc">An issue starts from a talk question, a PR&#x27;s DEFERRED list, or you. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session checks the PR.s claims, or a group member&#x27;s review for shared code, signs off the landing. The result goes back to the EPIC, manuscript and talks sessions.</desc>
 <style>
   .bg { fill: #ffffff; }
   .layer { fill: #f3f3f1; }
@@ -63,7 +63,7 @@
 <text class="serif tier" x="648" y="430.0">land</text>
 <rect class="agent" x="110" y="410" width="80" height="32" rx="3"/>
 <text class="name" x="150.0" y="426.0">EPIC</text>
-<text class="serif note" x="200" y="431" text-anchor="start">claims check, or</text>
+<text class="serif note" x="200" y="431" text-anchor="start">checks its claims, or</text>
 <rect class="human" x="318" y="406" width="170" height="40" rx="3"/>
 <text class="person" x="403.0" y="426.0">a group member</text>
 <text class="serif note" x="498" y="431" text-anchor="start">review, for shared code</text>
