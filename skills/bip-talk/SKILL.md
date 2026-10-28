@@ -15,7 +15,7 @@ The deck is how current results are presented and made understandable to the gro
 The session owns `talks/` and the talk branch: decks, figures and their scripts, `feedback.md`, and `feedback-scripts/`; no one else commits there.
 There is one talk branch and PR at a time, holding every talk since the last landing; it stays draft until the user asks to land it, and its body is the session's to keep current. Landing steps are in the repo's `talks/AGENTS.md`; land through `/bip-pr-land`, whose Step 5.5 waits for a build or test check to succeed at the head after the PR leaves draft. The user's word to land, `--admin` included, waives review, not CI.
 The project's EPIC session rules on numbers and files issues (it runs `/bip-issue-check`); send it a draft path, not a filed issue.
-Send the ms session each point from a talk that changes what the paper says, and each draft issue for a prior-answer read.
+Send the ms session each point from a talk that shows the paper is wrong; the EPIC session forwards draft issues to it.
 Unlike `/bip-ms`, this session runs the computations behind its responses, itself or through a helper, under the compute rules in `~/.claude/CLAUDE.md` and any gate its conductor relays.
 Questions for the user go as `~/.claude/CLAUDE.md` says ("Asking the user").
 

@@ -65,14 +65,14 @@ One improvement per run; name any others in a line.
 
 Decide whether the fix is operations or could touch the science:
 
-- **Operations**: how sessions run, route, review, land, or format, with nothing that changes an analysis, a scientific claim, or what a paper says. Take the option below that fits without asking, and tell the user afterward what you did.
-- **Science**: anything that could change an analysis, a claim, or a paper. Stop and ask the user which option to take.
+- **Operations**: the edit changes only who does something, when, or by which route: how sessions run, message, review, land, or format. Take the option below that fits without asking, and tell the user afterward what you did.
+- **Science**: the edit changes what is computed, what is claimed, or what a paper says, including a rule that decides those (a skeptic's checks, a prior-answer step). Stop and ask the user which option to take.
 
 When in doubt, it is science. An edit to the global `~/.claude/CLAUDE.md` always goes to the user first.
 The options:
 
 1. **Apply now**: edit a target outside bipartite directly.
-2. **Send to the `bipartite` session**: for anything in the bipartite repo, when `ListAgents` shows a session by that name. Send the diagnosis, the proposed edit, and your operations-or-science call; it checks the call, places the edit, lands it, and reports back.
+2. **Send to the `bipartite` session**: for anything in the bipartite repo, when `ListAgents` shows a session by that name. Send the diagnosis, the proposed edit, and your operations-or-science call; it checks the call, asks the user first on a science call, places the edit, lands it, and reports back.
    With no such session, open a PR from a worktree of your own, since `~/re/bipartite` is shared by every session on the machine:
    ```bash
    git -C ~/re/bipartite fetch -q origin

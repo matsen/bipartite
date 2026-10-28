@@ -28,6 +28,7 @@ It is the context you reason from, not a running log.
 It is also a storehouse, not the text that gets submitted.
 Write Methods and Results as readable prose, so anyone can follow the project's full scope.
 Keep the Introduction and Discussion as outlines that place the work in the literature.
+Where either is already prose, leave the prose in place and add new material as outline points; never replace prose a person wrote.
 People write those two sections from the outlines, and go over the whole paper line by line, before submission.
 The PI directs the science at the level of the paper; agents handle the implementation.
 
@@ -35,9 +36,9 @@ Direct research through issues and PRs, not through constant edits to the paper.
 Comment on PRs/issues to request analyses where `docs/guides/roles.md` ("Posting to GitHub") allows it; otherwise message the owning session, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner.
 
 Update the manuscript when a research thread is complete: reconcile the finished result into the paper (the manuscript prevails on disagreement; cf. `/bip-ms-audit`).
-Decide where it goes and how to word it yourself, then tell the user what changed with the diff; ask the user about the science, never about placement or wording.
-A point raised in a talk that changes what the paper says updates the paper too.
 Until then, keep findings in notes, not in the paper; the paper stays the stable context.
+Decide where a result goes and how to word it yourself, then tell the user what changed with the diff; ask the user about the science, never about placement or wording.
+A point raised in a talk that shows the paper is wrong changes the paper now; new results still wait for their thread to complete.
 
 Out of scope, as a safety boundary: running experiments.
 Guiding, scoping, and requesting that work is in scope, and so is reading code and results in tracked repos, yourself or through a subagent.
@@ -189,7 +190,7 @@ cp "<local-path>/figure.svg" "$PREP_DIR/"
 make pdf-figures
 ```
 
-If the manuscript does not reference the figure yet, place it and write the `\includegraphics` block.
+If the figure's thread is complete and the manuscript does not reference it yet, place it and write the `\includegraphics` block; otherwise leave it in the prep directory.
 
 ## Notebook review workflow
 
@@ -197,17 +198,17 @@ If the manuscript does not reference the figure yet, place it and write the `\in
 open -a "Google Chrome" "<path-to-notebook.html>"
 ```
 
-Tell the user which notebook opened and which EPIC/issue produced it; after review, fold in the plots and findings that a completed thread rests on.
+Tell the user which notebook opened and which EPIC/issue produced it; once its thread is complete, fold in the plots and findings it rests on.
 
 ## Text drafting workflow
 
 1. Read the relevant EPIC findings, PR descriptions, and results.
 2. Read the manuscript around the target spot, per "Reading the manuscript" in Step 0.
 3. Write it: prose in Methods and Results, outline points in the Introduction and Discussion.
-4. Run the `@scientific-tex-editor` agent on new prose.
+4. Run the `@scientific-tex-editor` agent on new prose, and read its diff, deleted lines included, before committing.
 5. Commit, and tell the user what changed with the diff.
 
-An outline point is one full-sentence claim, followed by the `\cite` keys that support it and the `\ref` to the results it rests on.
+An outline point is one full-sentence claim, followed by the `\cite` keys that support it and the `\ref` to the results it rests on, if any.
 A bare topic ("related work on X") is not a point.
 
 Prose you write into the paper, drafted or edited, follows these rules from the start:
