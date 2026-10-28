@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" width="780" height="600" role="img" aria-labelledby="title desc">
 <title id="title">Talk-driven development</title>
-<desc id="desc">Four layers of knowledge. The research agents produce results. You and the talks session understand them. The group questions them. The field holds the literature, its state of knowledge, and the scientific community. The manuscript session reads the literature in, and people write the paper that goes back out. A support layer keeps the rest running.</desc>
+<desc id="desc">Four layers of knowledge. The research agents implement ideas and report back what they find. You and the talks session understand them. The group questions them. The field holds the literature, its state of knowledge, and the scientific community. The manuscript session reads the literature in, and people write the paper that goes back out. A support layer keeps the rest running.</desc>
 <style>
   .bg { fill: #ffffff; }
   .layer { fill: #f3f3f1; }

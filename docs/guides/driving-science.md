@@ -18,7 +18,7 @@ The literature is in a dashed box, because it is knowledge, not a person or an a
 Read the upper four layers from the bottom up. Each is a wider circle that has to understand and accept a result.
 Tier 3 introduced the EPIC, conductor and worker sessions; [Agent Roles](roles.md) says what each role owns.
 
-- **Research.** The agents produce results. The EPIC session (`/bip-epic`) holds the current edge of one research question. The conductor (`/bip-conductor`) spawns a worker for each issue. The manuscript session (`/bip-ms`) stores each result with how it relates to prior work.
+- **Research.** The agents implement ideas and report back what they find. The EPIC session (`/bip-epic`) holds the current edge of one research question. The conductor (`/bip-conductor`) spawns a worker for each issue. The manuscript session (`/bip-ms`) stores each result with how it relates to prior work.
 - **You.** Most of the work happens here, between you and the talks session (`/bip-talk`). Together you turn results into slides, and you have to understand each result well enough to explain it. A `/bip-helper` does the figure and deck work, so the talks session stays free to answer you.
 - **The group.** You present the slides, and the group's questions come back. The talks session writes each question into the talk's `feedback.md`. It answers each one with a reproducible exploratory analysis, or sends it to the EPIC session as a draft issue.
 - **The field.** The literature is the field's state of knowledge, and the goal is to improve it. The manuscript session reads the literature in. People write the paper that goes back out. The manuscript session keeps the results that the paper is built from, but it does not write the paper's prose.
