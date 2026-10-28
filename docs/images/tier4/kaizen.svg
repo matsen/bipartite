@@ -1,26 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 470" width="780" height="470" role="img" aria-labelledby="title desc">
 <title id="title">Kaizen</title>
-<desc id="desc">From any session you propose a fix for friction or a bug with /bip-kaizen. The bipartite session weighs it, a cold reviewer and the sender check the diff, and it lands once CI is green. Skills are symlinked, so every session uses the fix from its next invocation.</desc>
+<desc id="desc">From any session, you or the session itself propose a fix for friction or a bug with /bip-kaizen. The bipartite session weighs it, a cold reviewer and the sender check the diff, and it lands once CI is green. Skills are symlinked, so every session uses the fix from its next invocation.</desc>
 <style>
-  svg { --bg: #ffffff; --layer: #f3f3f1; --box: #ffffff; --stroke: #a9a9a9; --ink: #222222; --muted: #666666; --line: #444444; --human: #5b3fc4; }
-  .bg { fill: var(--bg); }
-  .layer { fill: var(--layer); }
-  .lit { fill: none; stroke: var(--stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
-  .agent { fill: var(--box); stroke: var(--stroke); stroke-width: 1; }
-  .human { fill: var(--box); stroke: var(--human); stroke-width: 2.2; }
-  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
-  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
   .small { font-size: 12px; }
-  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: var(--ink); }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
   .title { font-size: 18px; text-anchor: middle; }
-  .note { font-size: 13px; font-style: italic; fill: var(--muted); }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
   .label { font-size: 14px; }
-  .tier { font-size: 14px; font-style: italic; fill: var(--muted); }
-  .arrow { stroke: var(--line); stroke-width: 1.5; fill: none; marker-end: url(#head); }
-  .both { stroke: var(--line); stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
-  .dotted { stroke: var(--line); stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
-  .dashed { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
-  .headfill { fill: var(--line); }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
 </style>
 <defs>
   <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -43,10 +42,10 @@
 <text class="serif title" x="520" y="59" text-anchor="start">…</text>
 <rect class="human" x="56" y="84" width="64" height="32" rx="3"/>
 <text class="person" x="88.0" y="100.0">you</text>
-<text class="serif label" x="132" y="105" text-anchor="start">hit friction or a bug, and run /bip-kaizen:</text>
+<text class="serif label" x="132" y="105" text-anchor="start">or the session itself, hits friction or a bug and runs /bip-kaizen:</text>
 <text class="serif note" x="132" y="122" text-anchor="start">what happened, the root cause, a proposed edit</text>
 <line class="arrow" x1="330" y1="132" x2="330" y2="176"/>
-<text class="serif note" x="340" y="159" text-anchor="start">the proposal, quoting your words</text>
+<text class="serif note" x="340" y="159" text-anchor="start">the proposal, quoting any words of yours</text>
 <rect class="layer" x="30" y="178" width="600" height="170" rx="3"/>
 <text class="serif tier" x="648" y="267.0">bipartite</text>
 <rect class="agent" x="56" y="196" width="110" height="32" rx="3"/>

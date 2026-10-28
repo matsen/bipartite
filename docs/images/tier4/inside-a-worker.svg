@@ -2,25 +2,24 @@
 <title id="title">Inside a worker</title>
 <desc id="desc">One worker on one issue in one clone. At each stopping point an issue-lead reads the files cold and says what to do next. Before merge, review agents run in parallel, and comment-check fact-checks each review comment. The EPIC session sends corrections through the conductor. Once CI is green the PR goes to its landing signer.</desc>
 <style>
-  svg { --bg: #ffffff; --layer: #f3f3f1; --box: #ffffff; --stroke: #a9a9a9; --ink: #222222; --muted: #666666; --line: #444444; --human: #5b3fc4; }
-  .bg { fill: var(--bg); }
-  .layer { fill: var(--layer); }
-  .lit { fill: none; stroke: var(--stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
-  .agent { fill: var(--box); stroke: var(--stroke); stroke-width: 1; }
-  .human { fill: var(--box); stroke: var(--human); stroke-width: 2.2; }
-  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
-  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
   .small { font-size: 12px; }
-  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: var(--ink); }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
   .title { font-size: 18px; text-anchor: middle; }
-  .note { font-size: 13px; font-style: italic; fill: var(--muted); }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
   .label { font-size: 14px; }
-  .tier { font-size: 14px; font-style: italic; fill: var(--muted); }
-  .arrow { stroke: var(--line); stroke-width: 1.5; fill: none; marker-end: url(#head); }
-  .both { stroke: var(--line); stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
-  .dotted { stroke: var(--line); stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
-  .dashed { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
-  .headfill { fill: var(--line); }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
 </style>
 <defs>
   <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -50,6 +49,8 @@
 <text class="name" x="472.0" y="224.0">cold reader</text>
 <rect class="agent" x="60" y="252" width="210" height="32" rx="3"/>
 <text class="name" x="165.0" y="268.0">math back-translation</text>
+<text class="serif note" x="284" y="265" text-anchor="start">the skeptic, cold reader and math back-translation</text>
+<text class="serif note" x="284" y="283" text-anchor="start">run only when the PR calls for them</text>
 <rect class="agent" x="60" y="306" width="140" height="32" rx="3"/>
 <text class="name" x="130.0" y="322.0">comment-check</text>
 <text class="serif note" x="212" y="319" text-anchor="start">fact-checks each review comment</text>

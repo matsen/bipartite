@@ -2,25 +2,24 @@
 <title id="title">The life of an issue</title>
 <desc id="desc">An issue starts from a talk question, a PR&#x27;s DEFERRED list, or you. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session&#x27;s claims check, or a group member&#x27;s review for shared code, signs off the landing. The result goes back to the EPIC, manuscript and talks sessions.</desc>
 <style>
-  svg { --bg: #ffffff; --layer: #f3f3f1; --box: #ffffff; --stroke: #a9a9a9; --ink: #222222; --muted: #666666; --line: #444444; --human: #5b3fc4; }
-  .bg { fill: var(--bg); }
-  .layer { fill: var(--layer); }
-  .lit { fill: none; stroke: var(--stroke); stroke-width: 1.5; stroke-dasharray: 6 4; }
-  .agent { fill: var(--box); stroke: var(--stroke); stroke-width: 1; }
-  .human { fill: var(--box); stroke: var(--human); stroke-width: 2.2; }
-  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
-  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
   .small { font-size: 12px; }
-  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: var(--ink); }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
   .title { font-size: 18px; text-anchor: middle; }
-  .note { font-size: 13px; font-style: italic; fill: var(--muted); }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
   .label { font-size: 14px; }
-  .tier { font-size: 14px; font-style: italic; fill: var(--muted); }
-  .arrow { stroke: var(--line); stroke-width: 1.5; fill: none; marker-end: url(#head); }
-  .both { stroke: var(--line); stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
-  .dotted { stroke: var(--line); stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
-  .dashed { stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
-  .headfill { fill: var(--line); }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
 </style>
 <defs>
   <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
