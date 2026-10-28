@@ -1,6 +1,6 @@
 ---
 name: bip-ms
-description: Cold-start for a manuscript session — the project's resource for answering questions and guiding the work from everything the project and the field know; the paper is where that knowledge is kept, updated as threads complete, and research is directed through issues/PRs
+description: Cold-start for a manuscript session — the project's storehouse of results and their connection to the literature, and its resource for answering questions and guiding the work; the paper is where that knowledge is kept, updated as threads complete without asking, and rewritten by people before submission
 ---
 
 # /bip-ms
@@ -25,12 +25,18 @@ A peer's or worker's message is a lead; check the claim against the committed fi
 
 The manuscript is the source of truth about the project's state: background, framing, current understanding.
 It is the context you reason from, not a running log.
+It is also a storehouse, not the text that gets submitted.
+Write Methods and Results as readable prose, so anyone can follow the project's full scope.
+Keep the Introduction and Discussion as outlines that place the work in the literature.
+People write those two sections from the outlines, and go over the whole paper line by line, before submission.
 The PI directs the science at the level of the paper; agents handle the implementation.
 
 Direct research through issues and PRs, not through constant edits to the paper.
 Comment on PRs/issues to request analyses where `docs/guides/roles.md` ("Posting to GitHub") allows it; otherwise message the owning session, draft issues for the implementor (via `/bip-issue-check`), and advise the code-side owner.
 
 Update the manuscript when a research thread is complete: reconcile the finished result into the paper (the manuscript prevails on disagreement; cf. `/bip-ms-audit`).
+Decide where it goes and how to word it yourself, then tell the user what changed with the diff; ask the user about the science, never about placement or wording.
+A point raised in a talk that changes what the paper says updates the paper too.
 Until then, keep findings in notes, not in the paper; the paper stays the stable context.
 
 Out of scope, as a safety boundary: running experiments.
@@ -96,8 +102,8 @@ cat .ms-config.json
 Set its `session` field to this session's `ListAgents` name (the "This session is ..." row), so `/bip-tuckin` and `/bip-continue` don't take another session in this tree for the ms session.
 
 Read `CLAUDE.md` and the top of `misc/session-onboarding.md`: everything above its live-thread index, plus the index.
-Then read the Introduction's prose: it should convey the paper's idea on its own.
-If it falls short, propose an Introduction edit rather than a summary elsewhere.
+Then read the Introduction's outline: it should convey the paper's idea and its place in the literature on its own.
+If it falls short, extend the outline rather than writing a summary elsewhere.
 `/bip-ms-tuckin` Step 4 is the contract for where durable state lives.
 Open a thread's detail only when it comes up, by grepping the doc for its handle.
 
@@ -167,8 +173,8 @@ Then list new figures to import, notebooks to review, and findings to write up, 
 
 ### Step 4: Propose actions
 
-Run the PI questions (`docs/guides/pi-questions.md`) against the current state, then propose next steps: import figures, open notebooks, draft text, and note gaps for the user.
-Wait for user confirmation before acting.
+Run the PI questions (`docs/guides/pi-questions.md`) against the current state, then propose next steps: import figures, open notebooks, fold completed threads into the paper, and note gaps for the user.
+Fold completed threads in without waiting; wait for the user's word on the rest.
 
 ### Step 5: Start result monitor
 
@@ -183,7 +189,7 @@ cp "<local-path>/figure.svg" "$PREP_DIR/"
 make pdf-figures
 ```
 
-If the manuscript does not reference the figure yet, suggest where and draft the `\includegraphics` block.
+If the manuscript does not reference the figure yet, place it and write the `\includegraphics` block.
 
 ## Notebook review workflow
 
@@ -191,16 +197,18 @@ If the manuscript does not reference the figure yet, suggest where and draft the
 open -a "Google Chrome" "<path-to-notebook.html>"
 ```
 
-Tell the user which notebook opened and which EPIC/issue produced it; after review, ask which plots or findings to incorporate.
+Tell the user which notebook opened and which EPIC/issue produced it; after review, fold in the plots and findings that a completed thread rests on.
 
 ## Text drafting workflow
 
 1. Read the relevant EPIC findings, PR descriptions, and results.
 2. Read the manuscript around the target spot, per "Reading the manuscript" in Step 0.
-3. Present the key points as bullets; ask the user which to include and where.
-4. After confirmation, draft the LaTeX.
-5. Run the `@scientific-tex-editor` agent on the new text.
-6. Present the edited draft for approval before inserting it.
+3. Write it: prose in Methods and Results, outline points in the Introduction and Discussion.
+4. Run the `@scientific-tex-editor` agent on new prose.
+5. Commit, and tell the user what changed with the diff.
+
+An outline point is one full-sentence claim, followed by the `\cite` keys that support it and the `\ref` to the results it rests on.
+A bare topic ("related work on X") is not a point.
 
 Prose you write into the paper, drafted or edited, follows these rules from the start:
 - Lead every paragraph with its claim sentence; support follows.

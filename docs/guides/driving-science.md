@@ -10,6 +10,12 @@ Once a result is worth keeping, its analysis is moved into the project's main br
 The [June post](https://matsen.group/general/2026/06/06/bipartite.html) described manuscript-driven development. The manuscript still matters, but now the talk drives the work.
 Talks match how scientists already work, and they bring people back into the room.
 
+As scientists, we have spent much of our time on operations.
+Even when we don't write the code, we review PRs that only change its structure, chase failed jobs, and keep track of who is doing what.
+In this setup the agents take the operations, and you keep the science.
+A change that could touch the science, such as an analysis, a claim, or what the paper says, comes to you.
+A change that is purely operational lands without you.
+
 This page has four diagrams. The first shows the whole system. The other three zoom in on an issue, a worker, and a fix to the skills.
 In all four, people are in a <span class="face-person">humanist face</span> with a purple outline, and agents are in <span class="face-agent">typewriter</span>.
 The literature is in a dashed box, because it is knowledge, not a person or an agent.
@@ -24,7 +30,7 @@ Tier 3 introduced the EPIC, conductor and worker sessions; [Agent Roles](roles.m
 - **Research.** The agents implement ideas and report back what they find. The EPIC session (`/bip-epic`) holds the current edge of one research question. The conductor (`/bip-conductor`) spawns a worker for each issue. The manuscript session (`/bip-ms`) stores each result with how it relates to prior work.
 - **You.** Most of the work happens here, between you and the talks session (`/bip-talk`). Together you turn results into slides, and you have to understand each result well enough to explain it. A `/bip-helper` does the figure and deck work, so the talks session stays free to answer you.
 - **The group.** You present the slides, and the group's questions come back. The talks session writes each question into the talk's `feedback.md`. It answers each one with a reproducible exploratory analysis, or sends it to the EPIC session as a draft issue.
-- **The field.** The literature is the field's state of knowledge, and the goal is to improve it. The manuscript session reads the literature in. People write the paper that goes back out. The manuscript session keeps the results that the paper is built from, but it does not write the paper's prose.
+- **The field.** The literature is the field's state of knowledge, and the goal is to improve it. The manuscript session reads the literature in and keeps the results in the paper. People rewrite the paper before it goes back out (see [The paper](#the-paper)).
 
 The support layer holds no results. It keeps the other layers running.
 
@@ -32,6 +38,16 @@ The support layer holds no results. It keeps the other layers running.
 - A sysadmin session, which has no skill of its own, watches the machine, and an infra session (`/bip-infra`) watches the cluster.
 - A librarian session (`/bip-librarian`) triages literature alerts and asks the EPIC owners about the few that matter.
 - A bipartite session, started in this repo, lands fixes to the skills (see [Kaizen](#kaizen)).
+
+## The paper
+
+The paper in the repository is the project's storehouse, not the text we submit.
+The manuscript session keeps it current as each research thread completes, without asking you where a result goes or how to word it.
+Methods and Results are readable prose, so anyone can follow the full scope of the project.
+The Introduction and Discussion are outlines that place the work in the literature. Each point is a full-sentence claim with its citations and the results it rests on.
+When a talk flags a problem, the paper changes too.
+Before submission, people go over the paper line by line, and write the Introduction and Discussion from their outlines.
+Nothing goes out as the agents wrote it.
 
 ## The life of an issue
 
@@ -44,21 +60,20 @@ Before it is filed, its draft goes to two sessions:
 - The manuscript session knows what the field knows. It can say whether published work already predicts the answer.
 - The EPIC session knows the project's current edge. It can say how the issue fits the work in flight.
 
-`/bip-issue-check` then reviews the draft, a skeptic agent looks for flaws in its plan, and the issue is filed.
+`/bip-issue-check` then reviews the draft, and the issue is filed. For an issue that the EPIC or talks session writes, a skeptic agent also looks for flaws in its plan.
 The conductor spawns a worker for it.
 A self-contained PR lands after the EPIC session checks the claims it makes; a PR that changes shared code needs a review from a group member.
-The result goes back to the EPIC session, which rules on it, to the manuscript session, which records it, and to the talks session, which presents it.
+The result goes back to the EPIC session, which rules on it, to the manuscript session, which records it, and to the talks session, which reads it from the EPIC and presents it.
 [Issue Lifecycle](issue-lifecycle.md) gives the skills in order.
 
 ## Inside a worker
 
-![Inside a worker: the worker loop, the issue-lead, parallel review agents, and comment-check](../images/tier4/inside-a-worker.svg)
+![Inside a worker: the worker loop, the issue-lead, and parallel review agents](../images/tier4/inside-a-worker.svg)
 
 A worker owns one issue in one clone.
 It loops: implement, run, report.
 At each stopping point it spawns an issue-lead, which reads the files cold, with none of the worker's context. The issue-lead judges scope and results, and says whether to continue, fold deferred work in, or escalate.
 Before merge, `/bip-pr-review` runs its review agents in parallel. clean-code checks naming and function size, and code-reuse looks for existing code the PR could use. The skeptic runs only when the PR makes a scientific claim, the cold reader reads a rendered notebook as its audience would, and runs only when the PR adds one, and the math back-translation runs only for a PR with formulas or scientific computation. The math back-translation restates the code's math in LaTeX, checks it against the paper the method comes from, and posts it to the PR.
-`/bip-comment-check` fact-checks each review comment against the code before the worker acts on it.
 The EPIC session sends corrections through the conductor, so the message and the clone's log of work stay in step.
 Once CI is green at the PR's head, the PR goes to its landing signer: the session or person who signs off the landing.
 
@@ -67,10 +82,11 @@ Once CI is green at the PR's head, the PR goes to its landing signer: the sessio
 ![Kaizen: a proposal from any session goes to the bipartite session, is reviewed and landed, and reaches every session](../images/tier4/kaizen.svg)
 
 You, or the session you are working in, can hit friction or a bug.
-Run `/bip-kaizen` there, or the session runs it itself. It writes what happened, the root cause, and a proposed edit.
+Run `/bip-kaizen` there, or the session drafts the kaizen itself. It writes what happened, the root cause, and a proposed edit.
+A fix that is purely operational goes ahead, and you hear about it afterward. A fix that could touch the science waits for your word.
 A change to a project's own files is made in place. For a change to bipartite, the session sends the proposal to the bipartite session and quotes any words of yours.
 The bipartite session weighs it, places it in the right file, and is lean by default: a rule must name a failure someone actually hit, and deleting beats adding.
 It may push back, or ask for an A/B test first.
-A cold reviewer compares the old file with the new one, and the session that sent the proposal approves the diff.
+The session that sent the proposal approves the diff, and for a trim to a skill, a cold reviewer also compares the old file with the new one.
 The fix lands once CI is green at the PR's head.
 The skills directory is symlinked into `~/.claude/skills`, so every session in every repo uses the fix from its next skill invocation.
