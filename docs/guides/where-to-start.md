@@ -7,7 +7,7 @@ Bipartite can be adopted in four steps. Each step adds sessions and tooling to t
 | 1. One session | Claude Code, one working session at a time | [skills-starter](https://github.com/matsengrp/skills-starter) |
 | 2. Named sessions | Several named sessions in terminal tabs or VS Code terminals, which message each other | bipartite (`make install`) |
 | 3. Fleet | A pool of repo clones, with a worker session spawned into a tmux window for each issue, coordinated by long-lived sessions | bipartite and tmux |
-| 4. The whole rig | A talks session on top of the fleet: results go on slides, and the group's questions drive the next work | tier 3, and a group that meets |
+| 4. Driving science | A talks session on top of the fleet: results go on slides, and the group's questions drive the next work | tier 3, and a group that meets |
 
 ## Tier 1: one session
 
@@ -48,6 +48,6 @@ Tier 3 needs tmux: spawned workers, the review windows `/bip-inbox` opens for PR
 
 Move on when results arrive faster than you can understand them and explain them to your group.
 
-## Tier 4: the whole rig
+## Tier 4: driving science
 
-A talks session (`/bip-talk`) sits on top of the fleet. You turn results into slides with it and present them to your group, and the group's questions drive the next work. Support sessions keep the rig running. [The Whole Rig](whole-rig.md) shows it in four diagrams.
+A talks session (`/bip-talk`) sits on top of the fleet. You turn results into slides with it and present them to your group, and the group's questions drive the next work. Support sessions keep the fleet running. [Driving Science with a Fleet of Agents](driving-science.md) shows it in four diagrams.

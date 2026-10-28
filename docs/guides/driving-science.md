@@ -1,4 +1,4 @@
-# The Whole Rig
+# Driving Science with a Fleet of Agents
 
 Tier 4 puts a talks session on top of the [tier 3](where-to-start.md#tier-3-fleet) fleet.
 We call the result talk-driven development.
@@ -7,11 +7,11 @@ Work is spun out to the main line once a result is worth keeping.
 It builds on the manuscript-driven development of the [June post](https://matsen.group/general/2026/06/06/bipartite.html), and moves the driver from the manuscript to the talk.
 Talks match how scientists already work, and they bring people back into the room.
 
-This page has four diagrams. The first shows the whole rig. The other three zoom in on an issue, a worker, and a fix to the skills.
+This page has four diagrams. The first shows the whole system. The other three zoom in on an issue, a worker, and a fix to the skills.
 In all four, people are in a humanist face with a purple outline, and agents are in typewriter.
 The literature is in a dashed box, because it is knowledge, not a person or an agent.
 
-## The rig
+## The whole system
 
 ![Talk-driven development: four layers of knowledge, from research up to the field, with a support layer below](../images/tier4/talk-driven-development.svg)
 
