@@ -63,7 +63,7 @@ Before it is filed, its draft goes to two sessions:
 `/bip-issue-check` then reviews the draft, and the issue is filed. For an issue that the EPIC or talks session writes, a skeptic agent also looks for flaws in its plan.
 The conductor spawns a worker for it.
 A self-contained PR lands after the EPIC session checks the claims it makes; a PR that changes shared code needs a review from a group member.
-The result goes back to the EPIC session, which rules on it, to the manuscript session, which records it, and to the talks session, which reads it from the EPIC and presents it.
+The result goes back to the EPIC session, which rules on it, to the manuscript session, which records it, and to the talks session, which finds it at cold start and presents it.
 [Issue Lifecycle](issue-lifecycle.md) gives the skills in order.
 
 ## Inside a worker
