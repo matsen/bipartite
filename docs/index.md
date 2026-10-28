@@ -1,6 +1,6 @@
 # bipartite
 
-A context layer for research groups: connecting your internal world (projects, repos, coordination) to the external academic world (papers, citations, authors).
+**Agentic hacking like a PI.** A CLI and Claude Code skills that run a research group's agents across issues, code, talks, manuscripts, and the literature.
 
 - **Go CLI** for querying literature, GitHub activity, and your group's projects and repos
 - **Claude Code skills** for orchestrating agent sessions, manuscripts and literature
