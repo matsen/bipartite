@@ -1,5 +1,5 @@
 site_name: bipartite
-site_description: A context layer connecting your research group to the academic literature
+site_description: "Agentic hacking like a PI: a CLI and Claude Code skills that run a research group's agents"
 site_url: https://matsen.github.io/bipartite
 repo_url: https://github.com/matsen/bipartite
 repo_name: matsen/bipartite
