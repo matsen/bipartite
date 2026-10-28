@@ -1,8 +1,11 @@
 # Driving Science with a Fleet of Agents
 
-Tier 4 puts a talks session on top of the [tier 3](where-to-start.md#tier-3-fleet) fleet.
-We call the result talk-driven development.
-Results go on slides, you present them to the group, and the group's questions drive the next work.
+In tier 4 you drive the science, and a fleet of agents helps.
+The agents implement ideas and report back what they find.
+You turn their results into slides and present them to your group, and the group's questions drive the next work.
+The manuscript session ties each result to the literature, and the goal is to improve what the field knows.
+
+The talks are the new piece, so we call this talk-driven development.
 Once a result is worth keeping, its analysis is moved into the project's main branch.
 The [June post](https://matsen.group/general/2026/06/06/bipartite.html) described manuscript-driven development. The manuscript still matters, but now the talk drives the work.
 Talks match how scientists already work, and they bring people back into the room.
