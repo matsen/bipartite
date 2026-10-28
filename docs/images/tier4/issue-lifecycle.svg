@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" width="780" height="600" role="img" aria-labelledby="title desc">
 <title id="title">The life of an issue</title>
-<desc id="desc">An issue starts from a talk question, a PR&#x27;s DEFERRED list, or you. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session checks the PR.s claims, or a group member&#x27;s review for shared code, signs off the landing. The result goes back to the EPIC, manuscript and talks sessions.</desc>
+<desc id="desc">An issue starts from you, a talk question, or a PR&#x27;s DEFERRED list. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session signs off the landing after it checks the PR&#x27;s claims; shared code needs a group member&#x27;s review. The result goes back to the EPIC, manuscript and talks sessions.</desc>
 <style>
   .bg { fill: #ffffff; }
   .layer { fill: #f3f3f1; }
@@ -27,7 +27,7 @@
   </marker>
 </defs>
 <rect class="bg" width="780" height="600"/>
-<text class="serif label" x="330" y="30" text-anchor="middle">from a talk question, a PR&#x27;s DEFERRED list, or you</text>
+<text class="serif label" x="330" y="30" text-anchor="middle">from you, a talk question, or a PR&#x27;s DEFERRED list</text>
 <line class="arrow" x1="330" y1="40" x2="330" y2="70"/>
 <rect class="layer" x="30" y="72" width="600" height="110" rx="3"/>
 <text class="serif tier" x="648" y="131.0">formulate</text>

@@ -35,7 +35,7 @@ The support layer holds no results. It keeps the other layers running.
 ![The life of an issue: formulate with ms and EPIC, check and file, work, land, and the result goes back](../images/tier4/issue-lifecycle.svg)
 
 Many agents look at one issue before it lands.
-An issue starts from a talk question, the follow-ups a PR lists as deferred, or you.
+An issue starts from you, a talk question, or the follow-ups a PR lists as deferred.
 Before it is filed, its draft goes to two sessions:
 
 - The manuscript session knows what the field knows. It can say whether published work already predicts the answer.
