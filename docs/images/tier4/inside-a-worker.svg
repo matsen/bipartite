@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 480" width="780" height="480" role="img" aria-labelledby="title desc">
+<title id="title">Inside a worker</title>
+<desc id="desc">One worker on one issue in one clone. At each stopping point an issue-lead reads the files cold and says what to do next. Before merge, review agents run in parallel, and comment-check fact-checks each review comment. The EPIC session sends corrections through the conductor. Once CI is green the PR goes to its landing signer.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .small { font-size: 12px; }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
+  .title { font-size: 18px; text-anchor: middle; }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
+  .label { font-size: 14px; }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
+</style>
+<defs>
+  <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path class="headfill" d="M0,0 L10,5 L0,10 z"/>
+  </marker>
+</defs>
+<rect class="bg" width="780" height="480"/>
+<rect class="layer" x="30" y="20" width="600" height="340" rx="3"/>
+<text class="serif tier" x="648" y="194.0">worker clone</text>
+<rect class="agent" x="60" y="40" width="100" height="32" rx="3"/>
+<text class="name" x="110.0" y="56.0">worker</text>
+<text class="serif note" x="172" y="61" text-anchor="start">loops: implement, run, report</text>
+<line class="arrow" x1="110" y1="74" x2="110" y2="118"/>
+<text class="serif note" x="120" y="101" text-anchor="start">at each stopping point</text>
+<rect class="agent" x="60" y="122" width="120" height="32" rx="3"/>
+<text class="name" x="120.0" y="138.0">issue-lead</text>
+<text class="serif note" x="192" y="135" text-anchor="start">reads the files cold; judges scope and results;</text>
+<text class="serif note" x="192" y="153" text-anchor="start">says continue, fold in, or escalate</text>
+<text class="serif label" x="60" y="196" text-anchor="start">pre-merge review, in parallel:</text>
+<rect class="agent" x="60" y="208" width="110" height="32" rx="3"/>
+<text class="name" x="115.0" y="224.0">clean-code</text>
+<rect class="agent" x="184" y="208" width="110" height="32" rx="3"/>
+<text class="name" x="239.0" y="224.0">code-reuse</text>
+<rect class="agent" x="308" y="208" width="90" height="32" rx="3"/>
+<text class="name" x="353.0" y="224.0">skeptic</text>
+<rect class="agent" x="412" y="208" width="120" height="32" rx="3"/>
+<text class="name" x="472.0" y="224.0">cold reader</text>
+<rect class="agent" x="60" y="252" width="210" height="32" rx="3"/>
+<text class="name" x="165.0" y="268.0">math back-translation</text>
+<text class="serif note" x="284" y="265" text-anchor="start">the skeptic, cold reader and math back-translation</text>
+<text class="serif note" x="284" y="283" text-anchor="start">run only when the PR calls for them</text>
+<rect class="agent" x="60" y="306" width="140" height="32" rx="3"/>
+<text class="name" x="130.0" y="322.0">comment-check</text>
+<text class="serif note" x="212" y="319" text-anchor="start">fact-checks each review comment</text>
+<text class="serif note" x="212" y="337" text-anchor="start">before the worker acts on it</text>
+<line class="arrow" x1="110" y1="418" x2="110" y2="364"/>
+<text class="serif note" x="120" y="395" text-anchor="start">corrections, through the conductor</text>
+<rect class="agent" x="60" y="420" width="100" height="32" rx="3"/>
+<text class="name" x="110.0" y="436.0">EPIC</text>
+<line class="arrow" x1="520" y1="362" x2="520" y2="416"/>
+<text class="serif note" x="510" y="395" text-anchor="end">CI green, then the PR</text>
+<rect class="agent" x="440" y="420" width="160" height="32" rx="3"/>
+<text class="name" x="520.0" y="436.0">landing signer</text>
+</svg>

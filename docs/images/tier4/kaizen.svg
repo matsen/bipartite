@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 470" width="780" height="470" role="img" aria-labelledby="title desc">
+<title id="title">Kaizen</title>
+<desc id="desc">From any session, you or the session itself propose a fix for friction or a bug with /bip-kaizen. The bipartite session weighs it, a cold reviewer and the sender check the diff, and it lands once CI is green. Skills are symlinked, so every session uses the fix from its next invocation.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .small { font-size: 12px; }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
+  .title { font-size: 18px; text-anchor: middle; }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
+  .label { font-size: 14px; }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
+</style>
+<defs>
+  <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path class="headfill" d="M0,0 L10,5 L0,10 z"/>
+  </marker>
+</defs>
+<rect class="bg" width="780" height="470"/>
+<rect class="layer" x="30" y="20" width="600" height="110" rx="3"/>
+<text class="serif tier" x="648" y="79.0">any session</text>
+<rect class="agent" x="56" y="38" width="80" height="32" rx="3"/>
+<text class="name" x="96.0" y="54.0">talks</text>
+<rect class="agent" x="150" y="38" width="60" height="32" rx="3"/>
+<text class="name" x="180.0" y="54.0">ms</text>
+<rect class="agent" x="224" y="38" width="80" height="32" rx="3"/>
+<text class="name" x="264.0" y="54.0">EPIC</text>
+<rect class="agent" x="318" y="38" width="90" height="32" rx="3"/>
+<text class="name" x="363.0" y="54.0">worker</text>
+<rect class="agent" x="422" y="38" width="80" height="32" rx="3"/>
+<text class="name" x="462.0" y="54.0">infra</text>
+<text class="serif title" x="520" y="59" text-anchor="start">…</text>
+<rect class="human" x="56" y="84" width="64" height="32" rx="3"/>
+<text class="person" x="88.0" y="100.0">you</text>
+<text class="serif label" x="132" y="105" text-anchor="start">or the session itself, hits friction or a bug and runs /bip-kaizen:</text>
+<text class="serif note" x="132" y="122" text-anchor="start">what happened, the root cause, a proposed edit</text>
+<line class="arrow" x1="330" y1="132" x2="330" y2="176"/>
+<text class="serif note" x="340" y="159" text-anchor="start">the proposal, quoting any words of yours</text>
+<rect class="layer" x="30" y="178" width="600" height="170" rx="3"/>
+<text class="serif tier" x="648" y="267.0">bipartite</text>
+<rect class="agent" x="56" y="196" width="110" height="32" rx="3"/>
+<text class="name" x="111.0" y="212.0">bipartite</text>
+<text class="serif note" x="180" y="207" text-anchor="start">weighs it: lean by default, and deleting beats adding;</text>
+<text class="serif note" x="180" y="225" text-anchor="start">a rule must name a failure someone actually hit;</text>
+<text class="serif note" x="180" y="243" text-anchor="start">places it, and may push back or ask for an A/B first</text>
+<rect class="agent" x="56" y="266" width="140" height="32" rx="3"/>
+<text class="name" x="126.0" y="282.0">cold reviewer</text>
+<text class="serif note" x="208" y="286" text-anchor="start">old file against new</text>
+<rect class="agent" x="376" y="266" width="110" height="32" rx="3"/>
+<text class="name" x="431.0" y="282.0">the sender</text>
+<text class="serif note" x="498" y="286" text-anchor="start">approves the diff</text>
+<text class="serif label" x="56" y="330" text-anchor="start">CI green at the head, then land</text>
+<line class="arrow" x1="330" y1="350" x2="330" y2="404"/>
+<text class="serif note" x="340" y="373" text-anchor="start">skills are symlinked, so the next</text>
+<text class="serif note" x="340" y="391" text-anchor="start">invocation everywhere uses the fix</text>
+<text class="serif title" x="330" y="432" text-anchor="start">every session, every repo</text>
+</svg>

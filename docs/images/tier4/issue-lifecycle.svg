@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 600" width="780" height="600" role="img" aria-labelledby="title desc">
+<title id="title">The life of an issue</title>
+<desc id="desc">An issue starts from you, a talk question, or a PR&#x27;s DEFERRED list. Its draft goes to the manuscript session, which knows what the field knows, and to the EPIC session, which knows the project&#x27;s current edge. issue-check and a skeptic review it before it is filed. The conductor spawns a worker. The EPIC session signs off the landing after it checks the PR&#x27;s claims; shared code needs a group member&#x27;s review. The result goes back to the EPIC, manuscript and talks sessions.</desc>
+<style>
+  .bg { fill: #ffffff; }
+  .layer { fill: #f3f3f1; }
+  .lit { fill: none; stroke: #a9a9a9; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .agent { fill: #ffffff; stroke: #a9a9a9; stroke-width: 1; }
+  .human { fill: #ffffff; stroke: #5b3fc4; stroke-width: 2.2; }
+  .name { font-family: "Latin Modern Mono", "DejaVu Sans Mono", monospace; font-size: 15px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .person { font-family: "Gill Sans", "Gill Sans MT", "Gillius ADF", Optima, Lato, sans-serif; font-size: 18px; fill: #222222; text-anchor: middle; dominant-baseline: central; }
+  .small { font-size: 12px; }
+  .serif { font-family: "Latin Modern Roman", Georgia, serif; fill: #222222; }
+  .title { font-size: 18px; text-anchor: middle; }
+  .note { font-size: 13px; font-style: italic; fill: #666666; }
+  .label { font-size: 14px; }
+  .tier { font-size: 14px; font-style: italic; fill: #666666; }
+  .arrow { stroke: #444444; stroke-width: 1.5; fill: none; marker-end: url(#head); }
+  .both { stroke: #444444; stroke-width: 1.5; fill: none; marker-start: url(#head); marker-end: url(#head); }
+  .dotted { stroke: #444444; stroke-width: 1.8; stroke-dasharray: 0.1 5; stroke-linecap: round; }
+  .dashed { stroke: #444444; stroke-width: 1.5; stroke-dasharray: 6 4; fill: none; marker-end: url(#head); }
+  .headfill { fill: #444444; }
+</style>
+<defs>
+  <marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path class="headfill" d="M0,0 L10,5 L0,10 z"/>
+  </marker>
+</defs>
+<rect class="bg" width="780" height="600"/>
+<text class="serif label" x="330" y="30" text-anchor="middle">from you, a talk question, or a PR&#x27;s DEFERRED list</text>
+<line class="arrow" x1="330" y1="40" x2="330" y2="70"/>
+<rect class="layer" x="30" y="72" width="600" height="110" rx="3"/>
+<text class="serif tier" x="648" y="131.0">formulate</text>
+<rect class="agent" x="90" y="92" width="80" height="32" rx="3"/>
+<text class="name" x="130.0" y="108.0">ms</text>
+<rect class="agent" x="470" y="92" width="80" height="32" rx="3"/>
+<text class="name" x="510.0" y="108.0">EPIC</text>
+<line class="both" x1="176" y1="108" x2="464" y2="108"/>
+<text class="serif label" x="320" y="100" text-anchor="middle">draft</text>
+<text class="serif note" x="130" y="146" text-anchor="middle">what the field</text>
+<text class="serif note" x="130" y="164" text-anchor="middle">already knows</text>
+<text class="serif note" x="510" y="146" text-anchor="middle">how it fits the project&#x27;s</text>
+<text class="serif note" x="510" y="164" text-anchor="middle">current edge</text>
+<line class="arrow" x1="330" y1="184" x2="330" y2="212"/>
+<rect class="layer" x="30" y="214" width="600" height="56" rx="3"/>
+<text class="serif tier" x="648" y="246.0">check and file</text>
+<rect class="agent" x="200" y="226" width="130" height="32" rx="3"/>
+<text class="name" x="265.0" y="242.0">issue-check</text>
+<rect class="agent" x="350" y="226" width="100" height="32" rx="3"/>
+<text class="name" x="400.0" y="242.0">skeptic</text>
+<line class="arrow" x1="330" y1="272" x2="330" y2="300"/>
+<rect class="layer" x="30" y="302" width="600" height="56" rx="3"/>
+<text class="serif tier" x="648" y="334.0">work</text>
+<rect class="agent" x="170" y="314" width="120" height="32" rx="3"/>
+<text class="name" x="230.0" y="330.0">conductor</text>
+<line class="arrow" x1="296" y1="330" x2="384" y2="330"/>
+<text class="serif note" x="340" y="322" text-anchor="middle">spawns</text>
+<rect class="agent" x="390" y="314" width="90" height="32" rx="3"/>
+<text class="name" x="435.0" y="330.0">worker</text>
+<text class="serif note" x="492" y="334" text-anchor="start">inside a worker: below</text>
+<line class="arrow" x1="330" y1="360" x2="330" y2="388"/>
+<rect class="layer" x="30" y="390" width="600" height="72" rx="3"/>
+<text class="serif tier" x="648" y="430.0">land</text>
+<rect class="agent" x="110" y="410" width="80" height="32" rx="3"/>
+<text class="name" x="150.0" y="426.0">EPIC</text>
+<text class="serif note" x="200" y="431" text-anchor="start">checks its claims, or</text>
+<rect class="human" x="318" y="406" width="170" height="40" rx="3"/>
+<text class="person" x="403.0" y="426.0">a group member</text>
+<text class="serif note" x="498" y="431" text-anchor="start">review, for shared code</text>
+<line class="arrow" x1="330" y1="464" x2="330" y2="504"/>
+<text class="serif label" x="340" y="489" text-anchor="start">result</text>
+<rect class="agent" x="100" y="508" width="80" height="32" rx="3"/>
+<text class="name" x="140.0" y="524.0">EPIC</text>
+<text class="serif note" x="140" y="562" text-anchor="middle">rules on it</text>
+<rect class="agent" x="290" y="508" width="80" height="32" rx="3"/>
+<text class="name" x="330.0" y="524.0">ms</text>
+<text class="serif note" x="330" y="562" text-anchor="middle">records it</text>
+<rect class="agent" x="480" y="508" width="80" height="32" rx="3"/>
+<text class="name" x="520.0" y="524.0">talks</text>
+<text class="serif note" x="520" y="562" text-anchor="middle">presents it</text>
+</svg>

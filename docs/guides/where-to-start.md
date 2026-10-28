@@ -1,12 +1,13 @@
 # Where to Start
 
-Bipartite can be adopted in three steps. Each step adds sessions and tooling to the one before. Start at the first, and move on when the test at the end of each tier says you are ready.
+Bipartite can be adopted in four steps. Each step adds sessions and tooling to the one before. Start at the first, and move on when the test at the end of each tier says you are ready.
 
 | Tier | What you run | Needs |
 |---|---|---|
 | 1. One session | Claude Code, one working session at a time | [skills-starter](https://github.com/matsengrp/skills-starter) |
 | 2. Named sessions | Several named sessions in terminal tabs or VS Code terminals, which message each other | bipartite (`make install`) |
 | 3. Fleet | A pool of repo clones, with a worker session spawned into a tmux window for each issue, coordinated by long-lived sessions | bipartite and tmux |
+| 4. Driving science | You drive the science, and the fleet helps: talks to your group, a manuscript tied to the literature, and support sessions | tier 3, and a group that meets |
 
 ## Tier 1: one session
 
@@ -44,3 +45,15 @@ The fleet adds long-lived sessions that run the work for you. [Agent Roles](role
 - Staff (`/bip-staff`). Sessions send it the questions they can't settle themselves. It answers what it can and notifies you only for decisions that are yours.
 
 Tier 3 needs tmux: spawned workers, the review windows `/bip-inbox` opens for PRs awaiting your review, and the skills that rebuild the fleet after a host reboot all run through it. The [Issue Lifecycle](issue-lifecycle.md) guide gives the order of the issue and PR skills.
+
+Move on when results arrive faster than you can understand them and explain them to your group.
+
+## Tier 4: driving science
+
+In tier 4 you drive the science, and the fleet helps. Each result has to pass a wider circle: you have to understand it, the group has to be convinced by it, and the field has to accept it.
+
+- A talks session (`/bip-talk`) turns results into slides with you. You present them to your group, and the group's questions drive the next work.
+- The manuscript session (`/bip-ms`) ties each result to the literature. People write the paper that goes back to the field.
+- Support sessions keep the fleet running. A fix to the skills, proposed from any session, reaches every session.
+
+[Driving Science with a Fleet of Agents](driving-science.md) shows the whole system in four diagrams.
