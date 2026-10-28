@@ -64,7 +64,8 @@ All figure and deck work goes through one long-lived `/bip-helper`, never inline
 1. Check out and pull the talk branch; read `talks/AGENTS.md`, the current talk's source and `feedback.md`, and the talk PR's body.
 2. Read the EPIC body for the project's current state.
 3. Run each hold's FIRST CHECK; report what has read and what still holds.
-4. Take the continuation file's in-flight items, if any, as the user's direction; otherwise list the follow-ups not yet settled and what the next talk needs.
+4. Sweep for results no talk has shown. For the talk's EPIC, list the PRs merged since the last talk and the open PRs with a Result section, and grep each PR number across `talks/**/*.md`. List each one no talk record cites in `talks/SWEEP.md`, under a dated heading, for the user to rule present, hold or skip; a listed PR counts as cited once the user has ruled on it. Results posted only as issue comments need the same pass over the EPIC's issues.
+5. Take the continuation file's in-flight items, if any, as the user's direction; otherwise list the follow-ups not yet settled and what the next talk needs.
 
 Tuck in with `/bip-tuckin` (the generic fallback), naming `/bip-talk` as the cold-start in the continuation file.
 
