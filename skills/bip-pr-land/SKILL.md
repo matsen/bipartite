@@ -30,7 +30,7 @@ git fetch -q origin "+pull/<N>/head:refs/pr/<N>" <base> \
   && gh pr merge <N> --squash --match-head-commit "$sha" --body "closes #<issue>"
 ```
 
-If the ancestor test fails, by default rebase `refs/pr/<N>` onto `origin/<base>` in a scratch worktree, `git push --force-with-lease origin HEAD:<headRefName>`, run the repo's gate on the rebased head (CI per Step 5.5; with no CI, the local gate its CLAUDE.md names), and re-run the guard. You may merge a stale head without the rebase only when you can say why it is safe (e.g. its files are disjoint from what landed since); say so in a PR comment.
+If the ancestor test fails, by default rebase `refs/pr/<N>` onto `origin/<base>` in a scratch worktree, `git push --force-with-lease origin HEAD:<headRefName>`, run the repo's gate on the rebased head (CI per Step 5.5; with no CI, the local gate its CLAUDE.md names), and re-run the guard. You may land behind (merge a stale head without the rebase, running the guard without its ancestor line) only when the PR is truly disjoint from what landed since: the missed commits cannot affect it. Sharing no file is not enough; a missed change to code the PR imports, calls or reads disqualifies it. CI must still be green at the head (Step 5.5). Say why it is disjoint in a PR comment.
 
 Do this only for a worker that has ended (`stop_reason: awaiting-human-merge`, session idle). A live worker holding a landing delegation lands its own PR. If the clone is a fleet slot, reclaim it through `/bip-conductor`, which runs the issue-lead's terminal ceremony before preserving (Step 7a here would delete the status file the ceremony keys on).
 
@@ -122,7 +122,7 @@ test "$(git rev-parse HEAD)" = "$(gh pr view <N> --json headRefOid -q .headRefOi
   && gh pr merge --squash --match-head-commit "$(git rev-parse HEAD)" --body "closes #<issue>"   # or --body "" if it closes nothing
 ```
 
-If the guard fails, go back to Step 4. A moved base voids an approval.
+If the guard fails, go back to Step 4, or land behind ("Where to stand") when the PR is truly disjoint from what landed since. Otherwise a moved base voids an approval.
 
 ### Step 7a: Preserve EPIC state, then detect worktree mode
 
