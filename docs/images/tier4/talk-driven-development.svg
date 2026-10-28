@@ -40,7 +40,7 @@
 <g transform="translate(0 40)">
 <!-- the paper goes up, written by people -->
 <line class="arrow" x1="300" y1="122" x2="300" y2="50"/>
-<text class="serif label" x="310" y="96">the paper, written by people</text>
+<text class="serif label" x="310" y="96">the paper, rewritten by people</text>
 
 
 <!-- the group -->

@@ -39,7 +39,7 @@ Step 2 uses the conductor's occupancy table to scope Group A; Step 6 uses it as 
 ### The epic's own claims
 
 - Before writing that the EPIC's question is answered, quote the question and state which measured quantity closes it, and by how much (say so if it is one stage at one fixture).
-- Run a skeptic subagent before claiming a question answered and before filing an issue you wrote. File every new issue through `/bip-issue-check`, never raw `gh issue create`.
+- Run a skeptic subagent before claiming a question answered and before filing an issue you wrote. Send the draft's path to each ms session in the `Feeds:` line too, which says whether published work already predicts the answer; fold in a reply that arrives before filing, but don't hold the issue for it. File every new issue through `/bip-issue-check`, never raw `gh issue create`.
 - Check attribution ("who found it") against the log or PR before repeating it.
 - Escalate a question to the user only if its answers lead to different actions; take any shared first step now and ask only about the fork. How to test (seeds, sample size, decision rule) is yours to rule on, or staff's. Put the question as one line in your report, escalate per `/bip-conductor`'s "Paging the user", park only that item, and keep working.
 

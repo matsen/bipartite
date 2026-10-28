@@ -49,6 +49,7 @@ new schema silently won't take.
 
 - Agents decide and land changes here without asking the user, under downward pressure on size: a peer's suggested addition is a proposal to weigh, not a fix to apply, and deleting beats adding (`CONSTITUTION.md` Article VII).
 - Every PR gets `/bip-pr-review` before it lands, skill-only PRs included; peer sessions' acks don't replace it. Skip the steps that don't apply and say so in the report.
+- A PR from another session's kaizen also needs that session's ack on the diff. A PR that trims a skill also gets a cold reviewer who compares the old file with the new one: acks have caught text a trim softened by mistake.
 - Owner is **`matsen/bipartite`**, not `matsengrp`. Use `matsen` in GitHub URLs and API calls.
 - Continuation notes → `_ignore/CONTINUE-<role>.md` (gitignored); never commit. Written by `/bip-tuckin`, read by `/bip-continue`; see `docs/guides/continuation-prompt.md`.
 - Secrets: the token and webhook getters in `internal/config/global.go` look up each name (`BIP_GITHUB_TOKEN`, `BIP_SLACK_TOKEN`, `BIP_ASTA_API_KEY`, `BIP_SLACK_WEBHOOK_<CHANNEL>`, plus fallbacks) in the environment, then in `~/.config/bip/secrets.env`, then in `config.yml`. Never print `secrets.env`. `config.yml` should hold no secrets, but an older one may still carry tokens or `slack_webhooks`, so don't print it whole: read the field you need.

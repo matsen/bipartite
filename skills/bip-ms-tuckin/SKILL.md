@@ -24,9 +24,8 @@ git diff --stat
 git diff --cached --stat
 ```
 
-If there are uncommitted changes to TeX files, ask the user whether to commit them.
-Draft a commit message summarizing what changed (e.g., "Update implementation notes: Phase 1b done, branchScale normalization").
-Do not commit without confirmation.
+Commit the TeX changes this session made, with a message summarizing what changed (e.g., "Update implementation notes: Phase 1b done, branchScale normalization").
+Ask the user before committing changes the session did not make.
 
 If there are only untracked `ISSUE-*.md` files, note them but do not commit (these are intentionally untracked per CLAUDE.md).
 

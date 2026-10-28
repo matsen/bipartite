@@ -45,7 +45,8 @@
 <text class="serif label" x="132" y="105" text-anchor="start">or the session itself, hits friction or a bug and runs /bip-kaizen:</text>
 <text class="serif note" x="132" y="122" text-anchor="start">what happened, the root cause, a proposed edit</text>
 <line class="arrow" x1="330" y1="132" x2="330" y2="176"/>
-<text class="serif note" x="340" y="159" text-anchor="start">the proposal, quoting any words of yours</text>
+<text class="serif note" x="340" y="150" text-anchor="start">the proposal, quoting any words of yours;</text>
+<text class="serif note" x="340" y="168" text-anchor="start">operations go ahead, science waits for you</text>
 <rect class="layer" x="30" y="178" width="600" height="170" rx="3"/>
 <text class="serif tier" x="648" y="267.0">bipartite</text>
 <rect class="agent" x="56" y="196" width="110" height="32" rx="3"/>
@@ -55,7 +56,7 @@
 <text class="serif note" x="180" y="243" text-anchor="start">places it, and may push back or ask for an A/B first</text>
 <rect class="agent" x="56" y="266" width="140" height="32" rx="3"/>
 <text class="name" x="126.0" y="282.0">cold reviewer</text>
-<text class="serif note" x="208" y="286" text-anchor="start">old file against new</text>
+<text class="serif note" x="208" y="286" text-anchor="start">for a trim: old file against new</text>
 <rect class="agent" x="376" y="266" width="110" height="32" rx="3"/>
 <text class="name" x="431.0" y="282.0">the sender</text>
 <text class="serif note" x="498" y="286" text-anchor="start">approves the diff</text>

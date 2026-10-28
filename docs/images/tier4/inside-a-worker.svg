@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 480" width="780" height="480" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 420" width="780" height="420" role="img" aria-labelledby="title desc">
 <title id="title">Inside a worker</title>
-<desc id="desc">One worker on one issue in one clone. At each stopping point an issue-lead reads the files cold and says what to do next. Before merge, review agents run in parallel, and comment-check fact-checks each review comment. The EPIC session sends corrections through the conductor. Once CI is green the PR goes to its landing signer.</desc>
+<desc id="desc">One worker on one issue in one clone. At each stopping point an issue-lead reads the files cold and says what to do next. Before merge, review agents run in parallel. The EPIC session sends corrections through the conductor. Once CI is green the PR goes to its landing signer.</desc>
 <style>
   .bg { fill: #ffffff; }
   .layer { fill: #f3f3f1; }
@@ -26,9 +26,9 @@
     <path class="headfill" d="M0,0 L10,5 L0,10 z"/>
   </marker>
 </defs>
-<rect class="bg" width="780" height="480"/>
-<rect class="layer" x="30" y="20" width="600" height="340" rx="3"/>
-<text class="serif tier" x="648" y="194.0">worker clone</text>
+<rect class="bg" width="780" height="420"/>
+<rect class="layer" x="30" y="20" width="600" height="280" rx="3"/>
+<text class="serif tier" x="648" y="164.0">worker clone</text>
 <rect class="agent" x="60" y="40" width="100" height="32" rx="3"/>
 <text class="name" x="110.0" y="56.0">worker</text>
 <text class="serif note" x="172" y="61" text-anchor="start">loops: implement, run, report</text>
@@ -51,16 +51,12 @@
 <text class="name" x="165.0" y="268.0">math back-translation</text>
 <text class="serif note" x="284" y="265" text-anchor="start">the skeptic, cold reader and math back-translation</text>
 <text class="serif note" x="284" y="283" text-anchor="start">run only when the PR calls for them</text>
-<rect class="agent" x="60" y="306" width="140" height="32" rx="3"/>
-<text class="name" x="130.0" y="322.0">comment-check</text>
-<text class="serif note" x="212" y="319" text-anchor="start">fact-checks each review comment</text>
-<text class="serif note" x="212" y="337" text-anchor="start">before the worker acts on it</text>
-<line class="arrow" x1="110" y1="418" x2="110" y2="364"/>
-<text class="serif note" x="120" y="395" text-anchor="start">corrections, through the conductor</text>
-<rect class="agent" x="60" y="420" width="100" height="32" rx="3"/>
-<text class="name" x="110.0" y="436.0">EPIC</text>
-<line class="arrow" x1="520" y1="362" x2="520" y2="416"/>
-<text class="serif note" x="510" y="395" text-anchor="end">CI green, then the PR</text>
-<rect class="agent" x="440" y="420" width="160" height="32" rx="3"/>
-<text class="name" x="520.0" y="436.0">landing signer</text>
+<line class="arrow" x1="110" y1="358" x2="110" y2="304"/>
+<text class="serif note" x="120" y="335" text-anchor="start">corrections, through the conductor</text>
+<rect class="agent" x="60" y="360" width="100" height="32" rx="3"/>
+<text class="name" x="110.0" y="376.0">EPIC</text>
+<line class="arrow" x1="520" y1="302" x2="520" y2="356"/>
+<text class="serif note" x="510" y="335" text-anchor="end">CI green, then the PR</text>
+<rect class="agent" x="440" y="360" width="160" height="32" rx="3"/>
+<text class="name" x="520.0" y="376.0">landing signer</text>
 </svg>
