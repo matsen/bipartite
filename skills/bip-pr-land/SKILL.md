@@ -202,7 +202,12 @@ fi
 git branch -d <branch>
 ```
 
-`gh pr merge` normally deletes the remote branch. If not: `git push origin --delete <branch>`
+`gh pr merge` normally deletes the remote branch, and GitHub then retargets each open PR based on it. If the branch survives, retarget those PRs to the merged PR's base before you delete it by hand, since a manual delete closes them:
+
+```bash
+for n in $(gh pr list --state open --base <branch> --json number -q '.[].number'); do gh pr edit "$n" --base <base>; done
+git push origin --delete <branch>
+```
 
 ### Step 9: Ensure clean main
 
