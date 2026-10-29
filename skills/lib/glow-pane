@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# glow-pane <file>: show a markdown file in glow, in a split beside the calling tmux pane.
+# glow-pane [-t <pane>] <file>: show a markdown file in glow, in a split beside the calling
+# tmux pane, or beside <pane>. A `claude --bg` job runs in no pane, so it passes -t with the
+# pane the user is watching.
 # glow-pane --run <file> [glow flags]: run glow in this pane, as the split does.
 # glow reloads the file when it changes, so edit it in place. The style is tmux's
 # @theme (light or dark), else glow's auto; theme-follow respawns the pane when
@@ -16,7 +18,16 @@ if [ "${1:-}" = --run ]; then
   [ "$style" = auto ] || style="$styles/glow-$style.json"
   exec glow -t -s "$style" "$@" "$file"
 fi
-file=$(readlink -f "${1:?usage: glow-pane <file>}")
-pane=$("$(dirname "$(readlink -f "$0")")/own-pane") || { echo "glow-pane runs in a tmux pane" >&2; exit 1; }
+pane=
+if [ "${1:-}" = -t ]; then pane=${2:?usage: glow-pane [-t <pane>] <file>}; shift 2; fi
+file=$(readlink -f "${1:?usage: glow-pane [-t <pane>] <file>}")
+if [ -z "$pane" ] && ! pane=$("$(dirname "$(readlink -f "$0")")/own-pane"); then
+  if [ -n "${CLAUDE_JOB_DIR:-}" ]; then
+    echo "glow-pane: a --bg job runs in no tmux pane; pass -t <pane> for the pane the user is watching" >&2
+  else
+    echo "glow-pane runs in a tmux pane, or with -t <pane>" >&2
+  fi
+  exit 1
+fi
 tmux split-window -h -d -l 40% -t "$pane" \
   "$(printf '%q --run %q' "$(readlink -f "$0")" "$file")"
