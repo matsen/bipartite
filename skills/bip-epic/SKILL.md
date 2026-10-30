@@ -196,6 +196,7 @@ mkdir -p "$CLONE_ROOT/.spawn-prompts"
 
 `<this-skill's-base-directory>` is the base directory given at invocation; `lib/spawn-intent.sh` is a sibling of every skill directory. `resolve_clone_root` expands the tilde-form `clone_root`.
 
+- Every `action_candidates` item from either scan group, and every issue you filed this cycle, gets a brief or a written reason in this cycle's handoff. The conductor spawns only from briefs, so an issue left with neither sits unspawned.
 - Every brief opens with an `EPIC: <owner/repo>#<N>` line, cross-repo included: `/bip-conductor-spawn` requires it and counts live slots by it.
 - Intersect candidates with the occupancy table as a discrete step and write "checked against conductor table of HH:MM" in the handoff; re-ask if the table is over a cycle old. In clone mode nothing downstream refuses the same issue spawned into a second idle clone.
 - Older intent files are named `spawn-<N>.txt`; `/bip-conductor-spawn` reads either. Use `<N>.md` and don't rename old files.
