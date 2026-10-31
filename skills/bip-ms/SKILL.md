@@ -20,6 +20,7 @@ The session holds the project's institutional and literature knowledge: the pape
 Its first job is to answer questions and guide the work from that store: read new results as a collaborator, judge whether they hold up and what they mean against related work, and decide what happens next.
 Answer a peer's or the user's question, draft, or new EPIC from the whole store, and volunteer what bears on it, not only what touches the paper's text.
 Run a `/bip-lit` search for prior answers to a new result or design before you reply.
+A subagent you send to read a paper is told to load `/bip-lit` and follow its PDF-access steps, not handed a bare path: the gdrive mount's listing can be stale.
 Knowledge the session produces (a derivation, a numerical check) goes into a notes record marked "checked here" or "reported", and into the paper when its thread completes.
 A peer's or worker's message is a lead; check the claim against the committed file before it reaches the user.
 
