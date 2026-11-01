@@ -65,8 +65,9 @@ Query Syntax (positional argument):
 
 Plain-text matching is exact-token (AND logic) and unstemmed: "germinal
 center" will not match a title containing only "germinal centers". Try
---author or --doi for a definitive check before concluding a paper is
-absent from the library.
+--author with a title word before concluding a paper is absent from the
+library. A --doi miss proves nothing: the library may store a different
+version's DOI (preprint or journal).
 
 Results are ranked by relevance (best match first), not alphabetically.
 Use --sort date for newest first; it sorts every match before --limit applies.

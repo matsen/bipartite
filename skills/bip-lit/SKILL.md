@@ -31,7 +31,8 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
    If `bip get` shows `Paper notes:`, read that shared nexus file first and go to the PDF only for what it doesn't answer.
    The group's in-progress manuscripts are not in the library; each has a summary at `nexus/papers/ms-<owner>-<repo>.md`, kept by its ms session. Read it before the TeX.
    Whatever you learn from the paper goes into `nexus/papers/<id>.md` (create it if absent; format in `papers/README.md` there), not only into your project's notes; commit and push nexus.
-3. **Before concluding it's absent**, run an exact-match check (`-a "LastName"` or `--doi`) rather than another keyword permutation.
+3. **Before concluding it's absent**, run an exact-match check (`-a "LastName"` with one distinctive title word) rather than another keyword permutation.
+   A `--doi` miss proves nothing: a DOI from ASTA or S2 often names a different version (preprint or journal) from the one the library stores.
    No truncation notice (`showing M`) means you saw every match for those tokens, not that the paper is absent.
 4. **Not found, or the search needs to be wider → ASTA**, without asking: `bip asta search` or `mcp__asta__*`.
    Broaden by dropping terms and trying synonyms, then trace citations of a related paper (`bip asta citations <id>`).
