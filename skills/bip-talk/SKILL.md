@@ -56,7 +56,7 @@ All figure and deck work goes through one long-lived `/bip-helper`, never inline
 
 1. After a talk, the user relays the audience's questions, and the session writes `feedback.md`: quick answers first.
 2. Then the follow-ups, slowly, one candidate at a time, with a skeptic early. Each ends filed (through the EPIC session), answered by an existing issue or PR, converged to no experiment (the user confirms no-file), dropped as a duplicate, or gated on another issue's read.
-3. What is settled goes into the next talk's deck. Before the user reviews the rebuilt deck where it is served, a fresh subagent given only the deck PDF and its source reads it as the audience would. For each figure it first says what the axes are and what each point is, then flags undefined terms, order and density. Fix what it finds.
+3. What is settled goes into the next talk's deck. Before the user reviews the rebuilt deck where it is served, a fresh subagent given only the deck PDF and its source reads it as the audience would. For each figure it first says what the axes are and what each point is, then flags undefined terms, metaphors, order and density. Fix what it finds.
 4. The user signs off on `feedback.md` and on the figures.
 5. Once the group is satisfied with an analysis (the user's call), it is formalized on main: ask the EPIC session for an issue that ports its script and analysis with tests and PR review, and a worker does the port. The talk keeps its copy as the record, and its notes point at main once the port lands.
 
