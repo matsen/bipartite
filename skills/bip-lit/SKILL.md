@@ -57,7 +57,7 @@ Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://do
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
 Before you call a Paperpile DOI bad, check `curl -sI https://doi.org/<doi>`: doi.org redirects an alias DOI to its canonical one, while `api.crossref.org` answers an alias with a 301, not the record.
 To import a Paperpile export, run `/bip-lit-import`.
-To confirm each paper arrived, run `bip search --doi <doi> --human` with the DOI Paperpile stored; `bip get` takes only ids and has no `--doi`.
+To confirm each paper arrived, run `bip search --doi <doi> --human` with the DOI Paperpile stored; `bip get` takes only ids and has no `--doi`. A miss can be an alias DOI, so check by title as in step 3.
 
 ## Back a list of claims
 
