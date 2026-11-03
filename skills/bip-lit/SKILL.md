@@ -1,6 +1,6 @@
 ---
 name: bip-lit
-description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), managing the library, or exploring literature via S2/ASTA.
+description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), backing each item of a plan with papers checked against their PDFs, managing the library, or exploring literature via S2/ASTA.
 ---
 
 # Bip Reference Library
@@ -37,6 +37,14 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
 4. **Not found, or the search needs to be wider → ASTA**, without asking: `bip asta search` or `mcp__asta__*`.
    Broaden by dropping terms and trying synonyms, then trace citations of a related paper (`bip asta citations <id>`).
 
+### Back a list of claims
+
+To back each item of a plan or design with literature, run the steps above per item and keep a notes file of each item's candidate papers and the claim each would carry.
+A paper picked from its abstract can cut against the claim, or support it only in a regime far from yours.
+So send each load-bearing paper to a reading agent (2–4 papers per agent) that loads `/bip-lit` and writes the nexus note.
+Each claim gets the quoted page, table or figure and a verdict: SUPPORTED, QUALIFIED (say how) or NOT SUPPORTED.
+Fold the verdicts back into the notes file and the plan.
+
 ### Writing queries
 
 `bip search` is exact-token AND matching, unstemmed, so one inflected or half-remembered word zeroes out a query.
@@ -55,6 +63,7 @@ In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches tho
 
 Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
+Before you call a Paperpile DOI bad, check `curl -sI https://doi.org/<doi>`: an alias DOI redirects there, and `api.crossref.org` answers it with a 301, not the record.
 To import a Paperpile export, run `/bip-lit-import`.
 
 ## Opening an S2 paper page in a browser
