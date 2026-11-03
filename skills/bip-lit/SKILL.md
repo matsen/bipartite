@@ -1,6 +1,6 @@
 ---
 name: bip-lit
-description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), managing the library, or exploring literature via S2/ASTA.
+description: Unified guidance for using the bipartite reference library CLI. Use when searching for papers, reading or summarizing one (shared notes in nexus papers/), backing each item of a plan with papers checked against their PDFs, managing the library, or exploring literature via S2/ASTA.
 ---
 
 # Bip Reference Library
@@ -55,7 +55,17 @@ In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches tho
 
 Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
+Before you call a Paperpile DOI bad, check `curl -sI https://doi.org/<doi>`: doi.org redirects an alias DOI to its canonical one, while `api.crossref.org` answers an alias with a 301, not the record.
 To import a Paperpile export, run `/bip-lit-import`.
+To confirm each paper arrived, run `bip search --doi <doi> --human` with the DOI Paperpile stored; `bip get` takes only ids and has no `--doi`. A miss can be an alias DOI, so check by title as in step 3.
+
+## Back a list of claims
+
+To back each item of a plan or design with literature, run the steps above per item and keep a notes file of each item's candidate papers and the claim each would carry.
+A paper picked from its abstract can cut against the claim, or support it only in a regime far from yours.
+So send each load-bearing paper to a reading agent (2–4 papers per agent) that loads `/bip-lit` and writes the nexus note.
+Each claim gets the quoted page, table or figure and a verdict: SUPPORTED, QUALIFIED (say how) or NOT SUPPORTED.
+Fold the verdicts back into the notes file and the plan.
 
 ## Opening an S2 paper page in a browser
 
