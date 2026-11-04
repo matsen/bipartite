@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // requireTmux skips the test if tmux isn't available in the test environment.
@@ -17,13 +18,32 @@ func requireTmux(t *testing.T) {
 }
 
 // withTmuxSessionIn starts a detached tmux session with cwd set to dir,
-// runs fn, then tears the session down.
+// waits for its pane to report dir, runs fn, then tears the session down.
+// tmux 3.6 starts the pane's shell asynchronously, so right after
+// new-session pane_current_path can still be the server's cwd.
 func withTmuxSessionIn(t *testing.T, dir, sessionName string, fn func()) {
 	t.Helper()
 	if err := exec.Command("tmux", "new-session", "-d", "-s", sessionName, "-c", dir).Run(); err != nil {
 		t.Fatalf("starting tmux session: %v", err)
 	}
 	defer exec.Command("tmux", "kill-session", "-t", sessionName).Run()
+
+	want, err := canonicalizePath(dir)
+	if err != nil {
+		t.Fatalf("resolving %q: %v", dir, err)
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		out, _ := exec.Command("tmux", "display-message", "-p", "-t", sessionName, "#{pane_current_path}").Output()
+		last := strings.TrimSpace(string(out))
+		if got, err := canonicalizePath(last); last != "" && err == nil && got == want {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("pane of %s never reported cwd %q (last: %q)", sessionName, dir, last)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	fn()
 }
 
