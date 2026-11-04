@@ -35,11 +35,12 @@ func withTmuxSessionIn(t *testing.T, dir, sessionName string, fn func()) {
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		out, _ := exec.Command("tmux", "display-message", "-p", "-t", sessionName, "#{pane_current_path}").Output()
-		if got, err := canonicalizePath(strings.TrimSpace(string(out))); err == nil && got == want {
+		last := strings.TrimSpace(string(out))
+		if got, err := canonicalizePath(last); last != "" && err == nil && got == want {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("pane of %s never reported cwd %q", sessionName, dir)
+			t.Fatalf("pane of %s never reported cwd %q (last: %q)", sessionName, dir, last)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
