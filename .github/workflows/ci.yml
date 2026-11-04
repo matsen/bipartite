@@ -20,6 +20,14 @@ jobs:
       - name: Build
         run: go build -o bip ./cmd/bip
 
+      - name: tmux debug
+        run: |
+          tmux -V; cat /etc/os-release | head -2; echo "TMUX_TMPDIR=$TMUX_TMPDIR XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
+          d=$(mktemp -d); tmux new-session -d -s dbg -c "$d"; echo "new rc=$?"
+          tmux list-panes -a -F '#{pane_current_path}|#{pane_start_path}|#{pane_pid}|#{pane_dead}'; echo "list rc=$?"
+          sleep 1; tmux list-panes -a -F '#{pane_current_path}|#{pane_start_path}|#{pane_pid}|#{pane_dead}'
+          pid=$(tmux list-panes -a -F '#{pane_pid}' | head -1); ls -l /proc/$pid/cwd || true; ps -o pid,cmd -p $pid || true
+          tmux kill-server || true
       - name: Run tests
         run: go test ./...
 
