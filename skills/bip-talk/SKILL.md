@@ -37,7 +37,7 @@ Everything here holds across repos.
 
 ## Discipline
 
-- **The first cut at a dataset is the raw data**: a scatterplot of the measured quantities, one point per observation. A derived statistic (a slope, a ratio, a per-target level) comes later, once the raw plot has been looked at; it comes first only for a reason stated in the slide's notes.
+- **The first cut at a dataset is the raw data**: a scatterplot of the measured quantities, one point per observation. A derived statistic (a slope, a ratio, a per-target level) comes later, once the raw plot has been looked at; it comes first only for a reason stated in the slide's notes, for example that plots of the raw values already exist in the project's PRs or talks, and the statistic cancels a confound those values carry.
 - Put a skeptic (`surprising-conclusion-skeptic`) on each follow-up candidate before drafting its issue: it catches misattributions and duplicates of open issues.
 - A new or changed figure is drawn in the slide style the repo's `talks/AGENTS.md` names, and gets a `plot-reviewer` pass before it goes in a deck. Give the reviewer the script, the rendered figure, and the slide as rendered in the deck PDF, since it has to judge the size the figure is projected at.
 - Re-derive every number a peer sends before it reaches a slide, and keep PROVISIONAL numbers off slides.
