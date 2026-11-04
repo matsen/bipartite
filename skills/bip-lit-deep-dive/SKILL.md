@@ -13,7 +13,7 @@ Step 3 matters most: a paper picked from its abstract can cut against the claim,
 ## Steps
 
 1. **Search.** Number the items if the plan does not. Send agents over the items (a few items each). Tell each agent to load `/bip-lit` and search the library, then ASTA.
-   Write a notes file in the project (for example `notes/literature-<topic>.md`). For each item, list the candidate papers and the claim each would carry. End it with the papers not in the library, each as a `https://doi.org/<doi>` link.
+   Write a notes file in the project (for example `notes/literature-<topic>.md`). For each item, list the candidate papers and the claim each would carry. End it with the papers not in the library, each as a `https://doi.org/<doi>` link. A paper goes on that list only after `bip search --doi <doi>` and an author-and-title search (`/bip-lit` step 3) both miss; a hit means it is in the library, often under another year or version, so list its key instead.
 2. **Get the papers** into the library by `/bip-lit`'s "Adding to the library". Repeat until every paper is in, or the user drops it.
 3. **Read the load-bearing papers.** Send 2–4 papers to each reading agent, in parallel. Tell each agent to load `/bip-lit`, follow its PDF steps, and write or update the nexus note. For each claim it returns the quoted page, table or figure and a verdict: SUPPORTED, QUALIFIED (say how) or NOT SUPPORTED.
    A setting the paper does not state (a default, a ratio you derive from a table) gets its source named, for example the tool's code at a commit.
