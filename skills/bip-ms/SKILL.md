@@ -207,7 +207,7 @@ Tell the user which notebook opened and which EPIC/issue produced it; once its t
 2. Read the manuscript around the target spot, per "Reading the manuscript" in Step 0.
 3. Write it: prose in Methods and Results, outline points in the Introduction and Discussion.
 4. Run the `@scientific-tex-editor` agent on new prose, and read its diff, deleted lines included, before committing.
-5. Commit, and tell the user what changed with the diff.
+5. Pull, commit on `main`, and push. Tex repos take no branch or PR (the group default; Erick, 2026-11-06). Tell the user what changed with the diff.
 
 An outline point is one full-sentence claim, followed by the `\cite` keys that support it and the `\ref` to the results it rests on, if any.
 A bare topic ("related work on X") is not a point.
