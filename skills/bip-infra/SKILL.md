@@ -42,6 +42,7 @@ When the situation changes (a host returns, the pause lifts), notify the same li
 ## Footprint reports
 
 Conductors report what they run where. Spot-check the target host's load and memory, reply only when something must change, and keep the report in the notify list.
+Standing rules for conductors (which jobs need no ack, the guard sizing rule, what to report) go in the site doc. A broadcast points to that section and does not restate the rules, so conductors keep no copies that go stale.
 
 ## Decisions that aren't infra's
 
