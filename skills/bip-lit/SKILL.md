@@ -53,7 +53,8 @@ In `bip search`, put people in `-a`, not the query: `"Tim Yu Bloom"` matches tho
 
 ## Adding to the library
 
-Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile; `bip s2 add` changes the library and needs the user's word.
+Give the user the DOI (`externalIds.DOI` from `bip asta paper`) as a `https://doi.org/<doi>` link, never bare, and ask them to add it to Paperpile.
+"Import" or "add these" from the user means this Paperpile route. `bip s2 add` writes a metadata-only entry with no PDF, so run it only when the user names `bip s2 add`.
 Once they've imported it, `git pull --ff-only` in the nexus repo and `bip rebuild`.
 Before you call a Paperpile DOI bad, check `curl -sI https://doi.org/<doi>`: doi.org redirects an alias DOI to its canonical one, while `api.crossref.org` answers an alias with a 301, not the record.
 To import a Paperpile export, run `/bip-lit-import`.
