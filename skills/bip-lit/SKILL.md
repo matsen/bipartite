@@ -21,6 +21,7 @@ An argument (`/bip-lit <query>`, or `/bip-lit find <query>` with `find` dropped)
    An entry with a `URL:` and no `PDF:` is a web page (an essay or blog post with no DOI): read it at that URL.
    Read the `Supplements:` it lists too: methods numbers (data size, training budget, per-condition tables) are often only there.
    On Linux, a listed PDF missing from disk is usually a fresh import that the rclone mount has not listed yet, and no cache setting lists it soon enough: copy it straight from the remote instead of waiting.
+   A PDF replaced in Paperpile (a revised version) can still read as the old file through the mount; when the version matters, copy it from the remote the same way.
    `findmnt -no SOURCE,TARGET -T <pdf-root>` gives the remote and its mount point (on pax, `gdrive:` and `~/gdrive`). The remote path is the remote, then pdf-root below the mount point, then the `PDF:` field (on pax, `gdrive:Paperpile/<PDF:>`). Run `rclone copyto "<remote path>" "<scratchpad>/<file>"` and read that copy, which is the journal version.
    If `rclone copyto` doesn't find it either, or the paper isn't in the library, read a legal open-access copy: `bip s2 lookup <id> --fields openAccessPdf` (the library key, or `DOI:`/`ARXIV:` for a paper not in it) gives its URL and status, and an arXiv preprint is at `https://arxiv.org/pdf/<id>`.
    Note which version you read (published, author manuscript, preprint) and cite its sections rather than journal pages; this is for reading only, and Paperpile stays the library of record.
