@@ -103,7 +103,7 @@
 <rect class="agent" x="276" y="484" width="80" height="32" rx="3"/>
 <text class="name" x="316" y="500">infra</text>
 <rect class="agent" x="376" y="484" width="100" height="32" rx="3"/>
-<text class="name" x="426" y="500">librarian</text>
+<text class="name" x="426" y="500">ingest</text>
 <rect class="agent" x="496" y="484" width="110" height="32" rx="3"/>
 <text class="name" x="551" y="500">bipartite</text>
 <text class="serif tier" x="648" y="504">support</text>

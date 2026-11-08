@@ -36,7 +36,7 @@ The support layer holds no results. It keeps the other layers running.
 
 - Staff (`/bip-staff`) holds your rulings word for word. It answers what it can and pages you for the rest.
 - A sysadmin session, which has no skill of its own, watches the machine, and an infra session (`/bip-infra`) watches the cluster.
-- A librarian session (`/bip-librarian`) triages literature alerts and asks the EPIC owners about the few that matter.
+- An ingest session (`/bip-ingest`) triages literature alerts and newsletters, and sends the few items that matter to the sessions they bear on.
 - A bipartite session, started in this repo, lands fixes to the skills (see [Kaizen](#kaizen)).
 
 ## The paper

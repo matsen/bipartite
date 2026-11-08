@@ -4,7 +4,7 @@
 # hidden tmux session), wait for the fresh session, then type `/bip-continue`.
 #
 # Usage:  self-cycle            # from a Bash tool call, as the last act of a turn
-#         self-cycle /bip-librarian  # resume with a stateless role's skill instead
+#         self-cycle /bip-ingest  # resume with a stateless role's skill instead
 #
 # It detaches immediately and returns. The `/clear` is typed while the turn is
 # still running, so Claude Code queues it and runs it once the turn ends.
@@ -17,8 +17,8 @@ set -u
 
 if [ "${1:-}" != --detached ]; then
 	resume=${1:-/bip-continue}
-	if ! [[ $resume =~ ^/bip-(continue|librarian)$ ]]; then
-		echo "self-cycle: resume command must be /bip-continue or /bip-librarian, got '$resume'" >&2
+	if ! [[ $resume =~ ^/bip-(continue|ingest)$ ]]; then
+		echo "self-cycle: resume command must be /bip-continue or /bip-ingest, got '$resume'" >&2
 		exit 1
 	fi
 	# A `claude --bg` session runs under the Claude daemon, outside any pane,
