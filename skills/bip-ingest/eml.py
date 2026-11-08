@@ -3,8 +3,8 @@
 Usage: python3 -I eml.py <copy of the .eml>
 
 The links are printed as the email gives them (often tracking redirects).
-Unsubscribe and manage-subscription links and lines are dropped, because
-they carry the subscriber's key.
+Unsubscribe links and lines are dropped when their text or URL says so,
+because they carry the subscriber's key; others may slip through.
 """
 
 import sys
@@ -33,7 +33,7 @@ class Page(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag in ("style", "script"):
-            self.skip -= 1
+            self.skip = max(0, self.skip - 1)
         elif tag == "a" and self.anchor:
             self.links.append(self.anchor)
             self.anchor = None
@@ -49,7 +49,7 @@ class Page(HTMLParser):
 with open(sys.argv[1], "rb") as f:
     msg = message_from_binary_file(f, policy=policy.default)
 for key in ("Subject", "From", "Date"):
-    print(f"{key}: {msg[key]}")
+    print(f"{key}: {msg[key] or ''}")
 
 # The HTML part's text carries no inline URLs; the plain part often repeats each one.
 page = Page()

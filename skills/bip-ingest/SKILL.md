@@ -1,13 +1,13 @@
 ---
 name: bip-ingest
-description: Cold-start the ingest session — triage one batch of outside reading (Semantic Scholar and Google Scholar alerts, or a newsletter saved as .eml in ~/Downloads), cut the noise, and send the few survivors to the sessions they bear on — papers to EPIC owners, gems to hhmi, agent practice to bipartite — then hand the user a Paperpile list. One batch per round; the user runs /bip-cycle between rounds.
+description: Cold-start the ingest session — triage one batch of outside reading (Semantic Scholar and Google Scholar alerts, or a newsletter saved as .eml in ~/Downloads), cut the noise, send the few survivors to the sessions they bear on, and hand the user a Paperpile list. One batch per round; the user runs /bip-cycle between rounds.
 ---
 
 # /bip-ingest
 
 The ingest session turns a batch of outside reading into a short list worth acting on.
 Most items are noise; start from that prior.
-It finds each item and the session it bears on; that session frames it, because only it knows its open threads.
+It finds each item and the session it bears on; that session frames it, because only it knows its open threads and, for a paper, whether the numbers are comparable.
 Other sessions reach it by name, so ask the user to `/rename ingest` if it is not already named that.
 Run it in `$NEXUS_PATH`; for command usage see `/bip-lit`.
 
@@ -16,12 +16,12 @@ On cold start, say you are ready for a batch and wait.
 
 ## Reading an .eml
 
-A batch can arrive as `.eml` files in `~/Downloads`, which keep the links that a paste loses.
+A batch can arrive as `.eml` files in `~/Downloads`, which keep the links that a paste loses: the files the user names, or else the newest one.
 Copy each into a new empty folder in your scratchpad, then run `python3 -I <this skill's base directory>/eml.py <copy>`.
-It prints the headers, the text, and numbered links with their anchor text, and drops unsubscribe links, which carry the user's key.
+It prints the headers, the text, and numbered links with their anchor text (inline in the text for a plain-only email). It drops most unsubscribe links; treat every other link as carrying the user's key too.
 Newsletter links are tracking redirects that carry the user's subscriber id: never save or forward one.
 Resolve only a link you keep, with `curl -s -o /dev/null -w '%{redirect_url}' '<href>'`, since resolving counts as a click; then drop the resolved URL's query string.
-When the round is done, delete the `.eml` from `~/Downloads`.
+When the round is done, delete the `.eml` files you read from `~/Downloads`.
 
 ## A round of literature alerts
 
@@ -65,7 +65,8 @@ Then the user runs `/bip-cycle` for the next batch.
 1. **Cut the noise.** An item survives only if you can name, in a few words, the session it bears on and why:
    - agent practice, skills, and how the fleet works go to `bipartite`, as a proposed change: the item, its resolved link, and what it would change;
    - other topics go to the session whose role covers them (`ListAgents`), or to the one the user names for that topic;
-   - a paper goes through the literature round's steps 2–5.
+   - a paper goes through the literature round's steps 1–7;
+   - an item no live session covers is cut.
    Judge from the item's text, not its headline.
 2. **Send each session one numbered message** with its survivors. A reply never blocks the round.
 3. **Report to the user** as one numbered list: what went to which session, then a one-line count of what was cut, with the titles underneath.
