@@ -1,20 +1,29 @@
 ---
-name: bip-librarian
-description: Cold-start the librarian session — triage one pasted batch of Semantic Scholar and Google Scholar alert emails, cut the noise, ask the relevant EPIC owners about the few survivors, send gems to hhmi, and hand the user a Paperpile list. One batch per round; the user runs /bip-cycle between rounds.
+name: bip-ingest
+description: Cold-start the ingest session — triage one batch of outside reading (Semantic Scholar and Google Scholar alerts, or a newsletter saved as .eml in ~/Downloads), cut the noise, and send the few survivors to the sessions they bear on — papers to EPIC owners, gems to hhmi, agent practice to bipartite — then hand the user a Paperpile list. One batch per round; the user runs /bip-cycle between rounds.
 ---
 
-# /bip-librarian
+# /bip-ingest
 
-The librarian turns a pasted batch of alert emails into a short list worth reading.
+The ingest session turns a batch of outside reading into a short list worth acting on.
 Most items are noise; start from that prior.
-The librarian finds the paper and the EPIC it bears on; the EPIC owner frames it, because only the owner knows the open threads and whether the numbers are comparable.
-Other sessions reach it by name, so ask the user to `/rename librarian` if it is not already named that.
+It finds each item and the session it bears on; that session frames it, because only it knows its open threads.
+Other sessions reach it by name, so ask the user to `/rename ingest` if it is not already named that.
 Run it in `$NEXUS_PATH`; for command usage see `/bip-lit`.
 
 It keeps no state between rounds.
 On cold start, say you are ready for a batch and wait.
 
-## A round
+## Reading an .eml
+
+A batch can arrive as `.eml` files in `~/Downloads`, which keep the links that a paste loses.
+Copy each into a new empty folder in your scratchpad, then run `python3 -I <this skill's base directory>/eml.py <copy>`.
+It prints the headers, the text, and numbered links with their anchor text, and drops unsubscribe links, which carry the user's key.
+Newsletter links are tracking redirects that carry the user's subscriber id: never save or forward one.
+Resolve only a link you keep, with `curl -s -o /dev/null -w '%{redirect_url}' '<href>'`, since resolving counts as a click; then drop the resolved URL's query string.
+When the round is done, delete the `.eml` from `~/Downloads`.
+
+## A round of literature alerts
 
 1. **Find the owners**, one line per owned EPIC (owner, EPIC, title):
 
@@ -51,8 +60,19 @@ On cold start, say you are ready for a batch and wait.
 The round ends when the owners have replied or the user says to stop waiting.
 Then the user runs `/bip-cycle` for the next batch.
 
+## A round of a newsletter
+
+1. **Cut the noise.** An item survives only if you can name, in a few words, the session it bears on and why:
+   - agent practice, skills, and how the fleet works go to `bipartite`, as a proposed change: the item, its resolved link, and what it would change;
+   - other topics go to the session whose role covers them (`ListAgents`), or to the one the user names for that topic;
+   - a paper goes through the literature round's steps 2–5.
+   Judge from the item's text, not its headline.
+2. **Send each session one numbered message** with its survivors. A reply never blocks the round.
+3. **Report to the user** as one numbered list: what went to which session, then a one-line count of what was cut, with the titles underneath.
+
 ## Never
 
 - Post on GitHub.
 - Run `bip s2 add`; the user adds papers through Paperpile.
+- Save or forward a newsletter's tracking or unsubscribe link.
 - File a direction a paper suggests; that goes through the owner's `/bip-goals`.
