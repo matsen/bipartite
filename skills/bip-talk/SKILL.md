@@ -46,7 +46,7 @@ Everything here holds across repos.
 
 ## Figure and deck work
 
-All figure and deck work goes through one long-lived `/bip-helper`, never inline, so the session stays free to answer the user.
+Figures, and new slides that need one, go through one long-lived `/bip-helper`, so the session stays free to answer the user. Text edits to the deck source (wording, notes, splitting or reordering slides) are made inline and rebuilt at once, so the user can review them live.
 
 - Start its worktree off `origin/<talk-branch>` in place of `origin/main`.
 - Each round, the helper runs `git fetch && git reset --hard origin/<talk-branch>`, does the work, and pushes a fresh helper branch.
