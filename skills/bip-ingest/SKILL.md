@@ -63,8 +63,7 @@ Then the user runs `/bip-cycle` for the next batch.
 ## A round of a newsletter
 
 1. **Cut the noise.** An item survives only if you can name, in a few words, the session it bears on and why:
-   - agent practice, skills, and how the fleet works go to `bipartite`, as a proposed change: the item, its resolved link, and what it would change;
-   - other topics go to the session whose role covers them (`ListAgents`), or to the one the user names for that topic;
+   - it goes to the session that `$NEXUS_PATH/ingest-routes.md` lists for its topic, in the form that line asks for, or to the one the user names. Report a listed session that is not in `ListAgents`; don't send to it;
    - a paper goes through the literature round's steps 1–7;
    - an item no live session covers is cut.
    Judge from the item's text, not its headline.
