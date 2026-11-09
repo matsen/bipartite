@@ -30,6 +30,7 @@ Everything here holds across repos.
 - **Few words on a slide.** Keep each definition, in the fewest words; move detail to the speaker notes or a backup slide.
 - **Every data figure shows what its axes are and what each point (or cell, or bar) is**, on the slide itself. The first line of its speaker notes says the same: `Axes: …; each point: …`. A schematic, with no data axes, gets no such line.
 - **A hue used on more than one slide means one thing.** Give entities (models, datasets) and concepts (mutation, selection) separate hues, and use each only on a mark that is that entity or concept; any other mark is black, gray, or a hue used once. Colors within one figure must stay distinct under color blindness; colors on different slides need not.
+- **A symbol used on more than one slide means one thing, at one scale.** Keep the talk's symbols in `notes/notation.md` (symbol, meaning, the slide that defines it); add a symbol there before using it, and point figure briefs at it.
 - **`feedback.md`** has two `#` groups, **Quick answers** and **For follow-up**.
   One `##` per point, phrased as a question, with the asker in parentheses (the user's own points last); then a `**Response.**` paragraph in full prose, which may push back: the take-home and "see slide N", with the long version in `feedback-scripts/`.
   Each follow-up ends with `**For an issue.**`, saying what work would answer it, for the EPIC session to file.
