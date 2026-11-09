@@ -72,11 +72,12 @@ git diff origin/<base>...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && st
 
 - Snakemake: launch `snakemake-pipeline-expert` on workflow structure and rule organization.
 - All code changes: launch `clean-code-reviewer` on modified source files (not tests) and, in parallel, `code-reuse-reviewer` on the same branch. They report independently.
+- Point `clean-code-reviewer` and `code-reuse-reviewer` at experiment and script code too, and ask what the PR could drop: modes, arms, and scripts its final result no longer uses (not controls or arms its README reports, including null ones), and helpers copied rather than imported.
 - All code changes: in parallel, launch a `general-purpose` agent for correctness:
 
   ```
   Review git diff origin/<base>...HEAD for correctness. Read the diff, then the code it
-  touches: the callers of every changed function, the functions it calls, and its tests.
+  touches: the callers of every changed function, the functions each one calls, and their tests.
   Look for a wrong result or crash (empty input, zero, the last item, rounding), a caller
   the change breaks, a fix made in one caller while the shared function stays wrong,
   swallowed errors or lost data, and risky new logic (a branch, a parser, a data write,
@@ -87,8 +88,6 @@ git diff origin/<base>...HEAD --name-only | xargs -I{} sh -c 'test -f "{}" && st
   Give each finding as file:line, the case, and the smallest fix.
   End with one line on what you could not check.
   ```
-
-- Point all three at experiment and script code too, and ask what the PR could drop: modes, arms, and scripts its final result no longer uses (not controls or arms its README reports, including null ones), and helpers copied rather than imported.
 
 ### Step 4.5: Scientific Conclusion Skeptic (conditional)
 
