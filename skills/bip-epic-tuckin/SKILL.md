@@ -23,6 +23,8 @@ Fleet-side state (clone/slot status, `.epic-status.json`, pending spawn intent) 
 For each `ISSUE-EPIC-*.md` file in the repo root, follow the **EPIC body update pattern** from `/bip-epic` (pull with `updatedAt` tracking → edit → conflict-check → push).
 Extract the issue number from the filename (`ISSUE-EPIC-284.md` → 284).
 Prune completed sections while you're in there — this is the same discipline as `/bip-epic`'s regular update pattern, not a separate cleanup pass.
+Then measure the stored body: `gh api repos/<org>/<repo>/issues/<N> | python3 -c 'import json,sys; print(len(json.load(sys.stdin)["body"].encode()))'`.
+Over 64 KB, do `/bip-epic`'s archive pass (Size limits) before finishing, unless the user waives it.
 
 Report which EPICs were pushed (and which were skipped due to conflicts).
 
