@@ -56,10 +56,10 @@ Everything below lives in the repo.
    Below the index, each thread's **detail** carries what it would *mean for the paper*, the analyses requested, and what it is waiting on; a ruling is quoted verbatim, never paraphrased.
    Prefer pointing at the file that holds a fact over restating it; a number that sits in a `%PROV` or `notes/` file is not copied here.
    It is a standing document, not a log: **edit the lines that are now wrong rather than appending**.
-   When a thread closes, move any guard it carries ("no exposure", "do not restore") into a `%PROV` beside the sentence it protects, then delete the thread.
+   When a thread closes, check that its result is in the paper, move any guard ("no exposure", "do not restore") or ruling it carries into a `%PROV` beside the sentence it protects, then delete the thread.
    **Never record open/merged/closed status**: GitHub is the source of truth and a status line is wrong within hours.
    Before finishing, measure what a fresh session reads, the top plus the index: `awk '/^## Live/{f=1;print;next} f&&/^## /{exit} {print}' misc/session-onboarding.md | wc -c`.
-   Over about 20 KB, prune first: delete closed threads, cut each open thread to one line, and move detail below the index.
+   Over about 20 KB, prune first: close each finished thread as above, cut each open thread to one line, and move detail below the index.
    Do not finish the tuckin until it is under the limit or the user waives it.
 
 2. **Keep it to ONE file.** If the repo has both an onboarding doc and a separate notes
