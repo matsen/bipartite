@@ -25,7 +25,7 @@ bipartite is a Go CLI (`bip`) and a set of Claude Code skills. Its data lives in
 - **[Projects, Repos, and Stores](guides/projects-and-stores.md)** — Track projects and repositories, and keep custom records in generic stores
 - **[Workflow Coordination](guides/workflow-coordination.md)** — Check-ins, digests, and Slack integration across repos
 - **[Worktree Layout](guides/layout.md)** — Opt-in per-issue git worktrees for `bip spawn`
-- **[Continuation Prompt](guides/continuation-prompt.md)** — Carrying a session across a context reset with `/bip-tuckin` and `/bip-continue`
+- **[Continuation Prompt](guides/continuation-prompt.md)** — Carrying a session across a context reset with `/bip-tuckin`, `/bip-continue` and `/bip-cycle`, and why that beats compaction
 - **[Server Scout](guides/server-scout.md)** — Monitor remote server resources via SSH
 - **[How It Works](guides/architecture.md)** — The nexus, bip CLI, and Claude Code integration explained
 
