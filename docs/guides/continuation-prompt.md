@@ -3,13 +3,18 @@
 Every `/bip-*-tuckin` ends by writing a continuation prompt to a role-keyed path under `_ignore/` and echoing it.
 This guide owns that path, how the role is determined, the prompt's shape, and why the pattern exists; the tuckins and `/bip-continue` reference it.
 
-## Why this beats letting the window compact
+## Why cycle instead of letting the window compact
 
-Compaction summarizes the conversation: backward-looking, lossy, and still ephemeral — what matters ends up living only in a summary that degrades with each pass.
+Compaction summarizes the conversation. The summary looks backward, loses detail, and stays in the window, so what matters lives only in a summary that degrades with each pass.
 
-A tuckin does the opposite.
-It **commits durable project knowledge where it belongs** — the onboarding doc, the EPIC body, the manuscript's `%PROV`/`%TODO` markers, issue and PR bodies — and writes only a **short, forward-looking prompt** for the next session.
-The next session then rebuilds from committed truth, not from a degraded transcript, and nothing that matters lives only in the window.
+A tuckin moves the session's state into its durable homes instead: the onboarding doc, the EPIC body, the manuscript's `%PROV`/`%TODO` markers, issue and PR bodies.
+Then it writes a **short, forward-looking prompt** for the next session.
+`/bip-cycle` does the tuckin, clears the window and resumes, in one command.
+
+Two facts make this better than compaction:
+
+- **The durable state is much larger than a window.** A fresh session cannot read all of it and does not need to: it reads the part its next step needs, by pointer and by grep.
+- **Sessions often change direction.** A summary carries the old direction's context into the new one. A fresh start carries only what the new direction reads.
 
 So the prompt is not a summary of what happened.
 It is an orientation for what to do next, pointing at the durable state rather than restating it.
