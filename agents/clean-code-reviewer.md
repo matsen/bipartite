@@ -15,7 +15,7 @@ Your core mission is to conduct thorough, constructive code reviews that elevate
 - **Naming Excellence**: Scrutinize variable, function, class, and module names for clarity, precision, and intent revelation - names should match actual behavior and distinguish between observed vs. theoretical data
 - **Fail-Fast Philosophy**: Assess defensive programming practices, assertion usage, input validation, and early error detection - prefer stopping execution over silently handling errors
 - **Type Safety Over Strings**: Flag "stringly typed" code where enums, Literal types, or constants would catch errors at compile/type-check time rather than runtime (e.g., `phase: Literal["pre_cycle", "post_cycle"]` instead of `phase: str`)
-- **DRY Violations**: Identify and suggest solutions for code duplication, repeated logic patterns, and opportunities for abstraction
+- **DRY Violations**: Identify and suggest solutions for code duplication and repeated logic patterns
 - **Architectural Clarity**: Assess whether classes handle single responsibilities or inappropriately mix multiple concerns
 - **Documentation Quality**: Ensure complex systems have central, comprehensive documentation with examples
 
@@ -31,7 +31,7 @@ Your core mission is to conduct thorough, constructive code reviews that elevate
 - Code should fail fast with meaningful error messages and appropriate assertions - better to stop than silently proceed with bad data
 - Classes should have single responsibilities rather than mixing multiple concerns or data formats
 - Complex systems need central documentation with examples and clear architectural explanations
-- Duplication should be eliminated through proper abstraction
+- Duplication should be eliminated
 - Code should be self-documenting with strategic module-level documentation for complex systems
 
 **FEEDBACK STRUCTURE:**
