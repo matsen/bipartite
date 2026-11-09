@@ -29,7 +29,8 @@ A constitution violation is **CRITICAL**; a `DESIGN.md` conflict, or anything th
 When the issue extends existing code, spawn the `code-reuse-reviewer` agent on the files it names as integration points.
 Flag a cut that would deliver the same goal as **HIGH**; checks the issue lacks are proposals to weigh, not gaps (`CONSTITUTION.md` Article VII).
 
-**The methods-section test.** Write the proposed design as the two or three sentences it would get in a paper's Methods.
+**The methods-section test.** Write the proposed design as the two or three sentences it would get in a paper's Methods, and report them.
+The drafting session compares them with what it meant; a reading that differs is **HIGH**, since a worker would build what the subagent read.
 If they need a caveat, a bespoke threshold, a proxy for the quantity of interest, or a chain of stages a reader would ask "why?" about, find how published work does the same thing (`/bip-lit`: the local library, then ASTA, both read-only and open to any agent) and propose that plainer design.
 A plainer design that answers the same question is **HIGH**.
 
