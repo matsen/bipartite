@@ -58,6 +58,9 @@ Everything below lives in the repo.
    It is a standing document, not a log: **edit the lines that are now wrong rather than appending**.
    When a thread closes, move any guard it carries ("no exposure", "do not restore") into a `%PROV` beside the sentence it protects, then delete the thread.
    **Never record open/merged/closed status**: GitHub is the source of truth and a status line is wrong within hours.
+   Before finishing, measure what a fresh session reads, the top plus the index: `awk '/^## Live/{f=1;print;next} f&&/^## /{exit} {print}' misc/session-onboarding.md | wc -c`.
+   Over about 20 KB, prune first: delete closed threads, cut each open thread to one line, and move detail below the index.
+   Do not finish the tuckin until it is under the limit or the user waives it.
 
 2. **Keep it to ONE file.** If the repo has both an onboarding doc and a separate notes
    file, merge them and delete the loser. Two documents with overlapping jobs is how state
