@@ -225,6 +225,11 @@ The epic half of a landing gate: "could this experiment have said otherwise?" As
 
 Write your expectation down before the data exists, and do not send it to the arm producing the data. Send the scheme (categories, discriminators, decision rules, known-positive controls) and keep the prior. Hold adjacent confounded evidence against a release condition written before the data, and state the condition.
 
+Most work is broad exploration, so the default is description, not a test.
+A decision rule belongs only to a question that decides something: a gate, a go/no-go, a claim that one arm beats another.
+A comparison the user asked to see is descriptive: report every readout on the same cells, led by the form the user asked for or the project used before, and name no primary.
+To narrow one to a primary readout, ask the user first.
+
 ### Step 7: Correcting a live worker — the judgment half
 
 When a live worker's scope needs correcting before its next stopping point, the epic decides: durable (changes what it produces: scope, target, artifact, gate criterion) or transient (host load, peer timing, a dependency that landed)?
