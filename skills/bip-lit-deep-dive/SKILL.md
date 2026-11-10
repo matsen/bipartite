@@ -22,4 +22,4 @@ Step 3 matters most: a paper picked from its abstract can cut against the claim,
 5. **In a manuscript session, put the result in the paper** where and in the form `/bip-ms`'s rules decide, with each item's evidence and gap. Add each cited paper with `bip export --bibtex --append <bib> <id>`, where `<bib>` is the file `\bibliography` names. Build the PDF and give the user the diff.
    A paper cited while writing, or after the user reads the section, goes through step 3 before it goes in.
 
-Report each item's verdicts in a table, the papers still missing, and what changed in the plan.
+Report each item's verdicts in a table, the papers still missing (each as its `https://doi.org/<doi>` link, in every message that asks for one or reports it missing), and what changed in the plan.
