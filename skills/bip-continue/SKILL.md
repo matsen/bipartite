@@ -14,6 +14,9 @@ Pick up where the last session's `/bip-tuckin` left off, from the role-keyed pro
    If several `CONTINUE-*.md` exist and the role or EPIC is unknown, list them and ask.
    If none exists, say so and stop; if a marker file makes the type obvious, offer the matching cold-start instead (`/bip-ms`, `/bip-spawn-resume`, `/bip-conductor`, `/bip-epic`, or `/bip-staff`).
 2. **Report staleness**: the file's written-at stamp against `git log -1` and the newest PR/issue activity. If the world moved since it was written, the checks below matter more.
+   A file modified well after its written-at stamp (`ls -l --time-style=full-iso`) means the last session was cleared before its tuckin finished, so the file is a mix of old and partial state.
+   Rebuild the gap before acting: read the previous transcript (the second-newest of `ls -t $(grep -lF '"customTitle":"<name>"' ~/.claude/projects/<cwd with / as ->/*.jsonl)`, where `<name>` is this session's `ListAgents` name; sessions share a directory, so the newest other file may be another session's) from its last tuckin to its end, including the peer messages it received, and the comments since the stamp on each issue and PR the file names.
+   Ask a peer to resend only what neither source holds.
 3. **Follow the prompt**: `cd` where it says, run the cold-start or resume skill it names — that skill re-registers `.conductor-session` or the EPIC's `Owner:` line and handles the role-specific setup — and read the durable state it points at.
    Take that skill's orientation but not its "stop and ask what next": the file's in-flight items are the user's direction, written before the `/clear`.
 4. **Before acting on any in-flight item, run its inline `FIRST CHECK`.** Treat every present-tense claim and every number in the file as stale until a command re-derives it; the EPIC body and issue/PR comments supersede the file where they disagree. Drop what the checks retire.
