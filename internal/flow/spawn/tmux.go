@@ -125,7 +125,7 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 			os.Remove(briefPath)
 		}
 	}()
-	pointer := strings.ReplaceAll(briefPointer(prompt, briefPath), "'", `'\''`)
+	pointer := strings.ReplaceAll(runnerPointer(agent, prompt, briefPath), "'", `'\''`)
 
 	// Write a launcher script that shows the brief in the pane and passes
 	// the pointer to the agent runner through a bash variable.
@@ -216,6 +216,19 @@ func briefPointer(prompt, path string) string {
 	}
 	return fmt.Sprintf("%s\n\nYour full brief is in %s. Read all of it before doing anything else, and follow it.", first, path)
 }
+
+// runnerPointer is briefPointer plus, for agy, agyNote.
+func runnerPointer(agent, prompt, path string) string {
+	if agent == "agy" {
+		return briefPointer(prompt, path) + agyNote
+	}
+	return briefPointer(prompt, path)
+}
+
+// agyNote tells an agy runner where to find what Claude Code would have
+// loaded for it: agy reads neither ~/.claude/CLAUDE.md nor the skills, and it
+// cannot message other sessions.
+const agyNote = "\n\nThis runner does not load Claude Code's instructions or skills. Before you act on the brief, read ~/.claude/CLAUDE.md and the repo's CLAUDE.md and AGENTS.md where they exist, and follow them. For each /bip-<name> skill the brief names, read and follow ~/.claude/skills/bip-<name>/SKILL.md. You cannot message other sessions: report through the PR body and issue comments."
 
 // buildClaudeInvocation returns the shell command that launches claude, with
 // --model injected only when model is non-empty. windowName is always passed

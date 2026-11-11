@@ -277,6 +277,18 @@ func TestBriefPointer(t *testing.T) {
 	}
 }
 
+func TestRunnerPointer(t *testing.T) {
+	if got := runnerPointer("claude", "brief", "/p"); strings.Contains(got, "~/.claude/CLAUDE.md") {
+		t.Errorf("claude pointer should not carry the agy note, got %q", got)
+	}
+	got := runnerPointer("agy", "brief", "/p")
+	for _, want := range []string{"/p", "~/.claude/CLAUDE.md", "~/.claude/skills/bip-<name>/SKILL.md", "PR body"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("agy pointer should contain %q, got %q", want, got)
+		}
+	}
+}
+
 func TestWriteBrief(t *testing.T) {
 	state := t.TempDir()
 	t.Setenv("XDG_STATE_HOME", state)
