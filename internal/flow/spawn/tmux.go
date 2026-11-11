@@ -2,6 +2,7 @@
 package spawn
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -246,40 +247,79 @@ const agySettingsPath = ".gemini/antigravity-cli/settings.json"
 // trustAgyWorkspace adds dir to the trustedWorkspaces list in agy's settings
 // file, keeping its other keys. agy trusts exact paths only, and an untrusted
 // directory gets a trust dialog that hides the runner's finished work.
+// Numbers are kept exactly; key order and formatting are not.
 func trustAgyWorkspace(settingsPath, dir string) error {
-	dir, err := filepath.Abs(dir)
+	dir, err := canonicalizePath(dir)
 	if err != nil {
 		return err
 	}
+	// Write through a symlinked settings file rather than replacing the link.
+	if resolved, err := filepath.EvalSymlinks(settingsPath); err == nil {
+		settingsPath = resolved
+	}
+	mode := os.FileMode(0o600)
 	settings := map[string]any{}
 	data, err := os.ReadFile(settingsPath)
-	if err != nil && !os.IsNotExist(err) {
+	switch {
+	case os.IsNotExist(err):
+	case err != nil:
 		return err
-	}
-	if len(data) > 0 {
-		if err := json.Unmarshal(data, &settings); err != nil {
-			return fmt.Errorf("parsing %s: %w", settingsPath, err)
+	default:
+		if info, err := os.Stat(settingsPath); err == nil {
+			mode = info.Mode().Perm()
+		}
+		dec := json.NewDecoder(bytes.NewReader(data))
+		dec.UseNumber()
+		if len(bytes.TrimSpace(data)) > 0 {
+			if err := dec.Decode(&settings); err != nil {
+				return fmt.Errorf("parsing %s: %w", settingsPath, err)
+			}
+		}
+		if settings == nil { // the file held null
+			settings = map[string]any{}
 		}
 	}
-	trusted, _ := settings["trustedWorkspaces"].([]any)
+	var trusted []any
+	if v, ok := settings["trustedWorkspaces"]; ok && v != nil {
+		if trusted, ok = v.([]any); !ok {
+			return fmt.Errorf("%s: trustedWorkspaces is not a list", settingsPath)
+		}
+	}
 	for _, t := range trusted {
 		if t == dir {
 			return nil
 		}
 	}
 	settings["trustedWorkspaces"] = append(trusted, dir)
-	out, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
+
+	var out bytes.Buffer
+	enc := json.NewEncoder(&out)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(settings); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
 		return err
 	}
-	tmp := settingsPath + ".tmp"
-	if err := os.WriteFile(tmp, append(out, '\n'), 0o600); err != nil {
+	// A unique temp file, so two spawns at once cannot interleave writes.
+	tmp, err := os.CreateTemp(filepath.Dir(settingsPath), "settings-*.json")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, settingsPath)
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(out.Bytes()); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(mode); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), settingsPath)
 }
 
 // buildClaudeInvocation returns the shell command that launches claude, with

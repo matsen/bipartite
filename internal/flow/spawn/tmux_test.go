@@ -297,7 +297,7 @@ func TestTrustAgyWorkspace(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if data, _ := os.ReadFile(settings); strings.Count(string(data), "/clones/a") != 1 {
+	if data, err := os.ReadFile(settings); err != nil || strings.Count(string(data), "/clones/a") != 1 {
 		t.Errorf("a second call should not add a duplicate, got %s", data)
 	}
 	if err := os.WriteFile(settings, []byte(`{"other": 1, "trustedWorkspaces": ["/home/x"]}`), 0o600); err != nil {
@@ -327,6 +327,67 @@ func TestTrustAgyWorkspace(t *testing.T) {
 	}
 	if err := trustAgyWorkspace(settings, "/clones/c"); err == nil {
 		t.Error("a settings file that is not JSON should be an error, not overwritten")
+	}
+}
+
+func TestTrustAgyWorkspaceKeepsUserData(t *testing.T) {
+	dir := t.TempDir()
+	write := func(path, body string, mode os.FileMode) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(body), mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func(path string) string {
+		t.Helper()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	notList := filepath.Join(dir, "notlist.json")
+	write(notList, `{"trustedWorkspaces": "/home/x"}`, 0o600)
+	if err := trustAgyWorkspace(notList, "/clones/a"); err == nil {
+		t.Error("a trustedWorkspaces that is not a list should be an error")
+	}
+	if got := read(notList); got != `{"trustedWorkspaces": "/home/x"}` {
+		t.Errorf("file should be unchanged on error, got %s", got)
+	}
+
+	null := filepath.Join(dir, "null.json")
+	write(null, "null", 0o600)
+	if err := trustAgyWorkspace(null, "/clones/a"); err != nil {
+		t.Errorf("a file holding null should be treated as empty, got %v", err)
+	}
+
+	big := filepath.Join(dir, "big.json")
+	write(big, `{"n": 9007199254740993, "s": "<a&b>"}`, 0o644)
+	if err := trustAgyWorkspace(big, "/clones/a"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(big); !strings.Contains(got, "9007199254740993") || !strings.Contains(got, "<a&b>") {
+		t.Errorf("numbers and strings should be kept as written, got %s", got)
+	}
+	if info, err := os.Stat(big); err != nil || info.Mode().Perm() != 0o644 {
+		t.Errorf("file mode should be kept at 0644, got %v (%v)", info.Mode().Perm(), err)
+	}
+
+	target := filepath.Join(dir, "real.json")
+	link := filepath.Join(dir, "link.json")
+	write(target, `{}`, 0o600)
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(link, "/clones/a"); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("a symlinked settings file should stay a symlink")
+	}
+	if !strings.Contains(read(target), "/clones/a") {
+		t.Error("the symlink's target should get the new entry")
 	}
 }
 
