@@ -374,6 +374,43 @@ func TestTrustAgyWorkspaceKeepsUserData(t *testing.T) {
 		t.Errorf("file mode should be kept at 0644, got %v (%v)", info.Mode().Perm(), err)
 	}
 
+	trailing := filepath.Join(dir, "trailing.json")
+	write(trailing, "{\"a\":1}\n{\"b\":2}\n", 0o600)
+	if err := trustAgyWorkspace(trailing, "/clones/a"); err == nil {
+		t.Error("data after the settings object should be an error")
+	}
+	if got := read(trailing); got != "{\"a\":1}\n{\"b\":2}\n" {
+		t.Errorf("file should be unchanged on error, got %s", got)
+	}
+
+	dangling := filepath.Join(dir, "dangling.json")
+	if err := os.Symlink(filepath.Join(dir, "missing", "settings.json"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(dangling, "/clones/a"); err == nil {
+		t.Error("a symlink with a missing target should be an error")
+	}
+	if info, err := os.Lstat(dangling); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("a dangling symlink should not be replaced")
+	}
+
+	realClone := filepath.Join(dir, "clone")
+	if err := os.Mkdir(realClone, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cloneLink := filepath.Join(dir, "clone-link")
+	if err := os.Symlink(realClone, cloneLink); err != nil {
+		t.Fatal(err)
+	}
+	forms := filepath.Join(dir, "forms.json")
+	if err := trustAgyWorkspace(forms, cloneLink); err != nil {
+		t.Fatal(err)
+	}
+	resolvedClone, _ := filepath.EvalSymlinks(realClone)
+	if got := read(forms); !strings.Contains(got, cloneLink) || !strings.Contains(got, resolvedClone) {
+		t.Errorf("both the link and resolved forms of the clone should be trusted, got %s", got)
+	}
+
 	target := filepath.Join(dir, "real.json")
 	link := filepath.Join(dir, "link.json")
 	write(target, `{}`, 0o600)

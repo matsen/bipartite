@@ -5,9 +5,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -249,13 +251,19 @@ const agySettingsPath = ".gemini/antigravity-cli/settings.json"
 // directory gets a trust dialog that hides the runner's finished work.
 // Numbers are kept exactly; key order and formatting are not.
 func trustAgyWorkspace(settingsPath, dir string) error {
-	dir, err := canonicalizePath(dir)
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	resolved, err := canonicalizePath(abs)
 	if err != nil {
 		return err
 	}
 	// Write through a symlinked settings file rather than replacing the link.
-	if resolved, err := filepath.EvalSymlinks(settingsPath); err == nil {
-		settingsPath = resolved
+	if info, err := os.Lstat(settingsPath); err == nil && info.Mode()&os.ModeSymlink != 0 {
+		if settingsPath, err = filepath.EvalSymlinks(settingsPath); err != nil {
+			return fmt.Errorf("settings file is a symlink whose target is missing: %w", err)
+		}
 	}
 	mode := os.FileMode(0o600)
 	settings := map[string]any{}
@@ -274,6 +282,9 @@ func trustAgyWorkspace(settingsPath, dir string) error {
 			if err := dec.Decode(&settings); err != nil {
 				return fmt.Errorf("parsing %s: %w", settingsPath, err)
 			}
+			if _, err := dec.Token(); err != io.EOF {
+				return fmt.Errorf("parsing %s: data after the settings object", settingsPath)
+			}
 		}
 		if settings == nil { // the file held null
 			settings = map[string]any{}
@@ -285,12 +296,19 @@ func trustAgyWorkspace(settingsPath, dir string) error {
 			return fmt.Errorf("%s: trustedWorkspaces is not a list", settingsPath)
 		}
 	}
-	for _, t := range trusted {
-		if t == dir {
-			return nil
+	// Trust both the path as given and its resolved form: which one agy
+	// compares is not known.
+	added := false
+	for _, d := range []string{abs, resolved} {
+		if !slices.Contains(trusted, any(d)) {
+			trusted = append(trusted, d)
+			added = true
 		}
 	}
-	settings["trustedWorkspaces"] = append(trusted, dir)
+	if !added {
+		return nil
+	}
+	settings["trustedWorkspaces"] = trusted
 
 	var out bytes.Buffer
 	enc := json.NewEncoder(&out)
