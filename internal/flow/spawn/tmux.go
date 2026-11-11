@@ -228,7 +228,7 @@ func runnerPointer(agent, prompt, path string) string {
 // agyNote tells an agy runner where to find what Claude Code would have
 // loaded for it: agy reads neither ~/.claude/CLAUDE.md nor the skills, and it
 // cannot message other sessions.
-const agyNote = "\n\nThis runner does not load Claude Code's instructions or skills. Before the brief, read ~/.claude/CLAUDE.md and the repo's CLAUDE.md and AGENTS.md where they exist, and follow them. For each /bip-<name> skill the brief names, read and follow ~/.claude/skills/bip-<name>/SKILL.md. You cannot message other sessions: report through the PR body and issue comments."
+const agyNote = "\n\nThis runner does not load Claude Code's instructions or skills. Before you act on the brief, read ~/.claude/CLAUDE.md and the repo's CLAUDE.md and AGENTS.md where they exist, and follow them. For each /bip-<name> skill the brief names, read and follow ~/.claude/skills/bip-<name>/SKILL.md. You cannot message other sessions: report through the PR body and issue comments."
 
 // buildClaudeInvocation returns the shell command that launches claude, with
 // --model injected only when model is non-empty. windowName is always passed
