@@ -1,6 +1,7 @@
 package spawn
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -286,6 +287,46 @@ func TestRunnerPointer(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("agy pointer should contain %q, got %q", want, got)
 		}
+	}
+}
+
+func TestTrustAgyWorkspace(t *testing.T) {
+	settings := filepath.Join(t.TempDir(), "agy", "settings.json")
+	for range 2 { // the second call must not add a duplicate
+		if err := trustAgyWorkspace(settings, "/clones/a"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if data, _ := os.ReadFile(settings); strings.Count(string(data), "/clones/a") != 1 {
+		t.Errorf("a second call should not add a duplicate, got %s", data)
+	}
+	if err := os.WriteFile(settings, []byte(`{"other": 1, "trustedWorkspaces": ["/home/x"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(settings, "/clones/b"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["other"] != float64(1) {
+		t.Errorf("other keys should be kept, got %v", got)
+	}
+	trusted := got["trustedWorkspaces"].([]any)
+	if len(trusted) != 2 || trusted[0] != "/home/x" || trusted[1] != "/clones/b" {
+		t.Errorf("trustedWorkspaces = %v, want [/home/x /clones/b]", trusted)
+	}
+
+	if err := os.WriteFile(settings, []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(settings, "/clones/c"); err == nil {
+		t.Error("a settings file that is not JSON should be an error, not overwritten")
 	}
 }
 

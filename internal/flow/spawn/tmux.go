@@ -2,6 +2,7 @@
 package spawn
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -110,6 +111,15 @@ func CreateWindow(windowName, repoPath, prompt, url, model, agent string) error 
 
 	if _, err := exec.LookPath(executable); err != nil {
 		return fmt.Errorf("agent runner %q not found in PATH: %w", executable, err)
+	}
+	if agent == "agy" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+		if err := trustAgyWorkspace(filepath.Join(home, agySettingsPath), repoPath); err != nil {
+			return fmt.Errorf("pre-trusting %s for agy: %w", repoPath, err)
+		}
 	}
 
 	// Keep the brief out of argv: a 20 KB prompt there is matched by any
@@ -229,6 +239,48 @@ func runnerPointer(agent, prompt, path string) string {
 // loaded for it: agy reads neither ~/.claude/CLAUDE.md nor the skills, and it
 // cannot message other sessions.
 const agyNote = "\n\nThis runner does not load Claude Code's instructions or skills. Before you act on the brief, read ~/.claude/CLAUDE.md and the repo's CLAUDE.md and AGENTS.md where they exist, and follow them. For each /bip-<name> skill the brief names, read and follow ~/.claude/skills/bip-<name>/SKILL.md. You cannot message other sessions: report through the PR body and issue comments."
+
+// agySettingsPath is agy's settings file, relative to the home directory.
+const agySettingsPath = ".gemini/antigravity-cli/settings.json"
+
+// trustAgyWorkspace adds dir to the trustedWorkspaces list in agy's settings
+// file, keeping its other keys. agy trusts exact paths only, and an untrusted
+// directory gets a trust dialog that hides the runner's finished work.
+func trustAgyWorkspace(settingsPath, dir string) error {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	settings := map[string]any{}
+	data, err := os.ReadFile(settingsPath)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	if len(data) > 0 {
+		if err := json.Unmarshal(data, &settings); err != nil {
+			return fmt.Errorf("parsing %s: %w", settingsPath, err)
+		}
+	}
+	trusted, _ := settings["trustedWorkspaces"].([]any)
+	for _, t := range trusted {
+		if t == dir {
+			return nil
+		}
+	}
+	settings["trustedWorkspaces"] = append(trusted, dir)
+	out, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		return err
+	}
+	tmp := settingsPath + ".tmp"
+	if err := os.WriteFile(tmp, append(out, '\n'), 0o600); err != nil {
+		return err
+	}
+	return os.Rename(tmp, settingsPath)
+}
 
 // buildClaudeInvocation returns the shell command that launches claude, with
 // --model injected only when model is non-empty. windowName is always passed
