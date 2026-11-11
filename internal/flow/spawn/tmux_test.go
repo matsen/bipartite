@@ -1,6 +1,7 @@
 package spawn
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -286,6 +287,144 @@ func TestRunnerPointer(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("agy pointer should contain %q, got %q", want, got)
 		}
+	}
+}
+
+func TestTrustAgyWorkspace(t *testing.T) {
+	settings := filepath.Join(t.TempDir(), "agy", "settings.json")
+	for range 2 { // the second call must not add a duplicate
+		if err := trustAgyWorkspace(settings, "/clones/a"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if data, err := os.ReadFile(settings); err != nil || strings.Count(string(data), "/clones/a") != 1 {
+		t.Errorf("a second call should not add a duplicate, got %s", data)
+	}
+	if err := os.WriteFile(settings, []byte(`{"other": 1, "trustedWorkspaces": ["/home/x"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(settings, "/clones/b"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(settings)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(data, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["other"] != float64(1) {
+		t.Errorf("other keys should be kept, got %v", got)
+	}
+	trusted := got["trustedWorkspaces"].([]any)
+	if len(trusted) != 2 || trusted[0] != "/home/x" || trusted[1] != "/clones/b" {
+		t.Errorf("trustedWorkspaces = %v, want [/home/x /clones/b]", trusted)
+	}
+
+	if err := os.WriteFile(settings, []byte("{not json"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(settings, "/clones/c"); err == nil {
+		t.Error("a settings file that is not JSON should be an error, not overwritten")
+	}
+}
+
+func TestTrustAgyWorkspaceKeepsUserData(t *testing.T) {
+	dir := t.TempDir()
+	write := func(path, body string, mode os.FileMode) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(body), mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func(path string) string {
+		t.Helper()
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+
+	notList := filepath.Join(dir, "notlist.json")
+	write(notList, `{"trustedWorkspaces": "/home/x"}`, 0o600)
+	if err := trustAgyWorkspace(notList, "/clones/a"); err == nil {
+		t.Error("a trustedWorkspaces that is not a list should be an error")
+	}
+	if got := read(notList); got != `{"trustedWorkspaces": "/home/x"}` {
+		t.Errorf("file should be unchanged on error, got %s", got)
+	}
+
+	null := filepath.Join(dir, "null.json")
+	write(null, "null", 0o600)
+	if err := trustAgyWorkspace(null, "/clones/a"); err != nil {
+		t.Errorf("a file holding null should be treated as empty, got %v", err)
+	}
+
+	big := filepath.Join(dir, "big.json")
+	write(big, `{"n": 9007199254740993, "s": "<a&b>"}`, 0o644)
+	if err := trustAgyWorkspace(big, "/clones/a"); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(big); !strings.Contains(got, "9007199254740993") || !strings.Contains(got, "<a&b>") {
+		t.Errorf("numbers and strings should be kept as written, got %s", got)
+	}
+	if info, err := os.Stat(big); err != nil || info.Mode().Perm() != 0o644 {
+		t.Errorf("file mode should be kept at 0644, got %v (%v)", info.Mode().Perm(), err)
+	}
+
+	trailing := filepath.Join(dir, "trailing.json")
+	write(trailing, "{\"a\":1}\n{\"b\":2}\n", 0o600)
+	if err := trustAgyWorkspace(trailing, "/clones/a"); err == nil {
+		t.Error("data after the settings object should be an error")
+	}
+	if got := read(trailing); got != "{\"a\":1}\n{\"b\":2}\n" {
+		t.Errorf("file should be unchanged on error, got %s", got)
+	}
+
+	dangling := filepath.Join(dir, "dangling.json")
+	if err := os.Symlink(filepath.Join(dir, "missing", "settings.json"), dangling); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(dangling, "/clones/a"); err == nil {
+		t.Error("a symlink with a missing target should be an error")
+	}
+	if info, err := os.Lstat(dangling); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("a dangling symlink should not be replaced")
+	}
+
+	realClone := filepath.Join(dir, "clone")
+	if err := os.Mkdir(realClone, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cloneLink := filepath.Join(dir, "clone-link")
+	if err := os.Symlink(realClone, cloneLink); err != nil {
+		t.Fatal(err)
+	}
+	forms := filepath.Join(dir, "forms.json")
+	if err := trustAgyWorkspace(forms, cloneLink); err != nil {
+		t.Fatal(err)
+	}
+	resolvedClone, _ := filepath.EvalSymlinks(realClone)
+	if got := read(forms); !strings.Contains(got, cloneLink) || !strings.Contains(got, resolvedClone) {
+		t.Errorf("both the link and resolved forms of the clone should be trusted, got %s", got)
+	}
+
+	target := filepath.Join(dir, "real.json")
+	link := filepath.Join(dir, "link.json")
+	write(target, `{}`, 0o600)
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	if err := trustAgyWorkspace(link, "/clones/a"); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Lstat(link); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("a symlinked settings file should stay a symlink")
+	}
+	if !strings.Contains(read(target), "/clones/a") {
+		t.Error("the symlink's target should get the new entry")
 	}
 }
 
