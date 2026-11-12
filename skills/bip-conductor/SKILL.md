@@ -352,5 +352,6 @@ The status schema is `status-spec.md`. Check on every reconciliation:
 
   Cancel with `Escape`, never `Enter` (the cursor sits on "1. Yes"), then tell the worker what you declined.
   A subagent's modal shows in its parent's pane; sweep a slot "waiting on a subagent" after ~20 silent minutes.
+- A session whose turns end in a "Start a new session" API error is stopped, though it still runs tools between stops. `~/.claude/skills/lib/stuck-sessions` lists such sessions; tell `staff` about each one, and route no more work to it.
 - Use the mtimes of `.epic-status.json` and `.epic-worklog.md`, not `updated_at`, which workers hand-type.
   `phase` is not evidence of done; check `gh pr view`. A pane's statusline can be stale; its scrollback is current.
