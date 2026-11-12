@@ -2,7 +2,7 @@
 # reset-session: clear a stuck Claude session from outside and resume it, for a
 # session that cannot run its own tuckin (see stuck-sessions).
 #
-# Usage:  reset-session <pane>     # e.g. %1, from the session's ListAgents row
+# Usage:  reset-session <pane> <name>   # e.g. %1 dasm2-epic, from its ListAgents row
 #
 # It prints the continuation files in the pane's working directory with their
 # age, and refuses when there are none, since /bip-continue would then have
@@ -10,17 +10,25 @@
 # it types /clear, waits for the fresh session, and types /bip-continue, whose
 # Step 2 rebuilds what the old transcript holds after the file was written.
 set -u
-pane=${1:?usage: reset-session <pane>}
+pane=${1:?usage: reset-session <pane> <name>}
+name=${2:?usage: reset-session <pane> <name>}
 [[ $pane =~ ^%[0-9]+$ ]] || { echo "reset-session: pane must look like %12, got '$pane'" >&2; exit 1; }
 cwd=$(tmux display-message -p -t "$pane" '#{pane_current_path}' 2>/dev/null)
 if [ -z "$cwd" ]; then
 	echo "reset-session: no tmux pane $pane" >&2
 	exit 1
 fi
-# Keystrokes read as the user's turn, so type only into a pane running claude.
+# Keystrokes read as the user's turn, so type only into a pane whose
+# foreground program is claude (a spawned worker's claude is a grandchild).
 root=$(tmux display-message -p -t "$pane" '#{pane_pid}')
-if ! { ps -o comm= -p "$root"; pgrep -P "$root" -l; } 2>/dev/null | grep -q claude; then
-	echo "reset-session: no claude process in $pane; nothing sent" >&2
+fg=$(ps -o tpgid= -p "$root" 2>/dev/null | tr -d ' ')
+if [ -z "$fg" ] || ! pgrep -g "$fg" -x claude >/dev/null; then
+	echo "reset-session: claude is not the foreground program in $pane; nothing sent" >&2
+	exit 1
+fi
+# The Enter after /clear would pick "1. Yes" on a permission prompt.
+if tmux capture-pane -p -t "$pane" | grep -qE 'Do you want to proceed|❯ 1\.'; then
+	echo "reset-session: $pane shows a permission prompt; answer it first; nothing sent" >&2
 	exit 1
 fi
 shopt -s nullglob
@@ -35,5 +43,5 @@ for f in "${files[@]}"; do
 done
 self_cycle="$(dirname "$(readlink -f "$0")")/../bip-cycle/self-cycle"
 log=${TMPDIR:-/tmp}/reset-session-${pane#%}.log
-setsid nohup "$self_cycle" --detached "$pane" "$cwd" /bip-continue >"$log" 2>&1 </dev/null &
+setsid nohup "$self_cycle" --detached "$pane" "$cwd" /bip-continue "$name" >"$log" 2>&1 </dev/null &
 echo "reset-session: /clear sent to $pane ($cwd); /bip-continue follows (log: $log)"

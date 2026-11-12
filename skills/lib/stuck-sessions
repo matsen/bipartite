@@ -6,7 +6,9 @@
 # Usage:  stuck-sessions [hours]   # transcripts modified in the last N hours (default 48)
 #
 # For each session name (a transcript's customTitle), only its newest transcript
-# counts, so a session that was reset does not report again. It prints one line
+# counts, so a session that was reset does not report again; one renamed after
+# its reset keeps reporting under the old name until that transcript ages out.
+# A transcript with no title is keyed, and listed, by its path. It prints one line
 # per stuck session: name, error count among its last 20 assistant turns, first
 # and last error time, whether its last turn is an error (if not, it may have
 # recovered), cwd and transcript. No output when none is stuck.
@@ -14,14 +16,15 @@ set -u
 hours=${1:-48}
 declare -A seen
 while read -r f; do
-	name=$(grep -o '"customTitle":"[^"]*"' "$f" 2>/dev/null | tail -1 | cut -d'"' -f4)
-	[ -n "$name" ] || continue
+	name=$(grep -F '"custom-title"' "$f" 2>/dev/null | jq -Rr 'fromjson? | select(.type == "custom-title") | .customTitle' | tail -1)
+	[ -n "$name" ] || name=$f
 	[ -n "${seen[$name]:-}" ] && continue
 	seen[$name]=1
-	tail -n 3000 "$f" | jq -rs --arg name "$name" --arg f "$f" '
+	# Line by line, so a half-written last line does not hide the session.
+	tail -n 3000 "$f" | jq -Rrn --arg name "$name" --arg f "$f" '
 		def stop: .isApiErrorMessage == true
 			and (.message.content | tostring | contains("Start a new session"));
-		[.[] | select(.type == "assistant")] | .[-20:] as $turns
+		[inputs | fromjson? | select(.type == "assistant")] | .[-20:] as $turns
 		| ($turns | map(select(stop))) as $e
 		| select($e | length > 0)
 		| (if ($turns[-1] | stop) then "last turn: error" else "last turn: ok" end) as $last
