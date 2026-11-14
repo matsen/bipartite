@@ -26,6 +26,10 @@ Everything here holds across repos.
 
 - **One dated directory per talk** (`YYYY-MM-DD-<name>/`): slide source, built deck and PDF, `figures/` (copies, so the record stands alone), `notes/`, `feedback.md`, `feedback-scripts/`.
   A deck is the record of the talk as given, apart from notes marked as added afterwards; later work goes into the next talk.
+- **Build the deck around questions.** The agenda is a numbered list of questions, one per group: "**Topic:** the question?".
+  Each group opens with an overview slide titled with its question. It shows a grid of 2–4 boxed panels, one per result, each with a one-line finding above its figure.
+  The result slides follow in grid order. A result that answers a different question goes in that question's overview, not in a neighbor's.
+  A caption shortened from its slide can lose a scope condition, so check each caption against the slide it summarizes. After a reorder, fix any slide that points at "the next slides".
 - **Define each new term on a slide, before its first use.** A new statistic, model or term gets its own lead-in slide. Write a regression out in full, with one bullet per symbol. Explain a derived quantity (such as a per-target level) as step-by-step bullets revealed one at a time, each with a one-sentence gloss. Name each quantity for what it computes ("the slope on log codon count", not "tilt"), and settle the names before building the slides that use them. Speaker notes are not enough for a definition; they hold how to read each figure, the numbers behind it, and links to scripts and issues. Keep notes short, except where the slide gives only the result of an argument too complex for the slide (a derivation, a counting step, an "X forces Y"): there the notes give every step, so the speaker can explain it in full.
 - **Few words on a slide.** Keep each definition, in the fewest words; move detail to the speaker notes or a backup slide.
 - **Every data figure shows what its axes are and what each point (or cell, or bar) is**, on the slide itself. The first line of its speaker notes says the same: `Axes: …; each point: …`. A schematic, with no data axes, gets no such line.
