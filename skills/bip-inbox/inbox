@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # inbox [epic-config]: one JSON line per GitHub item a conductor must act on.
 #   {"kind":"review-request", pr, title}   a review requested of the user, with
-#       no r<N>-* window, and not commented on or reviewed by the user since
-#       the PR's last commit (🤖 comments are agents', so they don't count).
+#       no r<N>-* window in a clone under $CLONE_ROOT, and not commented on or
+#       reviewed by the user since the PR's last commit (🤖 comments are
+#       agents', so they don't count).
 #   {"kind":"comment"|"review", pr, slot, author, at, state, url, body}
 #       a human's comment or review on a PR the fleet opened (authored by the
 #       user's account), newer than the last run; slot names the clone(s) on
@@ -21,7 +22,10 @@ exec 9>"$seen.lock"; flock 9   # a scan and the Monitor must not both act on one
 [ -f "$seen" ] || echo '{}' > "$seen"
 
 # Review requests.
-windows=$(tmux list-windows -a -F '#W' 2>/dev/null || true)
+# Keep only windows with a pane in this fleet's clones: another fleet's r48
+# window must not hide this repo's #48. Every pane, not the active one, counts.
+windows=$(tmux list-panes -a -F $'#W\t#{pane_current_path}' 2>/dev/null \
+  | awk -F'\t' -v r="$(realpath "$CLONE_ROOT")/" 'index($2, r) == 1 {print $1}' || true)
 for n in $(gh search prs --review-requested=@me --state=open --repo "$REPO" \
              --updated ">=$SINCE" --sort updated --limit 100 --json number -q '.[].number'); do
   grep -q "^r$n-" <<<"$windows" && continue
