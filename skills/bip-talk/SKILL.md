@@ -43,7 +43,7 @@ Everything here holds across repos.
 
 ## Discipline
 
-- **The first cut at a dataset is the raw data**: a scatterplot of the measured quantities, one point per observation. A derived statistic (a slope, a ratio, a per-target level) comes later, once the raw plot has been looked at; it comes first only for a reason stated in the slide's notes, for example that plots of the raw values already exist in the project's PRs or talks, and the statistic cancels a confound those values carry.
+- **Answer with the simplest readout first.** The first answer to a question is the simplest one that could settle it: an existing readout or a raw count, or, for a new dataset, a scatterplot of the measured quantities with one point per observation. A derived statistic (a slope, a ratio, a difference of correlations) comes after that answer is on a slide and leaves something open. It comes first only for a reason stated in the slide's notes, for example that it cancels a confound the raw values carry. A brief to a helper or a reviewer states the question in the user's words and names that simplest test.
 - Put a skeptic (`surprising-conclusion-skeptic`) on each follow-up candidate before drafting its issue: it catches misattributions and duplicates of open issues.
 - A new or changed figure is drawn in the slide style the repo's `talks/AGENTS.md` names, and gets a `plot-reviewer` pass before it goes in a deck. Give the reviewer the script, the rendered figure, and the slide as rendered in the deck PDF, since it has to judge the size the figure is projected at.
 - Re-derive every number a peer sends before it reaches a slide, and keep PROVISIONAL numbers off slides.
