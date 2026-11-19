@@ -20,6 +20,7 @@ Run it in either session of an EPIC's pair (`/bip-epic`, `/bip-ms`); the other i
    Item 1 says why it beats item 2, and "stop or wind down this line" is always on the list.
    Ask "which claim does this move?" before "can a worker start it today?".
    Run the PI questions (`docs/guides/pi-questions.md`) against each.
+   The pair agreeing is not corroboration: ask the session that consumes each item's output whether the item claims that output decides something it does not or assumes a criterion it lacks, and what of its work is stranded if the item is dropped.
 4. **Put it to the user**: the map first, then the D-list, numbered so they can answer by number, in plain text; if they are away, escalate to `staff`.
    Record both in the EPIC body as PROPOSED. Expect the user to re-scope and to settle directions one at a time.
 5. **After the discussion**, record the user's words verbatim as FINAL in the EPIC body, labelling any answer given in a dialog (picked option or typed into it) as such, since `user-said.sh` cannot find it; only then file and spawn, per `/bip-epic`.
