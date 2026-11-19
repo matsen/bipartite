@@ -6,6 +6,7 @@ repo_name: matsen/bipartite
 
 theme:
   name: material
+  custom_dir: overrides
   palette:
     - scheme: default
       primary: blue
