@@ -251,6 +251,7 @@ Put rulings a future reader needs on the PR, not in slot files, which `/bip-pr-l
 
 The EPIC body is the source of truth for project status; prune completed sections in the same edit (Step 5).
 Keep a local copy as `ISSUE-EPIC-<N>.md` in the repo root (gitignored via `ISSUE-*.md`).
+When the EPIC is new, or the edit adds, removes or reorders phases, run `/bip-epic-check` on that copy before pushing; it checks cost forecasts and scope that `/bip-issue-check` does not.
 
 ```bash
 # Pull current body and record the timestamp
