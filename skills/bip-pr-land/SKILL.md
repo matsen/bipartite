@@ -98,8 +98,8 @@ gh pr checks "$BRANCH" --json name,state,conclusion
 ```
 
 - Empty array and no `.github/workflows/`: proceed.
-  Empty array in a repo with workflows means CI hasn't registered yet: wait (`until [ "$(gh pr checks "$BRANCH" --json name | jq length)" -gt 0 ]; do sleep 5; done`), then continue below.
-- Checks present: block with `gh pr checks "$BRANCH" --watch --fail-fast` until all required checks conclude `SUCCESS`, `NEUTRAL` or `SKIPPED`.
+  Empty array in a repo with workflows means CI hasn't registered yet: wait (`until [ "$(gh pr checks "$BRANCH" --json name | jq length)" -gt 0 ]; do sleep 30; done`), then continue below.
+- Checks present: block with `gh pr checks "$BRANCH" --watch -i 60 --fail-fast` until all required checks conclude `SUCCESS`, `NEUTRAL` or `SKIPPED`.
   `SKIPPED` passes only if a check that builds or tests concluded `SUCCESS` at this head: a gate job can succeed while skipping the tests it gates. If so, rebase and wait for the tests.
 - Any check fails: do not merge. Report the failing check (`gh pr view --web`) and stop.
 
