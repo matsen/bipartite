@@ -72,7 +72,9 @@ foreground command makes you unreachable to SendMessage. Under the ralph
 loop, ending a turn does not idle (the stop hook re-feeds you and spends an
 iteration), so before waiting on a background task or agent, cancel the
 loop (/ralph-loop:cancel-ralph) and restart it with the command at the top
-of this prompt when you resume.
+of this prompt when you resume. Wait for CI with `gh run watch -i 60`
+or `gh pr checks --watch -i 60`, never at the default interval: every
+session shares one GitHub API limit, and a 3 s watch can drain it.
 
 GIT: write any multi-line commit message to a file and use `git commit -F`.
 After pushing, confirm `git ls-remote origin <branch>` matches
