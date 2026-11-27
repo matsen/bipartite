@@ -49,7 +49,7 @@ Only what survives both gates gets a destination:
 
 **Two artifacts, and the split is the point.** A continuation prompt longer than a page does not get pasted; a file nobody is pointed at does not get read.
 
-**The file** — `CONTINUATION-<N>.md` in the repo root (add to `.gitignore` if not already covered) — can be as long as it needs to be. Include:
+**The file** — `_ignore/CONTINUATION-<N>.md`, beside the prompt file — can be as long as it needs to be. Include:
 - **How the programme works**: the slicing discipline, what is out of scope by default, when to reach for a skeptic agent.
 - **The traps** that caused the most rework — naming collisions, artifacts everyone reads wrong, anything where each reasoning step was locally valid and the conclusion still came out wrong.
 - **Current state with its numbers**, and the pointer to the EPIC section that supersedes everything else.
@@ -59,7 +59,7 @@ Only what survives both gates gets a destination:
 
 **The prompt** is what you write to `_ignore/CONTINUE-epic-<N>.md` (keyed by EPIC number, as the guide requires) and print for the user. Keep its `Session: <this session's ListAgents name>` line: role resolution reads it.
 Its path, its under-a-page shape, and the rule that every action item carries its falsifier inline are `docs/guides/continuation-prompt.md`; the next session loads it with `/bip-continue`.
-On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
+On top of that, the EPIC prompt adds the `/bip-epic <N>` invocation, a one-line pointer to `_ignore/CONTINUATION-<N>.md` (the long file above), and **the two or three traps that would cost the most if rediscovered** — put those in the prompt itself, not only in the file, since they are what a fresh session gets wrong before it has read anything.
 
 **Record approvals as `approved at <SHA>`, never as a state.** "Approved by both" is true when written and becomes misleading the moment anyone pushes. Same class of defect: a fact that expires silently.
 
@@ -73,7 +73,7 @@ Print a summary:
 - EPICs pushed: i281, i295
 - EPICs skipped (conflict): i310
 - Topic-level findings: <none survived the filter | routed to CLAUDE.md/skill/EPIC body as listed>
-- Continuation: CONTINUATION-<N>.md (long) + _ignore/CONTINUE-epic-<N>.md (prompt) written; prompt printed below
+- Continuation: _ignore/CONTINUATION-<N>.md (long) + _ignore/CONTINUE-epic-<N>.md (prompt) written; prompt printed below
 
 Safe to reset context. Fleet-side state (clones, slots) is unaffected
 by this — run /bip-conductor-tuckin if that session is resetting too.
